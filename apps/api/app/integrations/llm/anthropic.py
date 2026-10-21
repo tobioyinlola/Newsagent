@@ -1,0 +1,50 @@
+import json
+
+from anthropic import AsyncAnthropic
+
+from app.config import get_settings
+from app.integrations.llm.base import ScriptDraft, ScriptLLM
+from app.services.claims import detect_claims
+
+MODEL = "claude-sonnet-5-5"
+
+SYSTEM = (
+    "You write scripts for a short news-style video that features a startup. Use an original "
+    "fictional channel voice; never reference any real news network. Never invent facts: use only "
+    "the supplied facts. Reply with JSON only."
+)
+
+
+class AnthropicScriptLLM(ScriptLLM):
+    def __init__(self) -> None:
+        self._client = AsyncAnthropic(api_key=get_settings().anthropic_api_key)
+
+    def estimate_cost(self, brief_text: str) -> float:
+        return 0.05
+
+    async def _json(self, prompt: str) -> dict:
+        msg = await self._client.messages.create(
+            model=MODEL,
+            max_tokens=4000,
+            system=SYSTEM,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = "".join(b.text for b in msg.content if b.type == "text")
+        return json.loads(text[text.index("{") : text.rindex("}") + 1])
+
+    async def parse_brief(self, brief_text: str, website_url: str | None) -> dict:
+        return await self._json(
+            "Extract JSON with keys company, problem, usp, key_facts (list), region, tone from this "
+            f"brief:\n{brief_text}\nWebsite: {website_url or 'n/a'}"
+        )
+
+    async def write_script(self, facts: dict, tone: str) -> ScriptDraft:
+        raw = await self._json(
+            "Write a 60-90 second anchor script as JSON with keys segments [{kind,text}], "
+            "ticker_lines [str], lower_thirds [{title,subtitle}], interview_questions [str]. "
+            f"Tone: {tone}. Facts: {json.dumps(facts)}"
+        )
+        draft = ScriptDraft.model_validate(raw)
+        text = " ".join(s.text for s in draft.segments)
+        draft.claim_flags = detect_claims(text)  # deterministic check, not left to the LLM
+        return draft

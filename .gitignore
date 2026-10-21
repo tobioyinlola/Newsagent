@@ -1,0 +1,15 @@
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+dist/
+out/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+services/renderer/public/bench-anchor.webm
+services/renderer/src/_floor_entry.tsx
+*.db

@@ -1,0 +1,41 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: apps/api } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync
+      - run: uv run ruff check .
+      - run: uv run mypy app
+      - run: uv run pytest -q
+  web:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: apps/web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: apps/web/pnpm-lock.yaml }
+      - uses: astral-sh/setup-uv@v3
+      - run: (cd ../api && uv sync) && (cd ../api && uv run python ../../scripts/export_openapi.py)
+      - run: pnpm install --frozen-lockfile
+      - name: Generated API client must be up to date
+        run: pnpm gen:api && git diff --exit-code openapi.json src/api/schema.d.ts
+      - run: pnpm lint && pnpm build && pnpm test
+  renderer:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: services/renderer } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build && pnpm test

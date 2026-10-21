@@ -1,0 +1,184 @@
+from datetime import UTC, datetime, timedelta
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth import Principal, current_principal
+from app.db import get_session
+from app.integrations import registry
+from app.models import Asset, Brief, Project, ScriptVersion
+from app.pipeline.advance import advance
+from app.schemas.api import ProjectCreate, ProjectOut, ScriptOut, ScriptUpdate
+from app.services import state_machine as sm
+from app.services.claims import detect_claims
+from app.services.ratelimit import limit
+
+router = APIRouter(prefix="/v1/projects", tags=["projects"])
+
+WORDS_PER_SECOND = 2.5
+
+
+async def _owned(session: AsyncSession, project_id: str, p: Principal) -> Project:
+    project = await session.get(Project, project_id)
+    if project is None or project.workspace_id != p.workspace.id:
+        raise HTTPException(404, "Project not found")
+    return project
+
+
+async def _out(session: AsyncSession, project: Project) -> ProjectOut:
+    assets = (await session.execute(select(Asset).where(Asset.project_id == project.id))).scalars().all()
+    out = ProjectOut.model_validate(project)
+    out.assets = [a for a in assets]  # type: ignore[misc]
+    return out
+
+
+async def _latest_script(session: AsyncSession, project_id: str) -> ScriptVersion | None:
+    return (
+        (
+            await session.execute(
+                select(ScriptVersion)
+                .where(ScriptVersion.project_id == project_id)
+                .order_by(ScriptVersion.version.desc())
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+
+@router.post("", response_model=ProjectOut, dependencies=[Depends(limit("brief", 20, 3600))])
+async def create_project(
+    body: ProjectCreate, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> ProjectOut:
+    if p.workspace.suspended:
+        raise HTTPException(403, "Workspace suspended")
+    project = Project(
+        workspace_id=p.workspace.id,
+        region=body.region,
+        voice_accent=body.voice_accent,
+        accent_override=body.accent_override,
+    )
+    session.add(project)
+    await session.flush()
+    session.add(Brief(project_id=project.id, raw_text=body.brief_text, website_url=body.website_url))
+    await session.commit()
+    return await _out(session, project)
+
+
+@router.get("/{project_id}", response_model=ProjectOut)
+async def get_project(
+    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> ProjectOut:
+    return await _out(session, await _owned(session, project_id, p))
+
+
+@router.post(
+    "/{project_id}/script/generate", response_model=ScriptOut, dependencies=[Depends(limit("script", 15, 3600))]
+)
+async def generate_script(
+    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> ScriptVersion:
+    project = await _owned(session, project_id, p)
+    if project.state not in {"draft", "script_ready"}:
+        raise HTTPException(409, "Script can no longer be regenerated")
+    llm = registry.get_llm()
+    brief = project.brief
+    if brief is None:
+        raise HTTPException(409, "Project has no brief")
+    # Stages 1 and 2 are cheap; they are not charged against render budgets (spec section 8).
+    brief.structured_facts = await llm.parse_brief(brief.raw_text, brief.website_url)
+    draft = await llm.write_script(brief.structured_facts, "confident")
+    prev = await _latest_script(session, project_id)
+    sv = ScriptVersion(
+        project_id=project_id,
+        version=(prev.version + 1) if prev else 1,
+        segments=[s.model_dump() for s in draft.segments],
+        ticker_lines=draft.ticker_lines,
+        lower_thirds=draft.lower_thirds,
+        interview_questions=draft.interview_questions,
+        claim_flags=[c.model_dump() for c in draft.claim_flags],
+    )
+    session.add(sv)
+    if project.state == "draft":
+        sm.transition(project, "script_ready")
+    await session.commit()
+    return sv
+
+
+@router.put("/{project_id}/script", response_model=ScriptOut)
+async def update_script(
+    project_id: str,
+    body: ScriptUpdate,
+    p: Principal = Depends(current_principal),
+    session: AsyncSession = Depends(get_session),
+) -> ScriptVersion:
+    project = await _owned(session, project_id, p)
+    if project.state != "script_ready":
+        raise HTTPException(409, "Script is locked")
+    prev = await _latest_script(session, project_id)
+    text = " ".join(s.get("text", "") for s in body.segments)
+    flags = [c.model_dump() for c in detect_claims(text)]
+    for f in flags:  # confirmation carries over only for claim text the owner explicitly confirms
+        f["confirmed"] = f["text"] in body.confirmed_claims
+    sv = ScriptVersion(
+        project_id=project_id,
+        version=(prev.version + 1) if prev else 1,
+        segments=body.segments,
+        ticker_lines=body.ticker_lines,
+        lower_thirds=body.lower_thirds,
+        interview_questions=body.interview_questions,
+        claim_flags=flags,
+    )
+    session.add(sv)
+    await session.commit()
+    return sv
+
+
+@router.post("/{project_id}/script/approve", response_model=ProjectOut)
+async def approve_script(
+    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> ProjectOut:
+    project = await _owned(session, project_id, p)
+    sv = await _latest_script(session, project_id)
+    if project.state != "script_ready" or sv is None:
+        raise HTTPException(409, "No script ready for approval")
+    unconfirmed = [f for f in sv.claim_flags if not f.get("confirmed")]
+    if unconfirmed:  # hard rule 3
+        raise HTTPException(422, {"error": "claims_unconfirmed", "claims": unconfirmed})
+    ws = p.workspace
+    words = sum(len(s["text"].split()) for s in sv.segments)
+    if words / WORDS_PER_SECOND > ws.max_video_seconds:
+        raise HTTPException(422, "Script is longer than your plan allows")
+    since = datetime.now(UTC) - timedelta(days=1)
+    today = (
+        await session.execute(
+            select(func.count())
+            .select_from(ScriptVersion)
+            .join(Project, Project.id == ScriptVersion.project_id)
+            .where(Project.workspace_id == ws.id, ScriptVersion.approved_at >= since)
+        )
+    ).scalar_one()
+    if today >= ws.max_videos_per_day:
+        raise HTTPException(429, "Daily video limit reached")
+    sv.approved, sv.approved_by, sv.approved_at = True, p.user.email, datetime.now(UTC)
+    sm.transition(project, "script_approved")
+    await session.commit()
+    await advance(session, project_id)  # paid pipeline starts; every paid step passes the spend guard
+    await session.refresh(project)
+    return await _out(session, project)
+
+
+@router.post("/{project_id}/retry", response_model=ProjectOut)
+async def retry(
+    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> ProjectOut:
+    project = await _owned(session, project_id, p)
+    try:
+        sm.resume(project)
+    except sm.IllegalTransition:
+        raise HTTPException(409, "Project is not retryable") from None
+    await session.commit()
+    await advance(session, project_id)
+    await session.refresh(project)
+    return await _out(session, project)

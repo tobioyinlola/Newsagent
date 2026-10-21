@@ -1,0 +1,11 @@
+import { renderMedia, selectComposition } from "@remotion/renderer";
+import { bundle } from "@remotion/bundler";
+import path from "node:path";
+import fs from "node:fs";
+fs.writeFileSync("src/_floor_entry.tsx", `import {registerRoot, Composition} from "remotion";import {Floor} from "./Floor";registerRoot(()=> <Composition id="Floor" component={Floor} width={1920} height={1080} fps={30} durationInFrames={150}/>);`);
+const url = await bundle({ entryPoint: path.resolve("src/_floor_entry.tsx") });
+const comp = await selectComposition({ serveUrl: url, id: "Floor" });
+const t = Date.now();
+await renderMedia({ composition: comp, serveUrl: url, codec: "h264", outputLocation: "out/floor.mp4" });
+console.log("floor 5s 1080p seconds:", (Date.now() - t) / 1000);
+fs.unlinkSync("src/_floor_entry.tsx");

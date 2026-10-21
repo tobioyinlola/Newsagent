@@ -1,0 +1,9 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 60
+# Private network only: do NOT generate a public domain for this service.
+# Start at RENDER_JOBS_CONCURRENCY=1; scale by adding instances (see docs/render-benchmarks.md).
