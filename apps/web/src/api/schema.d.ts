@@ -89,6 +89,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/brand-kit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Brand Kit */
+        get: operations["get_brand_kit_v1_brand_kit_get"];
+        /**
+         * Save Brand Kit
+         * @description Each save creates a new version (BR-5). There is no field for the channel identity (BR-8).
+         */
+        put: operations["save_brand_kit_v1_brand_kit_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/brand-kit/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Brand */
+        post: operations["import_brand_v1_brand_kit_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/brand-kit/logo-upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Logo Upload */
+        post: operations["logo_upload_v1_brand_kit_logo_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me": {
         parameters: {
             query?: never;
@@ -113,7 +168,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List Projects */
+        get: operations["list_projects_v1_projects_get"];
         put?: never;
         /** Create Project */
         post: operations["create_project_v1_projects_post"];
@@ -132,6 +188,77 @@ export interface paths {
         };
         /** Get Project */
         get: operations["get_project_v1_projects__project_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/captions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Captions */
+        get: operations["captions_v1_projects__project_id__captions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/costs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Costs */
+        get: operations["costs_v1_projects__project_id__costs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/downloads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Downloads */
+        get: operations["downloads_v1_projects__project_id__downloads_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Events
+         * @description Server-sent events. Clients use fetch streaming (EventSource cannot send the Authorization header).
+         */
+        get: operations["events_v1_projects__project_id__events_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -208,6 +335,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{project_id}/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Share */
+        post: operations["create_share_v1_projects__project_id__share_post"];
+        /** Revoke Share */
+        delete: operations["revoke_share_v1_projects__project_id__share_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/share/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** View Share */
+        get: operations["view_share_v1_share__token__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/voices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Voices
+         * @description BR-6: availability depends on the avatar vendor, so read it from the provider at runtime.
+         */
+        get: operations["voices_v1_voices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -222,6 +404,171 @@ export interface components {
             storage_key: string;
             /** Type */
             type: string;
+        };
+        /** BrandDraft */
+        BrandDraft: {
+            /** Accent Color */
+            accent_color: string | null;
+            /** Company Name */
+            company_name: string | null;
+            /**
+             * Confirmed
+             * @default false
+             */
+            confirmed: boolean;
+            /** Logo Url */
+            logo_url: string | null;
+            /** Primary Color */
+            primary_color: string | null;
+            /** Source Url */
+            source_url: string;
+        };
+        /** BrandImportIn */
+        BrandImportIn: {
+            /** Url */
+            url: string;
+        };
+        /** BrandKitIn */
+        BrandKitIn: {
+            /** Accent Color */
+            accent_color: string;
+            /**
+             * Fonts
+             * @default {}
+             */
+            fonts: {
+                [key: string]: string;
+            };
+            /** Logo Dark Key */
+            logo_dark_key?: string | null;
+            /** Logo Light Key */
+            logo_light_key?: string | null;
+            /** Primary Color */
+            primary_color: string;
+            /**
+             * Pronunciation Glossary
+             * @default {}
+             */
+            pronunciation_glossary: {
+                [key: string]: string;
+            };
+            /**
+             * Secondary Colors
+             * @default []
+             */
+            secondary_colors: string[];
+            /** Source Url */
+            source_url?: string | null;
+            /**
+             * Tone
+             * @default confident
+             */
+            tone: string;
+        };
+        /** BrandKitOut */
+        BrandKitOut: {
+            /**
+             * Accent Alternatives
+             * @default []
+             */
+            accent_alternatives: string[];
+            /** Accent Color */
+            accent_color: string;
+            /**
+             * Contrast
+             * @default []
+             */
+            contrast: components["schemas"]["ContrastCheck"][];
+            /** Fonts */
+            fonts: {
+                [key: string]: string;
+            };
+            /** Id */
+            id: string;
+            /** Logo Dark Key */
+            logo_dark_key: string | null;
+            /** Logo Light Key */
+            logo_light_key: string | null;
+            /** Primary Color */
+            primary_color: string;
+            /** Pronunciation Glossary */
+            pronunciation_glossary: {
+                [key: string]: string;
+            };
+            /** Secondary Colors */
+            secondary_colors: string[];
+            /** Source Url */
+            source_url: string | null;
+            /** Tone */
+            tone: string;
+            /** Version */
+            version: number;
+        };
+        /** CaptionsOut */
+        CaptionsOut: {
+            /** Captions */
+            captions: {
+                [key: string]: string;
+            };
+            /** Disclosure */
+            disclosure: string;
+            /** Has Active Share */
+            has_active_share: boolean;
+        };
+        /** ContrastCheck */
+        ContrastCheck: {
+            /** Background */
+            background: string;
+            /** Passes */
+            passes: boolean;
+            /** Ratio */
+            ratio: number;
+            /** Suggested Background */
+            suggested_background?: string | null;
+            /** Text */
+            text: string;
+        };
+        /** CostLine */
+        CostLine: {
+            /** Attempts */
+            attempts: number;
+            /** Cost */
+            cost: string;
+            /** Duration S */
+            duration_s: string | null;
+            /** Stage */
+            stage: string;
+            /** Status */
+            status: string;
+            /** Vendor */
+            vendor: string | null;
+        };
+        /** CostsOut */
+        CostsOut: {
+            /** Lines */
+            lines: components["schemas"]["CostLine"][];
+            /** Total */
+            total: string;
+        };
+        /** DownloadItem */
+        DownloadItem: {
+            /** Expires In S */
+            expires_in_s: number;
+            /** Filename */
+            filename: string;
+            /** Format */
+            format: string | null;
+            /** Type */
+            type: string;
+            /** Url */
+            url: string;
+        };
+        /** DownloadsOut */
+        DownloadsOut: {
+            /** Disclosure */
+            disclosure: string;
+            /** Items */
+            items: components["schemas"]["DownloadItem"][];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -259,6 +606,25 @@ export interface components {
             expires_at: string;
             /** Workspace Id */
             workspace_id: string;
+        };
+        /** LogoUploadIn */
+        LogoUploadIn: {
+            /** Content Type */
+            content_type: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /**
+             * Variant
+             * @default light
+             */
+            variant: string;
+        };
+        /** LogoUploadOut */
+        LogoUploadOut: {
+            /** Key */
+            key: string;
+            /** Upload Url */
+            upload_url: string;
         };
         /** MeOut */
         MeOut: {
@@ -372,6 +738,24 @@ export interface components {
             /** Ticker Lines */
             ticker_lines: string[];
         };
+        /** ShareCreated */
+        ShareCreated: {
+            /** Url */
+            url: string;
+        };
+        /** SharePublic */
+        SharePublic: {
+            /** Disclosure */
+            disclosure: string;
+            /** Tag */
+            tag: string;
+            /** Thumbnail Url */
+            thumbnail_url: string | null;
+            /** Title */
+            title: string;
+            /** Video Url */
+            video_url: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -392,6 +776,15 @@ export interface components {
             /** Vendor */
             vendor: string;
         };
+        /** VoiceOut */
+        VoiceOut: {
+            /** Accent */
+            accent: string;
+            /** Id */
+            id: string;
+            /** Preview Url */
+            preview_url?: string | null;
+        };
         /** WorkspacePatch */
         WorkspacePatch: {
             /** Credit Balance */
@@ -400,6 +793,8 @@ export interface components {
             max_video_seconds?: number | null;
             /** Max Videos Per Day */
             max_videos_per_day?: number | null;
+            /** Share Disabled */
+            share_disabled?: boolean | null;
             /** Spend Cap */
             spend_cap?: number | string | null;
             /** Suspended */
@@ -582,6 +977,142 @@ export interface operations {
             };
         };
     };
+    get_brand_kit_v1_brand_kit_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandKitOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_brand_kit_v1_brand_kit_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrandKitIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandKitOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_brand_v1_brand_kit_import_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrandImportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandDraft"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logo_upload_v1_brand_kit_logo_upload_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LogoUploadIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogoUploadOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     me_v1_me_get: {
         parameters: {
             query?: never;
@@ -600,6 +1131,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_projects_v1_projects_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"][];
                 };
             };
             /** @description Validation Error */
@@ -668,6 +1230,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    captions_v1_projects__project_id__captions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptionsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    costs_v1_projects__project_id__costs_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CostsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    downloads_v1_projects__project_id__downloads_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DownloadsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    events_v1_projects__project_id__events_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -804,6 +1498,136 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScriptOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_share_v1_projects__project_id__share_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_share_v1_projects__project_id__share_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    view_share_v1_share__token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharePublic"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    voices_v1_voices_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceOut"][];
                 };
             };
             /** @description Validation Error */

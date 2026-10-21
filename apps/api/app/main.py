@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routes import admin, auth, health, projects
+from app.routes import admin, auth, brand, delivery, health, projects
 
 
 class JsonFormatter(logging.Formatter):
@@ -23,7 +23,7 @@ def create_app() -> FastAPI:
         sentry_sdk.init(dsn=s.sentry_dsn, environment=s.environment)
     app = FastAPI(title="Newsagent API", version="0.1.0")
     app.add_middleware(CORSMiddleware, allow_origins=[s.app_base_url], allow_methods=["*"], allow_headers=["*"])
-    for r in (health.router, auth.router, projects.router, admin.router):
+    for r in (health.router, auth.router, brand.router, projects.router, delivery.router, admin.router):
         app.include_router(r)
     return app
 

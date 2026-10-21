@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,8 +12,10 @@ from app.models import Asset, Brief, Project, ScriptVersion
 from app.pipeline.advance import advance
 from app.schemas.api import ProjectCreate, ProjectOut, ScriptOut, ScriptUpdate
 from app.services import state_machine as sm
+from app.services.brand import ALLOWED_VOICE_ACCENTS
 from app.services.claims import detect_claims
 from app.services.ratelimit import limit
+from app.services.safety import find_banned
 
 router = APIRouter(prefix="/v1/projects", tags=["projects"])
 
@@ -53,6 +56,8 @@ async def create_project(
 ) -> ProjectOut:
     if p.workspace.suspended:
         raise HTTPException(403, "Workspace suspended")
+    if body.voice_accent not in ALLOWED_VOICE_ACCENTS:
+        raise HTTPException(422, {"error": "invalid_voice_accent", "allowed": ALLOWED_VOICE_ACCENTS})
     project = Project(
         workspace_id=p.workspace.id,
         region=body.region,
@@ -146,6 +151,9 @@ async def approve_script(
     unconfirmed = [f for f in sv.claim_flags if not f.get("confirmed")]
     if unconfirmed:  # hard rule 3
         raise HTTPException(422, {"error": "claims_unconfirmed", "claims": unconfirmed})
+    banned = find_banned(json.dumps([sv.segments, sv.ticker_lines, sv.lower_thirds, sv.interview_questions]))
+    if banned:  # hard rule 1: checked before any paid step runs
+        raise HTTPException(422, {"error": "banned_network_name", "terms": banned})
     ws = p.workspace
     words = sum(len(s["text"].split()) for s in sv.segments)
     if words / WORDS_PER_SECOND > ws.max_video_seconds:

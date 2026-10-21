@@ -32,6 +32,7 @@ class Workspace(Base, TimestampMixin):
     max_videos_per_day: Mapped[int] = mapped_column(Integer, default=3)
     max_video_seconds: Mapped[int] = mapped_column(Integer, default=300)
     suspended: Mapped[bool] = mapped_column(Boolean, default=False)
+    share_disabled: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class Invite(Base, TimestampMixin):

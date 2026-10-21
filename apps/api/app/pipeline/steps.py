@@ -13,17 +13,20 @@ from app.integrations.avatar.base import AvatarRequest
 from app.integrations.renderer.base import RenderRequest
 from app.models import Asset, BrandKit, Job, Project, ScriptVersion
 from app.services import state_machine as sm
+from app.services.captions import build_srt
+from app.services.safety import find_banned
 from app.services.spend_guard import LimitReached, SpendGuard
 
 FORMATS = [
-    {"format": "16x9", "width": 1920, "height": 1080},
-    {"format": "9x16", "width": 1080, "height": 1920},
+    {"kind": "video", "format": "16x9", "width": 1920, "height": 1080},
+    {"kind": "video", "format": "9x16", "width": 1080, "height": 1920},
+    {"kind": "thumbnail", "format": "16x9", "name": "thumbnail", "width": 1920, "height": 1080},
 ]
+PREVIEW = [{"kind": "video", "format": "16x9", "name": "preview", "width": 1920, "height": 1080, "scale": 0.5}]
 
 # Locked channel identity and mandatory disclosures (hard rules 1 and 2). Never user-editable.
 CHANNEL_IDENTITY = {"name": "Startup Spotlight Network", "locked": True}
 DISCLOSURES = {"tag": "Featured", "anchor": "AI-generated anchor"}
-BANNED_TERMS = ["cnn", "bbc", "fox news", "sky news", "al jazeera", "msnbc", "reuters", "bloomberg tv"]
 
 
 def input_hash(data: dict) -> str:
@@ -57,9 +60,24 @@ def anchor_text(script: ScriptVersion) -> str:
     return " ".join(s["text"] for s in script.segments)
 
 
+async def current_kit(session: AsyncSession, workspace_id: str) -> BrandKit | None:
+    return (
+        (
+            await session.execute(
+                select(BrandKit).where(BrandKit.workspace_id == workspace_id).order_by(BrandKit.version.desc())
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+
 async def anchor_inputs(session: AsyncSession, project: Project) -> dict:
     script = await approved_script(session, project.id)
+    kit = await current_kit(session, project.workspace_id)
     return {
+        "brand_version": kit.version if kit else 0,
+        "glossary": kit.pronunciation_glossary if kit else {},
         "script_id": script.id,
         "text": anchor_text(script),
         "accent": project.voice_accent,
@@ -93,8 +111,10 @@ async def build_overlay_props(session: AsyncSession, project: Project, script: S
 async def anchor_render(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
     script = await approved_script(session, project.id)
     avatar = registry.get_avatar()
+    kit = await current_kit(session, project.workspace_id)
     req = AvatarRequest(
         script_text=anchor_text(script),
+        pronunciation=(kit.pronunciation_glossary if kit else None) or None,
         voice_accent=project.voice_accent,
         avatar_id=project.anchor_id,
         transparent=True,
@@ -111,7 +131,7 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
     return StepOutcome({"video_url": out.video_url, "duration_s": out.duration_s, "key": key}, cost)
 
 
-async def final_render(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
+async def _render(session: AsyncSession, project: Project, guard: SpendGuard, outputs: list[dict], prefix: str):
     script = await approved_script(session, project.id)
     renderer = registry.get_renderer()
     anchor = (
@@ -119,14 +139,14 @@ async def final_render(session: AsyncSession, project: Project, guard: SpendGuar
         .scalars()
         .first()
     )
+    assert anchor is not None, "anchor asset must exist before rendering"
     props = await build_overlay_props(session, project, script)
-    assert anchor is not None, "anchor asset must exist before final render"
     req = RenderRequest(
         composition="NewsStudio",
         props=props,
-        outputs=FORMATS,
+        outputs=outputs,
         input_urls={"anchor": registry.get_storage().presign_get(anchor.storage_key)},
-        output_prefix=f"projects/{project.id}/final",
+        output_prefix=f"projects/{project.id}/{prefix}",
     )
     res = await guard.reserve(project.workspace_id, "renderer", renderer.estimate_cost(req))
     try:
@@ -136,9 +156,25 @@ async def final_render(session: AsyncSession, project: Project, guard: SpendGuar
         await guard.release(res)
         raise
     cost = await guard.settle(res, renderer.estimate_cost(req))
-    for fmt, key in zip(FORMATS, status.output_keys, strict=False):
-        session.add(Asset(project_id=project.id, type="render", storage_key=key, format=fmt["format"]))
+    return script, anchor, props, status, cost
+
+
+async def preview_render(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
+    _, _, props, status, cost = await _render(session, project, guard, PREVIEW, "preview")
+    session.add(Asset(project_id=project.id, type="preview", storage_key=status.output_keys[0], format="16x9"))
     return StepOutcome({"props": props, "output_keys": status.output_keys}, cost)
+
+
+async def final_render(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
+    script, anchor, props, status, cost = await _render(session, project, guard, FORMATS, "final")
+    for o, key in zip(FORMATS, status.output_keys, strict=False):
+        atype = "thumbnail" if o["kind"] == "thumbnail" else "render"
+        session.add(Asset(project_id=project.id, type=atype, storage_key=key, format=o["format"]))
+    srt = build_srt(script.segments, float(anchor.duration or 60))
+    srt_key = f"projects/{project.id}/final/captions.srt"
+    await registry.get_storage().put(srt_key, srt.encode(), "application/x-subrip")
+    session.add(Asset(project_id=project.id, type="caption", storage_key=srt_key))
+    return StepOutcome({"props": props, "output_keys": status.output_keys, "srt_key": srt_key}, cost)
 
 
 async def _wait(renderer, render_id: str):
@@ -153,16 +189,15 @@ async def _wait(renderer, render_id: str):
         await asyncio.sleep(2)
 
 
-def quality_gate(result: dict, outputs: int) -> list[str]:
+def quality_gate(result: dict, outputs: int) -> list[str]:  # outputs = expected number of rendered files
     """Stage 11 (subset): disclosure + banned-content checks. Loudness/lip-sync arrive in Phase 1."""
     problems = []
     props = result["props"]
     if props["disclosures"] != DISCLOSURES:
         problems.append("missing mandatory disclosure labels")
-    blob = json.dumps([props["tickerLines"], props["lowerThirds"]]).lower()
-    for term in BANNED_TERMS:
-        if term in blob:
-            problems.append(f"banned network name in overlays: {term}")
+    blob = json.dumps([props["tickerLines"], props["lowerThirds"]])
+    for term in find_banned(blob):
+        problems.append(f"banned network name in overlays: {term}")
     if len(result["output_keys"]) < outputs:
         problems.append("missing output formats")
     return problems

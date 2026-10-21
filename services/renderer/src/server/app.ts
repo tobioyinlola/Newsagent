@@ -4,13 +4,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { NewsProps, defaultProps } from "../compositions/types";
-import { renderOne } from "../render";
+import { assertEvenScale, renderOne, renderThumbnail } from "../render";
 import { putFile } from "./storage";
 
 type Job = { status: "queued" | "running" | "succeeded" | "failed"; progress: number; output_keys: string[]; error: string | null };
-type Output = { format: "16x9" | "9x16"; width: number; height: number };
+type Output = { kind?: "video" | "thumbnail"; name?: string; scale?: number; format: "16x9" | "9x16"; width: number; height: number };
 
-export function createApp(opts: { secret: string; maxConcurrent?: number; renderFn?: typeof renderOne }) {
+export function createApp(opts: { secret: string; maxConcurrent?: number; renderFn?: typeof renderOne; thumbFn?: typeof renderThumbnail }) {
   const app = express();
   app.use(express.json({ limit: "1mb" }));
   const jobs = new Map<string, Job>();
@@ -18,6 +18,7 @@ export function createApp(opts: { secret: string; maxConcurrent?: number; render
   let running = 0;
   const max = opts.maxConcurrent ?? Number(process.env.RENDER_JOBS_CONCURRENCY || 1);
   const render = opts.renderFn ?? renderOne;
+  const renderThumb = opts.thumbFn ?? renderThumbnail;
 
   const pump = () => {
     while (running < max && queue.length) {
@@ -54,9 +55,16 @@ export function createApp(opts: { secret: string; maxConcurrent?: number; render
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), "render-"));
       try {
         for (const [i, o] of outputs.entries()) {
-          const file = path.join(dir, `${o.format}.mp4`);
-          await render({ format: o.format, props: merged, outFile: file, onProgress: (p) => { job.progress = (i + p) / outputs.length; } });
-          const key = `${output_prefix}/${o.format}.mp4`;
+          const thumb = o.kind === "thumbnail";
+          const base = o.name ?? o.format;
+          if (!/^[a-z0-9x_-]+$/i.test(base)) throw new Error("invalid output name");
+          const file = path.join(dir, `${base}.${thumb ? "png" : "mp4"}`);
+          if (thumb) await renderThumb(o.format, merged, file);
+          else {
+            assertEvenScale(o.width, o.height, o.scale ?? 1);
+            await render({ format: o.format, props: merged, outFile: file, scale: o.scale, onProgress: (p) => { job.progress = (i + p) / outputs.length; } });
+          }
+          const key = `${output_prefix}/${base}.${thumb ? "png" : "mp4"}`;
           await putFile(key, file);
           job.output_keys.push(key);
         }

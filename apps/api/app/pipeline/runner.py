@@ -12,17 +12,23 @@ from app.models import Job, Project
 from app.models.base import new_id
 from app.pipeline import steps
 from app.services import state_machine as sm
+from app.services.notifications import notify_owners
 from app.services.spend_guard import LimitReached, SpendGuard
 
 log = logging.getLogger("pipeline")
 BACKOFF_SCALE = 1.0  # tests set to 0
 
 STEPS = {
+    "preview_render": ("renderer", steps.preview_render, None),
     "anchor_render": ("avatar", steps.anchor_render, "anchor_ready"),
     "final_render": ("renderer", steps.final_render, "final_ready"),
 }
 # State a project must be in for a finished step to move it forward; otherwise a re-run is a no-op.
-PREDECESSOR = {"anchor_render": "rendering_anchor", "final_render": "anchor_ready"}
+PREDECESSOR = {
+    "anchor_render": "rendering_anchor",
+    "preview_render": "anchor_ready",
+    "final_render": "anchor_ready",
+}
 
 
 async def run_step(step: str, payload: dict) -> None:
@@ -77,6 +83,7 @@ async def _attempt_loop(step, fn, pid, ih, policy) -> bool:
                 sm.limit_reached(project, e.reason)
                 job.status, job.error = "failed", e.reason
                 await session.commit()
+                await notify_owners(pid, "limit_reached")
                 return False  # refused: no retries, nothing was charged
             except Exception as e:  # vendor failure
                 await session.rollback()
@@ -93,6 +100,7 @@ async def _attempt_loop(step, fn, pid, ih, policy) -> bool:
                         j2.status = "failed"
                         sm.fail(p2, "We couldn't finish this step. Please retry.", retryable=True)
                         await s2.commit()
+                        await notify_owners(pid, "failed")
                         return False
                     await s2.commit()
                 await asyncio.sleep(policy.backoff_base_s * 2 ** (attempt - 1) * BACKOFF_SCALE)
@@ -106,7 +114,7 @@ async def _attempt_loop(step, fn, pid, ih, policy) -> bool:
     return False
 
 
-async def _finish(step: str, pid: str, next_state: str) -> None:
+async def _finish(step: str, pid: str, next_state: str | None) -> None:
     from app.pipeline.advance import advance
 
     async with session_maker()() as session:
@@ -131,8 +139,12 @@ async def _finish(step: str, pid: str, next_state: str) -> None:
             if problems:
                 sm.fail(project, "Quality check failed: " + "; ".join(problems), retryable=False)
                 await session.commit()
+                await notify_owners(pid, "failed")
                 return
-        sm.transition(project, next_state)
+        if next_state:
+            sm.transition(project, next_state)
         await session.commit()
-        if next_state != "final_ready":
+        if next_state == "final_ready":
+            await notify_owners(pid, "render_ready")
+        else:
             await advance(session, pid)

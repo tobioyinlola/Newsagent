@@ -28,7 +28,7 @@ Operators also set budgets: `PUT /v1/admin/vendor-budgets` (the spend guard refu
 
 ## Test
 ```bash
-cd apps/api && uv run ruff check . && uv run mypy app && uv run pytest      # 21 tests
+cd apps/api && uv run ruff check . && uv run mypy app && uv run pytest      # 53 tests
 cd apps/web && pnpm lint && pnpm build && pnpm test
 cd services/renderer && pnpm build && pnpm test
 cd services/renderer && pnpm bench 10                                      # render benchmark
@@ -36,7 +36,15 @@ cd services/renderer && pnpm bench 10                                      # ren
 After changing API routes or schemas: `uv run python scripts/export_openapi.py && (cd apps/web && pnpm gen:api)`;
 CI fails if the committed client is stale.
 
+## API overview (v1, all under `/v1`)
+Auth `POST /auth/redeem`, `GET /me` | Brand `GET|PUT /brand-kit`, `POST /brand-kit/import`, `POST /brand-kit/logo-upload`,
+`GET /voices` | Projects `POST|GET /projects`, `/projects/{id}/script/{generate,approve}`, `PUT /script`, `POST /retry` |
+Delivery `GET /projects/{id}/{downloads,captions,costs,events}` (events is SSE; use fetch streaming, not EventSource),
+`POST|DELETE /projects/{id}/share`, public `GET /share/{token}` | Admin `POST /admin/invites`,
+`PATCH /admin/workspaces/{id}`, `PUT /admin/vendor-budgets`. Full contract: `/docs`.
+
 ## Pipeline
+Order: anchor render, then a half-resolution preview, then the final 16:9 + 9:16 renders, thumbnail and SRT.
 `advance(project_id)` inspects state and enqueues the next idempotent step (`pipeline/`). Steps look up `jobs` by
 `(project, stage, input_hash)` and reuse a finished result, so re-runs never double-charge. Every paid step calls
 `SpendGuard.reserve` then `settle` (`services/spend_guard.py`); refusal moves the project to `limit_reached`.

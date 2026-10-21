@@ -12,7 +12,7 @@ export async function getBundle(): Promise<string> {
 const browserExecutable = process.env.CHROMIUM_PATH || undefined;
 
 export async function renderOne(opts: {
-  format: "16x9" | "9x16"; props: NewsProps; outFile: string; onProgress?: (p: number) => void;
+  format: "16x9" | "9x16"; props: NewsProps; outFile: string; scale?: number; onProgress?: (p: number) => void;
 }) {
   const url = await getBundle();
   const id = `NewsStudio-${opts.format}`;
@@ -23,6 +23,7 @@ export async function renderOne(opts: {
     chromiumOptions: process.env.RENDER_GL ? { gl: process.env.RENDER_GL as "swangle" | "angle" | "egl" } : undefined,
     concurrency: process.env.RENDER_CONCURRENCY ? Number(process.env.RENDER_CONCURRENCY) : undefined,
     jpegQuality: process.env.RENDER_JPEG_QUALITY ? Number(process.env.RENDER_JPEG_QUALITY) : undefined,
+    scale: opts.scale,
     onProgress: ({ progress }) => opts.onProgress?.(progress),
   });
   return comp;
@@ -32,4 +33,12 @@ export async function renderThumbnail(format: "16x9" | "9x16", props: NewsProps,
   const url = await getBundle();
   const comp = await selectComposition({ serveUrl: url, id: `NewsStudio-${format}`, inputProps: props, browserExecutable });
   await renderStill({ composition: comp, serveUrl: url, output: outFile, frame: 45, inputProps: props, browserExecutable });
+}
+
+// H.264 needs even dimensions: reject scales that would produce odd pixel sizes before launching Chrome.
+export function assertEvenScale(width: number, height: number, scale: number) {
+  const w = width * scale, h = height * scale;
+  if (!Number.isInteger(w) || !Number.isInteger(h) || w % 2 || h % 2) {
+    throw new Error(`scale ${scale} gives ${w}x${h}; H.264 needs even integer dimensions`);
+  }
 }

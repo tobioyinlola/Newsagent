@@ -16,8 +16,9 @@ class MockRenderer(RendererClient):
         rid = f"mock-{len(self._done) + 1}"
         keys = []
         for o in req.outputs:
-            key = f"{req.output_prefix}/{o['format']}.mp4"
-            await self.storage.put(key, PLACEHOLDER_MP4, "video/mp4")
+            ext = "png" if o.get("kind") == "thumbnail" else "mp4"
+            key = f"{req.output_prefix}/{o.get('name') or o['format']}.{ext}"
+            await self.storage.put(key, PLACEHOLDER_MP4, "image/png" if ext == "png" else "video/mp4")
             keys.append(key)
         self._done[rid] = keys
         return rid

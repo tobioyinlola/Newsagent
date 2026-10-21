@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from sqlalchemy import select
 
+from app.integrations import registry
 from app.models import Asset, Job, Project, Workspace
 from app.pipeline.queue import get_queue
 from tests.conftest import OPS, OWNER
@@ -48,11 +49,15 @@ async def test_full_mock_pipeline_run(client, workspace, maker):
     data = r.json()
     assert data["state"] == "final_ready", data
     assert {a["format"] for a in data["assets"] if a["type"] == "render"} == {"16x9", "9x16"}
+    assert {a["type"] for a in data["assets"]} >= {"anchor", "preview", "render", "thumbnail", "caption"}
+    sent = registry.get_email().sent
+    assert {m["to"] for m in sent} == {"owner@acme.test", "ops@example.com"}
+    assert {m["subject"] for m in sent} == {"Your video is ready"} and "/projects/" in sent[0]["text"]
     assert Decimal(data["cost_total"]) > 0
 
     async with maker() as s:
         jobs = (await s.execute(select(Job).where(Job.project_id == pid))).scalars().all()
-        assert {j.stage for j in jobs} == {"anchor_render", "final_render"}
+        assert {j.stage for j in jobs} == {"anchor_render", "preview_render", "final_render"}
         assert all(j.status == "succeeded" and j.attempts == 1 for j in jobs)
         ws = await s.get(Workspace, workspace)
         assert ws.credit_balance == Decimal("10") - Decimal(data["cost_total"])
