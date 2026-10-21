@@ -49,3 +49,10 @@ Effective speed after the fix: **~8.8 fps with the anchor clip** (3.8x faster th
 ## Remotion licence
 Free tier in use (organisations of up to 3 people). A Company License ($0.01 per render, $100/month minimum) is
 required at 4 or more.
+
+## Renderer smoke test (`pnpm smoke`)
+Starts the renderer service, renders a preview (0.5 scale), a 9:16 final and a thumbnail from a stand-in
+transparent anchor served over HTTP, then calls `/analyze` on each. Verified: durations match the anchor, audio is
+present, finals land at about -16 LUFS after normalisation, previews are left un-normalised by design, and a
+960x540 preview is produced. The stand-in clip comes from a script:
+Run `services/renderer/scripts/make-standin-anchor.sh` to create it.

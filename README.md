@@ -32,6 +32,7 @@ cd apps/api && uv run ruff check . && uv run mypy app && uv run pytest      # 83
 cd apps/web && pnpm lint && pnpm build && pnpm test      # unit
 cd apps/web && pnpm e2e                                    # browser journey; needs CHROMIUM_PATH locally, uses mocked vendors
 cd services/renderer && pnpm build && pnpm test
+cd services/renderer && pnpm smoke                                         # real render + analyze (first run scripts/make-standin-anchor.sh)
 cd services/renderer && pnpm bench 10                                      # render benchmark
 ```
 After changing API routes or schemas: `uv run python scripts/export_openapi.py && (cd apps/web && pnpm gen:api)`;

@@ -8,6 +8,7 @@
     "build": "tsc --noEmit",
     "studio": "remotion studio src/index.ts",
     "bench": "tsx src/bench.ts",
+    "smoke": "tsx src/smoke.ts",
     "test": "vitest run"
   },
   "dependencies": {
