@@ -9,39 +9,43 @@ renderer service on Railway staging and update this file before relying on any c
 (what is expensive) should carry over.
 
 ## Results (1920x1080 and 1080x1920, 30 fps, H.264 + AAC)
+
+**Root cause of the slow first benchmark: the renderer forced `chromiumOptions.gl = "swangle"`.** Using Chrome's
+default is 2-3x faster for this composition. Nothing else needed changing.
+
 | Case | Video length | 16:9 render | 9:16 render | Peak RSS (node + chrome + ffmpeg) |
 | --- | --- | --- | --- | --- |
-| Graphics only (placeholder anchor) | 10 s | 79 s | 78 s | ~1.5 GB |
-| With transparent VP9+alpha anchor clip | 10 s | 130 s | 112 s | ~1.8 GB |
-| Graphics only, concurrency 2 vs 4 | 5 s | 40.6 s vs 39.2 s | n/a | 1.4 / 1.8 GB |
-| Trivial 1080p frame (floor: solid colour + frame number) | 5 s | 12.2 s | n/a | n/a |
+| Graphics only, `swangle` (before) | 10 s | 79 s | 78 s | ~1.5 GB |
+| With transparent VP9+alpha anchor, `swangle` (before) | 10 s | 130 s | 112 s | ~1.8 GB |
+| Graphics only, default GL (after) | 10 s | 28.5 s | 27.6 s | ~1.5 GB |
+| With transparent VP9+alpha anchor, default GL (after) | 10 s | 38.3 s | 34.9 s | ~2.0 GB |
+| With transparent VP9+alpha anchor, default GL (after) | 30 s | 102 s | 98 s | ~2.0 GB |
 
-Effective speed: about **3.8 fps** for graphics only, **~2.3 fps** with the anchor clip, versus ~12 fps for a
-trivial frame on the same box. Raising concurrency from 2 to 4 changed nothing (CPU-bound), and lowering JPEG
-quality changed little.
+Effective speed after the fix: **~8.8 fps with the anchor clip** (3.8x faster than before), ~10.5 fps graphics only.
 
-## What this means for the targets
-- Target: script approved to final render under 15 minutes for a 90 s video (2,700 frames, two formats).
-- Extrapolating linearly: ~12 min per format graphics-only, ~20 min per format with the anchor, i.e. roughly
-  **25-40 minutes for both formats on one 4 vCPU instance. The 15 minute target is NOT met as built.**
-- Memory is modest (< 2 GB), so a renderer instance fits in a normal Railway plan. CPU is the constraint.
+## Against the 15 minute target (90 s video, two formats)
+- 2,700 frames at ~8.8 fps is about **5.1 min per format, ~10.3 min for both formats on one 4 vCPU instance**,
+  rendered one after the other. This meets the target for the render step, but it leaves only ~4.5 minutes for
+  everything else (HeyGen generation time, upload/download, quality gate), and HeyGen latency is still unmeasured.
+  Running the two formats on two instances would bring the render step to ~5 min.
+- Memory is under 2 GB, so a renderer instance fits a normal Railway plan. CPU is the constraint.
+- Caveat: these are sandbox numbers (4 vCPU, no GPU), not Railway. Re-run `pnpm bench 30` on the real service.
 
-## Where the time goes (observed, not fully profiled)
-1. Per-frame Chrome screenshot cost in software GL (the floor test alone is 12 fps).
-2. Our composition costs ~3x the floor: full-frame gradient, skewed translucent panels and a wide animated ticker are
-   repainted every frame.
-3. VP9-with-alpha decoding through `OffthreadVideo` adds ~0.17 s/frame.
+## Things tried that did not help (do not repeat)
+- Pre-rendering the static studio layers (gradient, panels, channel bug, disclosures) once as an image: 38.3 s vs
+  37.1 s without it. Removed to keep the composition simple.
+- Higher `concurrency` (2 vs 4): no change. Lower JPEG quality: negligible.
+- Hiding the ticker, banner and lower-third made no measurable difference: the cost was per-frame browser overhead,
+  not our graphics.
 
-## Options to get under 15 minutes (pick in Gate 0)
-- Optimise the composition: pre-render the static studio plate to a single image/video once per accent, keep only
-  the ticker, banner and lower-third dynamic. Likely 2-3x.
-- Render the two formats in parallel on two renderer instances (the API already treats them as separate outputs).
-- Split one render into frame ranges across instances and concatenate (Remotion supports frame ranges).
-- Remotion Lambda or similar elastic rendering (adds a vendor and licence cost; not in the spec).
-- Pre-composite anchor + plate with FFmpeg instead of rendering the anchor through Chrome.
-- Cost: a render is billed on instance-minutes. At ~15 min x 2 formats the compute cost per video is not yet
-  known; I used a placeholder `$0.05` per output in the code. Replace it with measured Railway cost.
+## Remaining levers if Railway is slower than the sandbox
+- Render the two formats on separate renderer instances (the API already treats them as separate outputs).
+- Split one render into frame ranges across instances and concatenate.
+- Anchor decoding (VP9 alpha through `OffthreadVideo`) costs about 30% (10.5 fps down to 8.8 fps); a pre-composite step
+  in FFmpeg is possible if needed.
+- Compute cost per video is still unknown; the code uses a placeholder of $0.05 per output. Replace it with the
+  measured Railway cost.
 
 ## Remotion licence
-Free for individuals and organisations of up to 3 people in total headcount. At 4 or more a Company License is
-required ($0.01 per render, $100 monthly minimum). **Please confirm the team size.**
+Free tier in use (organisations of up to 3 people). A Company License ($0.01 per render, $100/month minimum) is
+required at 4 or more.

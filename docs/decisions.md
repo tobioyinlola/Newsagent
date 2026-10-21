@@ -2,7 +2,7 @@
 
 ## Open (need you)
 1. **Option A vs B for the anchor** - spike not run (no vendor access). See `anchor-spike.md`.
-2. **Render speed** - misses the 15 min target as built; choose a mitigation (see `render-benchmarks.md`).
+2. **Render speed** - resolved in the sandbox (forced `swangle` GL was the cause); re-verify on Railway.
 3. **Transcription vendor** - spec says "Whisper-class". Hosted (OpenAI/Groq/Replicate) or self-hosted?
 4. **Auth provider** - Clerk or Auth0. The API verifies any RS256 JWT with an `email` claim via JWKS; local dev uses
    `Bearer dev:<email>`.

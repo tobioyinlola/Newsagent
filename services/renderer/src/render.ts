@@ -19,7 +19,8 @@ export async function renderOne(opts: {
   const comp = await selectComposition({ serveUrl: url, id, inputProps: opts.props, browserExecutable });
   await renderMedia({
     composition: comp, serveUrl: url, codec: "h264", audioCodec: "aac", outputLocation: opts.outFile,
-    inputProps: opts.props, browserExecutable, chromiumOptions: { gl: (process.env.RENDER_GL as "swangle" | "angle" | "egl") || "swangle" },
+    inputProps: opts.props, browserExecutable, // Do NOT force gl: "swangle". It was measured 2-3x slower than Chrome's default in docs/render-benchmarks.md.
+    chromiumOptions: process.env.RENDER_GL ? { gl: process.env.RENDER_GL as "swangle" | "angle" | "egl" } : undefined,
     concurrency: process.env.RENDER_CONCURRENCY ? Number(process.env.RENDER_CONCURRENCY) : undefined,
     jpegQuality: process.env.RENDER_JPEG_QUALITY ? Number(process.env.RENDER_JPEG_QUALITY) : undefined,
     onProgress: ({ progress }) => opts.onProgress?.(progress),

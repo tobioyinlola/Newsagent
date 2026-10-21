@@ -36,5 +36,3 @@ Option B. We already own and can lock the layout, disclosure labels and channel 
 Remotion, and re-rendering for an accent change touches graphics only. Option A could win on speed to a good
 look but gives up that control. Treat this as a hypothesis until the spike is run.
 
-Note: Remotion render speed (see benchmarks) is the main cost of Option B, and it is a bigger problem than
-I expected.
