@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "lint": "eslint src",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run --passWithNoTests --exclude e2e",
+    "e2e": "playwright test",
     "gen:api": "openapi-typescript openapi.json -o src/api/schema.d.ts",
     "gen:api:check": "pnpm gen:api && git diff --exit-code src/api/schema.d.ts"
   },
@@ -20,7 +21,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.7.0",
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.0.0",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",

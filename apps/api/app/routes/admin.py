@@ -2,12 +2,20 @@ import secrets
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import Principal, operator
 from app.db import get_session
-from app.models import Invite, Workspace
-from app.schemas.api import InviteCreate, InviteOut, VendorBudgetSet, WorkspacePatch
+from app.models import Invite, VendorBudget, Workspace
+from app.schemas.api import (
+    InviteCreate,
+    InviteOut,
+    VendorBudgetOut,
+    VendorBudgetSet,
+    WorkspaceAdminOut,
+    WorkspacePatch,
+)
 from app.services.spend_guard import ensure_vendor_budget
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
@@ -54,3 +62,19 @@ async def set_vendor_budget(
     await ensure_vendor_budget(session, body.vendor, body.limit)
     await session.commit()
     return {"ok": True}
+
+
+@router.get("/workspaces", response_model=list[WorkspaceAdminOut])
+async def list_workspaces(
+    _: Principal = Depends(operator), session: AsyncSession = Depends(get_session)
+) -> list[Workspace]:
+    rows = await session.execute(select(Workspace).order_by(Workspace.created_at.desc()).limit(200))
+    return list(rows.scalars().all())
+
+
+@router.get("/vendor-budgets", response_model=list[VendorBudgetOut])
+async def list_vendor_budgets(
+    _: Principal = Depends(operator), session: AsyncSession = Depends(get_session)
+) -> list[VendorBudget]:
+    rows = await session.execute(select(VendorBudget).order_by(VendorBudget.period.desc(), VendorBudget.vendor))
+    return list(rows.scalars().all())

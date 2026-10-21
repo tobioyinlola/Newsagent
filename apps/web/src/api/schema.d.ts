@@ -45,9 +45,27 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List Vendor Budgets */
+        get: operations["list_vendor_budgets_v1_admin_vendor_budgets_get"];
         /** Set Vendor Budget */
         put: operations["set_vendor_budget_v1_admin_vendor_budgets_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/workspaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Workspaces */
+        get: operations["list_workspaces_v1_admin_workspaces_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -291,7 +309,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get Script */
+        get: operations["get_script_v1_projects__project_id__script_get"];
         /** Update Script */
         put: operations["update_script_v1_projects__project_id__script_put"];
         post?: never;
@@ -769,6 +788,17 @@ export interface components {
             /** Error Type */
             type: string;
         };
+        /** VendorBudgetOut */
+        VendorBudgetOut: {
+            /** Limit */
+            limit: string;
+            /** Period */
+            period: string;
+            /** Spent */
+            spent: string;
+            /** Vendor */
+            vendor: string;
+        };
         /** VendorBudgetSet */
         VendorBudgetSet: {
             /** Limit */
@@ -784,6 +814,27 @@ export interface components {
             id: string;
             /** Preview Url */
             preview_url?: string | null;
+        };
+        /** WorkspaceAdminOut */
+        WorkspaceAdminOut: {
+            /** Credit Balance */
+            credit_balance: string;
+            /** Id */
+            id: string;
+            /** Max Video Seconds */
+            max_video_seconds: number;
+            /** Max Videos Per Day */
+            max_videos_per_day: number;
+            /** Name */
+            name: string;
+            /** Share Disabled */
+            share_disabled: boolean;
+            /** Spend Cap */
+            spend_cap: string;
+            /** Spent Total */
+            spent_total: string;
+            /** Suspended */
+            suspended: boolean;
         };
         /** WorkspacePatch */
         WorkspacePatch: {
@@ -866,6 +917,37 @@ export interface operations {
             };
         };
     };
+    list_vendor_budgets_v1_admin_vendor_budgets_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VendorBudgetOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     set_vendor_budget_v1_admin_vendor_budgets_put: {
         parameters: {
             query?: never;
@@ -890,6 +972,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_workspaces_v1_admin_workspaces_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceAdminOut"][];
                 };
             };
             /** @description Validation Error */
@@ -1395,6 +1508,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_script_v1_projects__project_id__script_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScriptOut"];
                 };
             };
             /** @description Validation Error */

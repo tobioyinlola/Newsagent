@@ -111,6 +111,17 @@ async def generate_script(
     return sv
 
 
+@router.get("/{project_id}/script", response_model=ScriptOut)
+async def get_script(
+    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> ScriptVersion:
+    await _owned(session, project_id, p)
+    sv = await _latest_script(session, project_id)
+    if sv is None:
+        raise HTTPException(404, "No script yet")
+    return sv
+
+
 @router.put("/{project_id}/script", response_model=ScriptOut)
 async def update_script(
     project_id: str,

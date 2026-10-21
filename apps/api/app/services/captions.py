@@ -1,6 +1,6 @@
 """SRT generation and copy-ready social captions. Disclosure text is always included (hard rule 2)."""
 
-DISCLOSURE = "Featured startup. Anchor is AI-generated."
+DISCLOSURE = "Featured startup · AI-generated anchor"
 HASHTAGS = {
     "linkedin": ["#startups", "#founders", "#innovation"],
     "instagram": ["#startup", "#founderstory", "#entrepreneur", "#innovation"],

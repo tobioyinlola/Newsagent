@@ -13,3 +13,6 @@ out/
 services/renderer/public/bench-anchor.webm
 services/renderer/src/_floor_entry.tsx
 *.db
+e2e.db
+test-results/
+playwright-report/

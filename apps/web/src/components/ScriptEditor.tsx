@@ -1,0 +1,77 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { api, type Schemas, unwrap } from "../api/client";
+import { Button, Card, ErrorBox, Notice, inputCls } from "./ui";
+
+type Script = Schemas["ScriptOut"];
+type Seg = { kind: string; text: string };
+
+export function ScriptEditor({ projectId, script }: { projectId: string; script: Script }) {
+  const qc = useQueryClient();
+  const [segments, setSegments] = useState<Seg[]>(script.segments as Seg[]);
+  const [ticker, setTicker] = useState(script.ticker_lines.join("\n"));
+  const [confirmed, setConfirmed] = useState<Set<string>>(new Set(script.claim_flags.filter((c) => c.confirmed).map((c) => String(c.text))));
+  useEffect(() => {
+    setSegments(script.segments as Seg[]);
+    setTicker(script.ticker_lines.join("\n"));
+    setConfirmed(new Set(script.claim_flags.filter((c) => c.confirmed).map((c) => String(c.text))));
+  }, [script.id]);
+
+  const body = () => ({ segments, ticker_lines: ticker.split("\n").map((s) => s.trim()).filter(Boolean), lower_thirds: script.lower_thirds, interview_questions: script.interview_questions, confirmed_claims: [...confirmed] });
+  const refresh = () => { qc.invalidateQueries({ queryKey: ["script", projectId] }); qc.invalidateQueries({ queryKey: ["project", projectId] }); };
+  const path = { params: { path: { project_id: projectId } } };
+
+  const save = useMutation({ mutationFn: () => unwrap(api.PUT("/v1/projects/{project_id}/script", { ...path, body: body() })), onSuccess: refresh });
+  const regenerate = useMutation({ mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/script/generate", path)), onSuccess: refresh });
+  const approve = useMutation({
+    mutationFn: async () => {
+      const saved = await unwrap(api.PUT("/v1/projects/{project_id}/script", { ...path, body: body() }));
+      if (saved.claim_flags.some((c) => !c.confirmed)) throw new Error("Please confirm each flagged claim before approving.");
+      return unwrap(api.POST("/v1/projects/{project_id}/script/approve", path));
+    },
+    onSettled: refresh, // also on failure: the save above may have produced claims to confirm
+  });
+
+  // Claims to show: those the server flagged for the saved text. Unsaved edits re-flag on save.
+  // One row per sentence even if it matched several categories (e.g. a user count and a "first").
+  const flagMap = new Map<string, string[]>();
+  for (const c of script.claim_flags) flagMap.set(String(c.text), [...(flagMap.get(String(c.text)) ?? []), String(c.category)]);
+  const flags = [...flagMap.keys()];
+  const toggle = (t: string) => setConfirmed((s) => { const n = new Set(s); if (n.has(t)) n.delete(t); else n.add(t); return n; });
+
+  return (
+    <Card title={`Script (version ${script.version})`}>
+      <div className="space-y-4">
+        <Notice>Review what the anchor will say. Nothing is rendered, and no credits are used, until you approve.</Notice>
+        {segments.map((s, i) => (
+          <div key={i} className="space-y-1">
+            <label htmlFor={`seg-${i}`} className="text-sm font-medium capitalize">{s.kind}</label>
+            <textarea id={`seg-${i}`} rows={3} className={inputCls} value={s.text} onChange={(e) => setSegments(segments.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} />
+          </div>
+        ))}
+        <div className="space-y-1">
+          <label htmlFor="ticker" className="text-sm font-medium">News ticker (one line each)</label>
+          <textarea id="ticker" rows={3} className={inputCls} value={ticker} onChange={(e) => setTicker(e.target.value)} />
+        </div>
+        {flags.length > 0 && (
+          <fieldset className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3">
+            <legend className="px-1 text-sm font-semibold text-amber-950">Confirm these claims are accurate</legend>
+            <p className="text-sm text-amber-950">Revenue, user counts, funding, rankings and “first/best” statements must be confirmed by you before we render.</p>
+            {flags.map((t) => (
+              <label key={t} className="flex items-start gap-2 text-sm">
+                <input type="checkbox" className="mt-1" checked={confirmed.has(t)} onChange={() => toggle(t)} />
+                <span>{t} <span className="text-xs text-amber-900">({[...new Set(flagMap.get(t))].join(", ")})</span></span>
+              </label>
+            ))}
+          </fieldset>
+        )}
+        <ErrorBox error={save.error ?? regenerate.error ?? approve.error} />
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={() => save.mutate()} disabled={save.isPending}>Save changes</Button>
+          <Button variant="secondary" onClick={() => regenerate.mutate()} disabled={regenerate.isPending}>Regenerate</Button>
+          <Button onClick={() => approve.mutate()} disabled={approve.isPending}>Approve and make my video</Button>
+        </div>
+      </div>
+    </Card>
+  );
+}

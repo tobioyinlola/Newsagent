@@ -209,3 +209,25 @@ class CostLine(BaseModel):
 class CostsOut(BaseModel):
     total: Decimal
     lines: list[CostLine]
+
+
+# ---------- admin listings ----------
+class WorkspaceAdminOut(BaseModel):
+    id: str
+    name: str
+    credit_balance: Decimal
+    spend_cap: Decimal
+    spent_total: Decimal
+    max_videos_per_day: int
+    max_video_seconds: int
+    suspended: bool
+    share_disabled: bool
+    model_config = {"from_attributes": True}
+
+
+class VendorBudgetOut(BaseModel):
+    vendor: str
+    period: str
+    limit: Decimal
+    spent: Decimal
+    model_config = {"from_attributes": True}

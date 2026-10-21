@@ -997,6 +997,34 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "VendorBudgetOut": {
+        "properties": {
+          "limit": {
+            "title": "Limit",
+            "type": "string"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "spent": {
+            "title": "Spent",
+            "type": "string"
+          },
+          "vendor": {
+            "title": "Vendor",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vendor",
+          "period",
+          "limit",
+          "spent"
+        ],
+        "title": "VendorBudgetOut",
+        "type": "object"
+      },
       "VendorBudgetSet": {
         "properties": {
           "limit": {
@@ -1049,6 +1077,59 @@
           "accent"
         ],
         "title": "VoiceOut",
+        "type": "object"
+      },
+      "WorkspaceAdminOut": {
+        "properties": {
+          "credit_balance": {
+            "title": "Credit Balance",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "max_video_seconds": {
+            "title": "Max Video Seconds",
+            "type": "integer"
+          },
+          "max_videos_per_day": {
+            "title": "Max Videos Per Day",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "share_disabled": {
+            "title": "Share Disabled",
+            "type": "boolean"
+          },
+          "spend_cap": {
+            "title": "Spend Cap",
+            "type": "string"
+          },
+          "spent_total": {
+            "title": "Spent Total",
+            "type": "string"
+          },
+          "suspended": {
+            "title": "Suspended",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "credit_balance",
+          "spend_cap",
+          "spent_total",
+          "max_videos_per_day",
+          "max_video_seconds",
+          "suspended",
+          "share_disabled"
+        ],
+        "title": "WorkspaceAdminOut",
         "type": "object"
       },
       "WorkspacePatch": {
@@ -1217,6 +1298,57 @@
       }
     },
     "/v1/admin/vendor-budgets": {
+      "get": {
+        "operationId": "list_vendor_budgets_v1_admin_vendor_budgets_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/VendorBudgetOut"
+                  },
+                  "title": "Response List Vendor Budgets V1 Admin Vendor Budgets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Vendor Budgets",
+        "tags": [
+          "admin"
+        ]
+      },
       "put": {
         "operationId": "set_vendor_budget_v1_admin_vendor_budgets_put",
         "parameters": [
@@ -1272,6 +1404,59 @@
           }
         },
         "summary": "Set Vendor Budget",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/v1/admin/workspaces": {
+      "get": {
+        "operationId": "list_workspaces_v1_admin_workspaces_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkspaceAdminOut"
+                  },
+                  "title": "Response List Workspaces V1 Admin Workspaces Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Workspaces",
         "tags": [
           "admin"
         ]
@@ -2138,6 +2323,62 @@
       }
     },
     "/v1/projects/{project_id}/script": {
+      "get": {
+        "operationId": "get_script_v1_projects__project_id__script_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScriptOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Script",
+        "tags": [
+          "projects"
+        ]
+      },
       "put": {
         "operationId": "update_script_v1_projects__project_id__script_put",
         "parameters": [

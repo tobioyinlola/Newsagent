@@ -28,6 +28,21 @@ jobs:
       - name: Generated API client must be up to date
         run: pnpm gen:api && git diff --exit-code openapi.json src/api/schema.d.ts
       - run: pnpm lint && pnpm build && pnpm test
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [api, web]
+    defaults: { run: { working-directory: apps/web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: astral-sh/setup-uv@v3
+      - run: (cd ../api && uv sync)
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm e2e
   renderer:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: services/renderer } }

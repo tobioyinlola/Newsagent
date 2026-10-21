@@ -146,3 +146,21 @@ async def test_real_network_names_blocked_before_any_spend(client, workspace, ma
     assert r.status_code == 422 and r.json()["detail"]["terms"] == ["cnn"]
     async with maker() as s:
         assert (await s.get(Workspace, workspace)).credit_balance == Decimal("10")
+
+
+async def test_get_script_and_admin_listings(client, workspace):
+    pid = await make_final_ready(client)
+    s = (await client.get(f"/v1/projects/{pid}/script", headers=OWNER)).json()
+    assert s["approved"] is True and s["segments"]
+    assert (await client.get("/v1/admin/workspaces", headers=OWNER)).status_code == 403
+    ws = (await client.get("/v1/admin/workspaces", headers=OPS)).json()
+    assert ws[0]["id"] == workspace
+    vb = (await client.get("/v1/admin/vendor-budgets", headers=OPS)).json()
+    assert {v["vendor"] for v in vb} >= {"heygen", "renderer"}
+
+
+async def test_bootstrap_operator_is_idempotent(maker):
+    from app.cli import bootstrap_operator
+
+    a = await bootstrap_operator("Boss@Example.com")
+    assert await bootstrap_operator("boss@example.com") == a
