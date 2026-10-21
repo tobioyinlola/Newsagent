@@ -3,13 +3,15 @@
 ## Open (need you)
 1. **Option A vs B for the anchor** - spike not run (no vendor access). See `anchor-spike.md`.
 2. **Render speed** - misses the 15 min target as built; choose a mitigation (see `render-benchmarks.md`).
-3. **Remotion licence** - confirm headcount (free up to 3).
-4. **Transactional email vendor** - spec leaves it open (Postmark, Resend, SES). Only the `EmailProvider` interface,
-   a mock and an SMTP (Mailpit) implementation exist.
-5. **Transcription vendor** - spec says "Whisper-class". Hosted (OpenAI/Groq/Replicate) or self-hosted?
-6. **Auth provider** - Clerk or Auth0. The API verifies any RS256 JWT with an `email` claim via JWKS; local dev uses
+3. **Transcription vendor** - spec says "Whisper-class". Hosted (OpenAI/Groq/Replicate) or self-hosted?
+4. **Auth provider** - Clerk or Auth0. The API verifies any RS256 JWT with an `email` claim via JWKS; local dev uses
    `Bearer dev:<email>`.
-7. **Railway staging deploy** - not done; see README "Staging".
+5. **Railway staging deploy** - deferred by the user.
+
+## Decided
+- Remotion: free tier (team of 3 or fewer). Revisit if headcount reaches 4.
+- Email: Resend (`integrations/email/resend.py`). Needs `EMAIL_API_KEY` and a verified sending domain (SPF/DKIM/DMARC).
+- Railway staging deploy deferred.
 
 ## Made (assumed; change if you disagree)
 - Credits and costs are USD-denominated decimals (`Numeric(12,4)`).

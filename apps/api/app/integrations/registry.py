@@ -76,9 +76,13 @@ def get_renderer() -> RendererClient:
 
 def get_email() -> EmailProvider:
     def make() -> EmailProvider:
-        from app.integrations.email.mock import MockEmail
+        if get_settings().use_mocks:
+            from app.integrations.email.mock import MockEmail
 
-        return MockEmail()  # real vendor: Decision needed (see docs/decisions.md)
+            return MockEmail()
+        from app.integrations.email.resend import ResendEmail
+
+        return ResendEmail()
 
     return _get("email", make)  # type: ignore[return-value]
 
