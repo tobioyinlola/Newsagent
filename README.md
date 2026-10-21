@@ -28,7 +28,7 @@ Operators also set budgets: `PUT /v1/admin/vendor-budgets` (the spend guard refu
 
 ## Test
 ```bash
-cd apps/api && uv run ruff check . && uv run mypy app && uv run pytest      # 53 tests
+cd apps/api && uv run ruff check . && uv run mypy app && uv run pytest      # 52 tests
 cd apps/web && pnpm lint && pnpm build && pnpm test
 cd services/renderer && pnpm build && pnpm test
 cd services/renderer && pnpm bench 10                                      # render benchmark
