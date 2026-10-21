@@ -1,6 +1,7 @@
 from app.models.base import Base
 from app.models.entities import (
     Asset,
+    BrandAsset,
     BrandKit,
     Brief,
     InterviewSession,
@@ -17,6 +18,7 @@ from app.models.entities import (
 __all__ = [
     "Asset",
     "Base",
+    "BrandAsset",
     "BrandKit",
     "Brief",
     "InterviewSession",

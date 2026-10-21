@@ -128,6 +128,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/brand-kit/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Assets */
+        get: operations["list_assets_v1_brand_kit_assets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/brand-kit/import": {
         parameters: {
             query?: never;
@@ -145,7 +162,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/brand-kit/logo-upload": {
+    "/v1/brand-kit/uploads": {
         parameters: {
             query?: never;
             header?: never;
@@ -154,8 +171,46 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Logo Upload */
-        post: operations["logo_upload_v1_brand_kit_logo_upload_post"];
+        /** Start Upload */
+        post: operations["start_upload_v1_brand_kit_uploads_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/brand-kit/uploads/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Upload
+         * @description Download what was actually uploaded, verify type and size, scan for malware. Only then is it usable.
+         */
+        post: operations["confirm_upload_v1_brand_kit_uploads_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/dev-storage/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Object */
+        get: operations["get_object_v1_dev_storage__key__get"];
+        /** Put Object */
+        put: operations["put_object_v1_dev_storage__key__put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -208,7 +263,11 @@ export interface paths {
         get: operations["get_project_v1_projects__project_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete Project
+         * @description Owner can delete a project at any time it isn't mid-render. Removes files and all records.
+         */
+        delete: operations["delete_project_v1_projects__project_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -424,6 +483,19 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** BrandAssetOut */
+        BrandAssetOut: {
+            /** Content Type */
+            content_type: string;
+            /** Key */
+            key: string;
+            /** Kind */
+            kind: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Url */
+            url?: string | null;
+        };
         /** BrandDraft */
         BrandDraft: {
             /** Accent Color */
@@ -626,25 +698,6 @@ export interface components {
             /** Workspace Id */
             workspace_id: string;
         };
-        /** LogoUploadIn */
-        LogoUploadIn: {
-            /** Content Type */
-            content_type: string;
-            /** Size Bytes */
-            size_bytes: number;
-            /**
-             * Variant
-             * @default light
-             */
-            variant: string;
-        };
-        /** LogoUploadOut */
-        LogoUploadOut: {
-            /** Key */
-            key: string;
-            /** Upload Url */
-            upload_url: string;
-        };
         /** MeOut */
         MeOut: {
             /** Credit Balance */
@@ -774,6 +827,29 @@ export interface components {
             title: string;
             /** Video Url */
             video_url: string;
+        };
+        /** UploadConfirmIn */
+        UploadConfirmIn: {
+            /** Key */
+            key: string;
+        };
+        /** UploadIn */
+        UploadIn: {
+            /** Content Type */
+            content_type: string;
+            /** Kind */
+            kind: string;
+            /** Size Bytes */
+            size_bytes: number;
+        };
+        /** UploadOut */
+        UploadOut: {
+            /** Key */
+            key: string;
+            /** Max Bytes */
+            max_bytes: number;
+            /** Upload Url */
+            upload_url: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -1156,6 +1232,37 @@ export interface operations {
             };
         };
     };
+    list_assets_v1_brand_kit_assets_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandAssetOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     import_brand_v1_brand_kit_import_post: {
         parameters: {
             query?: never;
@@ -1191,7 +1298,7 @@ export interface operations {
             };
         };
     };
-    logo_upload_v1_brand_kit_logo_upload_post: {
+    start_upload_v1_brand_kit_uploads_post: {
         parameters: {
             query?: never;
             header?: {
@@ -1202,7 +1309,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LogoUploadIn"];
+                "application/json": components["schemas"]["UploadIn"];
             };
         };
         responses: {
@@ -1212,7 +1319,106 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LogoUploadOut"];
+                    "application/json": components["schemas"]["UploadOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_upload_v1_brand_kit_uploads_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadConfirmIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandAssetOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_object_v1_dev_storage__key__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_object_v1_dev_storage__key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -1343,6 +1549,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_project_v1_projects__project_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

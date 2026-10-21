@@ -4,6 +4,7 @@ from app.config import get_settings
 from app.integrations.avatar.base import AvatarProvider
 from app.integrations.email.base import EmailProvider
 from app.integrations.llm.base import ScriptLLM
+from app.integrations.malware.base import MalwareScanner
 from app.integrations.renderer.base import RendererClient
 from app.integrations.storage.base import StorageProvider
 from app.integrations.transcription.base import TranscriptionProvider
@@ -20,6 +21,11 @@ def _get(name: str, factory):
 def reset_providers(**overrides: object) -> None:
     _cache.clear()
     _cache.update(overrides)
+
+
+def override(**providers: object) -> None:
+    """Replace specific providers (tests) without discarding the others."""
+    _cache.update(providers)
 
 
 def get_storage() -> StorageProvider:
@@ -94,3 +100,18 @@ def get_transcription() -> TranscriptionProvider:
         return MockTranscription()  # real vendor: Decision needed
 
     return _get("transcription", make)  # type: ignore[return-value]
+
+
+def get_scanner() -> MalwareScanner:
+    def make() -> MalwareScanner:
+        if get_settings().use_mocks:
+            from app.integrations.malware.mock import MockScanner
+
+            return MockScanner()
+        if not get_settings().clamd_host:
+            raise RuntimeError("CLAMD_HOST must be set: uploads are refused without a malware scanner")
+        from app.integrations.malware.clamav import ClamAvScanner
+
+        return ClamAvScanner()
+
+    return _get("scanner", make)  # type: ignore[return-value]

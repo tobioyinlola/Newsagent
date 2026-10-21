@@ -12,7 +12,7 @@ from app.models import Job, Project
 from app.models.base import new_id
 from app.pipeline import steps
 from app.services import state_machine as sm
-from app.services.notifications import notify_owners
+from app.services.notifications import notify_owners, vendor_budget_alert
 from app.services.spend_guard import LimitReached, SpendGuard
 
 log = logging.getLogger("pipeline")
@@ -76,7 +76,7 @@ async def _attempt_loop(step, fn, pid, ih, policy) -> bool:
                 await session.execute(select(Job).where(Job.project_id == pid, Job.stage == step, Job.input_hash == ih))
             ).scalar_one()
             job.attempts = attempt
-            guard = SpendGuard(session, on_alert=lambda *a: log.warning("vendor budget at 80%%: %s", a))
+            guard = SpendGuard(session, on_alert=vendor_budget_alert)
             try:
                 out = await fn(session, project, guard)
             except LimitReached as e:

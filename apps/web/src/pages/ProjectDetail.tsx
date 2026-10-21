@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { Delivery } from "../components/Delivery";
 import { ScriptEditor } from "../components/ScriptEditor";
@@ -20,6 +20,11 @@ export function ProjectDetail() {
     enabled: state === "script_ready",
   });
   const costs = useQuery({ queryKey: ["costs", id], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/costs", path)), enabled: !!state && state !== "draft" });
+  const nav = useNavigate();
+  const del = useMutation({
+    mutationFn: () => unwrap(api.DELETE("/v1/projects/{project_id}", path)),
+    onSuccess: () => { qc.removeQueries({ queryKey: ["project", id] }); qc.invalidateQueries({ queryKey: ["projects"] }); nav("/projects"); },
+  });
   const retry = useMutation({ mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/retry", path)), onSuccess: () => qc.invalidateQueries({ queryKey: ["project", id] }) });
 
   // Live status: refetch whenever the server pushes a new state.
@@ -63,6 +68,12 @@ export function ProjectDetail() {
       )}
       {p.state === "final_ready" && <Delivery projectId={id} />}
 
+      {!["script_approved", "rendering_anchor", "anchor_ready"].includes(p.state) && (
+        <div className="flex items-center gap-3">
+          <Button variant="danger" disabled={del.isPending} onClick={() => { if (confirm("Delete this video and all its files? This can't be undone.")) del.mutate(); }}>Delete video</Button>
+          <ErrorBox error={del.error} />
+        </div>
+      )}
       {costs.data && costs.data.lines.length > 0 && (
         <Card title="Cost">
           <table className="w-full text-sm"><caption className="sr-only">Cost by step</caption>

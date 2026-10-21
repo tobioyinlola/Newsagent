@@ -36,6 +36,45 @@
         "title": "AssetOut",
         "type": "object"
       },
+      "BrandAssetOut": {
+        "properties": {
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "key",
+          "kind",
+          "content_type",
+          "size_bytes"
+        ],
+        "title": "BrandAssetOut",
+        "type": "object"
+      },
       "BrandDraft": {
         "properties": {
           "accent_color": {
@@ -587,49 +626,6 @@
         "title": "InviteOut",
         "type": "object"
       },
-      "LogoUploadIn": {
-        "properties": {
-          "content_type": {
-            "title": "Content Type",
-            "type": "string"
-          },
-          "size_bytes": {
-            "exclusiveMinimum": 0.0,
-            "title": "Size Bytes",
-            "type": "integer"
-          },
-          "variant": {
-            "default": "light",
-            "pattern": "^(light|dark)$",
-            "title": "Variant",
-            "type": "string"
-          }
-        },
-        "required": [
-          "content_type",
-          "size_bytes"
-        ],
-        "title": "LogoUploadIn",
-        "type": "object"
-      },
-      "LogoUploadOut": {
-        "properties": {
-          "key": {
-            "title": "Key",
-            "type": "string"
-          },
-          "upload_url": {
-            "title": "Upload Url",
-            "type": "string"
-          }
-        },
-        "required": [
-          "upload_url",
-          "key"
-        ],
-        "title": "LogoUploadOut",
-        "type": "object"
-      },
       "MeOut": {
         "properties": {
           "credit_balance": {
@@ -955,6 +951,67 @@
           "tag"
         ],
         "title": "SharePublic",
+        "type": "object"
+      },
+      "UploadConfirmIn": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "UploadConfirmIn",
+        "type": "object"
+      },
+      "UploadIn": {
+        "properties": {
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "kind": {
+            "pattern": "^(logo_light|logo_dark|guide_pdf|product_image)$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "size_bytes": {
+            "exclusiveMinimum": 0.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "content_type",
+          "size_bytes"
+        ],
+        "title": "UploadIn",
+        "type": "object"
+      },
+      "UploadOut": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "max_bytes": {
+            "title": "Max Bytes",
+            "type": "integer"
+          },
+          "upload_url": {
+            "title": "Upload Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "upload_url",
+          "key",
+          "max_bytes"
+        ],
+        "title": "UploadOut",
         "type": "object"
       },
       "ValidationError": {
@@ -1698,6 +1755,59 @@
         ]
       }
     },
+    "/v1/brand-kit/assets": {
+      "get": {
+        "operationId": "list_assets_v1_brand_kit_assets_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BrandAssetOut"
+                  },
+                  "title": "Response List Assets V1 Brand Kit Assets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Assets",
+        "tags": [
+          "brand"
+        ]
+      }
+    },
     "/v1/brand-kit/import": {
       "post": {
         "operationId": "import_brand_v1_brand_kit_import_post",
@@ -1757,9 +1867,9 @@
         ]
       }
     },
-    "/v1/brand-kit/logo-upload": {
+    "/v1/brand-kit/uploads": {
       "post": {
-        "operationId": "logo_upload_v1_brand_kit_logo_upload_post",
+        "operationId": "start_upload_v1_brand_kit_uploads_post",
         "parameters": [
           {
             "in": "header",
@@ -1782,7 +1892,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LogoUploadIn"
+                "$ref": "#/components/schemas/UploadIn"
               }
             }
           },
@@ -1793,7 +1903,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/LogoUploadOut"
+                  "$ref": "#/components/schemas/UploadOut"
                 }
               }
             },
@@ -1810,9 +1920,151 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Logo Upload",
+        "summary": "Start Upload",
         "tags": [
           "brand"
+        ]
+      }
+    },
+    "/v1/brand-kit/uploads/confirm": {
+      "post": {
+        "description": "Download what was actually uploaded, verify type and size, scan for malware. Only then is it usable.",
+        "operationId": "confirm_upload_v1_brand_kit_uploads_confirm_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandAssetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Upload",
+        "tags": [
+          "brand"
+        ]
+      }
+    },
+    "/v1/dev-storage/{key}": {
+      "get": {
+        "operationId": "get_object_v1_dev_storage__key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Object",
+        "tags": [
+          "dev"
+        ]
+      },
+      "put": {
+        "operationId": "put_object_v1_dev_storage__key__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Object V1 Dev Storage  Key  Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Object",
+        "tags": [
+          "dev"
         ]
       }
     },
@@ -1976,6 +2228,65 @@
       }
     },
     "/v1/projects/{project_id}": {
+      "delete": {
+        "description": "Owner can delete a project at any time it isn't mid-render. Removes files and all records.",
+        "operationId": "delete_project_v1_projects__project_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Project V1 Projects  Project Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Project",
+        "tags": [
+          "projects"
+        ]
+      },
       "get": {
         "operationId": "get_project_v1_projects__project_id__get",
         "parameters": [

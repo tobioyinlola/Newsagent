@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createApp } from "./app";
 
 async function withServer<T>(fn: (base: string) => Promise<T>, renderFn?: any, thumbFn?: any) {
-  const server = createApp({ secret: "s3cret", renderFn, thumbFn }).listen(0);
+  const server = createApp({ secret: "s3cret", renderFn, thumbFn, normalizeFn: async () => {} }).listen(0);
   try { return await fn(`http://127.0.0.1:${(server.address() as AddressInfo).port}`); } finally { server.close(); }
 }
 

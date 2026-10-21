@@ -32,6 +32,14 @@ test("invite to shared video", async ({ page, browser }) => {
   // --- brand kit
   await expect(fp.getByRole("heading", { name: /Brand kit/ })).toBeVisible();
   await fp.getByLabel("Accent color", { exact: true }).fill("#00AA66");
+  // logo upload: verified, scanned, then usable; malware is refused
+  const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(64)]);
+  await fp.getByLabel("Logo for dark backgrounds").setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: png });
+  await expect(fp.getByText("Uploaded and checked: logo light.")).toBeVisible();
+  await expect(fp.getByText("in use")).toBeVisible();
+  const eicar = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
+  await fp.getByLabel("Brand guide (PDF, optional)").setInputFiles({ name: "guide.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n" + eicar) });
+  await expect(fp.getByRole("alert")).toContainText("blocked by our security scan");
   await fp.getByRole("button", { name: "Add a word" }).click();
   await fp.getByLabel("Word 1", { exact: true }).fill("Oyinlola");
   await fp.getByLabel("Pronounced 1", { exact: true }).fill("oh-yin-LOH-lah");
@@ -70,6 +78,11 @@ test("invite to shared video", async ({ page, browser }) => {
   await fp.getByRole("button", { name: "Revoke all links" }).click();
   await viewer.reload();
   await expect(viewer.getByText("This link is no longer available.")).toBeVisible();
+
+  // --- owner deletes the video; it disappears from the list
+  fp.on("dialog", (d) => d.accept());
+  await fp.getByRole("button", { name: "Delete video" }).click();
+  await expect(fp.getByText("No videos yet.")).toBeVisible();
 });
 
 test("uninvited email gets a clear message", async ({ page }) => {

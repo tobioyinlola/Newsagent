@@ -42,3 +42,32 @@ async def notify_owners(project_id: str, kind: str) -> None:
             await registry.get_email().send(to, subject, text)
     except Exception:  # noqa: BLE001
         log.exception("notification %s failed for project %s", kind, project_id)
+
+
+_pending: set = set()
+
+
+async def notify_operators(subject: str, text: str) -> None:
+    try:
+        ops = [e.strip() for e in get_settings().operator_emails.split(",") if e.strip()]
+        for to in ops:
+            await registry.get_email().send(to, subject, text)
+        if not ops:
+            log.warning("operator alert with no OPERATOR_EMAILS configured: %s", subject)
+    except Exception:  # noqa: BLE001
+        log.exception("operator notification failed: %s", subject)
+
+
+def vendor_budget_alert(vendor: str, period: str, spent, limit) -> None:
+    """Sync callback for SpendGuard; schedules the email without blocking the paid step."""
+    import asyncio
+
+    task = asyncio.get_running_loop().create_task(
+        notify_operators(
+            f"Budget alert: {vendor} at 80% for {period}",
+            f"The {vendor} budget for {period} has reached {spent} of {limit}. "
+            "Raise the limit in the operator console or expect steps to be refused at 100%.",
+        )
+    )
+    _pending.add(task)  # keep a reference so the task isn't garbage collected mid-flight
+    task.add_done_callback(_pending.discard)

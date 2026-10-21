@@ -19,7 +19,21 @@ class RenderStatus:
     error: str | None = None
 
 
+@dataclass
+class Analysis:
+    duration_s: float
+    has_audio: bool
+    video_duration_s: float | None = None
+    audio_duration_s: float | None = None
+    loudness_lufs: float | None = None
+    true_peak_db: float | None = None
+
+
 class RendererClient(ABC):
+    @abstractmethod
+    async def analyze(self, url: str) -> Analysis:
+        """Measure a rendered file (duration, audio, loudness) for the quality gate."""
+
     @abstractmethod
     def estimate_cost(self, req: RenderRequest) -> float: ...
 

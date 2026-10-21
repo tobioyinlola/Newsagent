@@ -23,6 +23,10 @@ def create_app() -> FastAPI:
         sentry_sdk.init(dsn=s.sentry_dsn, environment=s.environment)
     app = FastAPI(title="Newsagent API", version="0.1.0")
     app.add_middleware(CORSMiddleware, allow_origins=[s.app_base_url], allow_methods=["*"], allow_headers=["*"])
+    if s.is_local and s.use_mocks:
+        from app.routes import devstorage
+
+        app.include_router(devstorage.router)
     for r in (health.router, auth.router, brand.router, projects.router, delivery.router, admin.router):
         app.include_router(r)
     return app

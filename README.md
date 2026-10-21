@@ -28,8 +28,9 @@ Operators also set budgets: `PUT /v1/admin/vendor-budgets` (the spend guard refu
 
 ## Test
 ```bash
-cd apps/api && uv run ruff check . && uv run mypy app && uv run pytest      # 52 tests
-cd apps/web && pnpm lint && pnpm build && pnpm test
+cd apps/api && uv run ruff check . && uv run mypy app && uv run pytest      # 83 tests; add TEST_DATABASE_URL=postgresql+asyncpg://... to run on Postgres
+cd apps/web && pnpm lint && pnpm build && pnpm test      # unit
+cd apps/web && pnpm e2e                                    # browser journey; needs CHROMIUM_PATH locally, uses mocked vendors
 cd services/renderer && pnpm build && pnpm test
 cd services/renderer && pnpm bench 10                                      # render benchmark
 ```
@@ -41,7 +42,8 @@ Auth `POST /auth/redeem`, `GET /me` | Brand `GET|PUT /brand-kit`, `POST /brand-k
 `GET /voices` | Projects `POST|GET /projects`, `/projects/{id}/script/{generate,approve}`, `PUT /script`, `POST /retry` |
 Delivery `GET /projects/{id}/{downloads,captions,costs,events}` (events is SSE; use fetch streaming, not EventSource),
 `POST|DELETE /projects/{id}/share`, public `GET /share/{token}` | Admin `POST /admin/invites`,
-`PATCH /admin/workspaces/{id}`, `PUT /admin/vendor-budgets`. Full contract: `/docs`.
+`PATCH /admin/workspaces/{id}`, `GET|PUT /admin/vendor-budgets`, `GET /admin/workspaces`. Uploads: `POST /brand-kit/uploads` then `/uploads/confirm`.
+First operator: `cd apps/api && uv run python -m app.cli bootstrap-operator you@example.com 100`. Full contract: `/docs`.
 
 ## Pipeline
 Order: anchor render, then a half-resolution preview, then the final 16:9 + 9:16 renders, thumbnail and SRT.

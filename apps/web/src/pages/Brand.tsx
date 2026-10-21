@@ -4,6 +4,24 @@ import { api, type Schemas, unwrap } from "../api/client";
 import { Button, Card, ErrorBox, Field, inputCls, Notice } from "../components/ui";
 import { contrastRatio, isHex } from "../lib/contrast";
 
+type UploadKind = Schemas["UploadIn"]["kind"];
+const UPLOADS: { kind: UploadKind; label: string; accept: string; types: string[] }[] = [
+  { kind: "logo_light", label: "Logo for dark backgrounds", accept: ".svg,.png", types: ["image/svg+xml", "image/png"] },
+  { kind: "logo_dark", label: "Logo for light backgrounds", accept: ".svg,.png", types: ["image/svg+xml", "image/png"] },
+  { kind: "guide_pdf", label: "Brand guide (PDF, optional)", accept: ".pdf", types: ["application/pdf"] },
+  { kind: "product_image", label: "Product image (PNG or JPEG, optional)", accept: ".png,.jpg,.jpeg", types: ["image/png", "image/jpeg"] },
+];
+
+// 1) ask for an upload slot, 2) send the file straight to storage, 3) have the server verify and scan it.
+async function uploadFile(kind: UploadKind, file: File, types: string[]): Promise<Schemas["BrandAssetOut"]> {
+  const type = types.includes(file.type) ? file.type : "";
+  if (!type) throw new Error("That file type isn't allowed here.");
+  const slot = await unwrap(api.POST("/v1/brand-kit/uploads", { body: { kind, content_type: type, size_bytes: file.size } }));
+  const put = await fetch(slot.upload_url, { method: "PUT", body: file, headers: { "Content-Type": type } });
+  if (!put.ok) throw new Error("The upload didn't go through. Please try again.");
+  return unwrap(api.POST("/v1/brand-kit/uploads/confirm", { body: { key: slot.key } }));
+}
+
 const FONTS = ["Inter", "Poppins", "Montserrat", "Roboto", "Lato", "Open Sans", "Playfair Display"];
 const TONES = ["confident", "friendly", "authoritative", "playful", "serious"];
 
@@ -40,6 +58,14 @@ export function Brand() {
   const save = useMutation({
     mutationFn: () => unwrap(api.PUT("/v1/brand-kit", { body: { ...form!, pronunciation_glossary: Object.fromEntries(glossary.filter((g) => g.term.trim() && g.say.trim()).map((g) => [g.term.trim(), g.say.trim()])) } })),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["brand"] }),
+  });
+  const assets = useQuery({ queryKey: ["brand-assets"], queryFn: () => unwrap(api.GET("/v1/brand-kit/assets")) });
+  const upload = useMutation({
+    mutationFn: ({ kind, file, types }: { kind: UploadKind; file: File; types: string[] }) => uploadFile(kind, file, types),
+    onSuccess: (a) => {
+      qc.invalidateQueries({ queryKey: ["brand-assets"] });
+      setForm((f) => (f && a.kind === "logo_light" ? { ...f, logo_light_key: a.key } : f && a.kind === "logo_dark" ? { ...f, logo_dark_key: a.key } : f));
+    },
   });
   const imp = useMutation({ mutationFn: () => unwrap(api.POST("/v1/brand-kit/import", { body: { url: site } })), onSuccess: setDraft });
 
@@ -81,6 +107,33 @@ export function Brand() {
         )}
         {kit.data.contrast.some((c) => !c.passes) && (
           <div className="mt-4"><Notice tone="warn">Some saved colors are hard to read: {kit.data.contrast.filter((c) => !c.passes).map((c) => `${c.background} (${c.ratio}:1, try ${c.suggested_background})`).join("; ")}</Notice></div>
+        )}
+      </Card>
+
+      <Card title="Logos and files">
+        <p className="mb-3 text-sm text-slate-700">SVG or transparent PNG logos work best. Every file is checked and virus-scanned before it can be used. Save the brand kit after uploading a logo.</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {UPLOADS.map((u) => (
+            <Field key={u.kind} label={u.label}>
+              {(id) => <input id={id} type="file" accept={u.accept} className="text-sm" disabled={upload.isPending}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate({ kind: u.kind, file: f, types: u.types }); e.target.value = ""; }} />}
+            </Field>
+          ))}
+        </div>
+        {upload.isPending && <p className="mt-2 text-sm" aria-busy="true">Uploading and checking…</p>}
+        <ErrorBox error={upload.error} />
+        {upload.isSuccess && <div className="mt-2"><Notice tone="ok">Uploaded and checked: {upload.data.kind.replace("_", " ")}.</Notice></div>}
+        {assets.data && assets.data.length > 0 && (
+          <ul className="mt-4 divide-y divide-slate-200 text-sm" aria-label="Uploaded files">
+            {assets.data.map((a) => (
+              <li key={a.key} className="flex items-center gap-3 py-2">
+                {a.content_type.startsWith("image/") && a.url && <img src={a.url} alt="" className="h-8 w-8 rounded border object-contain" />}
+                <span>{a.kind.replace("_", " ")}</span>
+                <span className="text-slate-600">{Math.max(1, Math.round(a.size_bytes / 1024))} KB</span>
+                {(a.key === form.logo_light_key || a.key === form.logo_dark_key) && <span className="rounded bg-green-100 px-2 py-0.5 text-xs text-green-900">in use</span>}
+              </li>
+            ))}
+          </ul>
         )}
       </Card>
 

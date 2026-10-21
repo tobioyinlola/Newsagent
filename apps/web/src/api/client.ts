@@ -29,6 +29,7 @@ export async function unwrap<T>(p: Promise<{ data?: T; error?: unknown; response
   const detail = (error as { detail?: unknown } | undefined)?.detail;
   let message = response.statusText || "Something went wrong";
   if (typeof detail === "string") message = detail;
+  else if (detail && typeof detail === "object" && "message" in detail) message = String((detail as { message: unknown }).message);
   else if (detail && typeof detail === "object" && "error" in detail) message = String((detail as { error: unknown }).error);
   if (response.status === 401) message = "Please sign in again.";
   throw new ApiError(response.status, message, detail);

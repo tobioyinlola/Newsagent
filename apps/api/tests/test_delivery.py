@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+import pytest
+
 from app.routes import delivery
 from app.services.captions import DISCLOSURE, build_srt
 from tests.conftest import OPS, OWNER
@@ -164,3 +166,83 @@ async def test_bootstrap_operator_is_idempotent(maker):
 
     a = await bootstrap_operator("Boss@Example.com")
     assert await bootstrap_operator("boss@example.com") == a
+
+
+# ---------- quality gate ----------
+def _result(**analysis):
+    base = {
+        "duration_s": 10.0,
+        "has_audio": True,
+        "video_duration_s": 10.0,
+        "audio_duration_s": 10.0,
+        "loudness_lufs": -16.0,
+        "true_peak_db": -1.5,
+    }
+    from app.pipeline.steps import DISCLOSURES
+
+    return {
+        "props": {"disclosures": DISCLOSURES, "tickerLines": ["x"], "lowerThirds": [], "anchorDurationSeconds": 10.0},
+        "output_keys": ["a", "b", "c"],
+        "analyses": {"p/16x9.mp4": {**base, **analysis}},
+    }
+
+
+def test_quality_gate_passes_good_media():
+    from app.pipeline.steps import quality_gate
+
+    assert quality_gate(_result(), 3) == []
+
+
+@pytest.mark.parametrize(
+    "bad,needle",
+    [
+        ({"duration_s": 20.0}, "does not match"),
+        ({"has_audio": False}, "no audio"),
+        ({"true_peak_db": 0.5}, "clipping"),
+        ({"audio_duration_s": 8.0}, "differ"),
+    ],
+)
+def test_quality_gate_catches_bad_media(bad, needle):
+    from app.pipeline.steps import quality_gate
+
+    assert any(needle in p for p in quality_gate(_result(**bad), 3))
+
+
+async def test_bad_media_fails_project_before_owner_sees_it(client, workspace):
+    from app.integrations import registry
+    from app.integrations.renderer.base import Analysis
+    from app.integrations.renderer.mock import MockRenderer
+
+    r = MockRenderer(registry.get_storage())
+    r.analysis_override = Analysis(duration_s=5.0, has_audio=False)
+    registry.override(renderer=r)
+    pid = await make_final_ready(client)
+    p = (await client.get(f"/v1/projects/{pid}", headers=OWNER)).json()
+    assert p["state"] == "failed" and p["failure_retryable"] is False and "Quality check failed" in p["failure_reason"]
+    assert (await client.get(f"/v1/projects/{pid}/downloads", headers=OWNER)).json()["items"][0]["type"] == "preview"
+
+
+async def test_renderer_receives_real_anchor_duration(client, workspace, maker):
+    from sqlalchemy import select
+
+    from app.models import Asset, Job
+
+    pid = await make_final_ready(client)
+    async with maker() as s:
+        anchor = (await s.execute(select(Asset).where(Asset.project_id == pid, Asset.type == "anchor"))).scalar_one()
+        job = (await s.execute(select(Job).where(Job.project_id == pid, Job.stage == "final_render"))).scalar_one()
+    assert float(anchor.duration) > 0
+    assert job.result["props"]["anchorDurationSeconds"] == float(anchor.duration)
+    assert set(job.result["analyses"]) == {k for k in job.result["output_keys"] if k.endswith(".mp4")}
+
+
+async def test_text_overflow_blocked_at_approval(client, workspace):
+    r = await client.post("/v1/projects", json={"brief_text": "Acme helps farmers sell produce online."}, headers=OWNER)
+    pid = r.json()["id"]
+    script = (await client.post(f"/v1/projects/{pid}/script/generate", headers=OWNER)).json()
+    body = {k: script[k] for k in ("segments", "ticker_lines", "lower_thirds", "interview_questions")}
+    body["segments"] = [{"kind": "intro", "text": "Tonight we feature Acme."}]
+    body["ticker_lines"] = ["x" * 120]
+    await client.put(f"/v1/projects/{pid}/script", json=body, headers=OWNER)
+    r = await client.post(f"/v1/projects/{pid}/script/approve", headers=OWNER)
+    assert r.status_code == 422 and "too long" in r.json()["detail"]["message"]

@@ -8,26 +8,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import Principal, current_principal
 from app.db import get_session
 from app.integrations import registry
-from app.models import BrandKit
+from app.integrations.storage.base import ObjectTooLarge
+from app.models import BrandAsset, BrandKit
 from app.schemas.api import (
     FONTS,
     TONES,
+    BrandAssetOut,
     BrandDraft,
     BrandImportIn,
     BrandKitIn,
     BrandKitOut,
     ContrastCheck,
-    LogoUploadIn,
-    LogoUploadOut,
+    UploadConfirmIn,
+    UploadIn,
+    UploadOut,
     VoiceOut,
 )
 from app.services import brand as brand_svc
+from app.services import uploads
 from app.services.ratelimit import limit
 
 router = APIRouter(prefix="/v1", tags=["brand"])
-
-MAX_LOGO_BYTES = 2 * 1024 * 1024
-LOGO_TYPES = {"image/svg+xml": "svg", "image/png": "png"}
 
 
 async def _current(session: AsyncSession, workspace_id: str) -> BrandKit | None:
@@ -69,10 +70,21 @@ async def save_brand_kit(
         raise HTTPException(422, {"error": "invalid_choice", "fonts": FONTS, "tones": TONES})
     if any(not c.startswith("#") or len(c) != 7 for c in body.secondary_colors):
         raise HTTPException(422, "secondary_colors must be #RRGGBB")
-    prefix = f"brand/{p.workspace.id}/"
-    for key in (body.logo_light_key, body.logo_dark_key):
-        if key and not key.startswith(prefix):
-            raise HTTPException(422, "Logo must be uploaded through /v1/brand-kit/logo-upload")
+    for key, kind in ((body.logo_light_key, "logo_light"), (body.logo_dark_key, "logo_dark")):
+        if not key:
+            continue
+        ok = (
+            await session.execute(
+                select(BrandAsset.id).where(
+                    BrandAsset.key == key,
+                    BrandAsset.workspace_id == p.workspace.id,
+                    BrandAsset.status == "clean",
+                    BrandAsset.kind == kind,
+                )
+            )
+        ).first()
+        if not ok:
+            raise HTTPException(422, "Logo must be an uploaded file that passed our security check")
     prev = await _current(session, p.workspace.id)
     kit = BrandKit(
         workspace_id=p.workspace.id,
@@ -97,15 +109,101 @@ async def import_brand(body: BrandImportIn, _: Principal = Depends(current_princ
     return BrandDraft(**draft)
 
 
-@router.post("/brand-kit/logo-upload", response_model=LogoUploadOut, dependencies=[Depends(limit("upload", 30, 3600))])
-async def logo_upload(body: LogoUploadIn, p: Principal = Depends(current_principal)) -> LogoUploadOut:
-    ext = LOGO_TYPES.get(body.content_type)
+@router.post("/brand-kit/uploads", response_model=UploadOut, dependencies=[Depends(limit("upload", 30, 3600))])
+async def start_upload(
+    body: UploadIn, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> UploadOut:
+    rule = uploads.RULES[body.kind]
+    ext = rule.types.get(body.content_type)
     if ext is None:
-        raise HTTPException(422, "Logo must be an SVG or a transparent PNG")
-    if body.size_bytes > MAX_LOGO_BYTES:
-        raise HTTPException(422, "Logo must be 2 MB or smaller")
-    key = f"brand/{p.workspace.id}/logo-{body.variant}-{uuid.uuid4().hex[:8]}.{ext}"
-    return LogoUploadOut(upload_url=registry.get_storage().presign_put(key, 600), key=key)
+        raise HTTPException(422, "That file type isn't allowed here")
+    if body.size_bytes > rule.max_bytes:
+        raise HTTPException(422, f"File must be {rule.max_bytes // (1024 * 1024)} MB or smaller")
+    key = f"brand/{p.workspace.id}/{body.kind}-{uuid.uuid4().hex[:10]}.{ext}"
+    session.add(
+        BrandAsset(
+            workspace_id=p.workspace.id,
+            key=key,
+            kind=body.kind,
+            content_type=body.content_type,
+            size_bytes=body.size_bytes,
+        )
+    )
+    await session.commit()
+    return UploadOut(upload_url=registry.get_storage().presign_put(key, 600), key=key, max_bytes=rule.max_bytes)
+
+
+@router.post(
+    "/brand-kit/uploads/confirm", response_model=BrandAssetOut, dependencies=[Depends(limit("upload", 30, 3600))]
+)
+async def confirm_upload(
+    body: UploadConfirmIn, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> BrandAssetOut:
+    """Download what was actually uploaded, verify type and size, scan for malware. Only then is it usable."""
+    asset = (
+        await session.execute(
+            select(BrandAsset).where(BrandAsset.key == body.key, BrandAsset.workspace_id == p.workspace.id)
+        )
+    ).scalar_one_or_none()
+    if asset is None or asset.status != "pending":
+        raise HTTPException(404, "Upload not found")
+    storage = registry.get_storage()
+    rule = uploads.RULES[asset.kind]
+
+    async def reject(reason: str) -> HTTPException:
+        asset.status = "rejected"
+        await storage.delete(asset.key)
+        await session.commit()
+        return HTTPException(422, reason)
+
+    try:
+        data = await storage.get(asset.key, rule.max_bytes)
+    except ObjectTooLarge:
+        raise await reject("File is too large") from None
+    except Exception:
+        raise HTTPException(422, "We didn't receive that file. Please upload it again.") from None
+    try:
+        uploads.validate_content(asset.content_type, data)
+    except uploads.InvalidUpload as e:
+        raise await reject(str(e)) from None
+    try:
+        result = await registry.get_scanner().scan(data)
+    except Exception:
+        # Fail closed: an unscanned file is never marked clean. The upload stays pending and can be retried.
+        raise HTTPException(503, "We couldn't check that file right now. Please try again shortly.") from None
+    if not result.clean:
+        raise await reject("That file was blocked by our security scan.")
+    asset.status, asset.size_bytes = "clean", len(data)
+    await session.commit()
+    return BrandAssetOut(key=asset.key, kind=asset.kind, content_type=asset.content_type, size_bytes=asset.size_bytes)
+
+
+@router.get("/brand-kit/assets", response_model=list[BrandAssetOut])
+async def list_assets(
+    p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> list[BrandAssetOut]:
+    rows = (
+        (
+            await session.execute(
+                select(BrandAsset)
+                .where(BrandAsset.workspace_id == p.workspace.id, BrandAsset.status == "clean")
+                .order_by(BrandAsset.created_at)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    storage = registry.get_storage()
+    return [
+        BrandAssetOut(
+            key=a.key,
+            kind=a.kind,
+            content_type=a.content_type,
+            size_bytes=a.size_bytes,
+            url=storage.presign_get(a.key, 900),
+        )
+        for a in rows
+    ]
 
 
 @router.get("/voices", response_model=list[VoiceOut])

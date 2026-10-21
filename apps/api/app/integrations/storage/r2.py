@@ -4,7 +4,7 @@ import boto3
 from botocore.config import Config
 
 from app.config import get_settings
-from app.integrations.storage.base import StorageProvider
+from app.integrations.storage.base import ObjectTooLarge, StorageProvider
 
 
 class R2Storage(StorageProvider):
@@ -31,6 +31,23 @@ class R2Storage(StorageProvider):
             return True
         except Exception:
             return False
+
+    async def size(self, key: str) -> int | None:
+        try:
+            head = await asyncio.to_thread(self.s3.head_object, Bucket=self.bucket, Key=key)
+            return int(head["ContentLength"])
+        except Exception:
+            return None
+
+    async def get(self, key: str, max_bytes: int) -> bytes:
+        n = await self.size(key)
+        if n is not None and n > max_bytes:
+            raise ObjectTooLarge(key)
+        obj = await asyncio.to_thread(self.s3.get_object, Bucket=self.bucket, Key=key)
+        return await asyncio.to_thread(obj["Body"].read, max_bytes + 1)
+
+    async def delete(self, key: str) -> None:
+        await asyncio.to_thread(self.s3.delete_object, Bucket=self.bucket, Key=key)
 
     def presign_get(self, key: str, expires_s: int = 900) -> str:
         return self.s3.generate_presigned_url(

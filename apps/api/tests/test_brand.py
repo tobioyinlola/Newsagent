@@ -91,19 +91,6 @@ async def test_brand_kit_rejects_bad_input(client, workspace, patch):
     assert (await client.put("/v1/brand-kit", json={**KIT, **patch}, headers=OWNER)).status_code == 422
 
 
-async def test_logo_upload_validation(client, workspace):
-    ok = await client.post(
-        "/v1/brand-kit/logo-upload", json={"content_type": "image/png", "size_bytes": 1000}, headers=OWNER
-    )
-    assert ok.status_code == 200 and ok.json()["key"].startswith("brand/")
-    for body in (
-        {"content_type": "image/gif", "size_bytes": 10},
-        {"content_type": "image/png", "size_bytes": 3_000_000},
-        {"content_type": "text/html", "size_bytes": 10},
-    ):
-        assert (await client.post("/v1/brand-kit/logo-upload", json=body, headers=OWNER)).status_code == 422
-
-
 async def test_voices_and_accent_validation(client, workspace):
     v = await client.get("/v1/voices", headers=OWNER)
     assert {x["accent"] for x in v.json()} == set(brand.ALLOWED_VOICE_ACCENTS)

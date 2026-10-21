@@ -2,20 +2,20 @@ import json
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import Principal, current_principal
 from app.db import get_session
 from app.integrations import registry
-from app.models import Asset, Brief, Project, ScriptVersion
+from app.models import Asset, Brief, InterviewSession, Job, Project, ScriptVersion, ShareLink
 from app.pipeline.advance import advance
 from app.schemas.api import ProjectCreate, ProjectOut, ScriptOut, ScriptUpdate
 from app.services import state_machine as sm
 from app.services.brand import ALLOWED_VOICE_ACCENTS
 from app.services.claims import detect_claims
 from app.services.ratelimit import limit
-from app.services.safety import find_banned
+from app.services.safety import find_banned, text_overflow
 
 router = APIRouter(prefix="/v1/projects", tags=["projects"])
 
@@ -161,10 +161,27 @@ async def approve_script(
         raise HTTPException(409, "No script ready for approval")
     unconfirmed = [f for f in sv.claim_flags if not f.get("confirmed")]
     if unconfirmed:  # hard rule 3
-        raise HTTPException(422, {"error": "claims_unconfirmed", "claims": unconfirmed})
+        raise HTTPException(
+            422,
+            {
+                "error": "claims_unconfirmed",
+                "message": "Please confirm each flagged claim before approving.",
+                "claims": unconfirmed,
+            },
+        )
     banned = find_banned(json.dumps([sv.segments, sv.ticker_lines, sv.lower_thirds, sv.interview_questions]))
     if banned:  # hard rule 1: checked before any paid step runs
-        raise HTTPException(422, {"error": "banned_network_name", "terms": banned})
+        raise HTTPException(
+            422,
+            {
+                "error": "banned_network_name",
+                "message": "Please remove real news network names: " + ", ".join(banned),
+                "terms": banned,
+            },
+        )
+    too_long = text_overflow(sv.lower_thirds, sv.ticker_lines)
+    if too_long:  # keeps text inside the broadcast layout (the renderer never wraps or shrinks it)
+        raise HTTPException(422, {"error": "text_too_long", "message": too_long})
     ws = p.workspace
     words = sum(len(s["text"].split()) for s in sv.segments)
     if words / WORDS_PER_SECOND > ws.max_video_seconds:
@@ -201,3 +218,26 @@ async def retry(
     await advance(session, project_id)
     await session.refresh(project)
     return await _out(session, project)
+
+
+IN_FLIGHT = {"script_approved", "rendering_anchor", "anchor_ready"}
+
+
+@router.delete("/{project_id}")
+async def delete_project(
+    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> dict:
+    """Owner can delete a project at any time it isn't mid-render. Removes files and all records."""
+    project = await _owned(session, project_id, p)
+    if project.state in IN_FLIGHT:
+        raise HTTPException(409, "This video is being made. Delete it once it finishes or fails.")
+    storage = registry.get_storage()
+    assets = (await session.execute(select(Asset).where(Asset.project_id == project_id))).scalars().all()
+    for a in assets:
+        await storage.delete(a.storage_key)
+    for model in (Asset, Job, ScriptVersion, ShareLink, InterviewSession):
+        await session.execute(delete(model).where(model.project_id == project_id))
+    await session.execute(delete(Brief).where(Brief.project_id == project_id))
+    await session.delete(project)
+    await session.commit()
+    return {"ok": True}

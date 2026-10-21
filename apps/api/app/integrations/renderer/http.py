@@ -1,7 +1,7 @@
 import httpx
 
 from app.config import get_settings
-from app.integrations.renderer.base import RendererClient, RenderRequest, RenderStatus
+from app.integrations.renderer.base import Analysis, RendererClient, RenderRequest, RenderStatus
 
 COST_PER_OUTPUT = 0.05  # placeholder until docs/render-benchmarks.md has measured numbers
 
@@ -15,6 +15,19 @@ class HttpRenderer(RendererClient):
 
     def estimate_cost(self, req: RenderRequest) -> float:
         return COST_PER_OUTPUT * len(req.outputs)
+
+    async def analyze(self, url: str) -> Analysis:
+        r = await self._client.post("/analyze", json={"url": url}, timeout=300)
+        r.raise_for_status()
+        d = r.json()
+        return Analysis(
+            duration_s=d["duration_s"],
+            has_audio=d["has_audio"],
+            video_duration_s=d.get("video_duration_s"),
+            audio_duration_s=d.get("audio_duration_s"),
+            loudness_lufs=d.get("loudness_lufs"),
+            true_peak_db=d.get("true_peak_db"),
+        )
 
     async def submit(self, req: RenderRequest) -> str:
         r = await self._client.post(

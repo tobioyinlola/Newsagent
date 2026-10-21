@@ -169,3 +169,16 @@ class ShareLink(Base, TimestampMixin):
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class BrandAsset(Base, TimestampMixin):
+    """A file the workspace uploaded for its brand. Only status="clean" files may be used."""
+
+    __tablename__ = "brand_assets"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), index=True)
+    key: Mapped[str] = mapped_column(String(500), unique=True)
+    kind: Mapped[str] = mapped_column(String(30))  # logo_light, logo_dark, guide_pdf, product_image
+    content_type: Mapped[str] = mapped_column(String(100))
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | clean | rejected

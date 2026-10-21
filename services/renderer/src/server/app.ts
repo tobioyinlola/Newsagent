@@ -5,12 +5,13 @@ import os from "node:os";
 import path from "node:path";
 import { NewsProps, defaultProps } from "../compositions/types";
 import { assertEvenScale, renderOne, renderThumbnail } from "../render";
+import { Analysis, analyzeUrl, normalizeAudio } from "../media";
 import { putFile } from "./storage";
 
 type Job = { status: "queued" | "running" | "succeeded" | "failed"; progress: number; output_keys: string[]; error: string | null };
 type Output = { kind?: "video" | "thumbnail"; name?: string; scale?: number; format: "16x9" | "9x16"; width: number; height: number };
 
-export function createApp(opts: { secret: string; maxConcurrent?: number; renderFn?: typeof renderOne; thumbFn?: typeof renderThumbnail }) {
+export function createApp(opts: { secret: string; maxConcurrent?: number; renderFn?: typeof renderOne; thumbFn?: typeof renderThumbnail; analyzeFn?: (url: string) => Promise<Analysis>; normalizeFn?: (file: string) => Promise<void> }) {
   const app = express();
   app.use(express.json({ limit: "1mb" }));
   const jobs = new Map<string, Job>();
@@ -19,6 +20,8 @@ export function createApp(opts: { secret: string; maxConcurrent?: number; render
   const max = opts.maxConcurrent ?? Number(process.env.RENDER_JOBS_CONCURRENCY || 1);
   const render = opts.renderFn ?? renderOne;
   const renderThumb = opts.thumbFn ?? renderThumbnail;
+  const analyze = opts.analyzeFn ?? analyzeUrl;
+  const normalize = opts.normalizeFn ?? normalizeAudio;
 
   const pump = () => {
     while (running < max && queue.length) {
@@ -64,6 +67,7 @@ export function createApp(opts: { secret: string; maxConcurrent?: number; render
             assertEvenScale(o.width, o.height, o.scale ?? 1);
             await render({ format: o.format, props: merged, outFile: file, scale: o.scale, onProgress: (p) => { job.progress = (i + p) / outputs.length; } });
           }
+          if (!thumb && o.name !== "preview") await normalize(file); // preview skips the extra pass
           const key = `${output_prefix}/${base}.${thumb ? "png" : "mp4"}`;
           await putFile(key, file);
           job.output_keys.push(key);
@@ -79,6 +83,15 @@ export function createApp(opts: { secret: string; maxConcurrent?: number; render
     });
     pump();
     res.status(202).json({ render_id: id });
+  });
+
+  app.post("/analyze", async (req, res) => {
+    try {
+      const url = String(req.body?.url ?? "");
+      res.json(await analyze(url));
+    } catch (e) {
+      res.status(422).json({ error: String((e as Error).message).slice(0, 300) });
+    }
   });
 
   app.get("/renders/:id", (req, res) => {

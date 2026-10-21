@@ -148,17 +148,6 @@ class BrandDraft(BaseModel):
     confirmed: bool = False
 
 
-class LogoUploadIn(BaseModel):
-    content_type: str
-    size_bytes: int = Field(gt=0)
-    variant: str = Field(default="light", pattern="^(light|dark)$")
-
-
-class LogoUploadOut(BaseModel):
-    upload_url: str
-    key: str
-
-
 class VoiceOut(BaseModel):
     id: str
     accent: str
@@ -231,3 +220,28 @@ class VendorBudgetOut(BaseModel):
     limit: Decimal
     spent: Decimal
     model_config = {"from_attributes": True}
+
+
+# ---------- brand asset uploads ----------
+class UploadIn(BaseModel):
+    kind: str = Field(pattern="^(logo_light|logo_dark|guide_pdf|product_image)$")
+    content_type: str
+    size_bytes: int = Field(gt=0)
+
+
+class UploadOut(BaseModel):
+    upload_url: str
+    key: str
+    max_bytes: int
+
+
+class UploadConfirmIn(BaseModel):
+    key: str
+
+
+class BrandAssetOut(BaseModel):
+    key: str
+    kind: str
+    content_type: str
+    size_bytes: int
+    url: str | None = None

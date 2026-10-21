@@ -2,7 +2,7 @@
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -86,7 +86,9 @@ async def anchor_inputs(session: AsyncSession, project: Project) -> dict:
     }
 
 
-async def build_overlay_props(session: AsyncSession, project: Project, script: ScriptVersion) -> dict:
+async def build_overlay_props(
+    session: AsyncSession, project: Project, script: ScriptVersion, anchor_duration_s: float
+) -> dict:
     kit = (
         (
             await session.execute(
@@ -103,6 +105,7 @@ async def build_overlay_props(session: AsyncSession, project: Project, script: S
             "primary": kit.primary_color if kit else "#0B3D91",
             "accent": project.accent_override or (kit.accent_color if kit else "#F5A623"),
         },
+        "anchorDurationSeconds": anchor_duration_s,
         "tickerLines": script.ticker_lines,
         "lowerThirds": script.lower_thirds,
     }
@@ -140,7 +143,7 @@ async def _render(session: AsyncSession, project: Project, guard: SpendGuard, ou
         .first()
     )
     assert anchor is not None, "anchor asset must exist before rendering"
-    props = await build_overlay_props(session, project, script)
+    props = await build_overlay_props(session, project, script, float(anchor.duration or 60))
     req = RenderRequest(
         composition="NewsStudio",
         props=props,
@@ -170,11 +173,19 @@ async def final_render(session: AsyncSession, project: Project, guard: SpendGuar
     for o, key in zip(FORMATS, status.output_keys, strict=False):
         atype = "thumbnail" if o["kind"] == "thumbnail" else "render"
         session.add(Asset(project_id=project.id, type=atype, storage_key=key, format=o["format"]))
+    renderer = registry.get_renderer()
+    analyses = {}
+    for o, key in zip(FORMATS, status.output_keys, strict=False):
+        if o["kind"] == "video":
+            a = await renderer.analyze(registry.get_storage().presign_get(key))
+            analyses[key] = asdict(a)
     srt = build_srt(script.segments, float(anchor.duration or 60))
     srt_key = f"projects/{project.id}/final/captions.srt"
     await registry.get_storage().put(srt_key, srt.encode(), "application/x-subrip")
     session.add(Asset(project_id=project.id, type="caption", storage_key=srt_key))
-    return StepOutcome({"props": props, "output_keys": status.output_keys, "srt_key": srt_key}, cost)
+    return StepOutcome(
+        {"props": props, "output_keys": status.output_keys, "srt_key": srt_key, "analyses": analyses}, cost
+    )
 
 
 async def _wait(renderer, render_id: str):
@@ -190,7 +201,11 @@ async def _wait(renderer, render_id: str):
 
 
 def quality_gate(result: dict, outputs: int) -> list[str]:  # outputs = expected number of rendered files
-    """Stage 11 (subset): disclosure + banned-content checks. Loudness/lip-sync arrive in Phase 1."""
+    """Stage 11: disclosures, banned names, and measured video/audio properties of each rendered video.
+
+    Loudness is normalised by the renderer and only recorded here; clipping, silence, wrong length and
+    audio/video drift fail the video before the owner sees it.
+    """
     problems = []
     props = result["props"]
     if props["disclosures"] != DISCLOSURES:
@@ -200,6 +215,19 @@ def quality_gate(result: dict, outputs: int) -> list[str]:  # outputs = expected
         problems.append(f"banned network name in overlays: {term}")
     if len(result["output_keys"]) < outputs:
         problems.append("missing output formats")
+    expected = float(props["anchorDurationSeconds"])
+    for key, a in result.get("analyses", {}).items():
+        name = key.rsplit("/", 1)[-1]
+        if abs(a["duration_s"] - expected) > max(1.0, 0.05 * expected):
+            problems.append(f"{name}: length {a['duration_s']:.1f}s does not match the {expected:.1f}s anchor")
+        if not a["has_audio"]:
+            problems.append(f"{name}: no audio track")
+        peak = a.get("true_peak_db")
+        if peak is not None and peak > -0.1:
+            problems.append(f"{name}: audio is clipping ({peak:.1f} dB)")
+        av, aa = a.get("video_duration_s"), a.get("audio_duration_s")
+        if av is not None and aa is not None and abs(av - aa) > 0.5:
+            problems.append(f"{name}: audio and video lengths differ by {abs(av - aa):.1f}s")
     return problems
 
 

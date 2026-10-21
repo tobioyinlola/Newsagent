@@ -48,6 +48,15 @@ class Settings(BaseSettings):
     use_mocks: bool = True
     operator_emails: str = ""  # comma separated; may call /admin
     queue_backend: str = "inline"  # inline | celery
+    rate_limit_backend: str = ""  # "memory" | "redis"; default: redis outside local
+    trust_proxy_headers: bool = False  # True behind Railway/Cloudflare so X-Forwarded-For identifies clients
+    clamd_host: str = ""  # ClamAV daemon; required for uploads when USE_MOCKS=false
+    clamd_port: int = 3310
+    api_public_url: str = "http://localhost:8000"  # used by local dev storage URLs
+
+    @property
+    def rate_limit_store(self) -> str:
+        return self.rate_limit_backend or ("memory" if self.is_local else "redis")
 
     @property
     def is_local(self) -> bool:

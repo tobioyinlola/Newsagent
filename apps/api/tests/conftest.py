@@ -20,8 +20,11 @@ from app.services.spend_guard import ensure_vendor_budget  # noqa: E402
 
 @pytest.fixture
 async def maker(tmp_path):
-    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path}/t.db")
+    # TEST_DATABASE_URL (e.g. postgresql+asyncpg://...) runs the suite on Postgres; default is SQLite.
+    url = os.environ.get("TEST_DATABASE_URL") or f"sqlite+aiosqlite:///{tmp_path}/t.db"
+    engine = create_async_engine(url)
     async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     m = async_sessionmaker(engine, expire_on_commit=False)
     db.set_session_maker(m)
