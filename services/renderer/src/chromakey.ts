@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { analyzeFile } from "./media";
+import { assertAllowedUrl } from "./urlguard";
 
 const run = promisify(execFile);
 const MAX_BYTES = 800 * 1024 * 1024;
@@ -14,8 +15,7 @@ export async function chromaKey(opts: { url: string; color?: string; similarity?
   const color = /^0x[0-9a-f]{6}$/i.test(opts.color ?? "") ? opts.color! : "0x00FF00";
   const similarity = Math.min(Math.max(opts.similarity ?? 0.28, 0.01), 0.6);
   const blend = Math.min(Math.max(opts.blend ?? 0.08, 0), 0.5);
-  const u = new URL(opts.url);
-  if (!["http:", "https:"].includes(u.protocol)) throw new Error("unsupported url");
+  assertAllowedUrl(opts.url);
   const res = await fetch(opts.url);
   if (!res.ok) throw new Error(`download failed: ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());

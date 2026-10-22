@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { assertAllowedUrl } from "./urlguard";
 import { promisify } from "node:util";
 
 const run = promisify(execFile);
@@ -52,8 +53,7 @@ export async function normalizeAudio(file: string): Promise<void> {
 }
 
 export async function analyzeUrl(url: string): Promise<Analysis> {
-  const u = new URL(url);
-  if (!["http:", "https:"].includes(u.protocol)) throw new Error("unsupported url");
+  assertAllowedUrl(url);
   const res = await fetch(url);
   if (!res.ok || !res.body) throw new Error(`download failed: ${res.status}`);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "analyze-"));

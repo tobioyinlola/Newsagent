@@ -79,7 +79,8 @@ class UnsafeUrl(ValueError):
     pass
 
 
-def assert_public_url(url: str) -> None:
+def resolve_public(url: str) -> str:
+    """Resolve the URL's host ONCE and return an IP address, refusing anything that isn't public internet."""
     parsed = urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         raise UnsafeUrl("Only http(s) URLs are allowed")
@@ -87,10 +88,25 @@ def assert_public_url(url: str) -> None:
         infos = socket.getaddrinfo(parsed.hostname, parsed.port or 443, proto=socket.IPPROTO_TCP)
     except socket.gaierror as e:
         raise UnsafeUrl("Could not resolve that website") from e
-    for info in infos:
-        ip = ipaddress.ip_address(info[4][0])
-        if not ip.is_global:
-            raise UnsafeUrl("That address is not allowed")
+    ips = [ipaddress.ip_address(info[4][0]) for info in infos]
+    if not ips or any(not ip.is_global for ip in ips):  # one private answer is enough to refuse (rebinding sets traps)
+        raise UnsafeUrl("That address is not allowed")
+    return str(ips[0])
+
+
+def assert_public_url(url: str) -> None:
+    resolve_public(url)
+
+
+def pin_to_ip(url: str, ip: str) -> tuple[str, dict[str, str], dict]:
+    """Rewrite the URL to connect to the already-validated IP, keeping the original Host header and TLS server name.
+    Without this the HTTP client resolves the name again and a DNS-rebinding attacker can swap in 127.0.0.1."""
+    parsed = urlparse(url)
+    host = parsed.hostname or ""
+    netloc_ip = f"[{ip}]" if ":" in ip else ip
+    port = f":{parsed.port}" if parsed.port else ""
+    pinned = parsed._replace(netloc=f"{netloc_ip}{port}").geturl()
+    return pinned, {"Host": f"{host}{port}"}, {"sni_hostname": host}
 
 
 class _Meta(HTMLParser):
@@ -128,8 +144,15 @@ async def import_from_website(url: str, client: httpx.AsyncClient | None = None,
     try:
         current = url
         for _ in range(4):  # manual redirects so each hop is re-validated
-            check_url(current)
-            r = await client.get(current, follow_redirects=False, headers={"User-Agent": "NewsagentBrandImport/1.0"})
+            headers = {"User-Agent": "NewsagentBrandImport/1.0"}
+            ext: dict = {}
+            target = current
+            if own:  # production: validate once, then connect to exactly that IP
+                target, host_header, ext = pin_to_ip(current, resolve_public(current))
+                headers.update(host_header)
+            else:
+                check_url(current)
+            r = await client.get(target, follow_redirects=False, headers=headers, extensions=ext)
             if r.is_redirect:
                 current = urljoin(current, r.headers["location"])
                 continue

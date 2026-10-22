@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { analyzeFile } from "./media";
+import { assertAllowedUrl } from "./urlguard";
 
 const run = promisify(execFile);
 const BUF = { maxBuffer: 128 * 1024 * 1024 };
@@ -27,6 +28,7 @@ export async function downloadChunks(urls: string[], dest: string): Promise<void
   const out = fs.createWriteStream(dest);
   try {
     for (const u of urls) {
+      assertAllowedUrl(u);
       const res = await fetch(u);
       if (!res.ok) throw new Error(`chunk download failed: ${res.status}`);
       const buf = Buffer.from(await res.arrayBuffer());

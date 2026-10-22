@@ -28,7 +28,7 @@ Operators also set budgets: `PUT /v1/admin/vendor-budgets` (the spend guard refu
 
 ## Test
 ```bash
-cd apps/api && uv run ruff check . && uv run mypy app && uv run pytest      # 137 tests; add TEST_DATABASE_URL=postgresql+asyncpg://... to run on Postgres
+cd apps/api && uv run ruff check . && uv run mypy app && uv run pytest      # 224 tests; add TEST_DATABASE_URL=postgresql+asyncpg://... to run on Postgres
 cd apps/web && pnpm lint && pnpm build && pnpm test      # unit
 cd apps/web && pnpm e2e                                    # browser journey; needs CHROMIUM_PATH locally, uses mocked vendors
 cd services/renderer && pnpm build && pnpm test
@@ -56,6 +56,16 @@ is finished unless the owner keeps them. See `docs/gate-2.md` for what has and h
 
 Local real-stack run (real ffmpeg + Remotion, mocked HeyGen/Whisper/email):
 `cd apps/web && E2E_QUESTIONS=5 pnpm e2e:real`. Periodic jobs: `celery -A app.pipeline.celery_app beat` (one instance).
+
+## Operating it (Phase 3)
+- **Operator console** (`/admin`): queue and jobs, review queue, costs and margin, credit packs, failover and an emergency
+  pause, audit log. **Credits** page for customers: balance, test checkout, usage statements, history. **Your data**: export or delete.
+- Billing: append-only credit ledger; payments via a provider-neutral signed webhook (a real provider adapter is still to be chosen).
+- Moderation holds borderline briefs, scripts and founder answers for a human; blocks clearly disallowed content.
+- `docs/runbook.md` (incidents), `docs/security-review.md`, `docs/gate-3.md` (what is and isn't done), `docs/render-benchmarks.md` (load test).
+- Backups: `python scripts/backup.py --upload`; prove one restores: `python scripts/restore_test.py <file.dump>`.
+- Renderer load test: `cd services/renderer && pnpm loadtest 6 5 2`.
+- In staging/production the API **refuses to start** with an insecure configuration and lists every problem.
 
 ## Pipeline
 Order: anchor render, then a half-resolution preview, then the final 16:9 + 9:16 renders, thumbnail and SRT.

@@ -69,3 +69,23 @@ confirms the compositing half of Option B; whether HeyGen's matted output looks 
 for 9:16 split on the 4 vCPU sandbox, about 10 fps. Founder portrait video is letterboxed in 16:9 (shown large,
 not cropped). Takes processing (`/process`: join chunks, trim silence, denoise, loudnorm, flags) runs in 2-5 s for an
 8 s take.
+
+
+## Load test and back-pressure (`pnpm loadtest <jobs> <seconds> <concurrency> [maxQueue]`)
+6 concurrent 16:9 renders of 5 s each, same 4 vCPU / 16 GB sandbox, software GL.
+
+| Renderer job concurrency | Wall | Videos/min | Median completion | Last | Peak memory |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 80.4 s | 4.48 | 54.2 s | 80.4 s | 1.7 GB |
+| 2 | 54.9 s | 6.56 | 36.8 s | 54.9 s | 3.2 GB |
+| 3 | 52.8 s | 6.82 | 52.5 s | 52.8 s | 4.7 GB |
+
+Concurrency 2 gives +46% throughput over 1; a third slot adds 1.5 GB of memory for +4% (the box is CPU-bound). **Use 2 per
+4 vCPU and scale by adding instances.**
+
+Overload: 8 jobs, concurrency 1, `MAX_QUEUE=2`: 3 accepted, 5 answered **429 + Retry-After**, 0 failures, peak memory 1.7 GB.
+The API's renderer client waits out 429s (up to 15 minutes) instead of failing the customer's video.
+
+Remotion was upgraded 4.0.250 -> 4.0.537 for security fixes. Smoke, merge and load results above were measured on 4.0.537;
+render speed was unchanged versus 4.0.250 (merge: 27 s vs 26 s). Caveat: this sandbox cannot reach `remotion.media`, so the
+upgraded version was run with Playwright's Chromium headless shell (`CHROMIUM_PATH`), not Remotion's own download.

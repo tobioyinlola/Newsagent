@@ -8,6 +8,23 @@
    `Bearer dev:<email>`.
 5. **Railway staging deploy** - deferred by the user.
 
+## Phase 3 decisions
+- **Credits are an append-only ledger.** Every balance change goes through `ledger.apply`; a test asserts the ledger
+  always sums to the balance. A failed attempt rolls back whole (nothing recorded, nothing charged).
+- **Markup is global** (`CREDIT_MARKUP`, default 1). The customer's balance is debited vendor cost x markup; vendor budgets and
+  project cost use the real vendor cost; margin = credits charged x `USD_PER_CREDIT` - vendor cost.
+- **Payments**: provider-neutral interface, HMAC-signed webhook, idempotent by ledger ref, amount must match the pack price.
+  The provider (Stripe / Paystack / Flutterwave) is **undecided**; only a mock exists. Mock provider and dev-pay route are local-only.
+- **Moderation is fail-safe**: LLM outage => hold for a human; unclear LLM answer => review. Approvals are keyed to a
+  fingerprint of the content, so any edit needs a new review. Operators can switch to log-only (shown with a warning).
+- **Failover** tries providers in order, each against its own vendor budget, releasing the failed attempt's hold. A
+  provider whose monthly budget is spent is skipped. Green-screen output (Synthesia) is keyed to alpha by the renderer.
+- **The emergency pause is a database switch** read on every reserve, so it takes effect immediately across all workers.
+- **Workspace deletion keeps the ledger** (anonymised) because financial records must be retained; everything else goes.
+- **The API refuses to start** with an insecure production config (mocks on, default keys, no scanner, http base URL...).
+- **Chose not to** add: billing-provider SDKs, multi-currency, taxes/invoices, SSO, a human-support inbox, a separate
+  moderation service. Each is a real need before scale, none was needed to prove the unit economics.
+
 ## Phase 2 decisions
 - **Chunked uploads, not S3 multipart.** MediaRecorder emits ~2 s chunks; S3 multipart needs >= 5 MB parts. Each chunk
   is its own object (`takes/<id>/raw/00007`), confirmed server-side by index; the renderer joins them. This makes

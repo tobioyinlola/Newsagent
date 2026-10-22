@@ -96,3 +96,62 @@ async def test_voices_and_accent_validation(client, workspace):
     assert {x["accent"] for x in v.json()} == set(brand.ALLOWED_VOICE_ACCENTS)
     r = await client.post("/v1/projects", json={"brief_text": "x" * 30, "voice_accent": "martian"}, headers=OWNER)
     assert r.status_code == 422
+
+
+async def test_import_pins_the_validated_ip_so_dns_rebinding_cannot_swap_it(monkeypatch):
+    import socket
+
+    resolutions = []
+
+    def fake_getaddrinfo(host, port, proto=0):
+        resolutions.append(host)
+        # a rebinding attacker answers differently each time: public first, then loopback
+        ip = "93.184.216.34" if len(resolutions) == 1 else "127.0.0.1"
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, port))]
+
+    seen = {}
+
+    class Capture(httpx.AsyncClient):
+        def __init__(self, *a, **k):
+            super().__init__(transport=httpx.MockTransport(self.handler), timeout=10)
+
+        @staticmethod
+        def handler(req: httpx.Request) -> httpx.Response:
+            seen["host"], seen["header"], seen["sni"] = (
+                req.url.host,
+                req.headers["host"],
+                req.extensions.get("sni_hostname"),
+            )
+            return httpx.Response(200, text="<title>Acme</title>")
+
+    monkeypatch.setattr(brand.socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(brand.httpx, "AsyncClient", Capture)
+    d = await brand.import_from_website("https://acme.example/")
+    assert d["company_name"] == "Acme"
+    assert seen == {"host": "93.184.216.34", "header": "acme.example", "sni": "acme.example"}
+    assert resolutions == ["acme.example"]  # resolved once; the client never looked the name up again
+
+
+def test_resolve_refuses_if_any_answer_is_private(monkeypatch):
+    import socket
+
+    monkeypatch.setattr(
+        brand.socket,
+        "getaddrinfo",
+        lambda h, p, proto=0: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", p)),
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.5", p)),
+        ],
+    )
+    with pytest.raises(brand.UnsafeUrl):
+        brand.resolve_public("https://mixed.example/")
+
+
+def test_pin_to_ip_handles_ports_and_ipv6():
+    url, headers, ext = brand.pin_to_ip("https://acme.example:8443/a?b=1", "93.184.216.34")
+    assert (
+        url == "https://93.184.216.34:8443/a?b=1"
+        and headers["Host"] == "acme.example:8443"
+        and ext["sni_hostname"] == "acme.example"
+    )
+    assert brand.pin_to_ip("http://x.example/", "2606:2800:220:1::1")[0] == "http://[2606:2800:220:1::1]/"
