@@ -59,6 +59,24 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e
+  e2e-real:
+    # slow (about 6 min): real ffmpeg + Remotion + browser recording. Runs on main only.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: [api, web, renderer]
+    defaults: { run: { working-directory: apps/web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: astral-sh/setup-uv@v3
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: (cd ../api && uv sync)
+      - run: pnpm install --frozen-lockfile && (cd ../../services/renderer && pnpm install --frozen-lockfile)
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: E2E_QUESTIONS=5 pnpm e2e:real
   renderer:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: services/renderer } }

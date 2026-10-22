@@ -27,6 +27,7 @@ from app.schemas.api import (
     GuestView,
     PhotoConfirmIn,
     PhotoIn,
+    UploadSlot,
 )
 from app.services import interview as iv
 from app.services import ratelimit, uploads
@@ -259,14 +260,14 @@ async def reprocess(token: str, take_id: str, session: AsyncSession = Depends(ge
     return _take(t)
 
 
-@router.post("/photo", dependencies=[Depends(guest_limit)])
-async def photo_slot(token: str, body: PhotoIn, session: AsyncSession = Depends(get_session)) -> dict:
+@router.post("/photo", response_model=UploadSlot, dependencies=[Depends(guest_limit)])
+async def photo_slot(token: str, body: PhotoIn, session: AsyncSession = Depends(get_session)) -> UploadSlot:
     s, project = await load(token, session, states={"awaiting_founder"})
     ext = {"image/png": "png", "image/jpeg": "jpg"}.get(body.content_type)
     if ext is None:
         raise HTTPException(422, "Please use a PNG or JPEG photo.")
     key = f"projects/{project.id}/takes/photo-{uuid.uuid4().hex[:10]}.{ext}"
-    return {"key": key, "upload_url": registry.get_storage().presign_put(key, 900), "content_type": body.content_type}
+    return UploadSlot(key=key, upload_url=registry.get_storage().presign_put(key, 900))
 
 
 @router.post("/photo/confirm", dependencies=[Depends(guest_limit)])
@@ -328,4 +329,20 @@ async def submit(token: str, session: AsyncSession = Depends(get_session)) -> di
     sm.transition(project, "processing_founder")
     await session.commit()
     await notify_owners(project.id, "founder_submitted")
+    return {"ok": True}
+
+
+@router.post("/speedtest", response_model=UploadSlot, dependencies=[Depends(guest_limit)])
+async def speedtest_slot(token: str, session: AsyncSession = Depends(get_session)) -> UploadSlot:
+    """Presigned slot for the device check's upload-speed test (a few hundred KB, deleted straight after)."""
+    s, project = await load(token, session, states={"awaiting_founder"})
+    key = f"projects/{project.id}/takes/speedtest-{uuid.uuid4().hex[:10]}"
+    return UploadSlot(key=key, upload_url=registry.get_storage().presign_put(key, 300))
+
+
+@router.post("/speedtest/done", dependencies=[Depends(guest_limit)])
+async def speedtest_done(token: str, body: PhotoConfirmIn, session: AsyncSession = Depends(get_session)) -> dict:
+    _, project = await load(token, session, states={"awaiting_founder"})
+    if body.key.startswith(f"projects/{project.id}/takes/speedtest-"):
+        await registry.get_storage().delete(body.key)
     return {"ok": True}

@@ -8,7 +8,26 @@
    `Bearer dev:<email>`.
 5. **Railway staging deploy** - deferred by the user.
 
-## Decided
+## Phase 2 decisions
+- **Chunked uploads, not S3 multipart.** MediaRecorder emits ~2 s chunks; S3 multipart needs >= 5 MB parts. Each chunk
+  is its own object (`takes/<id>/raw/00007`), confirmed server-side by index; the renderer joins them. This makes
+  resume trivial (the server's confirmed list is the truth) and keeps large files off the API.
+- **Reminder links need the raw token**, which the spec says is stored hashed. We store the SHA-256 hash for lookups
+  AND a Fernet-encrypted copy (`SECRET_KEY`) used only to re-send the same link in reminders. The encrypted copy is
+  deleted when the founder submits, the owner revokes/merges, or the link expires.
+- **Takes are processed as soon as the founder keeps them** (not at submit) so a dark or silent take is caught while
+  they are still on the page. Cost is bounded by 5 attempts per question.
+- **Take failures never change the project state** (take-level `failed` + retry); only the owner-visible pipeline
+  steps move the project.
+- **Interview cut renders two anchor clips** (intro+body, then outro) plus one clip per question. Costs 2 + N avatar
+  generations instead of 1; needed so the interview can sit between body and outro.
+- **Skip interview** from `awaiting_founder` uses the merge path with no answers (anchor intro + outro).
+- Whisper: any OpenAI-compatible `/audio/transcriptions` endpoint (OpenAI, Groq, self-hosted). No vendor lock decided.
+- Magic-link and share tokens are scrubbed from access logs and Sentry; the app sends `Referrer-Policy: no-referrer` via
+  meta tag and the founder page is `noindex`.
+- Avatar videos are now copied into our own storage (vendor URLs expire). Not yet exercised against real HeyGen.
+
+## Made (assumed
 - Remotion: free tier (team of 3 or fewer). Revisit if headcount reaches 4.
 - Email: Resend (`integrations/email/resend.py`). Needs `EMAIL_API_KEY` and a verified sending domain (SPF/DKIM/DMARC).
 - Railway staging deploy deferred.

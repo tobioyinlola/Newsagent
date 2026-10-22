@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { RequireAuth } from "./components/RequireAuth";
@@ -10,12 +11,16 @@ import { Projects } from "./pages/Projects";
 import { Redeem } from "./pages/Redeem";
 import { Share } from "./pages/Share";
 
+// The founder page is its own chunk so a phone on 4G downloads as little as possible before the camera starts.
+const Founder = lazy(() => import("./founder/Founder"));
+
 export function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/redeem" element={<Redeem />} />
       <Route path="/s/:token" element={<Share />} />
+      <Route path="/i/:token" element={<Suspense fallback={<p className="p-6">Loading…</p>}><Founder /></Suspense>} />
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
           <Route path="/projects" element={<Projects />} />

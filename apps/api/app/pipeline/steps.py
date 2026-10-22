@@ -120,7 +120,12 @@ async def persist_avatar_video(key: str, video_url: str) -> None:
     """Copy the vendor's video into our own storage. Vendor URLs expire; the renderer reads from our bucket."""
     storage = registry.get_storage()
     if video_url.startswith("mock://"):
-        await storage.put(key, b"mock-anchor-video", "video/webm")
+        from pathlib import Path
+
+        from app.config import get_settings
+
+        f = get_settings().mock_anchor_file
+        await storage.put(key, Path(f).read_bytes() if f else b"mock-anchor-video", "video/webm")
         return
     import httpx
 

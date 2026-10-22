@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "preview": "vite preview",
     "build": "tsc --noEmit && vite build",
     "lint": "eslint src",
     "test": "vitest run --passWithNoTests --exclude e2e",
     "e2e": "playwright test",
+    "e2e:real": "bash e2e-real/make-media.sh && playwright test -c playwright.real.config.ts",
     "gen:api": "openapi-typescript openapi.json -o src/api/schema.d.ts",
     "gen:api:check": "pnpm gen:api && git diff --exit-code src/api/schema.d.ts"
   },

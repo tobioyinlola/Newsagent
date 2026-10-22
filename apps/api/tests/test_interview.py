@@ -634,3 +634,19 @@ def test_srt_shift_and_trim():
 async def test_admin_can_set_transcription_budget(client, workspace):
     r = await client.put("/v1/admin/vendor-budgets", json={"vendor": "transcription", "limit": "5"}, headers=OPS)
     assert r.status_code == 200
+
+
+async def test_speedtest_slot_is_scoped_and_cleaned_up(client, workspace):
+    pid = await make_awaiting_founder(client)
+    token = await invite(client, pid)
+    slot = (await client.post(f"/v1/interview/{token}/speedtest")).json()
+    assert f"projects/{pid}/takes/speedtest-" in slot["key"]
+    await client.put(api_path(slot["upload_url"]), content=b"x" * 1000)
+    assert await registry.get_storage().exists(slot["key"])
+    await client.post(f"/v1/interview/{token}/speedtest/done", json={"key": slot["key"]})
+    assert not await registry.get_storage().exists(slot["key"])
+    # cannot be used to delete someone else's file
+    other = f"projects/{pid}/anchor.webm"
+    await registry.get_storage().put(other, b"keep")
+    await client.post(f"/v1/interview/{token}/speedtest/done", json={"key": other})
+    assert await registry.get_storage().exists(other)

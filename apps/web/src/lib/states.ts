@@ -1,10 +1,24 @@
-export const STEPS = [
-  { key: "draft", label: "Brief" },
-  { key: "script_ready", label: "Script" },
-  { key: "rendering_anchor", label: "Anchor" },
-  { key: "anchor_ready", label: "Rendering" },
-  { key: "final_ready", label: "Ready" },
-] as const;
+export type Step = { label: string; states: string[] };
+
+// The progress bar differs when a founder interview is included.
+export const stepsFor = (interview: boolean): Step[] =>
+  interview
+    ? [
+        { label: "Brief", states: ["draft"] },
+        { label: "Script", states: ["script_ready"] },
+        { label: "Anchor", states: ["script_approved", "rendering_anchor", "anchor_ready"] },
+        { label: "Founder", states: ["awaiting_founder"] },
+        { label: "Review", states: ["processing_founder"] },
+        { label: "Final video", states: ["merging"] },
+        { label: "Ready", states: ["final_ready"] },
+      ]
+    : [
+        { label: "Brief", states: ["draft"] },
+        { label: "Script", states: ["script_ready"] },
+        { label: "Anchor", states: ["script_approved", "rendering_anchor"] },
+        { label: "Rendering", states: ["anchor_ready"] },
+        { label: "Ready", states: ["final_ready"] },
+      ];
 
 const LABELS: Record<string, string> = {
   draft: "Draft",
@@ -12,9 +26,9 @@ const LABELS: Record<string, string> = {
   script_approved: "Script approved",
   rendering_anchor: "Recording the anchor",
   anchor_ready: "Rendering your video",
-  awaiting_founder: "Waiting for founder",
-  processing_founder: "Processing interview",
-  merging: "Merging interview",
+  awaiting_founder: "Waiting for your founder",
+  processing_founder: "Founder answers ready to review",
+  merging: "Making the final video",
   final_ready: "Ready",
   failed: "Needs attention",
   limit_reached: "Paused: limit reached",
@@ -22,10 +36,9 @@ const LABELS: Record<string, string> = {
 
 export const stateLabel = (s: string) => LABELS[s] ?? s;
 
-// Which step in the progress bar is current for a given state.
-export function stepIndex(state: string, failedFrom?: string): number {
-  const s = state === "script_approved" ? "rendering_anchor" : state;
-  const i = STEPS.findIndex((x) => x.key === s);
+// Index of the current step. A failed/paused project shows the step it stopped at.
+export function stepIndex(steps: Step[], state: string, failedFrom?: string): number {
+  const i = steps.findIndex((s) => s.states.includes(state));
   if (i >= 0) return i;
-  return failedFrom ? stepIndex(failedFrom) : 0;
+  return failedFrom ? stepIndex(steps, failedFrom) : 0;
 }

@@ -6,7 +6,8 @@ import { Delivery } from "../components/Delivery";
 import { ScriptEditor } from "../components/ScriptEditor";
 import { Button, Card, ErrorBox, Notice } from "../components/ui";
 import { streamProjectEvents } from "../lib/sse";
-import { STEPS, stateLabel, stepIndex } from "../lib/states";
+import { InterviewPanel, ReviewPanel } from "../components/Interview";
+import { stateLabel, stepIndex, stepsFor } from "../lib/states";
 
 export function ProjectDetail() {
   const { id = "" } = useParams();
@@ -29,7 +30,7 @@ export function ProjectDetail() {
 
   // Live status: refetch whenever the server pushes a new state.
   useEffect(() => {
-    if (!state || ["final_ready", "draft", "script_ready"].includes(state)) return;
+    if (!state || ["final_ready", "draft", "script_ready"].includes(state)) return;  // nothing live to watch
     const ctl = new AbortController();
     streamProjectEvents(id, () => { qc.invalidateQueries({ queryKey: ["project", id] }); qc.invalidateQueries({ queryKey: ["costs", id] }); }, ctl.signal);
     return () => ctl.abort();
@@ -38,7 +39,8 @@ export function ProjectDetail() {
   if (project.isLoading) return <p aria-busy="true">Loading…</p>;
   if (project.error || !project.data) return <ErrorBox error={project.error ?? new Error("Not found")} />;
   const p = project.data;
-  const cur = stepIndex(p.state, p.failure_reason ? "rendering_anchor" : undefined);
+  const steps = stepsFor(p.interview_enabled);
+  const cur = stepIndex(steps, p.state, p.failure_reason ? (p.interview_enabled ? "merging" : "rendering_anchor") : undefined);
 
   return (
     <>
@@ -47,8 +49,8 @@ export function ProjectDetail() {
         <span className="rounded-full bg-slate-100 px-3 py-1 text-sm" aria-live="polite">{stateLabel(p.state)}</span>
       </div>
       <ol className="flex flex-wrap gap-2" aria-label="Progress">
-        {STEPS.map((s, i) => (
-          <li key={s.key} aria-current={i === cur ? "step" : undefined} className={`rounded-full px-3 py-1 text-sm ${i < cur || p.state === "final_ready" ? "bg-green-100 text-green-900" : i === cur ? "bg-blue-700 text-white" : "bg-slate-100 text-slate-700"}`}>{s.label}</li>
+        {steps.map((s, i) => (
+          <li key={s.label} aria-current={i === cur ? "step" : undefined} className={`rounded-full px-3 py-1 text-sm ${i < cur || p.state === "final_ready" ? "bg-green-100 text-green-900" : i === cur ? "bg-blue-700 text-white" : "bg-slate-100 text-slate-700"}`}>{s.label}</li>
         ))}
       </ol>
 
@@ -64,11 +66,14 @@ export function ProjectDetail() {
       )}
       {p.state === "script_ready" && script.data && <ScriptEditor projectId={id} script={script.data} />}
       {["script_approved", "rendering_anchor", "anchor_ready"].includes(p.state) && (
-        <Card title="Making your video"><p aria-busy="true">This usually takes a few minutes. You can leave this page; we'll email you when it is ready.</p></Card>
+        <Card title={p.interview_enabled ? "Preparing your interview" : "Making your video"}><p aria-busy="true">This usually takes a few minutes. You can leave this page; we'll email you when it is ready.</p></Card>
       )}
+      {p.state === "awaiting_founder" && <InterviewPanel projectId={id} />}
+      {p.state === "processing_founder" && <ReviewPanel projectId={id} keepRaw={p.keep_raw_takes} />}
+      {p.state === "merging" && <Card title="Making your final video"><p aria-busy="true">We're putting the interview together. You'll get an email when it is ready.</p></Card>}
       {p.state === "final_ready" && <Delivery projectId={id} />}
 
-      {!["script_approved", "rendering_anchor", "anchor_ready"].includes(p.state) && (
+      {!["script_approved", "rendering_anchor", "anchor_ready", "merging"].includes(p.state) && (
         <div className="flex items-center gap-3">
           <Button variant="danger" disabled={del.isPending} onClick={() => { if (confirm("Delete this video and all its files? This can't be undone.")) del.mutate(); }}>Delete video</Button>
           <ErrorBox error={del.error} />

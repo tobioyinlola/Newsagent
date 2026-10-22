@@ -28,7 +28,7 @@ Operators also set budgets: `PUT /v1/admin/vendor-budgets` (the spend guard refu
 
 ## Test
 ```bash
-cd apps/api && uv run ruff check . && uv run mypy app && uv run pytest      # 83 tests; add TEST_DATABASE_URL=postgresql+asyncpg://... to run on Postgres
+cd apps/api && uv run ruff check . && uv run mypy app && uv run pytest      # 137 tests; add TEST_DATABASE_URL=postgresql+asyncpg://... to run on Postgres
 cd apps/web && pnpm lint && pnpm build && pnpm test      # unit
 cd apps/web && pnpm e2e                                    # browser journey; needs CHROMIUM_PATH locally, uses mocked vendors
 cd services/renderer && pnpm build && pnpm test
@@ -45,6 +45,17 @@ Delivery `GET /projects/{id}/{downloads,captions,costs,events}` (events is SSE; 
 `POST|DELETE /projects/{id}/share`, public `GET /share/{token}` | Admin `POST /admin/invites`,
 `PATCH /admin/workspaces/{id}`, `GET|PUT /admin/vendor-budgets`, `GET /admin/workspaces`. Uploads: `POST /brand-kit/uploads` then `/uploads/confirm`.
 First operator: `cd apps/api && uv run python -m app.cli bootstrap-operator you@example.com 100`. Full contract: `/docs`.
+
+## Founder interview (Phase 2)
+Owner ticks "Include a founder interview" when approving the script. After the anchor and per-question clips render, the
+project waits for the founder: the owner creates a private link (`/i/<token>`, 14 days, revocable, optionally emailed with
+reminders at days 2/5/9). The founder records in the browser; chunks upload straight to storage and resume after a drop.
+Each kept answer is cleaned up (ffmpeg), transcribed and quality-checked. After submit the owner reviews, picks PiP or
+split layout, trims/reorders/drops answers, and makes the final video. Raw recordings are deleted 90 days after the video
+is finished unless the owner keeps them. See `docs/gate-2.md` for what has and hasn't been verified.
+
+Local real-stack run (real ffmpeg + Remotion, mocked HeyGen/Whisper/email):
+`cd apps/web && E2E_QUESTIONS=5 pnpm e2e:real`. Periodic jobs: `celery -A app.pipeline.celery_app beat` (one instance).
 
 ## Pipeline
 Order: anchor render, then a half-resolution preview, then the final 16:9 + 9:16 renders, thumbnail and SRT.

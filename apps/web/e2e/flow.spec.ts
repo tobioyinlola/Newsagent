@@ -58,7 +58,7 @@ test("invite to shared video", async ({ page, browser }) => {
   await fp.getByRole("button", { name: "Approve and make my video" }).click();
   await expect(fp.getByRole("alert")).toContainText("confirm each flagged claim");
   await expect(fp.getByRole("group", { name: "Confirm these claims are accurate" })).toBeVisible();
-  for (const box of await fp.getByRole("checkbox").all()) await box.check();
+  for (const box of await fp.getByRole("group", { name: "Confirm these claims are accurate" }).getByRole("checkbox").all()) await box.check();
   await fp.getByRole("button", { name: "Approve and make my video" }).click();
 
   // --- render completes (mock vendors), live status

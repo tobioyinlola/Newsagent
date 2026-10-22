@@ -1270,6 +1270,16 @@
             "title": "Id",
             "type": "string"
           },
+          "interview_enabled": {
+            "default": false,
+            "title": "Interview Enabled",
+            "type": "boolean"
+          },
+          "keep_raw_takes": {
+            "default": false,
+            "title": "Keep Raw Takes",
+            "type": "boolean"
+          },
           "region": {
             "title": "Region",
             "type": "string"
@@ -1649,6 +1659,24 @@
           "max_bytes"
         ],
         "title": "UploadOut",
+        "type": "object"
+      },
+      "UploadSlot": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "upload_url": {
+            "title": "Upload Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "upload_url"
+        ],
+        "title": "UploadSlot",
         "type": "object"
       },
       "ValidationError": {
@@ -2820,9 +2848,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Photo Slot V1 Interview  Token  Photo Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/UploadSlot"
                 }
               }
             },
@@ -2894,6 +2920,103 @@
           }
         },
         "summary": "Photo Confirm",
+        "tags": [
+          "founder"
+        ]
+      }
+    },
+    "/v1/interview/{token}/speedtest": {
+      "post": {
+        "description": "Presigned slot for the device check's upload-speed test (a few hundred KB, deleted straight after).",
+        "operationId": "speedtest_slot_v1_interview__token__speedtest_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadSlot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Speedtest Slot",
+        "tags": [
+          "founder"
+        ]
+      }
+    },
+    "/v1/interview/{token}/speedtest/done": {
+      "post": {
+        "operationId": "speedtest_done_v1_interview__token__speedtest_done_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Speedtest Done V1 Interview  Token  Speedtest Done Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Speedtest Done",
         "tags": [
           "founder"
         ]

@@ -285,6 +285,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/interview/{token}/speedtest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Speedtest Slot
+         * @description Presigned slot for the device check's upload-speed test (a few hundred KB, deleted straight after).
+         */
+        post: operations["speedtest_slot_v1_interview__token__speedtest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interview/{token}/speedtest/done": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Speedtest Done */
+        post: operations["speedtest_done_v1_interview__token__speedtest_done_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/interview/{token}/submit": {
         parameters: {
             query?: never;
@@ -1245,6 +1282,16 @@ export interface components {
             failure_retryable: boolean;
             /** Id */
             id: string;
+            /**
+             * Interview Enabled
+             * @default false
+             */
+            interview_enabled: boolean;
+            /**
+             * Keep Raw Takes
+             * @default false
+             */
+            keep_raw_takes: boolean;
             /** Region */
             region: string;
             /** State */
@@ -1384,6 +1431,13 @@ export interface components {
             key: string;
             /** Max Bytes */
             max_bytes: number;
+            /** Upload Url */
+            upload_url: string;
+        };
+        /** UploadSlot */
+        UploadSlot: {
+            /** Key */
+            key: string;
             /** Upload Url */
             upload_url: string;
         };
@@ -2053,6 +2107,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "application/json": components["schemas"]["UploadSlot"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    photo_confirm_v1_interview__token__photo_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PhotoConfirmIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "application/json": {
                         [key: string]: unknown;
                     };
@@ -2069,7 +2158,38 @@ export interface operations {
             };
         };
     };
-    photo_confirm_v1_interview__token__photo_confirm_post: {
+    speedtest_slot_v1_interview__token__speedtest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadSlot"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    speedtest_done_v1_interview__token__speedtest_done_post: {
         parameters: {
             query?: never;
             header?: never;

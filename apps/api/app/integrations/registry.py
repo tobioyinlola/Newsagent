@@ -33,7 +33,7 @@ def get_storage() -> StorageProvider:
         if get_settings().use_mocks:
             from app.integrations.storage.local import LocalStorage
 
-            return LocalStorage()
+            return LocalStorage(get_settings().local_storage_dir or None)
         from app.integrations.storage.r2 import R2Storage
 
         return R2Storage()
@@ -69,7 +69,7 @@ def get_llm() -> ScriptLLM:
 
 def get_renderer() -> RendererClient:
     def make() -> RendererClient:
-        if get_settings().use_mocks:
+        if get_settings().use_mocks and get_settings().renderer_backend != "http":
             from app.integrations.renderer.mock import MockRenderer
 
             return MockRenderer(get_storage())

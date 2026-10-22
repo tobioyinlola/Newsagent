@@ -10,14 +10,17 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
   const qc = useQueryClient();
   const [segments, setSegments] = useState<Seg[]>(script.segments as Seg[]);
   const [ticker, setTicker] = useState(script.ticker_lines.join("\n"));
+  const [questions, setQuestions] = useState<string[]>(script.interview_questions);
+  const [withInterview, setWithInterview] = useState(false);
   const [confirmed, setConfirmed] = useState<Set<string>>(new Set(script.claim_flags.filter((c) => c.confirmed).map((c) => String(c.text))));
   useEffect(() => {
     setSegments(script.segments as Seg[]);
     setTicker(script.ticker_lines.join("\n"));
+    setQuestions(script.interview_questions);
     setConfirmed(new Set(script.claim_flags.filter((c) => c.confirmed).map((c) => String(c.text))));
   }, [script.id]);
 
-  const body = () => ({ segments, ticker_lines: ticker.split("\n").map((s) => s.trim()).filter(Boolean), lower_thirds: script.lower_thirds, interview_questions: script.interview_questions, confirmed_claims: [...confirmed] });
+  const body = () => ({ segments, ticker_lines: ticker.split("\n").map((s) => s.trim()).filter(Boolean), lower_thirds: script.lower_thirds, interview_questions: questions.map((q) => q.trim()).filter(Boolean), confirmed_claims: [...confirmed] });
   const refresh = () => { qc.invalidateQueries({ queryKey: ["script", projectId] }); qc.invalidateQueries({ queryKey: ["project", projectId] }); };
   const path = { params: { path: { project_id: projectId } } };
 
@@ -27,7 +30,7 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
     mutationFn: async () => {
       const saved = await unwrap(api.PUT("/v1/projects/{project_id}/script", { ...path, body: body() }));
       if (saved.claim_flags.some((c) => !c.confirmed)) throw new Error("Please confirm each flagged claim before approving.");
-      return unwrap(api.POST("/v1/projects/{project_id}/script/approve", path));
+      return unwrap(api.POST("/v1/projects/{project_id}/script/approve", { ...path, body: { with_interview: withInterview } }));
     },
     onSettled: refresh, // also on failure: the save above may have produced claims to confirm
   });
@@ -53,6 +56,25 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
           <label htmlFor="ticker" className="text-sm font-medium">News ticker (one line each)</label>
           <textarea id="ticker" rows={3} className={inputCls} value={ticker} onChange={(e) => setTicker(e.target.value)} />
         </div>
+        <fieldset className="space-y-2 rounded-md border border-slate-300 p-3">
+          <legend className="px-1 text-sm font-semibold">Founder interview (optional)</legend>
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" className="mt-1" checked={withInterview} onChange={(e) => setWithInterview(e.target.checked)} />
+            <span>Include a founder interview. The anchor asks these questions and your founder answers on their phone. If you skip this, you get the anchor-only video.</span>
+          </label>
+          {withInterview && (
+            <div className="space-y-2">
+              {questions.map((q, i) => (
+                <div key={i} className="flex gap-2">
+                  <input aria-label={`Interview question ${i + 1}`} maxLength={200} className={inputCls} value={q} onChange={(e) => setQuestions(questions.map((x, j) => (j === i ? e.target.value : x)))} />
+                  <Button variant="secondary" aria-label={`Remove question ${i + 1}`} onClick={() => setQuestions(questions.filter((_, j) => j !== i))}>Remove</Button>
+                </div>
+              ))}
+              {questions.length < 5 && <Button variant="secondary" onClick={() => setQuestions([...questions, ""])}>Add a question</Button>}
+              <p className="text-xs text-slate-600">1 to 5 questions. Short, open questions get the best answers.</p>
+            </div>
+          )}
+        </fieldset>
         {flags.length > 0 && (
           <fieldset className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3">
             <legend className="px-1 text-sm font-semibold text-amber-950">Confirm these claims are accurate</legend>

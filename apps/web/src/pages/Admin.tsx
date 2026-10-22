@@ -40,7 +40,7 @@ export function Admin() {
         <table className="mb-4 w-full text-sm"><caption className="sr-only">Vendor budgets</caption><thead><tr className="text-left text-slate-600"><th>Vendor</th><th>Period</th><th className="text-right">Spent</th><th className="text-right">Limit</th></tr></thead>
           <tbody>{budgets.data?.map((b) => <tr key={b.vendor + b.period} className="border-t border-slate-200"><td className="py-1">{b.vendor}</td><td>{b.period}</td><td className="text-right">{Number(b.spent).toFixed(2)}</td><td className="text-right">{Number(b.limit).toFixed(2)}</td></tr>)}</tbody></table>
         <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); setBudget.mutate(); }}>
-          <Field label="Vendor">{(id) => <select id={id} className={inputCls} value={vb.vendor} onChange={(e) => setVb({ ...vb, vendor: e.target.value })}>{["heygen", "renderer", "mock"].map((v) => <option key={v}>{v}</option>)}</select>}</Field>
+          <Field label="Vendor">{(id) => <select id={id} className={inputCls} value={vb.vendor} onChange={(e) => setVb({ ...vb, vendor: e.target.value })}>{["heygen", "renderer", "transcription", "mock"].map((v) => <option key={v}>{v}</option>)}</select>}</Field>
           <Field label="Monthly limit">{(id) => <input id={id} type="number" min="0" step="any" className={inputCls} value={vb.limit} onChange={(e) => setVb({ ...vb, limit: e.target.value })} />}</Field>
           <Button type="submit" variant="secondary">Set budget</Button>
         </form>

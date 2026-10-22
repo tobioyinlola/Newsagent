@@ -56,6 +56,11 @@ class Settings(BaseSettings):
     raw_take_retention_days: int = 90
     transcription_api_url: str = "https://api.openai.com/v1"  # any OpenAI-compatible /audio/transcriptions endpoint
     transcription_model: str = "whisper-1"
+    renderer_backend: str = (
+        ""  # "http" uses the real renderer service even when USE_MOCKS=true (local full-stack tests)
+    )
+    local_storage_dir: str = ""  # shared folder for LocalStorage so a local renderer can read/write the same files
+    mock_anchor_file: str = ""  # a real .webm the mock avatar copies as its output, for local end-to-end renders
     clamd_host: str = ""  # ClamAV daemon; required for uploads when USE_MOCKS=false
     clamd_port: int = 3310
     api_public_url: str = "http://localhost:8000"  # used by local dev storage URLs

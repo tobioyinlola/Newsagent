@@ -16,3 +16,5 @@ services/renderer/src/_floor_entry.tsx
 e2e.db
 test-results/
 playwright-report/
+e2e-real/.media/
+apps/api/e2e-real.db

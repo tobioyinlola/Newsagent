@@ -40,6 +40,8 @@ class ProjectOut(BaseModel):
     cost_total: Decimal
     failure_reason: str | None
     failure_retryable: bool
+    interview_enabled: bool = False
+    keep_raw_takes: bool = False
     created_at: datetime
     assets: list[AssetOut] = []
     model_config = {"from_attributes": True}
@@ -364,6 +366,11 @@ class ChunkUrlsOut(BaseModel):
 
 class CompleteIn(BaseModel):
     chunk_count: int = Field(ge=1, le=80)
+
+
+class UploadSlot(BaseModel):
+    key: str
+    upload_url: str
 
 
 class PhotoIn(BaseModel):
