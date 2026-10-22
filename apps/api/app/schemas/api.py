@@ -379,3 +379,175 @@ class PhotoIn(BaseModel):
 
 class PhotoConfirmIn(BaseModel):
     key: str
+
+
+# ---------- billing ----------
+class PackOut(BaseModel):
+    id: str
+    name: str
+    credits: Decimal
+    price_usd: Decimal
+    model_config = {"from_attributes": True}
+
+
+class PackIn(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    credits: Decimal = Field(gt=0)
+    price_usd: Decimal = Field(ge=0)
+
+
+class BillingSummary(BaseModel):
+    credit_balance: Decimal
+    spend_cap: Decimal
+    spent_total: Decimal
+    low_balance_threshold: Decimal
+    max_videos_per_day: int
+
+
+class CheckoutIn(BaseModel):
+    pack_id: str
+
+
+class CheckoutOut(BaseModel):
+    checkout_id: str
+    url: str
+
+
+class LedgerEntry(BaseModel):
+    id: str
+    created_at: datetime
+    kind: str
+    amount: Decimal
+    balance_after: Decimal
+    project_id: str | None
+    stage: str | None
+    description: str | None
+    model_config = {"from_attributes": True}
+
+
+class UsageLine(BaseModel):
+    project_id: str | None
+    stage: str | None
+    credits: Decimal
+
+
+class UsageStatement(BaseModel):
+    month: str
+    total_credits: Decimal
+    lines: list[UsageLine]
+
+
+class ManualCreditsIn(BaseModel):
+    credits: Decimal = Field(gt=0)
+    ref: str = Field(min_length=1, max_length=100)  # e.g. the invoice or bank transfer reference
+    note: str = Field(default="", max_length=300)
+
+
+class PackPatch(BaseModel):
+    active: bool
+
+
+# ---------- operator console ----------
+class ModerationCaseOut(BaseModel):
+    id: str
+    project_id: str
+    workspace_id: str
+    workspace_name: str | None = None
+    stage: str
+    status: str
+    reasons: list[str]
+    excerpt: str
+    note: str | None
+    created_at: datetime
+    reviewed_by: str | None = None
+
+
+class ModerationDecisionIn(BaseModel):
+    decision: str = Field(pattern="^(approve|reject)$")
+    note: str = Field(default="", max_length=500)
+
+
+class ProjectModerationOut(BaseModel):
+    stage: str
+    status: str
+    note: str | None = None
+    created_at: datetime
+
+
+class JobOut(BaseModel):
+    id: str
+    project_id: str
+    workspace_name: str | None = None
+    stage: str
+    vendor: str | None
+    status: str
+    attempts: int
+    cost: Decimal
+    duration_s: Decimal | None
+    error: str | None
+    created_at: datetime
+    stuck: bool = False
+
+
+class QueueOut(BaseModel):
+    jobs: dict[str, int]
+    takes: dict[str, int]
+    projects: dict[str, int]
+    moderation_pending: int
+    paused: bool
+
+
+class SettingsOut(BaseModel):
+    paused: bool = False
+    pause_reason: str = ""
+    moderation_mode: str = "enforce"
+    moderation_llm: bool = False
+    avatar_primary: str = "heygen"
+    avatar_secondary: str | None = None
+    avatar_failover: bool = False
+
+
+class SettingsPatch(BaseModel):
+    paused: bool | None = None
+    pause_reason: str | None = Field(default=None, max_length=200)
+    moderation_mode: str | None = Field(default=None, pattern="^(enforce|log_only)$")
+    moderation_llm: bool | None = None
+    avatar_primary: str | None = Field(default=None, pattern="^(heygen|synthesia|mock)$")
+    avatar_secondary: str | None = Field(default=None, pattern="^(heygen|synthesia|mock|none)$")
+    avatar_failover: bool | None = None
+
+
+class CostRow(BaseModel):
+    project_id: str
+    workspace_name: str | None
+    state: str
+    interview: bool
+    vendor_cost: Decimal
+    credits_charged: Decimal
+    margin: Decimal  # credits charged x USD per credit - vendor cost
+    by_vendor: dict[str, Decimal]
+
+
+class CostSummary(BaseModel):
+    videos: int  # completed (final_ready) videos in the window
+    avg_vendor_cost: Decimal
+    avg_credits_charged: Decimal
+    avg_margin: Decimal
+    usd_per_credit: Decimal
+    markup: Decimal
+
+
+class CostReport(BaseModel):
+    summary: CostSummary
+    rows: list[CostRow]
+
+
+class AuditOut(BaseModel):
+    id: str
+    created_at: datetime
+    actor: str
+    action: str
+    target_type: str | None
+    target_id: str | None
+    detail: dict
+    model_config = {"from_attributes": True}

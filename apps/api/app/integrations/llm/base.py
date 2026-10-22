@@ -30,4 +30,8 @@ class ScriptLLM(ABC):
     async def parse_brief(self, brief_text: str, website_url: str | None) -> dict: ...
 
     @abstractmethod
+    async def moderate(self, text: str) -> dict:
+        """Return {"level": "allow"|"review"|"block", "reasons": [str]} for content we are about to publish."""
+
+    @abstractmethod
     async def write_script(self, facts: dict, tone: str) -> ScriptDraft: ...

@@ -13,9 +13,12 @@ from app.pipeline.advance import advance
 from app.pipeline.takes import chunk_key
 from app.schemas.api import ApproveIn, ProjectCreate, ProjectOut, ScriptOut, ScriptUpdate
 from app.services import interview as iv
+from app.services import moderation_flow
 from app.services import state_machine as sm
+from app.services.audit import audit
 from app.services.brand import ALLOWED_VOICE_ACCENTS
 from app.services.claims import detect_claims
+from app.services.moderation import fingerprint, script_text
 from app.services.ratelimit import limit
 from app.services.safety import find_banned, text_overflow
 
@@ -60,6 +63,26 @@ async def create_project(
         raise HTTPException(403, "Workspace suspended")
     if body.voice_accent not in ALLOWED_VOICE_ACCENTS:
         raise HTTPException(422, {"error": "invalid_voice_accent", "allowed": ALLOWED_VOICE_ACCENTS})
+    verdict = await moderation_flow.evaluate(session, body.brief_text)
+    if verdict.level == "block" and await moderation_flow.mode(session) == "enforce":
+        # nothing is stored except an audit row with a fingerprint (not the text itself)
+        audit(
+            session,
+            p.user.email,
+            "moderation.blocked",
+            target_type="brief",
+            target_id=fingerprint(body.brief_text),
+            detail={"categories": verdict.categories},
+        )
+        await session.commit()
+        raise HTTPException(
+            422,
+            {
+                "error": "content_blocked",
+                "message": " ".join(verdict.messages) or "This content can't be used.",
+                "categories": verdict.categories,
+            },
+        )
     project = Project(
         workspace_id=p.workspace.id,
         region=body.region,
@@ -184,6 +207,16 @@ async def approve_script(
                 "terms": banned,
             },
         )
+    brief_text = project.brief.raw_text if project.brief else ""
+    text = script_text(brief_text, sv.segments, sv.ticker_lines, sv.lower_thirds, sv.interview_questions)
+    await moderation_flow.enforce(
+        session,
+        project_id=project.id,
+        workspace_id=project.workspace_id,
+        stage="script",
+        subject_id=fingerprint(sv.id, text),
+        text=text,
+    )
     too_long = text_overflow(sv.lower_thirds, sv.ticker_lines)
     if too_long:  # keeps text inside the broadcast layout (the renderer never wraps or shrinks it)
         raise HTTPException(422, {"error": "text_too_long", "message": too_long})

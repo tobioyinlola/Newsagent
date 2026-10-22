@@ -10,6 +10,9 @@ class MockScriptLLM(ScriptLLM):
         first = brief_text.strip().split(".")[0][:120]
         return {"company": "Acme", "problem": first, "usp": first, "key_facts": [brief_text[:200]]}
 
+    async def moderate(self, text: str) -> dict:
+        return {"level": "allow", "reasons": []}
+
     async def write_script(self, facts: dict, tone: str) -> ScriptDraft:
         company = facts.get("company", "this startup")
         segs = [

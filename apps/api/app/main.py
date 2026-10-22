@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routes import admin, auth, brand, delivery, guest, health, interview, projects
+from app.routes import admin, auth, billing, brand, delivery, guest, health, interview, ops, projects
 
 # Magic-link and share tokens are credentials. They live in URL paths, so scrub them from every log line.
 _TOKEN_PATH = re.compile(r"(/v1/(?:interview|share)/)[^/\s?\"']+")
@@ -60,11 +60,13 @@ def create_app() -> FastAPI:
         health.router,
         auth.router,
         brand.router,
+        billing.router,
         projects.router,
         delivery.router,
         interview.router,
         guest.router,
         admin.router,
+        ops.router,
     ):
         app.include_router(r)
     return app

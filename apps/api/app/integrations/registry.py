@@ -119,3 +119,14 @@ def get_scanner() -> MalwareScanner:
         return ClamAvScanner()
 
     return _get("scanner", make)  # type: ignore[return-value]
+
+
+def get_billing():
+    def make():
+        from app.integrations.billing.mock import MockBilling
+
+        if get_settings().billing_provider != "mock":
+            raise RuntimeError("No payment provider adapter is configured. See docs/decisions.md.")
+        return MockBilling()
+
+    return _get("billing", make)

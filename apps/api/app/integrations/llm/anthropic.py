@@ -38,6 +38,19 @@ class AnthropicScriptLLM(ScriptLLM):
             f"brief:\n{brief_text}\nWebsite: {website_url or 'n/a'}"
         )
 
+    async def moderate(self, text: str) -> dict:
+        raw = await self._json(
+            "You are a content-safety reviewer for short promotional videos about startups. Decide whether this "
+            'text may be published. Reply with JSON {"level": "allow"|"review"|"block", "reasons": [short '
+            "category names]}. block = clearly illegal, violent, hateful, sexual or fraudulent. review = misleading "
+            "health/financial claims, false endorsements, politics, or anything you are unsure about. Otherwise allow.\n\n"
+            + text[:6000]
+        )
+        level = (
+            raw.get("level") if raw.get("level") in {"allow", "review", "block"} else "review"
+        )  # unclear -> a human looks
+        return {"level": level, "reasons": [str(r)[:60] for r in raw.get("reasons", [])][:5]}
+
     async def write_script(self, facts: dict, tone: str) -> ScriptDraft:
         raw = await self._json(
             "Write a 60-90 second anchor script as JSON with keys segments [{kind,text}], "

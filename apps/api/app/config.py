@@ -61,10 +61,13 @@ class Settings(BaseSettings):
     )
     local_storage_dir: str = ""  # shared folder for LocalStorage so a local renderer can read/write the same files
     mock_anchor_file: str = ""  # a real .webm the mock avatar copies as its output, for local end-to-end renders
+    usd_per_credit: str = "1"  # what one credit is worth in revenue, for margin reporting
     credit_markup: str = (
         "1"  # customer credits charged per 1 USD of vendor cost (pass-through until pricing is decided)
     )
     low_balance_threshold: str = "5"
+    billing_webhook_secret: str = ""  # HMAC secret for payment webhooks; REQUIRED outside local
+    billing_provider: str = "mock"  # real provider adapter is a decision (Stripe / Paystack / Flutterwave)
     clamd_host: str = ""  # ClamAV daemon; required for uploads when USE_MOCKS=false
     clamd_port: int = 3310
     api_public_url: str = "http://localhost:8000"  # used by local dev storage URLs

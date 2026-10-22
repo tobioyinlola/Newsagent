@@ -23,9 +23,10 @@ from app.schemas.api import (
     RetakeIn,
     TakeOut,
 )
-from app.services import crypto
+from app.services import crypto, moderation_flow
 from app.services import interview as iv
 from app.services import state_machine as sm
+from app.services.moderation import fingerprint
 from app.services.notifications import email_founder_invite, email_founder_retake
 from app.services.ratelimit import limit
 
@@ -200,7 +201,20 @@ async def make_final(
         takes = await latest_takes(session, project_id)
         if any(t.status in {"recording", "uploaded", "processing"} for t in takes.values()):
             raise HTTPException(409, "Some answers are still being processed.")
+    takes_now = await latest_takes(session, project_id)
+    plan_now = project.merge_plan or default_plan(len(takes_now))
+    included = {a["question_index"] for a in plan_now["answers"] if a.get("include", True)}
     s = await active_session(session, project_id)
+    spoken = " ".join(t.transcript or "" for q, t in sorted(takes_now.items()) if q in included)
+    who = f"{s.founder_name} {s.founder_title}" if s else ""
+    await moderation_flow.enforce(  # what the founder SAID is published too, so it is screened before the final render
+        session,
+        project_id=project_id,
+        workspace_id=project.workspace_id,
+        stage="interview",
+        subject_id=fingerprint(*(f"{t.id}:{t.transcript}" for _, t in sorted(takes_now.items()))),
+        text=f"{who}\n{spoken}",
+    )
     if s:
         s.revoked_at, s.token_enc = datetime.now(UTC), None  # the founder link stops working once we merge
     sm.transition(project, "merging")
