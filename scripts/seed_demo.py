@@ -32,7 +32,8 @@ async def main(n: int) -> None:
             await c.put("/v1/admin/vendor-budgets", json={"vendor": vendor, "limit": "100000"}, headers=OPS)
         inv = (await c.post("/v1/admin/invites", json={"email": "seed@startup.example.com", "workspace_name": "Seed Co", "credits": "100000", "spend_cap": "100000"}, headers=OPS)).json()
         owner = {"Authorization": "Bearer dev:seed@startup.example.com"}
-        await c.post("/v1/auth/signup/start", json={"invite_code": inv["code"], "password": "seed-password-123"})
+        started = await c.post("/v1/auth/signup/start", json={"invite_code": inv["code"], "password": "correct horse battery"})
+        started.raise_for_status()
         mail = (await c.get("/v1/dev/last-email", params={"to": "seed@startup.example.com"})).json()["text"]
         code = re.search(r"\b(\d{6})\b", mail).group(1)  # type: ignore[union-attr]
         await c.post("/v1/auth/signup/verify", json={"invite_code": inv["code"], "code": code})
