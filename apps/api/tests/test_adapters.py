@@ -13,38 +13,41 @@ def test_srt_to_text():
     assert srt_to_text("") == ""
 
 
-async def test_whisper_api_request_shape_and_result(monkeypatch):
+def _download(content=b"audio-bytes"):
+    return httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(200, content=content)))
+
+
+async def test_whisper_api_request_shape_and_result():
     seen = {}
 
     def api(req: httpx.Request) -> httpx.Response:
         seen["url"], seen["auth"], seen["body"] = str(req.url), req.headers.get("authorization"), req.read()
         return httpx.Response(200, text=SRT)
 
-    class FakeDownload(httpx.AsyncClient):
-        def __init__(self, *a, **k):
-            super().__init__(transport=httpx.MockTransport(lambda r: httpx.Response(200, content=b"audio-bytes")))
-
-    monkeypatch.setattr("app.integrations.transcription.whisper_api.httpx.AsyncClient", FakeDownload)
     client = httpx.AsyncClient(
         base_url="https://api.example.com/v1", headers={"Authorization": "Bearer k"}, transport=httpx.MockTransport(api)
     )
-    t = await WhisperApiTranscription(client).transcribe("https://storage/x.mp3")
+    t = await WhisperApiTranscription(client, _download()).transcribe("https://storage/x.mp3")
     assert seen["url"] == "https://api.example.com/v1/audio/transcriptions" and seen["auth"] == "Bearer k"
     assert b'name="model"' in seen["body"] and b"audio-bytes" in seen["body"] and b"srt" in seen["body"]
     assert t.has_speech and t.text.startswith("Hello from Lagos.")
 
 
-async def test_whisper_empty_result_means_no_speech(monkeypatch):
-    class FakeDownload(httpx.AsyncClient):
-        def __init__(self, *a, **k):
-            super().__init__(transport=httpx.MockTransport(lambda r: httpx.Response(200, content=b"a")))
-
-    monkeypatch.setattr("app.integrations.transcription.whisper_api.httpx.AsyncClient", FakeDownload)
+async def test_whisper_empty_result_means_no_speech():
     client = httpx.AsyncClient(
         base_url="https://x/v1", transport=httpx.MockTransport(lambda r: httpx.Response(200, text=""))
     )
-    t = await WhisperApiTranscription(client).transcribe("https://storage/x.mp3")
+    t = await WhisperApiTranscription(client, _download()).transcribe("https://storage/x.mp3")
     assert not t.has_speech and t.srt == ""
+
+
+async def test_whisper_rejects_oversized_audio():
+    client = httpx.AsyncClient(
+        base_url="https://x/v1", transport=httpx.MockTransport(lambda r: httpx.Response(200, text=SRT))
+    )
+    big = _download(b"x" * (25 * 1024 * 1024))
+    with pytest.raises(ValueError, match="too large"):
+        await WhisperApiTranscription(client, big).transcribe("https://storage/x.mp3")
 
 
 async def test_http_renderer_process_polls_until_done(monkeypatch):

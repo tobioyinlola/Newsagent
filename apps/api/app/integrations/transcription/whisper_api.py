@@ -16,8 +16,9 @@ def srt_to_text(srt: str) -> str:
 
 
 class WhisperApiTranscription(TranscriptionProvider):
-    def __init__(self, client: httpx.AsyncClient | None = None) -> None:
+    def __init__(self, client: httpx.AsyncClient | None = None, download: httpx.AsyncClient | None = None) -> None:
         s = get_settings()
+        self._download = download or httpx.AsyncClient(timeout=60)
         self._model = s.transcription_model
         self._client = client or httpx.AsyncClient(
             base_url=s.transcription_api_url.rstrip("/"),
@@ -26,9 +27,8 @@ class WhisperApiTranscription(TranscriptionProvider):
         )
 
     async def transcribe(self, media_url: str) -> Transcript:
-        async with httpx.AsyncClient(timeout=60) as dl:
-            audio = await dl.get(media_url)
-            audio.raise_for_status()
+        audio = await self._download.get(media_url)
+        audio.raise_for_status()
         if len(audio.content) > MAX_AUDIO_BYTES:
             raise ValueError("audio too large to transcribe")
         r = await self._client.post(
