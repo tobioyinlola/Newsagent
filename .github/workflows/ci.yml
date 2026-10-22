@@ -1,6 +1,6 @@
 name: CI
 on:
-  push: { branches: [main] }
+  push: { branches: [main, staging] }
   pull_request:
 jobs:
   api:
@@ -66,7 +66,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - uses: astral-sh/setup-uv@v3
-      - run: (cd ../api && uv sync)
+      - run: (cd ../backend && uv sync)
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e
@@ -84,7 +84,7 @@ jobs:
         with: { node-version: 22 }
       - uses: astral-sh/setup-uv@v3
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - run: (cd ../api && uv sync)
+      - run: (cd ../backend && uv sync)
       - run: pnpm install --frozen-lockfile && (cd ../backend/renderer && pnpm install --frozen-lockfile)
       - run: pnpm exec playwright install --with-deps chromium
       - run: E2E_QUESTIONS=5 pnpm e2e:real
@@ -97,6 +97,7 @@ jobs:
         with: { version: 10 }
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg # the media/processing tests shell out to ffmpeg
       - run: pnpm install --frozen-lockfile
       - run: pnpm build && pnpm test
       - run: pnpm audit --prod
