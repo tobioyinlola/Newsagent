@@ -3,7 +3,7 @@
 ## Open (need you)
 1. **Option A vs B for the anchor** - spike not run (no vendor access). See `anchor-spike.md`.
 2. **Render speed** - resolved in the sandbox (forced `swangle` GL was the cause); re-verify on Railway.
-3. **Transcription vendor** - spec says "Whisper-class". Hosted (OpenAI/Groq/Replicate) or self-hosted?
+3. **Transcription vendor** - OpenAI (decided). `whisper-1` via `/audio/transcriptions`; set `TRANSCRIPTION_API_KEY` (an OpenAI key). Roughly $0.006 per audio minute at list price (verify on OpenAI's pricing page); set a `transcription` vendor budget in the console or the spend guard refuses the step.
 4. **Auth** - built in-house (decided; replaces Clerk/Auth0). Email + password (scrypt, min 10 chars, common-password check).
    Sign-up is invite-only: choose a password, then verify a 6-digit emailed code (10 min, 5 tries, single use, HMAC-hashed)
    that proves control of the invited address. Forgot-password uses the same kind of code. No authenticator-app (TOTP) by
