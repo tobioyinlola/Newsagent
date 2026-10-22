@@ -30,10 +30,10 @@ class HeyGenProvider(AvatarProvider):
 
     async def list_voices(self) -> list[VoiceOption]:
         async with httpx.AsyncClient(base_url=BASE, headers=self._headers, timeout=30) as c:
-            r = await c.get("/v3/voices")  # UNVERIFIED path
+            r = await c.get("/v3/voices")  # verified live: paginated ({data, has_more, next_token})
             r.raise_for_status()
             items = r.json().get("data", [])
-        return [VoiceOption(id=v["voice_id"], accent=v.get("accent", ""), preview_url=v.get("preview")) for v in items]
+        return [VoiceOption(id=v["voice_id"], accent=v.get("accent") or v.get("language", ""), preview_url=v.get("preview_audio_url") or v.get("preview")) for v in items]
 
     async def generate(self, req: AvatarRequest) -> AvatarResult:
         body: dict = {

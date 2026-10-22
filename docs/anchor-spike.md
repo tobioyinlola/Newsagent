@@ -1,6 +1,19 @@
 # Anchor spike (build spec section 9)
 
-**Status: NOT RUN. This is the one Phase 0 item I could not complete, and the Option A / B decision is still open.**
+**Status: PARTLY RUN. The key works, but no video was generated: the account has a $0.00 wallet and HeyGen returned
+`402 insufficient_credit`. The Option A / B decision is still open.**
+
+## What the live API told us (2026-10-22)
+- Auth works with `x-api-key`. `GET /v3/users/me` shows a **wallet billing** account with `remaining_balance: 0.0`.
+- `GET /v3/avatars` (paginated) returns avatar *groups* (e.g. Dante, 27 looks). `GET /v3/avatars/looks` returns the looks,
+  each with `avatar_type` (the ones seen are `photo_avatar`), `supported_api_engines` (`avatar_v`, `avatar_iv`, `avatar_iii`)
+  and `default_voice_id`. Nothing in these listings says a look supports transparent/webm output; that is still unconfirmed.
+- `GET /v3/voices` works and is paginated; voices carry `language` and `gender`, not an accent field.
+- `POST /v3/videos` with `{type:"avatar", avatar_id, script, output_format:"webm"}` was refused at the credit check, so the
+  request shape is still unproven. `avatar_id` may need to be a *look* id rather than a group id.
+- The older `/v2` endpoints are legacy and sunset on 2026-10-31; we use `/v3` only.
+- `developers.heygen.com` (the API reference) is not reachable from this environment's network policy.
+
 
 ## Why it did not run
 The session has no `HEYGEN_API_KEY` (or Synthesia key) and HeyGen account access. The spike has to generate
