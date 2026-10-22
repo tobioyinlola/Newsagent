@@ -20,6 +20,13 @@ def _fernet() -> Fernet:
     return Fernet(base64.urlsafe_b64encode(hashlib.sha256(b"newsagent-local-dev-key").digest()))
 
 
+def pepper() -> bytes:
+    """Server-side secret mixed into stored one-time-code hashes (a stolen database alone can't be brute-forced)."""
+    s = get_settings()
+    base = s.secret_key.encode() if s.secret_key else b"newsagent-local-dev-key"  # local-only fallback (see _fernet)
+    return hashlib.sha256(b"newsagent-auth-pepper:" + base).digest()
+
+
 def encrypt(text: str) -> str:
     return _fernet().encrypt(text.encode()).decode()
 

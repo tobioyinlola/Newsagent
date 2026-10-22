@@ -32,9 +32,44 @@ async def bootstrap_operator(email: str, credits: Decimal = Decimal("0")) -> str
         return ws.id
 
 
+async def reset_mfa(email: str) -> bool:
+    """Lockout recovery: turn off a user's second factor and sign them out everywhere. Audited as actor "cli"."""
+    from sqlalchemy import delete
+
+    from app.models import AuditLog, RecoveryCode
+    from app.services import sessions
+
+    async with session_maker()() as s:
+        user = (await s.execute(select(User).where(User.email == email.lower()))).scalar_one_or_none()
+        if user is None:
+            return False
+        user.totp_enabled, user.totp_secret_enc, user.totp_last_step = False, None, None
+        await s.execute(delete(RecoveryCode).where(RecoveryCode.user_id == user.id))
+        await sessions.revoke_all(s, user.id)
+        s.add(
+            AuditLog(
+                actor="cli",
+                action="auth.mfa_reset",
+                target_type="user",
+                target_id=user.id,
+                detail={"email": user.email},
+            )
+        )
+        await s.commit()
+        return True
+
+
 def main() -> None:
+    if len(sys.argv) == 3 and sys.argv[1] == "reset-mfa":
+
+        async def go() -> None:
+            print("two-factor reset" if await reset_mfa(sys.argv[2]) else "no such user")
+            await reset_engine()
+
+        asyncio.run(go())
+        return
     if len(sys.argv) < 3 or sys.argv[1] != "bootstrap-operator":
-        sys.exit("usage: python -m app.cli bootstrap-operator EMAIL [CREDITS]")
+        sys.exit("usage: python -m app.cli bootstrap-operator EMAIL [CREDITS] | reset-mfa EMAIL")
     credits = Decimal(sys.argv[3]) if len(sys.argv) > 3 else Decimal("0")
 
     async def run() -> None:

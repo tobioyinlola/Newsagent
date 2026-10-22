@@ -4,16 +4,13 @@ from decimal import Decimal
 from pydantic import BaseModel, EmailStr, Field
 
 
-class RedeemInvite(BaseModel):
-    code: str
-
-
 class MeOut(BaseModel):
     email: str
     workspace_id: str
     workspace_name: str
     credit_balance: Decimal
     is_operator: bool
+    mfa_enabled: bool = False
 
 
 class ProjectCreate(BaseModel):
@@ -551,3 +548,62 @@ class AuditOut(BaseModel):
     target_id: str | None
     detail: dict
     model_config = {"from_attributes": True}
+
+
+# ---------- sign-in / sign-up ----------
+class InvitePreview(BaseModel):
+    workspace_name: str
+    email_hint: str  # e.g. a***@startup.com
+
+
+class SignupStartIn(BaseModel):
+    invite_code: str = Field(min_length=8, max_length=100)
+
+
+class SignupVerifyIn(BaseModel):
+    invite_code: str = Field(min_length=8, max_length=100)
+    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class LoginStartIn(BaseModel):
+    email: EmailStr
+
+
+class LoginVerifyIn(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class CodeSentOut(BaseModel):
+    sent: bool = True
+    email_hint: str | None = None
+    expires_in_s: int
+
+
+class SessionOut(BaseModel):
+    token: str
+    expires_at: datetime
+    mfa_required: bool  # an authenticator code is still needed (call /auth/mfa/verify)
+    mfa_enrolment_required: bool  # operators must set up an authenticator before using the console
+
+
+class MfaCodeIn(BaseModel):
+    code: str = Field(min_length=6, max_length=20)  # an authenticator code, or a recovery code
+
+
+class MfaSetupOut(BaseModel):
+    secret: str
+    otpauth_uri: str
+
+
+class MfaEnableOut(BaseModel):
+    recovery_codes: list[str]  # shown once
+
+
+class SessionInfo(BaseModel):
+    id: str
+    created_at: datetime
+    last_used_at: datetime
+    user_agent: str | None
+    ip: str | None
+    current: bool

@@ -132,20 +132,3 @@ async def test_vendor_failure_retries_then_fails_retryable(client, workspace, ma
 async def test_admin_requires_operator(client, workspace):
     r = await client.post("/v1/admin/invites", json={"email": "a@b.example.com", "workspace_name": "X"}, headers=OWNER)
     assert r.status_code == 403
-
-
-async def test_invite_redeem_flow(client, workspace):
-    r = await client.post(
-        "/v1/admin/invites", json={"email": "new@startup.example.com", "workspace_name": "NewCo"}, headers=OPS
-    )
-    assert r.status_code == 200
-    code = r.json()["code"]
-    new = {"Authorization": "Bearer dev:new@startup.example.com"}
-    wrong = await client.post(
-        "/v1/auth/redeem", json={"code": code}, headers={"Authorization": "Bearer dev:x@y.example.com"}
-    )
-    assert wrong.status_code == 400
-    ok = await client.post("/v1/auth/redeem", json={"code": code}, headers=new)
-    assert ok.status_code == 200 and ok.json()["workspace_name"] == "NewCo"
-    again = await client.post("/v1/auth/redeem", json={"code": code}, headers=new)
-    assert again.status_code == 400

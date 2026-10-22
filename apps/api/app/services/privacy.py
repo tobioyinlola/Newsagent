@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.integrations import registry
 from app.models import (
     Asset,
+    AuthCode,
     BrandAsset,
     BrandKit,
     Brief,
@@ -18,10 +19,12 @@ from app.models import (
     Job,
     ModerationCase,
     Project,
+    RecoveryCode,
     ScriptVersion,
     ShareLink,
     Take,
     User,
+    UserSession,
     Workspace,
 )
 from app.pipeline.takes import chunk_key
@@ -76,6 +79,13 @@ async def delete_workspace(session: AsyncSession, ws: Workspace) -> None:
     ws.brand_kit_id = None
     await session.execute(delete(BrandKit).where(BrandKit.workspace_id == ws.id))
     await session.execute(delete(Invite).where(Invite.workspace_id == ws.id))
+    uids = list((await session.execute(select(User.id).where(User.workspace_id == ws.id))).scalars())
+    emails = list((await session.execute(select(User.email).where(User.workspace_id == ws.id))).scalars())
+    if uids:
+        await session.execute(delete(UserSession).where(UserSession.user_id.in_(uids)))
+        await session.execute(delete(RecoveryCode).where(RecoveryCode.user_id.in_(uids)))
+    if emails:
+        await session.execute(delete(AuthCode).where(AuthCode.email.in_(emails)))
     await session.execute(delete(User).where(User.workspace_id == ws.id))
     await session.execute(delete(ModerationCase).where(ModerationCase.workspace_id == ws.id))
     ws.name, ws.suspended, ws.deleted_at = f"deleted-{ws.id[:8]}", True, datetime.now(UTC)

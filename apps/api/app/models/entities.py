@@ -55,6 +55,11 @@ class User(Base, TimestampMixin):
     email: Mapped[str] = mapped_column(String(320), unique=True)
     role: Mapped[str] = mapped_column(String(20), default="owner")
     workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"))
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Authenticator-app (TOTP) second factor. Required for operators; optional for everyone else.
+    totp_secret_enc: Mapped[str | None] = mapped_column(Text, nullable=True)  # Fernet-encrypted
+    totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    totp_last_step: Mapped[int | None] = mapped_column(Integer, nullable=True)  # blocks replay of a used code
 
 
 class BrandKit(Base, TimestampMixin):
@@ -307,3 +312,41 @@ class ModerationCase(Base, TimestampMixin):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     reviewed_by: Mapped[str | None] = mapped_column(String(320), nullable=True)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class AuthCode(Base, TimestampMixin):
+    """A one-time sign-in / sign-up code sent by email. Only an HMAC of the code is stored."""
+
+    __tablename__ = "auth_codes"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    email: Mapped[str] = mapped_column(String(320), index=True)
+    purpose: Mapped[str] = mapped_column(String(10))  # login | signup
+    code_hash: Mapped[str] = mapped_column(String(64))
+    invite_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class UserSession(Base, TimestampMixin):
+    """A signed-in device. The bearer token is random and only its SHA-256 is stored, so sessions are revocable."""
+
+    __tablename__ = "sessions"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))  # absolute lifetime
+    last_used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)  # idle timeout
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    mfa_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    user_agent: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class RecoveryCode(Base, TimestampMixin):
+    __tablename__ = "recovery_codes"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    code_hash: Mapped[str] = mapped_column(String(64))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

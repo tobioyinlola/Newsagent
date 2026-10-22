@@ -14,8 +14,7 @@ from tests.helpers import invite, make_awaiting_founder, make_final_ready, recor
 GOOD = dict(
     environment="production",
     use_mocks=False,
-    auth_issuer="https://auth.example.com",
-    auth_audience="newsagent-api",
+    operator_emails="ops@example.com",
     secret_key=Fernet.generate_key().decode(),
     renderer_shared_secret="r" * 32,
     billing_webhook_secret="b" * 32,
@@ -50,7 +49,7 @@ def test_local_is_exempt():
     "override,needle",
     [
         ({"use_mocks": True}, "USE_MOCKS"),
-        ({"auth_audience": ""}, "AUTH_AUDIENCE"),
+        ({"operator_emails": ""}, "OPERATOR_EMAILS"),
         ({"secret_key": ""}, "SECRET_KEY"),
         ({"secret_key": "not-a-key"}, "valid Fernet"),
         ({"renderer_shared_secret": "short"}, "RENDERER_SHARED_SECRET"),

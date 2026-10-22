@@ -40,8 +40,10 @@ class Settings(BaseSettings):
     storage_secret_key: str = "minioadmin"
     renderer_url: str = "http://localhost:4000"
     renderer_shared_secret: str = ""
-    auth_issuer: str = ""
-    auth_audience: str = ""
+    otp_ttl_minutes: int = 10
+    session_idle_days: int = 7
+    session_absolute_days: int = 30
+    operator_session_hours: int = 8
     sentry_dsn: str = ""
     app_base_url: str = "http://localhost:5173"
     environment: str = "local"  # local, staging, production

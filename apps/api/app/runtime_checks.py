@@ -21,8 +21,8 @@ def problems(s: Settings) -> list[str]:
         out.append("USE_MOCKS must be false: mocks would fake payments, scans and vendors")
     if s.renderer_backend == "http" and s.use_mocks:
         out.append("RENDERER_BACKEND=http is a local-only override")
-    if not s.auth_issuer or not s.auth_audience:
-        out.append("AUTH_ISSUER and AUTH_AUDIENCE are required (tokens must be verified for issuer AND audience)")
+    if not s.operator_emails.strip():
+        out.append("OPERATOR_EMAILS is required (nobody could sign in to the operator console)")
     if not s.secret_key:
         out.append("SECRET_KEY is required")
     else:
