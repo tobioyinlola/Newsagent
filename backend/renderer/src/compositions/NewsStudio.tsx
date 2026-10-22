@@ -1,6 +1,7 @@
 import React from "react";
 import { AbsoluteFill, Easing, OffthreadVideo, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
-import { Chrome } from "./Chrome";
+import { Backdrop, Chrome } from "./Chrome";
+import { CF, Fonts, MONO, SANS } from "./theme";
 import { NewsProps } from "./types";
 
 // Channel identity: Cover Founder (our own brand). Do not use any other real network's name, marks, music or trade dress.
@@ -17,13 +18,9 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
   const ltOut = interpolate(frame, [durationInFrames - 20, durationInFrames - 5], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
   return (
-    <AbsoluteFill style={{ background: `linear-gradient(160deg, ${p.brand.primary}, #050B1A 75%)`, fontFamily: "Inter, Helvetica, Arial, sans-serif" }}>
-      {/* studio set: abstract panels */}
-      <AbsoluteFill>
-        <div style={{ position: "absolute", left: "-10%", top: "8%", width: "60%", height: "70%", background: "rgba(255,255,255,0.05)", transform: "skewX(-12deg)" }} />
-        <div style={{ position: "absolute", right: "-5%", top: "15%", width: "35%", height: "55%", background: "rgba(255,255,255,0.04)", transform: "skewX(-12deg)" }} />
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: portrait ? "32%" : "20%", height: 6 * u, background: p.brand.accent, opacity: 0.8 }} />
-      </AbsoluteFill>
+    <AbsoluteFill style={{ background: CF.ink, fontFamily: SANS }}>
+      <Fonts />
+      <Backdrop />
 
       {/* anchor */}
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "18%" : "9%" }}>
@@ -40,8 +37,8 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
       <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} />
 
       {/* breaking-news style banner */}
-      <div style={{ position: "absolute", left: 0, bottom: (portrait ? 31 : 19) * 1 + "%", transform: `translateX(${(1 - slide(5)) * -100}%)` }}>
-        <div style={{ background: p.brand.accent, color: "#111", fontWeight: 900, fontSize: 34 * u, padding: `${8 * u}px ${28 * u}px`, textTransform: "uppercase", letterSpacing: 3 * u }}>
+      <div style={{ position: "absolute", left: 0, bottom: (portrait ? 31 : 24.5) + "%", transform: `translateX(${(1 - slide(5)) * -100}%)` }}>
+        <div style={{ background: CF.green, color: CF.ink, fontFamily: MONO, fontWeight: 700, fontSize: 34 * u, padding: `${8 * u}px ${28 * u}px`, textTransform: "uppercase", letterSpacing: 3 * u }}>
           Featured startup
         </div>
       </div>
@@ -49,9 +46,9 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
       {/* lower third */}
       {lt && (
         <div style={{ position: "absolute", left: 48 * u, bottom: (portrait ? 20 : 11) + "%", opacity: slide(ltStart) * ltOut, transform: `translateY(${(1 - slide(ltStart)) * 30}px)` }}>
-          <div style={{ background: "rgba(5,11,26,0.92)", borderLeft: `${10 * u}px solid ${p.brand.accent}`, padding: `${14 * u}px ${28 * u}px` }}>
-            <div style={{ color: "#fff", fontSize: 44 * u, fontWeight: 800 }}>{lt.title}</div>
-            <div style={{ color: p.brand.accent, fontSize: 28 * u }}>{lt.subtitle}</div>
+          <div style={{ background: CF.ink, borderLeft: `${10 * u}px solid ${p.brand.accent}`, padding: `${14 * u}px ${28 * u}px` }}>
+            <div style={{ color: CF.white, fontFamily: MONO, fontSize: 44 * u, fontWeight: 700 }}>{lt.title}</div>
+            <div style={{ color: CF.green, fontFamily: SANS, fontSize: 28 * u }}>{lt.subtitle}</div>
           </div>
         </div>
       )}

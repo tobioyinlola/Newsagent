@@ -1,6 +1,7 @@
 import React from "react";
 import { AbsoluteFill, Audio, Freeze, Img, OffthreadVideo, Series, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { Backdrop, Chrome } from "./Chrome";
+import { CF, Fonts, MONO, SANS } from "./theme";
 
 export type Scene =
   | { type: "anchor" | "question"; src: string; seconds: number }
@@ -66,7 +67,7 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
   // Anchor "listening": the question clip frozen on its first frame and muted.
   const anchorBox = (
     <Freeze frame={0}>
-      <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: `linear-gradient(160deg, ${brand.primary}, #050B1A 75%)`, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: CF.ink, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
         <AnchorShot src={scene.pipSrc} muted height="100%" />
       </div>
     </Freeze>
@@ -74,9 +75,9 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
 
   const lowerThird = (
     <div style={{ position: "absolute", left: 48 * u, bottom: (portrait ? 20 : 14) + "%", opacity: ltIn * ltOut }}>
-      <div style={{ background: "rgba(5,11,26,0.92)", borderLeft: `${10 * u}px solid ${brand.accent}`, padding: `${14 * u}px ${28 * u}px` }}>
-        <div style={{ color: "#fff", fontSize: 44 * u, fontWeight: 800 }}>{scene.founder.name}</div>
-        <div style={{ color: brand.accent, fontSize: 28 * u }}>{scene.founder.title}</div>
+      <div style={{ background: CF.ink, borderLeft: `${10 * u}px solid ${brand.accent}`, padding: `${14 * u}px ${28 * u}px` }}>
+        <div style={{ color: CF.white, fontFamily: MONO, fontSize: 44 * u, fontWeight: 700 }}>{scene.founder.name}</div>
+        <div style={{ color: CF.green, fontFamily: SANS, fontSize: 28 * u }}>{scene.founder.title}</div>
       </div>
     </div>
   );
@@ -94,7 +95,7 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
   return (
     <AbsoluteFill>
       <div style={{ position: "absolute", left: 0, right: 0, top: 100 * u, bottom: 72 * u, background: "#000" }}>{founder}</div>
-      <div style={{ position: "absolute", right: 36 * u, top: portrait ? 130 * u : undefined, bottom: portrait ? undefined : 110 * u, width: width * pipW, height: width * pipW * 1.15, border: `${5 * u}px solid ${brand.accent}`, borderRadius: 16 * u, overflow: "hidden", boxShadow: "0 8px 30px rgba(0,0,0,0.5)" }}>{anchorBox}</div>
+      <div style={{ position: "absolute", right: 36 * u, top: portrait ? 130 * u : undefined, bottom: portrait ? undefined : 110 * u, width: width * pipW, height: width * pipW * 1.15, border: `${5 * u}px solid ${CF.green}`, borderRadius: 4 * u, overflow: "hidden" }}>{anchorBox}</div>
       {lowerThird}
     </AbsoluteFill>
   );
@@ -104,8 +105,9 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
   const { fps, height, width } = useVideoConfig();
   const portrait = height > width;
   return (
-    <AbsoluteFill style={{ fontFamily: "Inter, Helvetica, Arial, sans-serif", background: "#050B1A" }}>
-      <Backdrop primary={p.brand.primary} accent={p.brand.accent} />
+    <AbsoluteFill style={{ fontFamily: SANS, background: CF.ink }}>
+      <Fonts />
+      <Backdrop />
       <Series>
         {p.scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={Math.max(1, Math.round(s.seconds * fps))}>

@@ -25,5 +25,14 @@ Source: the Cover Founder brand guideline PDF (v1.0, 2026). Implemented in `fron
 The channel name in rendered videos and on the founder page is **Cover Founder** (`CHANNEL_IDENTITY` in
 `backend/app/pipeline/steps.py`, defaults in `backend/renderer/src/compositions`). It is locked: no field edits it.
 Not changed on purpose: the mandatory "Featured" / "AI-generated anchor" labels (hard rule 2), and the startup
-brand-kit editor, which is the *startup's* look. The video graphics (channel bug, lower thirds) still use the studio
-look, not yet the Cover Founder palette.
+brand-kit editor, which is the *startup's* look. 
+
+## Video graphics (`backend/renderer/src/compositions`)
+- `theme.tsx` holds the palette, the CF symbol and the striped ground; `Chrome.tsx` is the channel bug, the mandatory
+  disclosures and the ticker, shared by every composition so none can drop a disclosure.
+- Ground: ink `#222` with olive stripes. Channel bug: CF symbol in green + "COVER FOUNDER" in Space Mono Bold. "Featured"
+  tag: Peach with ink text. Ticker: ink with a green rule, Roboto. "Featured startup" banner: Pastel Green, Space Mono.
+- Lower thirds: ink panel, white Space Mono title, green Roboto subtitle. The **startup's own accent colour** is only the
+  marker bar beside the lower third (and not the ground), so every video reads as a Cover Founder video.
+- Fonts (Space Mono Bold, Roboto Regular/Bold) are bundled in `backend/renderer/public/fonts` and loaded before any frame is
+  captured, so a render never falls back to another font and needs no network.

@@ -1,9 +1,9 @@
 @import "tailwindcss";
-@import "@fontsource/space-mono/400.css";
-@import "@fontsource/space-mono/700.css";
-@import "@fontsource/roboto/400.css";
-@import "@fontsource/roboto/500.css";
-@import "@fontsource/roboto/700.css";
+@import "@fontsource/space-mono/latin-400.css";
+@import "@fontsource/space-mono/latin-700.css";
+@import "@fontsource/roboto/latin-400.css";
+@import "@fontsource/roboto/latin-500.css";
+@import "@fontsource/roboto/latin-700.css";
 
 /* Cover Founder brand guideline: palette, typography. Colours are used as approved, no gradients or effects on the logo. */
 @theme {
