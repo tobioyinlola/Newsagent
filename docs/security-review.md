@@ -11,7 +11,7 @@ Everything below says which of those a claim rests on.
 | Code review of auth, tokens, uploads, SSRF surface, payments webhook, moderation, deletion, logging | Read the code paths; wrote a failing test for each claim before relying on it |
 | Dependency audit | `pip-audit` (Python), `pnpm audit --prod` (web, renderer) |
 | Secret scan | Regex scan of the working tree and **every commit** in git history; `.env` untracked |
-| Behavioural verification | 224 API tests (SQLite and Postgres), 29 renderer tests, 5 browser tests, a real-stack browser test run **under the production Content-Security-Policy with zero violations** |
+| Behavioural verification | 227 API tests (SQLite and Postgres), 29 renderer tests, 5 browser tests, a real-stack browser test run **under the production Content-Security-Policy with zero violations** |
 
 | Not done | Why it matters |
 | --- | --- |

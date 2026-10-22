@@ -25,7 +25,7 @@ staging, export the CSV, and replace the placeholder rates (`avatar/heygen.py`, 
 the measured ones.
 
 ## 3. Security and privacy review closed
-See `docs/security-review.md`. Summary: engineering review done, 11 findings fixed (including 2 critical dependency
+See `docs/security-review.md`. Summary: engineering review done: 10 findings fixed and 1 mitigated (including 2 critical dependency
 advisories and 2 SSRF paths), 3 accepted with reasons, 3 open. **Still needed before this can be closed**: a lawyer on the
 section 8 items, a third-party penetration test of a deployed staging, and the infrastructure checklist in section 9.
 

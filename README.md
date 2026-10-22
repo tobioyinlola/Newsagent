@@ -28,7 +28,7 @@ Operators also set budgets: `PUT /v1/admin/vendor-budgets` (the spend guard refu
 
 ## Test
 ```bash
-cd apps/api && uv run ruff check . && uv run mypy app && uv run pytest      # 224 tests; add TEST_DATABASE_URL=postgresql+asyncpg://... to run on Postgres
+cd apps/api && uv run ruff check . && uv run mypy app && uv run pytest      # 227 tests; add TEST_DATABASE_URL=postgresql+asyncpg://... to run on Postgres
 cd apps/web && pnpm lint && pnpm build && pnpm test      # unit
 cd apps/web && pnpm e2e                                    # browser journey; needs CHROMIUM_PATH locally, uses mocked vendors
 cd services/renderer && pnpm build && pnpm test
