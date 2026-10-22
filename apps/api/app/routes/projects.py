@@ -2,18 +2,17 @@ import json
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import Principal, current_principal
 from app.db import get_session
 from app.integrations import registry
-from app.models import Asset, Brief, InterviewSession, Job, Project, ScriptVersion, ShareLink, Take
+from app.models import Asset, Brief, Project, ScriptVersion
 from app.pipeline.advance import advance
-from app.pipeline.takes import chunk_key
 from app.schemas.api import ApproveIn, ProjectCreate, ProjectOut, ScriptOut, ScriptUpdate
 from app.services import interview as iv
-from app.services import moderation_flow
+from app.services import moderation_flow, privacy
 from app.services import state_machine as sm
 from app.services.audit import audit
 from app.services.brand import ALLOWED_VOICE_ACCENTS
@@ -276,7 +275,7 @@ async def retry(
     return await _out(session, project)
 
 
-IN_FLIGHT = {"script_approved", "rendering_anchor", "anchor_ready", "merging"}
+IN_FLIGHT = privacy.IN_FLIGHT
 
 
 @router.delete("/{project_id}")
@@ -287,24 +286,6 @@ async def delete_project(
     project = await _owned(session, project_id, p)
     if project.state in IN_FLIGHT:
         raise HTTPException(409, "This video is being made. Delete it once it finishes or fails.")
-    storage = registry.get_storage()
-    assets = (await session.execute(select(Asset).where(Asset.project_id == project_id))).scalars().all()
-    for a in assets:
-        await storage.delete(a.storage_key)
-    for t in (await session.execute(select(Take).where(Take.project_id == project_id))).scalars():
-        for idx in list(t.chunks or {}):
-            await storage.delete(chunk_key(project_id, t.id, int(idx)))
-        for k in (t.processed_video_key, t.processed_audio_key):
-            if k:
-                await storage.delete(k)
-    for s in (
-        await session.execute(select(InterviewSession).where(InterviewSession.project_id == project_id))
-    ).scalars():
-        if s.photo_key:
-            await storage.delete(s.photo_key)
-    for model in (Take, Asset, Job, ScriptVersion, ShareLink, InterviewSession):
-        await session.execute(delete(model).where(model.project_id == project_id))
-    await session.execute(delete(Brief).where(Brief.project_id == project_id))
-    await session.delete(project)
+    await privacy.purge_project(session, project)
     await session.commit()
     return {"ok": True}

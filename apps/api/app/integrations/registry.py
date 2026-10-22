@@ -41,6 +41,25 @@ def get_storage() -> StorageProvider:
     return _get("storage", make)  # type: ignore[return-value]
 
 
+def get_avatar_named(name: str) -> AvatarProvider:
+    """A specific provider by name, for failover. In mock mode every name resolves to a mock that bills as that vendor."""
+
+    def make() -> AvatarProvider:
+        if get_settings().use_mocks:
+            from app.integrations.avatar.mock import MockAvatarProvider
+
+            return MockAvatarProvider(name=name, green_screen=name == "synthesia")
+        if name == "synthesia":
+            from app.integrations.avatar.synthesia import SynthesiaProvider
+
+            return SynthesiaProvider()
+        from app.integrations.avatar.heygen import HeyGenProvider
+
+        return HeyGenProvider()
+
+    return _get(f"avatar:{name}", make)  # type: ignore[return-value]
+
+
 def get_avatar() -> AvatarProvider:
     def make() -> AvatarProvider:
         if get_settings().use_mocks:
@@ -52,6 +71,21 @@ def get_avatar() -> AvatarProvider:
         return HeyGenProvider()
 
     return _get("avatar", make)  # type: ignore[return-value]
+
+
+async def avatar_chain(session) -> list[AvatarProvider]:
+    """Providers to try, in order. Default: the one provider from configuration. With the operator's failover
+    setting: the chosen primary, then the secondary if failover is on."""
+    from app.models import SystemSetting
+
+    row = await session.get(SystemSetting, "avatar")
+    cfg = row.value if row else {}
+    if not cfg.get("primary") and not cfg.get("failover"):
+        return [get_avatar()]
+    chain = [get_avatar_named(cfg.get("primary") or "heygen")]
+    if cfg.get("failover") and cfg.get("secondary") and cfg["secondary"] != cfg.get("primary", "heygen"):
+        chain.append(get_avatar_named(cfg["secondary"]))
+    return chain
 
 
 def get_llm() -> ScriptLLM:

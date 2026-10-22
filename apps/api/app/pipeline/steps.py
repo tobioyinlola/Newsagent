@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import logging
 from dataclasses import asdict, dataclass
 from decimal import Decimal
 
@@ -15,8 +16,11 @@ from app.models import Asset, BrandKit, InterviewSession, Job, Project, ScriptVe
 from app.services import state_machine as sm
 from app.services.captions import build_srt
 from app.services.interview import merge_srt, parse_srt, shifted_cues
+from app.services.notifications import notify_operators
 from app.services.safety import find_banned
 from app.services.spend_guard import LimitReached, SpendGuard
+
+log = logging.getLogger("pipeline")
 
 FORMATS = [
     {"kind": "video", "format": "16x9", "width": 1920, "height": 1080},
@@ -116,25 +120,79 @@ async def build_overlay_props(
 MAX_VIDEO_DOWNLOAD_BYTES = 600 * 1024 * 1024
 
 
-async def persist_avatar_video(key: str, video_url: str) -> None:
-    """Copy the vendor's video into our own storage. Vendor URLs expire; the renderer reads from our bucket."""
+async def persist_avatar_video(key: str, out) -> None:
+    """Copy the vendor's video into our own storage (vendor URLs expire; the renderer reads from our bucket).
+    Green-screen output (e.g. Synthesia) is keyed to a transparent WebM by the renderer first."""
     storage = registry.get_storage()
-    if video_url.startswith("mock://"):
+    url = out.video_url
+    raw_key = f"{key}.src.mp4" if out.needs_chroma_key else key
+    if url.startswith("mock://"):
         from pathlib import Path
 
         from app.config import get_settings
 
         f = get_settings().mock_anchor_file
-        await storage.put(key, Path(f).read_bytes() if f else b"mock-anchor-video", "video/webm")
-        return
-    import httpx
+        await storage.put(raw_key, Path(f).read_bytes() if f else b"mock-anchor-video", "video/webm")
+    else:
+        import httpx
 
-    async with httpx.AsyncClient(timeout=300, follow_redirects=True) as c:
-        r = await c.get(video_url)
-        r.raise_for_status()
-        if len(r.content) > MAX_VIDEO_DOWNLOAD_BYTES:
-            raise RuntimeError("anchor video too large")
-        await storage.put(key, r.content, "video/webm")
+        async with httpx.AsyncClient(timeout=300, follow_redirects=True) as c:
+            r = await c.get(url)
+            r.raise_for_status()
+            if len(r.content) > MAX_VIDEO_DOWNLOAD_BYTES:
+                raise RuntimeError("anchor video too large")
+            await storage.put(raw_key, r.content, "video/webm")
+    if out.needs_chroma_key:
+        try:
+            await registry.get_renderer().chroma_key(storage.presign_get(raw_key, 1800), key)
+        finally:
+            await storage.delete(raw_key)  # never keep the un-keyed copy
+
+
+_failover_notified: dict[str, float] = {}
+
+
+async def generate_anchor(
+    session: AsyncSession, project: Project, guard: SpendGuard, req: AvatarRequest, key: str, stage: str
+):
+    """Make one anchor clip, trying each configured provider in turn (spec: retry, then fail over to the secondary).
+    Each attempt reserves against its OWN vendor budget, and a failed attempt releases its hold, so a failover
+    never double-charges. Returns (result, cost, vendor_used)."""
+    import time
+
+    chain = await registry.avatar_chain(session)
+    last: Exception | None = None
+    for i, avatar in enumerate(chain):
+        more = i < len(chain) - 1
+        try:
+            res = await guard.reserve(
+                project.workspace_id, avatar.name, avatar.estimate_cost(req), project_id=project.id, stage=stage
+            )
+        except LimitReached as e:
+            if e.code == "vendor_budget" and more:  # this provider's monthly budget is spent: use the next one
+                last = e
+                continue
+            raise
+        try:
+            out = await avatar.generate(req)
+            await persist_avatar_video(key, out)
+        except Exception as e:  # noqa: BLE001
+            await guard.release(res)
+            last = e
+            log.warning("avatar provider %s failed for %s: %s", avatar.name, stage, e)
+            if more:
+                k = f"{avatar.name}->{chain[i + 1].name}"
+                if time.time() - _failover_notified.get(k, 0) > 3600:  # one email an hour, not one per clip
+                    _failover_notified[k] = time.time()
+                    await notify_operators(
+                        f"Avatar failover: {avatar.name} failed",
+                        f"{avatar.name} failed ({str(e)[:200]}). Switching to {chain[i + 1].name} for this clip.",
+                    )
+                continue
+            raise
+        return out, await guard.settle(res, out.cost), avatar.name
+    assert last is not None
+    raise last
 
 
 async def _paid_avatar_asset(
@@ -154,7 +212,6 @@ async def _paid_avatar_asset(
     ).first()
     if existing:
         return Decimal("0")
-    avatar = registry.get_avatar()
     req = AvatarRequest(
         script_text=text,
         pronunciation=glossary,
@@ -162,16 +219,7 @@ async def _paid_avatar_asset(
         avatar_id=project.anchor_id,
         transparent=True,
     )
-    res = await guard.reserve(
-        project.workspace_id, avatar.name, avatar.estimate_cost(req), project_id=project.id, stage=atype
-    )
-    try:
-        out = await avatar.generate(req)
-        await persist_avatar_video(key, out.video_url)
-    except Exception:
-        await guard.release(res)
-        raise
-    cost = await guard.settle(res, out.cost)
+    out, cost, _vendor = await generate_anchor(session, project, guard, req, key, atype)
     # an older clip for the same slot (e.g. the owner edited a question) is replaced
     for old in (
         await session.execute(
@@ -225,7 +273,6 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
                 key=f"projects/{project.id}/anchor-outro.webm",
             )
         return StepOutcome({"split": True}, recorded_cost=total)
-    avatar = registry.get_avatar()
     kit = await current_kit(session, project.workspace_id)
     req = AvatarRequest(
         script_text=anchor_text(script),
@@ -234,19 +281,10 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
         avatar_id=project.anchor_id,
         transparent=True,
     )
-    res = await guard.reserve(
-        project.workspace_id, avatar.name, avatar.estimate_cost(req), project_id=project.id, stage="anchor"
-    )
     key = f"projects/{project.id}/anchor.webm"
-    try:
-        out = await avatar.generate(req)
-        await persist_avatar_video(key, out.video_url)
-    except Exception:
-        await guard.release(res)
-        raise
-    cost = await guard.settle(res, out.cost)
+    out, cost, vendor = await generate_anchor(session, project, guard, req, key, "anchor")
     session.add(Asset(project_id=project.id, type="anchor", storage_key=key, duration=Decimal(str(out.duration_s))))
-    return StepOutcome({"video_url": out.video_url, "duration_s": out.duration_s, "key": key}, cost)
+    return StepOutcome({"vendor": vendor, "duration_s": out.duration_s, "key": key}, cost)
 
 
 async def question_clips(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:

@@ -48,7 +48,17 @@ class ProcessResult:
     stats: dict = field(default_factory=dict)
 
 
+@dataclass
+class KeyResult:
+    key: str
+    duration_s: float
+
+
 class RendererClient(ABC):
+    @abstractmethod
+    async def chroma_key(self, url: str, output_key: str) -> KeyResult:
+        """Turn a green-screen video into a transparent WebM stored at output_key."""
+
     @abstractmethod
     async def process(self, req: ProcessRequest) -> ProcessResult:
         """Join uploaded chunks, clean up and trim the audio, flag problems, write results to storage."""

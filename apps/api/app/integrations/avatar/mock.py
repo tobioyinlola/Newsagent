@@ -7,6 +7,10 @@ MOCK_COST_PER_MINUTE = 1.0
 class MockAvatarProvider(AvatarProvider):
     name = "mock"
 
+    def __init__(self, name: str = "mock", green_screen: bool = False) -> None:
+        self.name = name  # lets tests play "heygen" / "synthesia" and bill the right vendor budget
+        self.green_screen = green_screen
+
     def _duration(self, req: AvatarRequest) -> float:
         return max(1.0, len(req.script_text.split()) / WORDS_PER_SECOND)
 
@@ -20,8 +24,11 @@ class MockAvatarProvider(AvatarProvider):
     async def generate(self, req: AvatarRequest) -> AvatarResult:
         d = self._duration(req)
         return AvatarResult(
-            video_url="mock://anchor.webm" if req.transparent else "mock://anchor.mp4",
+            video_url="mock://green.mp4"
+            if self.green_screen
+            else ("mock://anchor.webm" if req.transparent else "mock://anchor.mp4"),
             duration_s=d,
             cost=self.estimate_cost(req),
             vendor_video_id="mock-video",
+            needs_chroma_key=self.green_screen,
         )

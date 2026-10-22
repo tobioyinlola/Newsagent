@@ -17,6 +17,7 @@ class AvatarResult:
     duration_s: float
     cost: float  # actual vendor cost in credits (USD)
     vendor_video_id: str
+    needs_chroma_key: bool = False  # green-screen output that must be keyed to transparent before compositing
 
 
 @dataclass

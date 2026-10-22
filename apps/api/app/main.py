@@ -3,11 +3,12 @@ import logging
 import re
 
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routes import admin, auth, billing, brand, delivery, guest, health, interview, ops, projects
+from app.routes import account, admin, auth, billing, brand, delivery, guest, health, interview, ops, projects
+from app.runtime_checks import assert_runtime_ok
 
 # Magic-link and share tokens are credentials. They live in URL paths, so scrub them from every log line.
 _TOKEN_PATH = re.compile(r"(/v1/(?:interview|share)/)[^/\s?\"']+")
@@ -44,6 +45,7 @@ def create_app() -> FastAPI:
     s = get_settings()
     h = logging.StreamHandler()
     h.setFormatter(JsonFormatter())
+    assert_runtime_ok(s)  # staging/production only; local is exempt
     h.addFilter(RedactTokens())
     logging.basicConfig(level=logging.INFO, handlers=[h], force=True)
     for name in ("uvicorn.access", "httpx"):
@@ -56,6 +58,23 @@ def create_app() -> FastAPI:
         from app.routes import devstorage
 
         app.include_router(devstorage.router)
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        resp = await call_next(request)
+        resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+        resp.headers.setdefault("X-Frame-Options", "DENY")
+        resp.headers.setdefault("Referrer-Policy", "no-referrer")
+        resp.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+        resp.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        if request.url.path.startswith("/v1/") and not request.url.path.startswith("/v1/dev-storage"):
+            resp.headers.setdefault(
+                "Cache-Control", "no-store"
+            )  # tokens, signed URLs and personal data must not be cached
+        if not s.is_local:
+            resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        return resp
+
     for r in (
         health.router,
         auth.router,
@@ -66,6 +85,7 @@ def create_app() -> FastAPI:
         interview.router,
         guest.router,
         admin.router,
+        account.router,
         ops.router,
     ):
         app.include_router(r)

@@ -30,7 +30,7 @@ from app.schemas.api import (
     UploadSlot,
 )
 from app.services import interview as iv
-from app.services import ratelimit, uploads
+from app.services import privacy, ratelimit, uploads
 from app.services import state_machine as sm
 from app.services.notifications import notify_owners
 
@@ -345,4 +345,18 @@ async def speedtest_done(token: str, body: PhotoConfirmIn, session: AsyncSession
     _, project = await load(token, session, states={"awaiting_founder"})
     if body.key.startswith(f"projects/{project.id}/takes/speedtest-"):
         await registry.get_storage().delete(body.key)
+    return {"ok": True}
+
+
+@router.delete("/data", dependencies=[Depends(guest_limit)])
+async def erase_my_recordings(token: str, session: AsyncSession = Depends(get_session)) -> dict:
+    """The founder's own right to erasure: delete every recording, transcript and photo, and close the link."""
+    s, project = await load(token, session)
+    await privacy.purge_takes(session, project.id)
+    s.revoked_at, s.token_enc, s.submitted_at = datetime.now(UTC), None, None
+    if project.state == "processing_founder":
+        sm.transition(project, "awaiting_founder")  # nothing left to review; the owner can invite again or skip
+    project.merge_plan = None
+    await session.commit()
+    await notify_owners(project.id, "founder_erased")
     return {"ok": True}

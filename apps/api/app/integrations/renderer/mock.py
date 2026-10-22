@@ -1,5 +1,6 @@
 from app.integrations.renderer.base import (
     Analysis,
+    KeyResult,
     ProcessRequest,
     ProcessResult,
     RendererClient,
@@ -19,11 +20,17 @@ class MockRenderer(RendererClient):
         self.process_duration_s = 4.0  # what a processed founder take measures
         self.process_flags: list[str] = []  # tests set e.g. ["no_speech"] to simulate a bad take
         self.processed: list[ProcessRequest] = []
+        self.keyed: list[tuple[str, str]] = []
         self.requests: list[RenderRequest] = []  # every render submitted, for assertions
         self.analysis_override: Analysis | None = None  # tests inject bad media
 
     def estimate_cost(self, req: RenderRequest) -> float:
         return 0.05 * len(req.outputs)
+
+    async def chroma_key(self, url: str, output_key: str) -> KeyResult:
+        self.keyed.append((url, output_key))
+        await self.storage.put(output_key, b"mock-keyed-anchor", "video/webm")
+        return KeyResult(output_key, 3.0)
 
     async def process(self, req: ProcessRequest) -> ProcessResult:
         vkey = f"{req.output_prefix}/answer.mp4" if req.kind == "video" else None

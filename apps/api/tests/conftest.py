@@ -46,7 +46,7 @@ async def workspace(maker):
         await ledger.apply(s, ws, Decimal("10"), "grant", description="test credits")
         s.add(User(email="owner@acme.test", workspace_id=ws.id))
         s.add(User(email="ops@example.com", workspace_id=ws.id))
-        for vendor in ("mock", "heygen", "renderer", "transcription"):
+        for vendor in ("mock", "heygen", "synthesia", "renderer", "transcription"):
             await ensure_vendor_budget(s, vendor, Decimal("100"))
         await s.commit()
         return ws.id

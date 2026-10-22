@@ -25,6 +25,11 @@ MESSAGES = {
         "Your founder has submitted their answers",
         "Your founder finished recording. Open the project to review the answers, choose a layout, and make the final video.",
     ),
+    "founder_erased": (
+        "Your founder deleted their recordings",
+        "Your founder used their right to delete their recordings. They have been permanently removed. If a finished video already "
+        "included them, please remove it from anywhere you shared it. You can invite them again or make the anchor-only video.",
+    ),
     "limit_reached": (
         "Your video is paused: limit reached",
         "Your video is paused because a usage limit was reached. Once the limit is raised, press Retry to continue.",

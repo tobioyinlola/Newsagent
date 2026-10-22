@@ -5,6 +5,7 @@ import httpx
 from app.config import VENDOR_POLICIES, get_settings
 from app.integrations.renderer.base import (
     Analysis,
+    KeyResult,
     ProcessRequest,
     ProcessResult,
     RendererClient,
@@ -24,6 +25,21 @@ class HttpRenderer(RendererClient):
 
     def estimate_cost(self, req: RenderRequest) -> float:
         return COST_PER_OUTPUT * len(req.outputs)
+
+    async def chroma_key(self, url: str, output_key: str) -> KeyResult:
+        r = await self._client.post("/chromakey", json={"url": url, "output_key": output_key})
+        r.raise_for_status()
+        rid = r.json()["render_id"]
+        waited = 0.0
+        while waited < VENDOR_POLICIES["renderer"].timeout_s:
+            st = (await self._client.get(f"/renders/{rid}")).json()
+            if st["status"] == "succeeded":
+                return KeyResult(st["result"]["key"], st["result"]["duration_s"])
+            if st["status"] == "failed":
+                raise RuntimeError(st.get("error") or "chroma key failed")
+            await asyncio.sleep(2)
+            waited += 2
+        raise TimeoutError("chroma key timed out")
 
     async def process(self, req: ProcessRequest) -> ProcessResult:
         r = await self._client.post(

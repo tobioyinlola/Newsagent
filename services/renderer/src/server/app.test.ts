@@ -90,4 +90,23 @@ describe("renderer API", () => {
       throw new Error("did not finish");
     } finally { server.close(); }
   });
+  it("/chromakey validates input and exposes the keyed result", async () => {
+    const keyFn = async () => { const fs = await import("node:fs"); const os = await import("node:os"); const d = fs.mkdtempSync(os.tmpdir() + "/kt-"); fs.writeFileSync(d + "/o.webm", "w"); return { dir: d, path: d + "/o.webm", duration_s: 7.5, width: 640, height: 720 }; };
+    const server = createApp({ secret: "s3cret", keyFn }).listen(0);
+    const b = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    try {
+      const h = { "x-renderer-secret": "s3cret", "content-type": "application/json" };
+      for (const bad of [{}, { url: "http://x", output_key: "../evil.webm" }, { url: "http://x", output_key: "p/a.mp4" }]) {
+        expect((await fetch(`${b}/chromakey`, { method: "POST", headers: h, body: JSON.stringify(bad) })).status).toBe(400);
+      }
+      const { render_id } = await (await fetch(`${b}/chromakey`, { method: "POST", headers: h, body: JSON.stringify({ url: "http://x/v.mp4", output_key: "projects/p/anchor.webm" }) })).json();
+      for (let i = 0; i < 50; i++) {
+        const st = await (await fetch(`${b}/renders/${render_id}`, { headers: h })).json();
+        if (st.status === "succeeded") { expect(st.result).toMatchObject({ key: "projects/p/anchor.webm", duration_s: 7.5 }); return; }
+        if (st.status === "failed") throw new Error(st.error);
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      throw new Error("did not finish");
+    } finally { server.close(); }
+  });
 });
