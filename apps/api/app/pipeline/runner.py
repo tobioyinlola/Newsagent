@@ -19,12 +19,16 @@ log = logging.getLogger("pipeline")
 BACKOFF_SCALE = 1.0  # tests set to 0
 
 STEPS = {
+    "question_clips": ("avatar", steps.question_clips, None),
+    "merge_render": ("renderer", steps.merge_render, "final_ready"),
     "preview_render": ("renderer", steps.preview_render, None),
     "anchor_render": ("avatar", steps.anchor_render, "anchor_ready"),
     "final_render": ("renderer", steps.final_render, "final_ready"),
 }
 # State a project must be in for a finished step to move it forward; otherwise a re-run is a no-op.
 PREDECESSOR = {
+    "question_clips": "anchor_ready",
+    "merge_render": "merging",
     "anchor_render": "rendering_anchor",
     "preview_render": "anchor_ready",
     "final_render": "anchor_ready",
@@ -32,6 +36,11 @@ PREDECESSOR = {
 
 
 async def run_step(step: str, payload: dict) -> None:
+    if step == "process_take":  # per-take work isn't tied to the project's state
+        from app.pipeline.takes import process_take
+
+        await process_take(payload["take_id"])
+        return
     vendor_kind, fn, next_state = STEPS[step]
     policy = VENDOR_POLICIES[vendor_kind]
     pid = payload["project_id"]
@@ -41,6 +50,8 @@ async def run_step(step: str, payload: dict) -> None:
         if project is None:
             return
         inputs = await steps.anchor_inputs(session, project)
+        if step == "merge_render":
+            inputs = {**inputs, **await steps.merge_inputs(session, project)}
         ih = steps.input_hash({"step": step, **inputs})
         job = (
             await session.execute(select(Job).where(Job.project_id == pid, Job.stage == step, Job.input_hash == ih))
@@ -106,7 +117,7 @@ async def _attempt_loop(step, fn, pid, ih, policy) -> bool:
                 await asyncio.sleep(policy.backoff_base_s * 2 ** (attempt - 1) * BACKOFF_SCALE)
                 continue
             project.cost_total += out.cost
-            job.status, job.cost, job.result, job.error = "succeeded", out.cost, out.result, None
+            job.status, job.cost, job.result, job.error = "succeeded", out.cost + out.recorded_cost, out.result, None
             job.duration_s = Decimal(str(round(time.monotonic() - started, 2)))
             job.vendor = STEPS[step][0]
             await session.commit()
@@ -122,7 +133,7 @@ async def _finish(step: str, pid: str, next_state: str | None) -> None:
         assert project is not None
         if project.state != PREDECESSOR[step]:
             return
-        if step == "final_render":
+        if step in {"final_render", "merge_render"}:
             job = (
                 (
                     await session.execute(
@@ -143,6 +154,8 @@ async def _finish(step: str, pid: str, next_state: str | None) -> None:
                 return
         if next_state:
             sm.transition(project, next_state)
+            if next_state == "final_ready":
+                project.completed_at = datetime.now(UTC)
         await session.commit()
         if next_state == "final_ready":
             await notify_owners(pid, "render_ready")

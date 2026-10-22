@@ -95,9 +95,13 @@ def get_email() -> EmailProvider:
 
 def get_transcription() -> TranscriptionProvider:
     def make() -> TranscriptionProvider:
-        from app.integrations.transcription.mock import MockTranscription
+        if get_settings().use_mocks:
+            from app.integrations.transcription.mock import MockTranscription
 
-        return MockTranscription()  # real vendor: Decision needed
+            return MockTranscription()
+        from app.integrations.transcription.whisper_api import WhisperApiTranscription
+
+        return WhisperApiTranscription()
 
     return _get("transcription", make)  # type: ignore[return-value]
 

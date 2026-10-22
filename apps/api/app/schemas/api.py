@@ -245,3 +245,130 @@ class BrandAssetOut(BaseModel):
     content_type: str
     size_bytes: int
     url: str | None = None
+
+
+# ---------- founder interview ----------
+class InterviewInviteIn(BaseModel):
+    founder_name: str = Field(min_length=1, max_length=200)
+    founder_title: str = Field(default="", max_length=200)
+    founder_email: EmailStr | None = None
+
+
+class InterviewInviteOut(BaseModel):
+    url: str  # shown once; only a hash is stored for lookups
+    expires_at: datetime
+    emailed: bool
+
+
+class TakeOut(BaseModel):
+    id: str
+    question_index: int
+    kind: str
+    status: str
+    flags: list[str]
+    messages: list[str] = []
+    duration_s: Decimal | None = None
+    transcript: str | None = None
+    video_url: str | None = None
+    audio_url: str | None = None
+    attempts: int = 1
+
+
+class InterviewStatusOut(BaseModel):
+    active: bool
+    founder_name: str | None = None
+    founder_title: str | None = None
+    founder_email: str | None = None
+    expires_at: datetime | None = None
+    submitted: bool = False
+    consented: bool = False
+    reminders_sent: int = 0
+    questions: list[str] = []
+    takes: list[TakeOut] = []
+    plan: dict | None = None
+    photo_url: str | None = None
+
+
+class PlanAnswer(BaseModel):
+    question_index: int
+    include: bool = True
+    trim_start_s: float = 0
+    trim_end_s: float = 0
+
+
+class MergePlanIn(BaseModel):
+    layout: str = "pip"
+    order: list[int] | None = None
+    answers: list[PlanAnswer] = []
+
+
+class RetakeIn(BaseModel):
+    question_index: int
+    note: str = Field(default="", max_length=300)
+
+
+class KeepRawIn(BaseModel):
+    keep: bool
+
+
+class ApproveIn(BaseModel):
+    with_interview: bool = False
+
+
+# ---------- founder (guest) ----------
+class GuestTake(BaseModel):
+    id: str
+    status: str
+    kind: str
+    flags: list[str] = []
+    messages: list[str] = []
+    chunks_received: list[int] = []
+    duration_s: Decimal | None = None
+
+
+class GuestQuestion(BaseModel):
+    index: int
+    text: str
+    clip_url: str | None = None
+    take: GuestTake | None = None
+    attempts_left: int
+
+
+class GuestView(BaseModel):
+    company: str
+    founder_name: str
+    expires_at: datetime
+    consent_text: str
+    consented: bool
+    can_record: bool
+    submitted: bool
+    has_photo: bool
+    questions: list[GuestQuestion]
+    max_chunks: int
+    max_chunk_bytes: int
+
+
+class GuestTakeIn(BaseModel):
+    question_index: int = Field(ge=0, le=4)
+    kind: str = Field(pattern="^(video|audio)$")
+    mime: str = Field(max_length=100)
+
+
+class ChunkUrlsIn(BaseModel):
+    indexes: list[int] = Field(min_length=1, max_length=20)
+
+
+class ChunkUrlsOut(BaseModel):
+    urls: dict[str, str]
+
+
+class CompleteIn(BaseModel):
+    chunk_count: int = Field(ge=1, le=80)
+
+
+class PhotoIn(BaseModel):
+    content_type: str
+
+
+class PhotoConfirmIn(BaseModel):
+    key: str

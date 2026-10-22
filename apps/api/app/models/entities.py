@@ -84,6 +84,10 @@ class Project(Base, TimestampMixin):
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     failure_retryable: Mapped[bool] = mapped_column(Boolean, default=False)
     failed_from: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    interview_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    keep_raw_takes: Mapped[bool] = mapped_column(Boolean, default=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    merge_plan: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # owner's layout/order/trim/drop choices
 
     brief: Mapped["Brief | None"] = relationship(uselist=False, lazy="selectin")
 
@@ -133,6 +137,17 @@ class InterviewSession(Base, TimestampMixin):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     question_status: Mapped[dict] = mapped_column(JSON, default=dict)
     consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    consent_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    founder_title: Mapped[str] = mapped_column(String(200), default="")
+    founder_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    invited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reminders_sent: Mapped[int] = mapped_column(Integer, default=0)
+    last_reminder_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Encrypted copy of the raw token so reminder emails can re-send the same link. Cleared once the
+    # session is submitted, revoked or expired. Lookups always use token_hash.
+    token_enc: Mapped[str | None] = mapped_column(Text, nullable=True)
+    photo_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
 
 class Job(Base, TimestampMixin):
@@ -182,3 +197,27 @@ class BrandAsset(Base, TimestampMixin):
     content_type: Mapped[str] = mapped_column(String(100))
     size_bytes: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | clean | rejected
+
+
+class Take(Base, TimestampMixin):
+    """One recording attempt for one interview question. Chunks upload straight to storage and resume by index."""
+
+    __tablename__ = "takes"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    session_id: Mapped[str] = mapped_column(ForeignKey("interview_sessions.id"), index=True)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    question_index: Mapped[int] = mapped_column(Integer)
+    kind: Mapped[str] = mapped_column(String(10), default="video")  # video | audio
+    ext: Mapped[str] = mapped_column(String(5), default="webm")
+    # recording -> uploaded -> processing -> ready | needs_retake | failed ; superseded when retaken
+    status: Mapped[str] = mapped_column(String(20), default="recording")
+    chunks: Mapped[dict] = mapped_column(JSON, default=dict)  # {"0": size_bytes, ...} confirmed by the server
+    processed_video_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    processed_audio_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    duration_s: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    transcript: Mapped[str | None] = mapped_column(Text, nullable=True)
+    srt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    flags: Mapped[list] = mapped_column(JSON, default=list)
+    stats: Mapped[dict] = mapped_column(JSON, default=dict)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    raw_deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

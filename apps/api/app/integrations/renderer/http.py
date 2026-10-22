@@ -1,7 +1,16 @@
+import asyncio
+
 import httpx
 
-from app.config import get_settings
-from app.integrations.renderer.base import Analysis, RendererClient, RenderRequest, RenderStatus
+from app.config import VENDOR_POLICIES, get_settings
+from app.integrations.renderer.base import (
+    Analysis,
+    ProcessRequest,
+    ProcessResult,
+    RendererClient,
+    RenderRequest,
+    RenderStatus,
+)
 
 COST_PER_OUTPUT = 0.05  # placeholder until docs/render-benchmarks.md has measured numbers
 
@@ -15,6 +24,33 @@ class HttpRenderer(RendererClient):
 
     def estimate_cost(self, req: RenderRequest) -> float:
         return COST_PER_OUTPUT * len(req.outputs)
+
+    async def process(self, req: ProcessRequest) -> ProcessResult:
+        r = await self._client.post(
+            "/process",
+            json={"chunk_urls": req.chunk_urls, "kind": req.kind, "ext": req.ext, "output_prefix": req.output_prefix},
+        )
+        r.raise_for_status()
+        rid = r.json()["render_id"]
+        waited = 0.0
+        while waited < VENDOR_POLICIES["renderer"].timeout_s:
+            st = (await self._client.get(f"/renders/{rid}")).json()
+            if st["status"] == "succeeded":
+                d = st["result"]
+                return ProcessResult(
+                    audio_key=d["audio_key"],
+                    video_key=d.get("video_key"),
+                    duration_s=d["duration_s"],
+                    width=d.get("width"),
+                    height=d.get("height"),
+                    flags=d.get("flags", []),
+                    stats=d.get("stats", {}),
+                )
+            if st["status"] == "failed":
+                raise RuntimeError(st.get("error") or "processing failed")
+            await asyncio.sleep(2)
+            waited += 2
+        raise TimeoutError("processing timed out")
 
     async def analyze(self, url: str) -> Analysis:
         r = await self._client.post("/analyze", json={"url": url}, timeout=300)

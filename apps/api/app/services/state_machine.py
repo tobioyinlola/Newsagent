@@ -25,7 +25,8 @@ ALLOWED: dict[str, set[str]] = {
     "script_approved": {"rendering_anchor"},
     "rendering_anchor": {"anchor_ready"},
     "anchor_ready": {"awaiting_founder", "final_ready"},
-    "awaiting_founder": {"processing_founder"},
+    # awaiting_founder -> merging is the owner choosing to skip the interview (anchor-only cut)
+    "awaiting_founder": {"processing_founder", "merging"},
     "processing_founder": {"merging", "awaiting_founder"},  # retake request goes back
     "merging": {"final_ready"},
     "final_ready": set(),

@@ -11,9 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.integrations import registry
 from app.integrations.avatar.base import AvatarRequest
 from app.integrations.renderer.base import RenderRequest
-from app.models import Asset, BrandKit, Job, Project, ScriptVersion
+from app.models import Asset, BrandKit, InterviewSession, Job, Project, ScriptVersion, Take
 from app.services import state_machine as sm
 from app.services.captions import build_srt
+from app.services.interview import merge_srt, parse_srt, shifted_cues
 from app.services.safety import find_banned
 from app.services.spend_guard import LimitReached, SpendGuard
 
@@ -36,7 +37,8 @@ def input_hash(data: dict) -> str:
 @dataclass
 class StepOutcome:
     result: dict
-    cost: Decimal = Decimal("0")
+    cost: Decimal = Decimal("0")  # cost not yet added to project.cost_total (the runner adds it)
+    recorded_cost: Decimal = Decimal("0")  # already added by the step itself (multi-call steps commit as they go)
 
 
 async def approved_script(session: AsyncSession, project_id: str) -> ScriptVersion:
@@ -111,8 +113,111 @@ async def build_overlay_props(
     }
 
 
+MAX_VIDEO_DOWNLOAD_BYTES = 600 * 1024 * 1024
+
+
+async def persist_avatar_video(key: str, video_url: str) -> None:
+    """Copy the vendor's video into our own storage. Vendor URLs expire; the renderer reads from our bucket."""
+    storage = registry.get_storage()
+    if video_url.startswith("mock://"):
+        await storage.put(key, b"mock-anchor-video", "video/webm")
+        return
+    import httpx
+
+    async with httpx.AsyncClient(timeout=300, follow_redirects=True) as c:
+        r = await c.get(video_url)
+        r.raise_for_status()
+        if len(r.content) > MAX_VIDEO_DOWNLOAD_BYTES:
+            raise RuntimeError("anchor video too large")
+        await storage.put(key, r.content, "video/webm")
+
+
+async def _paid_avatar_asset(
+    session: AsyncSession, project: Project, guard: SpendGuard, *, atype: str, fmt: str, text: str, key: str
+) -> Decimal:
+    """Generate one anchor clip unless an identical one already exists. Commits as it goes so a later failure
+    never makes a retry pay for this clip again. Returns the cost it recorded on the project."""
+    kit = await current_kit(session, project.workspace_id)
+    glossary = (kit.pronunciation_glossary if kit else None) or None
+    h = input_hash({"text": text, "accent": project.voice_accent, "avatar": project.anchor_id, "glossary": glossary})
+    existing = (
+        await session.execute(
+            select(Asset.id).where(
+                Asset.project_id == project.id, Asset.type == atype, Asset.format == fmt, Asset.hash == h
+            )
+        )
+    ).first()
+    if existing:
+        return Decimal("0")
+    avatar = registry.get_avatar()
+    req = AvatarRequest(
+        script_text=text,
+        pronunciation=glossary,
+        voice_accent=project.voice_accent,
+        avatar_id=project.anchor_id,
+        transparent=True,
+    )
+    res = await guard.reserve(project.workspace_id, avatar.name, avatar.estimate_cost(req))
+    try:
+        out = await avatar.generate(req)
+        await persist_avatar_video(key, out.video_url)
+    except Exception:
+        await guard.release(res)
+        raise
+    cost = await guard.settle(res, out.cost)
+    # an older clip for the same slot (e.g. the owner edited a question) is replaced
+    for old in (
+        await session.execute(
+            select(Asset).where(Asset.project_id == project.id, Asset.type == atype, Asset.format == fmt)
+        )
+    ).scalars():
+        await session.delete(old)
+    session.add(
+        Asset(
+            project_id=project.id,
+            type=atype,
+            format=fmt,
+            storage_key=key,
+            hash=h,
+            duration=Decimal(str(out.duration_s)),
+        )
+    )
+    project.cost_total += cost
+    await session.commit()
+    return cost
+
+
+def split_segments(script: ScriptVersion) -> tuple[str, str]:
+    """Interview cut: the anchor speaks intro+body, then (after the interview) the outro."""
+    main = " ".join(s["text"] for s in script.segments if s.get("kind") != "outro")
+    outro = " ".join(s["text"] for s in script.segments if s.get("kind") == "outro")
+    return main, outro
+
+
 async def anchor_render(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
     script = await approved_script(session, project.id)
+    if project.interview_enabled:
+        main, outro = split_segments(script)
+        total = await _paid_avatar_asset(
+            session,
+            project,
+            guard,
+            atype="anchor",
+            fmt="main",
+            text=main or anchor_text(script),
+            key=f"projects/{project.id}/anchor.webm",
+        )
+        if outro:
+            total += await _paid_avatar_asset(
+                session,
+                project,
+                guard,
+                atype="anchor_outro",
+                fmt="outro",
+                text=outro,
+                key=f"projects/{project.id}/anchor-outro.webm",
+            )
+        return StepOutcome({"split": True}, recorded_cost=total)
     avatar = registry.get_avatar()
     kit = await current_kit(session, project.workspace_id)
     req = AvatarRequest(
@@ -123,32 +228,62 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
         transparent=True,
     )
     res = await guard.reserve(project.workspace_id, avatar.name, avatar.estimate_cost(req))
+    key = f"projects/{project.id}/anchor.webm"
     try:
         out = await avatar.generate(req)
+        await persist_avatar_video(key, out.video_url)
     except Exception:
         await guard.release(res)
         raise
     cost = await guard.settle(res, out.cost)
-    key = f"projects/{project.id}/anchor.webm"
     session.add(Asset(project_id=project.id, type="anchor", storage_key=key, duration=Decimal(str(out.duration_s))))
     return StepOutcome({"video_url": out.video_url, "duration_s": out.duration_s, "key": key}, cost)
 
 
-async def _render(session: AsyncSession, project: Project, guard: SpendGuard, outputs: list[dict], prefix: str):
+async def question_clips(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
+    """One anchor clip per interview question (stage 8). Idempotent per question."""
     script = await approved_script(session, project.id)
+    total = Decimal("0")
+    for i, q in enumerate(script.interview_questions):
+        total += await _paid_avatar_asset(
+            session,
+            project,
+            guard,
+            atype="question_clip",
+            fmt=f"q{i}",
+            text=q,
+            key=f"projects/{project.id}/question-{i}.webm",
+        )
+    return StepOutcome({"questions": len(script.interview_questions)}, recorded_cost=total)
+
+
+async def question_clips_complete(session: AsyncSession, project: Project) -> bool:
+    script = await approved_script(session, project.id)
+    have = {
+        a.format
+        for a in (
+            await session.execute(select(Asset).where(Asset.project_id == project.id, Asset.type == "question_clip"))
+        ).scalars()
+    }
+    return all(f"q{i}" in have for i in range(len(script.interview_questions)))
+
+
+async def _submit_render(
+    guard: SpendGuard,
+    project: Project,
+    *,
+    composition: str,
+    props: dict,
+    outputs: list[dict],
+    prefix: str,
+    input_urls: dict[str, str],
+):
     renderer = registry.get_renderer()
-    anchor = (
-        (await session.execute(select(Asset).where(Asset.project_id == project.id, Asset.type == "anchor")))
-        .scalars()
-        .first()
-    )
-    assert anchor is not None, "anchor asset must exist before rendering"
-    props = await build_overlay_props(session, project, script, float(anchor.duration or 60))
     req = RenderRequest(
-        composition="NewsStudio",
+        composition=composition,
         props=props,
         outputs=outputs,
-        input_urls={"anchor": registry.get_storage().presign_get(anchor.storage_key)},
+        input_urls=input_urls,
         output_prefix=f"projects/{project.id}/{prefix}",
     )
     res = await guard.reserve(project.workspace_id, "renderer", renderer.estimate_cost(req))
@@ -159,6 +294,27 @@ async def _render(session: AsyncSession, project: Project, guard: SpendGuard, ou
         await guard.release(res)
         raise
     cost = await guard.settle(res, renderer.estimate_cost(req))
+    return status, cost
+
+
+async def _render(session: AsyncSession, project: Project, guard: SpendGuard, outputs: list[dict], prefix: str):
+    script = await approved_script(session, project.id)
+    anchor = (
+        (await session.execute(select(Asset).where(Asset.project_id == project.id, Asset.type == "anchor")))
+        .scalars()
+        .first()
+    )
+    assert anchor is not None, "anchor asset must exist before rendering"
+    props = await build_overlay_props(session, project, script, float(anchor.duration or 60))
+    status, cost = await _submit_render(
+        guard,
+        project,
+        composition="NewsStudio",
+        props=props,
+        outputs=outputs,
+        prefix=prefix,
+        input_urls={"anchor": registry.get_storage().presign_get(anchor.storage_key)},
+    )
     return script, anchor, props, status, cost
 
 
@@ -168,24 +324,161 @@ async def preview_render(session: AsyncSession, project: Project, guard: SpendGu
     return StepOutcome({"props": props, "output_keys": status.output_keys}, cost)
 
 
-async def final_render(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
-    script, anchor, props, status, cost = await _render(session, project, guard, FORMATS, "final")
-    for o, key in zip(FORMATS, status.output_keys, strict=False):
-        atype = "thumbnail" if o["kind"] == "thumbnail" else "render"
-        session.add(Asset(project_id=project.id, type=atype, storage_key=key, format=o["format"]))
+async def _record_outputs(session: AsyncSession, project: Project, status) -> dict:
+    """Register rendered files as assets and measure each video for the quality gate."""
     renderer = registry.get_renderer()
     analyses = {}
     for o, key in zip(FORMATS, status.output_keys, strict=False):
+        atype = "thumbnail" if o["kind"] == "thumbnail" else "render"
+        session.add(Asset(project_id=project.id, type=atype, storage_key=key, format=o["format"]))
         if o["kind"] == "video":
-            a = await renderer.analyze(registry.get_storage().presign_get(key))
-            analyses[key] = asdict(a)
-    srt = build_srt(script.segments, float(anchor.duration or 60))
-    srt_key = f"projects/{project.id}/final/captions.srt"
-    await registry.get_storage().put(srt_key, srt.encode(), "application/x-subrip")
-    session.add(Asset(project_id=project.id, type="caption", storage_key=srt_key))
+            analyses[key] = asdict(await renderer.analyze(registry.get_storage().presign_get(key)))
+    return analyses
+
+
+async def _store_srt(session: AsyncSession, project: Project, srt: str) -> str:
+    key = f"projects/{project.id}/final/captions.srt"
+    await registry.get_storage().put(key, srt.encode(), "application/x-subrip")
+    for old in (
+        await session.execute(select(Asset).where(Asset.project_id == project.id, Asset.type == "caption"))
+    ).scalars():
+        await session.delete(old)
+    session.add(Asset(project_id=project.id, type="caption", storage_key=key))
+    return key
+
+
+async def final_render(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
+    script, anchor, props, status, cost = await _render(session, project, guard, FORMATS, "final")
+    analyses = await _record_outputs(session, project, status)
+    srt_key = await _store_srt(session, project, build_srt(script.segments, float(anchor.duration or 60)))
     return StepOutcome(
         {"props": props, "output_keys": status.output_keys, "srt_key": srt_key, "analyses": analyses}, cost
     )
+
+
+def default_plan(question_count: int) -> dict:
+    return {
+        "layout": "pip",
+        "order": list(range(question_count)),
+        "answers": [
+            {"question_index": q, "include": True, "trim_start_s": 0, "trim_end_s": 0} for q in range(question_count)
+        ],
+    }
+
+
+async def latest_takes(session: AsyncSession, project_id: str) -> dict[int, Take]:
+    """The current take per question: the newest one that isn't superseded."""
+    rows = (
+        await session.execute(
+            select(Take).where(Take.project_id == project_id, Take.status != "superseded").order_by(Take.created_at)
+        )
+    ).scalars()
+    out: dict[int, Take] = {}
+    for t in rows:
+        out[t.question_index] = t
+    return out
+
+
+async def merge_render(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
+    """Stage 10: anchor intro, then per question [anchor asks -> founder answers (PiP/split)], then outro."""
+    storage = registry.get_storage()
+    script = await approved_script(session, project.id)
+    assets = {
+        (a.type, a.format): a
+        for a in (await session.execute(select(Asset).where(Asset.project_id == project.id))).scalars()
+    }
+    main = assets.get(("anchor", "main")) or assets.get(("anchor", None))
+    assert main is not None, "anchor must exist before merging"
+    outro = assets.get(("anchor_outro", "outro"))
+    takes = await latest_takes(session, project.id)
+    n = len(script.interview_questions)
+    plan = project.merge_plan or default_plan(n)
+    answers = {a["question_index"]: a for a in plan["answers"]}
+    isession = (
+        (
+            await session.execute(
+                select(InterviewSession)
+                .where(InterviewSession.project_id == project.id)
+                .order_by(InterviewSession.created_at.desc())
+            )
+        )
+        .scalars()
+        .first()
+    )
+    founder = {"name": isession.founder_name if isession else "", "title": isession.founder_title if isession else ""}
+
+    main_text, outro_text = split_segments(script)
+    main_srt = build_srt([{"text": main_text or anchor_text(script)}], float(main.duration or 60))
+    scenes: list[dict] = [
+        {"type": "anchor", "src": storage.presign_get(main.storage_key), "seconds": float(main.duration or 0)}
+    ]
+    cues = [(a, b, t) for a, b, t in parse_srt(main_srt)]
+    t_cursor = float(main.duration or 0)
+    for q in plan["order"]:
+        take, ans, qclip = takes.get(q), answers.get(q, {}), assets.get(("question_clip", f"q{q}"))
+        if (
+            take is None
+            or not ans.get("include", True)
+            or take.status not in {"ready", "needs_retake"}
+            or qclip is None
+        ):
+            continue
+        window = float(take.duration_s or 0) - ans.get("trim_start_s", 0) - ans.get("trim_end_s", 0)
+        if window < 1.0:
+            continue
+        qsec = float(qclip.duration or 0)
+        qsrc = storage.presign_get(qclip.storage_key)
+        scenes.append({"type": "question", "src": qsrc, "seconds": qsec})
+        cues.append((t_cursor, t_cursor + qsec, script.interview_questions[q]))
+        t_cursor += qsec
+        scene: dict = {
+            "type": "answer",
+            "seconds": window,
+            "startFromSeconds": ans.get("trim_start_s", 0),
+            "pipSrc": qsrc,
+            "founder": founder,
+            "src": None,
+        }
+        if take.kind == "video" and take.processed_video_key:
+            scene["src"] = storage.presign_get(take.processed_video_key)
+        else:
+            scene["audioSrc"] = storage.presign_get(take.processed_audio_key or "")
+            if isession and isession.photo_key:
+                scene["photoSrc"] = storage.presign_get(isession.photo_key)
+        scenes.append(scene)
+        cues += shifted_cues(take.srt or "", t_cursor, ans.get("trim_start_s", 0), window)
+        t_cursor += window
+    if outro:
+        scenes.append(
+            {"type": "anchor", "src": storage.presign_get(outro.storage_key), "seconds": float(outro.duration or 0)}
+        )
+        cues += [
+            (t_cursor + a, t_cursor + b, t)
+            for a, b, t in parse_srt(build_srt([{"text": outro_text}], float(outro.duration or 1)))
+        ]
+        t_cursor += float(outro.duration or 0)
+
+    base = await build_overlay_props(session, project, script, t_cursor)
+    props = {**base, "layout": plan["layout"], "scenes": scenes, "totalSeconds": t_cursor}
+    status, cost = await _submit_render(
+        guard, project, composition="InterviewMerge", props=props, outputs=FORMATS, prefix="final", input_urls={}
+    )
+    analyses = await _record_outputs(session, project, status)
+    srt_key = await _store_srt(session, project, merge_srt(cues))
+    safe_props = {k: v for k, v in props.items() if k != "scenes"} | {
+        "sceneCount": len(scenes)
+    }  # no signed URLs in the DB
+    return StepOutcome(
+        {"props": safe_props, "output_keys": status.output_keys, "srt_key": srt_key, "analyses": analyses}, cost
+    )
+
+
+async def merge_inputs(session: AsyncSession, project: Project) -> dict:
+    takes = await latest_takes(session, project.id)
+    return {
+        "plan": project.merge_plan,
+        "takes": {q: [t.id, t.status, str(t.duration_s)] for q, t in sorted(takes.items())},
+    }
 
 
 async def _wait(renderer, render_id: str):

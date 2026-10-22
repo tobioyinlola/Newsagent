@@ -8,9 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import Principal, current_principal
 from app.db import get_session
 from app.integrations import registry
-from app.models import Asset, Brief, InterviewSession, Job, Project, ScriptVersion, ShareLink
+from app.models import Asset, Brief, InterviewSession, Job, Project, ScriptVersion, ShareLink, Take
 from app.pipeline.advance import advance
-from app.schemas.api import ProjectCreate, ProjectOut, ScriptOut, ScriptUpdate
+from app.pipeline.takes import chunk_key
+from app.schemas.api import ApproveIn, ProjectCreate, ProjectOut, ScriptOut, ScriptUpdate
+from app.services import interview as iv
 from app.services import state_machine as sm
 from app.services.brand import ALLOWED_VOICE_ACCENTS
 from app.services.claims import detect_claims
@@ -153,7 +155,10 @@ async def update_script(
 
 @router.post("/{project_id}/script/approve", response_model=ProjectOut)
 async def approve_script(
-    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+    project_id: str,
+    body: ApproveIn | None = None,
+    p: Principal = Depends(current_principal),
+    session: AsyncSession = Depends(get_session),
 ) -> ProjectOut:
     project = await _owned(session, project_id, p)
     sv = await _latest_script(session, project_id)
@@ -197,6 +202,24 @@ async def approve_script(
     ).scalar_one()
     if today >= ws.max_videos_per_day:
         raise HTTPException(429, "Daily video limit reached")
+    with_interview = bool(body and body.with_interview)
+    if with_interview and not (1 <= len(sv.interview_questions) <= iv.MAX_QUESTIONS):
+        raise HTTPException(
+            422,
+            {"error": "interview_questions", "message": f"An interview needs 1 to {iv.MAX_QUESTIONS} questions."},
+        )
+    if with_interview and any(not q.strip() or len(q) > 200 for q in sv.interview_questions):
+        raise HTTPException(422, {"error": "interview_questions", "message": "Each question must be 1-200 characters."})
+    banned_q = find_banned(" ".join(sv.interview_questions))
+    if banned_q:
+        raise HTTPException(
+            422,
+            {
+                "error": "banned_network_name",
+                "message": "Please remove real news network names: " + ", ".join(banned_q),
+            },
+        )
+    project.interview_enabled = with_interview
     sv.approved, sv.approved_by, sv.approved_at = True, p.user.email, datetime.now(UTC)
     sm.transition(project, "script_approved")
     await session.commit()
@@ -220,7 +243,7 @@ async def retry(
     return await _out(session, project)
 
 
-IN_FLIGHT = {"script_approved", "rendering_anchor", "anchor_ready"}
+IN_FLIGHT = {"script_approved", "rendering_anchor", "anchor_ready", "merging"}
 
 
 @router.delete("/{project_id}")
@@ -235,7 +258,18 @@ async def delete_project(
     assets = (await session.execute(select(Asset).where(Asset.project_id == project_id))).scalars().all()
     for a in assets:
         await storage.delete(a.storage_key)
-    for model in (Asset, Job, ScriptVersion, ShareLink, InterviewSession):
+    for t in (await session.execute(select(Take).where(Take.project_id == project_id))).scalars():
+        for idx in list(t.chunks or {}):
+            await storage.delete(chunk_key(project_id, t.id, int(idx)))
+        for k in (t.processed_video_key, t.processed_audio_key):
+            if k:
+                await storage.delete(k)
+    for s in (
+        await session.execute(select(InterviewSession).where(InterviewSession.project_id == project_id))
+    ).scalars():
+        if s.photo_key:
+            await storage.delete(s.photo_key)
+    for model in (Take, Asset, Job, ScriptVersion, ShareLink, InterviewSession):
         await session.execute(delete(model).where(model.project_id == project_id))
     await session.execute(delete(Brief).where(Brief.project_id == project_id))
     await session.delete(project)

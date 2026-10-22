@@ -29,7 +29,30 @@ class Analysis:
     true_peak_db: float | None = None
 
 
+@dataclass
+class ProcessRequest:
+    chunk_urls: list[str]
+    kind: str  # video | audio
+    ext: str
+    output_prefix: str
+
+
+@dataclass
+class ProcessResult:
+    audio_key: str
+    duration_s: float
+    video_key: str | None = None
+    width: int | None = None
+    height: int | None = None
+    flags: list[str] = field(default_factory=list)
+    stats: dict = field(default_factory=dict)
+
+
 class RendererClient(ABC):
+    @abstractmethod
+    async def process(self, req: ProcessRequest) -> ProcessResult:
+        """Join uploaded chunks, clean up and trim the audio, flag problems, write results to storage."""
+
     @abstractmethod
     async def analyze(self, url: str) -> Analysis:
         """Measure a rendered file (duration, audio, loudness) for the quality gate."""

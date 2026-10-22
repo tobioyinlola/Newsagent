@@ -217,6 +217,193 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/interview/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** View */
+        get: operations["view_v1_interview__token__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interview/{token}/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Consent */
+        post: operations["consent_v1_interview__token__consent_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interview/{token}/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Photo Slot */
+        post: operations["photo_slot_v1_interview__token__photo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interview/{token}/photo/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Photo Confirm */
+        post: operations["photo_confirm_v1_interview__token__photo_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interview/{token}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit */
+        post: operations["submit_v1_interview__token__submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interview/{token}/takes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Take */
+        post: operations["start_take_v1_interview__token__takes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interview/{token}/takes/{take_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Take Status */
+        get: operations["take_status_v1_interview__token__takes__take_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interview/{token}/takes/{take_id}/chunk-urls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Chunk Urls */
+        post: operations["chunk_urls_v1_interview__token__takes__take_id__chunk_urls_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interview/{token}/takes/{take_id}/chunks/{idx}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Chunk */
+        post: operations["confirm_chunk_v1_interview__token__takes__take_id__chunks__idx__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interview/{token}/takes/{take_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete Take */
+        post: operations["complete_take_v1_interview__token__takes__take_id__complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interview/{token}/takes/{take_id}/reprocess": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reprocess */
+        post: operations["reprocess_v1_interview__token__takes__take_id__reprocess_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me": {
         parameters: {
             query?: never;
@@ -337,6 +524,96 @@ export interface paths {
          */
         get: operations["events_v1_projects__project_id__events_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/interview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Interview Status */
+        get: operations["interview_status_v1_projects__project_id__interview_get"];
+        put?: never;
+        /** Create Invite */
+        post: operations["create_invite_v1_projects__project_id__interview_post"];
+        /** Revoke Invite */
+        delete: operations["revoke_invite_v1_projects__project_id__interview_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/interview/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make Final
+         * @description Start the merge. From awaiting_founder this is the anchor-only fallback (skip the interview).
+         */
+        post: operations["make_final_v1_projects__project_id__interview_merge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/interview/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Plan */
+        put: operations["save_plan_v1_projects__project_id__interview_plan_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/interview/retake": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Retake */
+        post: operations["request_retake_v1_projects__project_id__interview_retake_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/keep-raw-takes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Keep Raw */
+        put: operations["keep_raw_v1_projects__project_id__keep_raw_takes_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -472,6 +749,14 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ApproveIn */
+        ApproveIn: {
+            /**
+             * With Interview
+             * @default false
+             */
+            with_interview: boolean;
+        };
         /** AssetOut */
         AssetOut: {
             /** Format */
@@ -606,6 +891,23 @@ export interface components {
             /** Has Active Share */
             has_active_share: boolean;
         };
+        /** ChunkUrlsIn */
+        ChunkUrlsIn: {
+            /** Indexes */
+            indexes: number[];
+        };
+        /** ChunkUrlsOut */
+        ChunkUrlsOut: {
+            /** Urls */
+            urls: {
+                [key: string]: string;
+            };
+        };
+        /** CompleteIn */
+        CompleteIn: {
+            /** Chunk Count */
+            chunk_count: number;
+        };
         /** ContrastCheck */
         ContrastCheck: {
             /** Background */
@@ -661,10 +963,153 @@ export interface components {
             /** Items */
             items: components["schemas"]["DownloadItem"][];
         };
+        /** GuestQuestion */
+        GuestQuestion: {
+            /** Attempts Left */
+            attempts_left: number;
+            /** Clip Url */
+            clip_url?: string | null;
+            /** Index */
+            index: number;
+            take?: components["schemas"]["GuestTake"] | null;
+            /** Text */
+            text: string;
+        };
+        /** GuestTake */
+        GuestTake: {
+            /**
+             * Chunks Received
+             * @default []
+             */
+            chunks_received: number[];
+            /** Duration S */
+            duration_s?: string | null;
+            /**
+             * Flags
+             * @default []
+             */
+            flags: string[];
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Messages
+             * @default []
+             */
+            messages: string[];
+            /** Status */
+            status: string;
+        };
+        /** GuestTakeIn */
+        GuestTakeIn: {
+            /** Kind */
+            kind: string;
+            /** Mime */
+            mime: string;
+            /** Question Index */
+            question_index: number;
+        };
+        /** GuestView */
+        GuestView: {
+            /** Can Record */
+            can_record: boolean;
+            /** Company */
+            company: string;
+            /** Consent Text */
+            consent_text: string;
+            /** Consented */
+            consented: boolean;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Founder Name */
+            founder_name: string;
+            /** Has Photo */
+            has_photo: boolean;
+            /** Max Chunk Bytes */
+            max_chunk_bytes: number;
+            /** Max Chunks */
+            max_chunks: number;
+            /** Questions */
+            questions: components["schemas"]["GuestQuestion"][];
+            /** Submitted */
+            submitted: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** InterviewInviteIn */
+        InterviewInviteIn: {
+            /** Founder Email */
+            founder_email?: string | null;
+            /** Founder Name */
+            founder_name: string;
+            /**
+             * Founder Title
+             * @default
+             */
+            founder_title: string;
+        };
+        /** InterviewInviteOut */
+        InterviewInviteOut: {
+            /** Emailed */
+            emailed: boolean;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Url */
+            url: string;
+        };
+        /** InterviewStatusOut */
+        InterviewStatusOut: {
+            /** Active */
+            active: boolean;
+            /**
+             * Consented
+             * @default false
+             */
+            consented: boolean;
+            /** Expires At */
+            expires_at?: string | null;
+            /** Founder Email */
+            founder_email?: string | null;
+            /** Founder Name */
+            founder_name?: string | null;
+            /** Founder Title */
+            founder_title?: string | null;
+            /** Photo Url */
+            photo_url?: string | null;
+            /** Plan */
+            plan?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Questions
+             * @default []
+             */
+            questions: string[];
+            /**
+             * Reminders Sent
+             * @default 0
+             */
+            reminders_sent: number;
+            /**
+             * Submitted
+             * @default false
+             */
+            submitted: boolean;
+            /**
+             * Takes
+             * @default []
+             */
+            takes: components["schemas"]["TakeOut"][];
         };
         /** InviteCreate */
         InviteCreate: {
@@ -698,6 +1143,11 @@ export interface components {
             /** Workspace Id */
             workspace_id: string;
         };
+        /** KeepRawIn */
+        KeepRawIn: {
+            /** Keep */
+            keep: boolean;
+        };
         /** MeOut */
         MeOut: {
             /** Credit Balance */
@@ -710,6 +1160,51 @@ export interface components {
             workspace_id: string;
             /** Workspace Name */
             workspace_name: string;
+        };
+        /** MergePlanIn */
+        MergePlanIn: {
+            /**
+             * Answers
+             * @default []
+             */
+            answers: components["schemas"]["PlanAnswer"][];
+            /**
+             * Layout
+             * @default pip
+             */
+            layout: string;
+            /** Order */
+            order?: number[] | null;
+        };
+        /** PhotoConfirmIn */
+        PhotoConfirmIn: {
+            /** Key */
+            key: string;
+        };
+        /** PhotoIn */
+        PhotoIn: {
+            /** Content Type */
+            content_type: string;
+        };
+        /** PlanAnswer */
+        PlanAnswer: {
+            /**
+             * Include
+             * @default true
+             */
+            include: boolean;
+            /** Question Index */
+            question_index: number;
+            /**
+             * Trim End S
+             * @default 0
+             */
+            trim_end_s: number;
+            /**
+             * Trim Start S
+             * @default 0
+             */
+            trim_start_s: number;
         };
         /** ProjectCreate */
         ProjectCreate: {
@@ -761,6 +1256,16 @@ export interface components {
         RedeemInvite: {
             /** Code */
             code: string;
+        };
+        /** RetakeIn */
+        RetakeIn: {
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Question Index */
+            question_index: number;
         };
         /** ScriptOut */
         ScriptOut: {
@@ -827,6 +1332,37 @@ export interface components {
             title: string;
             /** Video Url */
             video_url: string;
+        };
+        /** TakeOut */
+        TakeOut: {
+            /**
+             * Attempts
+             * @default 1
+             */
+            attempts: number;
+            /** Audio Url */
+            audio_url?: string | null;
+            /** Duration S */
+            duration_s?: string | null;
+            /** Flags */
+            flags: string[];
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Messages
+             * @default []
+             */
+            messages: string[];
+            /** Question Index */
+            question_index: number;
+            /** Status */
+            status: string;
+            /** Transcript */
+            transcript?: string | null;
+            /** Video Url */
+            video_url?: string | null;
         };
         /** UploadConfirmIn */
         UploadConfirmIn: {
@@ -1432,6 +1968,381 @@ export interface operations {
             };
         };
     };
+    view_v1_interview__token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    consent_v1_interview__token__consent_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    photo_slot_v1_interview__token__photo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PhotoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    photo_confirm_v1_interview__token__photo_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PhotoConfirmIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_v1_interview__token__submit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_take_v1_interview__token__takes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuestTakeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestTake"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    take_status_v1_interview__token__takes__take_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+                take_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestTake"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chunk_urls_v1_interview__token__takes__take_id__chunk_urls_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+                take_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChunkUrlsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChunkUrlsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_chunk_v1_interview__token__takes__take_id__chunks__idx__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+                take_id: string;
+                idx: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestTake"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_take_v1_interview__token__takes__take_id__complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+                take_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestTake"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reprocess_v1_interview__token__takes__take_id__reprocess_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+                take_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestTake"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     me_v1_me_get: {
         parameters: {
             query?: never;
@@ -1729,6 +2640,261 @@ export interface operations {
             };
         };
     };
+    interview_status_v1_projects__project_id__interview_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewStatusOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_invite_v1_projects__project_id__interview_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InterviewInviteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewInviteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_invite_v1_projects__project_id__interview_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    make_final_v1_projects__project_id__interview_merge_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_plan_v1_projects__project_id__interview_plan_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergePlanIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_retake_v1_projects__project_id__interview_retake_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetakeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    keep_raw_v1_projects__project_id__keep_raw_takes_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KeepRawIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     retry_v1_projects__project_id__retry_post: {
         parameters: {
             query?: never;
@@ -1843,7 +3009,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ApproveIn"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

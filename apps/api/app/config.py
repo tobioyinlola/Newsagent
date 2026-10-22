@@ -50,6 +50,12 @@ class Settings(BaseSettings):
     queue_backend: str = "inline"  # inline | celery
     rate_limit_backend: str = ""  # "memory" | "redis"; default: redis outside local
     trust_proxy_headers: bool = False  # True behind Railway/Cloudflare so X-Forwarded-For identifies clients
+    secret_key: str = ""  # Fernet key (urlsafe base64, 32 bytes) for encrypting reminder links; required outside local
+    interview_expiry_days: int = 14
+    interview_reminder_days: str = "2,5,9"  # days after the invite when reminders are sent
+    raw_take_retention_days: int = 90
+    transcription_api_url: str = "https://api.openai.com/v1"  # any OpenAI-compatible /audio/transcriptions endpoint
+    transcription_model: str = "whisper-1"
     clamd_host: str = ""  # ClamAV daemon; required for uploads when USE_MOCKS=false
     clamd_port: int = 3310
     api_public_url: str = "http://localhost:8000"  # used by local dev storage URLs
