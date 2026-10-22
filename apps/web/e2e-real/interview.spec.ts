@@ -71,6 +71,9 @@ test("founder records on a throttled 4G phone, survives a dropped connection, an
   // --- founder: emulated mid-range Android phone on throttled 4G
   const phone: BrowserContext = await browser.newContext({ ...devices["Pixel 5"], permissions: ["camera", "microphone"] });
   const page = await phone.newPage();
+  // the production Content-Security-Policy is enforced by `vite preview`; any violation is a bug in the app or the policy
+  const violations: string[] = [];
+  page.on("console", (m) => { if (/Content Security Policy|violates the following/i.test(m.text())) violations.push(m.text().slice(0, 200)); });
   const cdp = await phone.newCDPSession(page);
   await cdp.send("Network.enable");
   await cdp.send("Network.emulateNetworkConditions", { offline: false, latency: 60, downloadThroughput: (4 * 1024 * 1024) / 8, uploadThroughput: (1.5 * 1024 * 1024) / 8 });
@@ -79,7 +82,10 @@ test("founder records on a throttled 4G phone, survives a dropped connection, an
   let bytes = 0;
   page.on("response", async (r) => { try { if (r.url().includes("localhost:5173")) bytes += (await r.body()).length; } catch { /* streamed */ } });
 
-  await page.goto(link.replace(/^https?:\/\/[^/]+/, "http://localhost:5173"));
+  const landing = await page.goto(link.replace(/^https?:\/\/[^/]+/, "http://localhost:5173"));
+  const headers = landing!.headers();
+  expect(headers["content-security-policy"], "CSP header must be present or the violation check proves nothing").toContain("default-src 'self'");
+  expect(headers["permissions-policy"]).toContain("camera=(self)");
   await expect(page.getByRole("heading", { name: "How your recording will be used" })).toBeVisible();
   await expect(page.getByText("deleted 90 days after")).toBeVisible();
   const beforeCamera = bytes;
@@ -124,6 +130,8 @@ test("founder records on a throttled 4G phone, survives a dropped connection, an
   await owner.getByLabel("Cut from start (s)").first().fill("0.5");
   await owner.getByRole("button", { name: "Make the final video" }).click();
   await expect(owner.getByRole("heading", { name: "Your video" })).toBeVisible({ timeout: 300_000 });
+
+  expect(violations, "CSP violations on the founder page").toEqual([]);
 
   // --- the delivered file is a real, correctly-sized video with audio
   const dl = await ownerCtx.request.get(`${API}/v1/projects/${id}/downloads`, { headers: OWNER });

@@ -21,6 +21,8 @@ async def redeem(
     now = datetime.now(UTC)
     if inv is None or inv.used_at is not None or inv.email.lower() != email or inv.expires_at.replace(tzinfo=UTC) < now:
         raise HTTPException(400, "Invite is invalid or expired")
+    if (await session.execute(select(User.id).where(User.email == email))).first():
+        raise HTTPException(409, "This email already has an account. Sign in instead.")
     ws = await session.get(Workspace, inv.workspace_id)
     assert ws is not None
     session.add(User(email=email, role="owner", workspace_id=ws.id))  # type: ignore[union-attr]

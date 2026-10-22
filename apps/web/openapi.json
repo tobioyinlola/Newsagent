@@ -47,6 +47,98 @@
         "title": "AssetOut",
         "type": "object"
       },
+      "AuditOut": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "title": "Detail",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "target_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Type"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "actor",
+          "action",
+          "target_type",
+          "target_id",
+          "detail"
+        ],
+        "title": "AuditOut",
+        "type": "object"
+      },
+      "BillingSummary": {
+        "properties": {
+          "credit_balance": {
+            "title": "Credit Balance",
+            "type": "string"
+          },
+          "low_balance_threshold": {
+            "title": "Low Balance Threshold",
+            "type": "string"
+          },
+          "max_videos_per_day": {
+            "title": "Max Videos Per Day",
+            "type": "integer"
+          },
+          "spend_cap": {
+            "title": "Spend Cap",
+            "type": "string"
+          },
+          "spent_total": {
+            "title": "Spent Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "credit_balance",
+          "spend_cap",
+          "spent_total",
+          "low_balance_threshold",
+          "max_videos_per_day"
+        ],
+        "title": "BillingSummary",
+        "type": "object"
+      },
       "BrandAssetOut": {
         "properties": {
           "content_type": {
@@ -384,6 +476,37 @@
         "title": "CaptionsOut",
         "type": "object"
       },
+      "CheckoutIn": {
+        "properties": {
+          "pack_id": {
+            "title": "Pack Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pack_id"
+        ],
+        "title": "CheckoutIn",
+        "type": "object"
+      },
+      "CheckoutOut": {
+        "properties": {
+          "checkout_id": {
+            "title": "Checkout Id",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "checkout_id",
+          "url"
+        ],
+        "title": "CheckoutOut",
+        "type": "object"
+      },
       "ChunkUrlsIn": {
         "properties": {
           "indexes": {
@@ -524,6 +647,122 @@
         "title": "CostLine",
         "type": "object"
       },
+      "CostReport": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/CostRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/CostSummary"
+          }
+        },
+        "required": [
+          "summary",
+          "rows"
+        ],
+        "title": "CostReport",
+        "type": "object"
+      },
+      "CostRow": {
+        "properties": {
+          "by_vendor": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "By Vendor",
+            "type": "object"
+          },
+          "credits_charged": {
+            "title": "Credits Charged",
+            "type": "string"
+          },
+          "interview": {
+            "title": "Interview",
+            "type": "boolean"
+          },
+          "margin": {
+            "title": "Margin",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "vendor_cost": {
+            "title": "Vendor Cost",
+            "type": "string"
+          },
+          "workspace_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Name"
+          }
+        },
+        "required": [
+          "project_id",
+          "workspace_name",
+          "state",
+          "interview",
+          "vendor_cost",
+          "credits_charged",
+          "margin",
+          "by_vendor"
+        ],
+        "title": "CostRow",
+        "type": "object"
+      },
+      "CostSummary": {
+        "properties": {
+          "avg_credits_charged": {
+            "title": "Avg Credits Charged",
+            "type": "string"
+          },
+          "avg_margin": {
+            "title": "Avg Margin",
+            "type": "string"
+          },
+          "avg_vendor_cost": {
+            "title": "Avg Vendor Cost",
+            "type": "string"
+          },
+          "markup": {
+            "title": "Markup",
+            "type": "string"
+          },
+          "usd_per_credit": {
+            "title": "Usd Per Credit",
+            "type": "string"
+          },
+          "videos": {
+            "title": "Videos",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "videos",
+          "avg_vendor_cost",
+          "avg_credits_charged",
+          "avg_margin",
+          "usd_per_credit",
+          "markup"
+        ],
+        "title": "CostSummary",
+        "type": "object"
+      },
       "CostsOut": {
         "properties": {
           "lines": {
@@ -543,6 +782,19 @@
           "lines"
         ],
         "title": "CostsOut",
+        "type": "object"
+      },
+      "DeleteAccountIn": {
+        "properties": {
+          "confirm": {
+            "title": "Confirm",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm"
+        ],
+        "title": "DeleteAccountIn",
         "type": "object"
       },
       "DownloadItem": {
@@ -1051,6 +1303,102 @@
         "title": "InviteOut",
         "type": "object"
       },
+      "JobOut": {
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "cost": {
+            "title": "Cost",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "stuck": {
+            "default": false,
+            "title": "Stuck",
+            "type": "boolean"
+          },
+          "vendor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor"
+          },
+          "workspace_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Name"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "stage",
+          "vendor",
+          "status",
+          "attempts",
+          "cost",
+          "duration_s",
+          "error",
+          "created_at"
+        ],
+        "title": "JobOut",
+        "type": "object"
+      },
       "KeepRawIn": {
         "properties": {
           "keep": {
@@ -1062,6 +1410,110 @@
           "keep"
         ],
         "title": "KeepRawIn",
+        "type": "object"
+      },
+      "LedgerEntry": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "balance_after": {
+            "title": "Balance After",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "kind",
+          "amount",
+          "balance_after",
+          "project_id",
+          "stage",
+          "description"
+        ],
+        "title": "LedgerEntry",
+        "type": "object"
+      },
+      "ManualCreditsIn": {
+        "properties": {
+          "credits": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Credits"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Note",
+            "type": "string"
+          },
+          "ref": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "credits",
+          "ref"
+        ],
+        "title": "ManualCreditsIn",
         "type": "object"
       },
       "MeOut": {
@@ -1128,6 +1580,194 @@
           }
         },
         "title": "MergePlanIn",
+        "type": "object"
+      },
+      "ModerationCaseOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "excerpt": {
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          },
+          "workspace_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Name"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "workspace_id",
+          "stage",
+          "status",
+          "reasons",
+          "excerpt",
+          "note",
+          "created_at"
+        ],
+        "title": "ModerationCaseOut",
+        "type": "object"
+      },
+      "ModerationDecisionIn": {
+        "properties": {
+          "decision": {
+            "pattern": "^(approve|reject)$",
+            "title": "Decision",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "ModerationDecisionIn",
+        "type": "object"
+      },
+      "PackIn": {
+        "properties": {
+          "credits": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Credits"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "price_usd": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Price Usd"
+          }
+        },
+        "required": [
+          "name",
+          "credits",
+          "price_usd"
+        ],
+        "title": "PackIn",
+        "type": "object"
+      },
+      "PackOut": {
+        "properties": {
+          "credits": {
+            "title": "Credits",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "price_usd": {
+            "title": "Price Usd",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "credits",
+          "price_usd"
+        ],
+        "title": "PackOut",
+        "type": "object"
+      },
+      "PackPatch": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "active"
+        ],
+        "title": "PackPatch",
         "type": "object"
       },
       "PhotoConfirmIn": {
@@ -1232,6 +1872,41 @@
         "title": "ProjectCreate",
         "type": "object"
       },
+      "ProjectModerationOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "status",
+          "created_at"
+        ],
+        "title": "ProjectModerationOut",
+        "type": "object"
+      },
       "ProjectOut": {
         "properties": {
           "assets": {
@@ -1304,6 +1979,48 @@
           "created_at"
         ],
         "title": "ProjectOut",
+        "type": "object"
+      },
+      "QueueOut": {
+        "properties": {
+          "jobs": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Jobs",
+            "type": "object"
+          },
+          "moderation_pending": {
+            "title": "Moderation Pending",
+            "type": "integer"
+          },
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "projects": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Projects",
+            "type": "object"
+          },
+          "takes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Takes",
+            "type": "object"
+          }
+        },
+        "required": [
+          "jobs",
+          "takes",
+          "projects",
+          "moderation_pending",
+          "paused"
+        ],
+        "title": "QueueOut",
         "type": "object"
       },
       "RedeemInvite": {
@@ -1452,6 +2169,140 @@
           "lower_thirds"
         ],
         "title": "ScriptUpdate",
+        "type": "object"
+      },
+      "SettingsOut": {
+        "properties": {
+          "avatar_failover": {
+            "default": false,
+            "title": "Avatar Failover",
+            "type": "boolean"
+          },
+          "avatar_primary": {
+            "default": "heygen",
+            "title": "Avatar Primary",
+            "type": "string"
+          },
+          "avatar_secondary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Secondary"
+          },
+          "moderation_llm": {
+            "default": false,
+            "title": "Moderation Llm",
+            "type": "boolean"
+          },
+          "moderation_mode": {
+            "default": "enforce",
+            "title": "Moderation Mode",
+            "type": "string"
+          },
+          "pause_reason": {
+            "default": "",
+            "title": "Pause Reason",
+            "type": "string"
+          },
+          "paused": {
+            "default": false,
+            "title": "Paused",
+            "type": "boolean"
+          }
+        },
+        "title": "SettingsOut",
+        "type": "object"
+      },
+      "SettingsPatch": {
+        "properties": {
+          "avatar_failover": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Failover"
+          },
+          "avatar_primary": {
+            "anyOf": [
+              {
+                "pattern": "^(heygen|synthesia|mock)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Primary"
+          },
+          "avatar_secondary": {
+            "anyOf": [
+              {
+                "pattern": "^(heygen|synthesia|mock|none)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Secondary"
+          },
+          "moderation_llm": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moderation Llm"
+          },
+          "moderation_mode": {
+            "anyOf": [
+              {
+                "pattern": "^(enforce|log_only)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moderation Mode"
+          },
+          "pause_reason": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pause Reason"
+          },
+          "paused": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paused"
+          }
+        },
+        "title": "SettingsPatch",
         "type": "object"
       },
       "ShareCreated": {
@@ -1677,6 +2528,69 @@
           "upload_url"
         ],
         "title": "UploadSlot",
+        "type": "object"
+      },
+      "UsageLine": {
+        "properties": {
+          "credits": {
+            "title": "Credits",
+            "type": "string"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          }
+        },
+        "required": [
+          "project_id",
+          "stage",
+          "credits"
+        ],
+        "title": "UsageLine",
+        "type": "object"
+      },
+      "UsageStatement": {
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/UsageLine"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "month": {
+            "title": "Month",
+            "type": "string"
+          },
+          "total_credits": {
+            "title": "Total Credits",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "total_credits",
+          "lines"
+        ],
+        "title": "UsageStatement",
         "type": "object"
       },
       "ValidationError": {
@@ -1960,6 +2874,313 @@
         "summary": "Health"
       }
     },
+    "/v1/account": {
+      "delete": {
+        "operationId": "delete_account_v1_account_delete",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteAccountIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Account V1 Account Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Account",
+        "tags": [
+          "account"
+        ]
+      }
+    },
+    "/v1/account/export": {
+      "get": {
+        "operationId": "export_data_v1_account_export_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Export Data V1 Account Export Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Data",
+        "tags": [
+          "account"
+        ]
+      }
+    },
+    "/v1/admin/audit": {
+      "get": {
+        "operationId": "audit_log_v1_admin_audit_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AuditOut"
+                  },
+                  "title": "Response Audit Log V1 Admin Audit Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Audit Log",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/v1/admin/cost-report": {
+      "get": {
+        "operationId": "cost_report_v1_admin_cost_report_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 90,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cost Report",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/v1/admin/cost-report.csv": {
+      "get": {
+        "operationId": "cost_report_csv_v1_admin_cost_report_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 90,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cost Report Csv",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
     "/v1/admin/invites": {
       "post": {
         "operationId": "create_invite_v1_admin_invites_post",
@@ -2016,6 +3237,630 @@
         "summary": "Create Invite",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/v1/admin/jobs": {
+      "get": {
+        "operationId": "jobs_v1_admin_jobs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "stage",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stage"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JobOut"
+                  },
+                  "title": "Response Jobs V1 Admin Jobs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Jobs",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/v1/admin/moderation": {
+      "get": {
+        "operationId": "moderation_queue_v1_admin_moderation_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "pending",
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ModerationCaseOut"
+                  },
+                  "title": "Response Moderation Queue V1 Admin Moderation Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Moderation Queue",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/v1/admin/moderation/{case_id}/decision": {
+      "post": {
+        "operationId": "moderation_decision_v1_admin_moderation__case_id__decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModerationDecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Moderation Decision V1 Admin Moderation  Case Id  Decision Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Moderation Decision",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/v1/admin/packs": {
+      "get": {
+        "operationId": "admin_packs_v1_admin_packs_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PackOut"
+                  },
+                  "title": "Response Admin Packs V1 Admin Packs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Packs",
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "operationId": "create_pack_v1_admin_packs_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Pack",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/v1/admin/packs/{pack_id}": {
+      "patch": {
+        "operationId": "patch_pack_v1_admin_packs__pack_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "title": "Pack Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Pack V1 Admin Packs  Pack Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Pack",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/v1/admin/projects/{project_id}/retry": {
+      "post": {
+        "description": "Restart a failed or paused project on the owner's behalf (e.g. after fixing a vendor outage).",
+        "operationId": "operator_retry_v1_admin_projects__project_id__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Operator Retry V1 Admin Projects  Project Id  Retry Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Operator Retry",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/v1/admin/queue": {
+      "get": {
+        "operationId": "queue_v1_admin_queue_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Queue",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/v1/admin/settings": {
+      "get": {
+        "operationId": "get_system_settings_v1_admin_settings_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get System Settings",
+        "tags": [
+          "ops"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_system_settings_v1_admin_settings_patch",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch System Settings",
+        "tags": [
+          "ops"
         ]
       }
     },
@@ -2254,6 +4099,77 @@
         ]
       }
     },
+    "/v1/admin/workspaces/{workspace_id}/credits": {
+      "post": {
+        "description": "Record an offline payment (bank transfer, invoice). `ref` makes a double submit harmless.",
+        "operationId": "add_credits_v1_admin_workspaces__workspace_id__credits_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualCreditsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Add Credits V1 Admin Workspaces  Workspace Id  Credits Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Credits",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/v1/auth/redeem": {
       "post": {
         "operationId": "redeem_v1_auth_redeem_post",
@@ -2310,6 +4226,419 @@
         "summary": "Redeem",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/v1/billing/checkout": {
+      "post": {
+        "operationId": "checkout_v1_billing_checkout_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Checkout",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/dev/pay/{checkout_id}": {
+      "post": {
+        "description": "Local development only: plays the part of the payment provider by sending our own signed webhook.",
+        "operationId": "dev_pay_v1_billing_dev_pay__checkout_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "checkout_id",
+            "required": true,
+            "schema": {
+              "title": "Checkout Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Dev Pay V1 Billing Dev Pay  Checkout Id  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dev Pay",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/ledger": {
+      "get": {
+        "operationId": "ledger_entries_v1_billing_ledger_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit_",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "title": "Limit ",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LedgerEntry"
+                  },
+                  "title": "Response Ledger Entries V1 Billing Ledger Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ledger Entries",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/packs": {
+      "get": {
+        "operationId": "packs_v1_billing_packs_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PackOut"
+                  },
+                  "title": "Response Packs V1 Billing Packs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Packs",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/summary": {
+      "get": {
+        "operationId": "summary_v1_billing_summary_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Summary",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/usage": {
+      "get": {
+        "operationId": "usage_v1_billing_usage_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "month",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Month"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageStatement"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Usage",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/usage.csv": {
+      "get": {
+        "operationId": "usage_csv_v1_billing_usage_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "month",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Month"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Usage Csv",
+        "tags": [
+          "billing"
         ]
       }
     },
@@ -2814,6 +5143,51 @@
           }
         },
         "summary": "Consent",
+        "tags": [
+          "founder"
+        ]
+      }
+    },
+    "/v1/interview/{token}/data": {
+      "delete": {
+        "description": "The founder's own right to erasure: delete every recording, transcript and photo, and close the link.",
+        "operationId": "erase_my_recordings_v1_interview__token__data_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Erase My Recordings V1 Interview  Token  Data Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Erase My Recordings",
         "tags": [
           "founder"
         ]
@@ -4360,6 +6734,68 @@
         ]
       }
     },
+    "/v1/projects/{project_id}/moderation": {
+      "get": {
+        "operationId": "project_moderation_v1_projects__project_id__moderation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectModerationOut"
+                  },
+                  "title": "Response Project Moderation V1 Projects  Project Id  Moderation Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Project Moderation",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
     "/v1/projects/{project_id}/retry": {
       "post": {
         "operationId": "retry_v1_projects__project_id__retry_post",
@@ -4884,6 +7320,29 @@
         "summary": "Voices",
         "tags": [
           "brand"
+        ]
+      }
+    },
+    "/v1/webhooks/billing": {
+      "post": {
+        "operationId": "billing_webhook_v1_webhooks_billing_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Billing Webhook V1 Webhooks Billing Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Billing Webhook",
+        "tags": [
+          "billing"
         ]
       }
     }

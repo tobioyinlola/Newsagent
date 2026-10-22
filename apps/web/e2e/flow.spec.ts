@@ -8,6 +8,7 @@ test("invite to shared video", async ({ page, browser }) => {
   await page.getByLabel("Email").fill("ops@example.com");
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("link", { name: "Admin" }).click();
+  await page.getByRole("tab", { name: "Setup" }).click();
   for (const vendor of ["mock", "renderer"]) {
     await page.getByLabel("Vendor").selectOption(vendor);
     await page.getByLabel("Monthly limit").fill("100");

@@ -20,6 +20,8 @@ export function Layout() {
           <Link to="/projects" className="mr-3 text-lg font-extrabold text-blue-900">Newsagent</Link>
           <NavLink to="/projects" className={link}>Videos</NavLink>
           <NavLink to="/brand" className={link}>Brand kit</NavLink>
+          <NavLink to="/billing" className={link}>Credits</NavLink>
+          <NavLink to="/account" className={link}>Your data</NavLink>
           {me.data?.is_operator && <NavLink to="/admin" className={link}>Admin</NavLink>}
           <span className="ml-auto flex items-center gap-3 text-sm text-slate-700">
             {me.data && <span>{me.data.workspace_name} · {Number(me.data.credit_balance).toFixed(2)} credits</span>}

@@ -213,7 +213,7 @@ async def approve_script(
         project_id=project.id,
         workspace_id=project.workspace_id,
         stage="script",
-        subject_id=fingerprint(sv.id, text),
+        subject_id=fingerprint(text),
         text=text,
     )
     too_long = text_overflow(sv.lower_thirds, sv.ticker_lines)

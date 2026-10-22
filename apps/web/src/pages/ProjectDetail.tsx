@@ -26,6 +26,12 @@ export function ProjectDetail() {
     mutationFn: () => unwrap(api.DELETE("/v1/projects/{project_id}", path)),
     onSuccess: () => { qc.removeQueries({ queryKey: ["project", id] }); qc.invalidateQueries({ queryKey: ["projects"] }); nav("/projects"); },
   });
+  const moderation = useQuery({
+    queryKey: ["moderation", id],
+    queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/moderation", path)),
+    enabled: !!state && ["script_ready", "processing_founder"].includes(state),
+    refetchInterval: 15000,
+  });
   const retry = useMutation({ mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/retry", path)), onSuccess: () => qc.invalidateQueries({ queryKey: ["project", id] }) });
 
   // Live status: refetch whenever the server pushes a new state.
@@ -63,6 +69,12 @@ export function ProjectDetail() {
           <div className="mt-3"><Button onClick={() => retry.mutate()} disabled={retry.isPending || (p.state === "failed" && !p.failure_retryable)}>Retry</Button></div>
           <ErrorBox error={retry.error} />
         </Card>
+      )}
+      {moderation.data?.[0]?.status === "pending" && (
+        <Notice tone="info">A member of our team is checking your {moderation.data[0].stage === "interview" ? "founder's answers" : "script"} before it is made. This is usually quick, and we'll email you as soon as it's done.</Notice>
+      )}
+      {moderation.data?.[0]?.status === "rejected" && (
+        <Notice tone="warn">Our team couldn't approve this content.{moderation.data[0].note ? ` ${moderation.data[0].note}` : ""} Please edit it and try again.</Notice>
       )}
       {p.state === "script_ready" && script.data && <ScriptEditor projectId={id} script={script.data} />}
       {["script_approved", "rendering_anchor", "anchor_ready"].includes(p.state) && (

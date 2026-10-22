@@ -11,7 +11,7 @@ const btn = "w-full rounded-xl px-5 py-4 text-lg font-semibold focus:outline-non
 const primary = `${btn} bg-blue-700 text-white active:bg-blue-900`;
 const secondary = `${btn} border-2 border-slate-300 bg-white text-slate-900`;
 
-function Shell({ company, children }: { company?: string; children: ReactNode }) {
+function Shell({ company, children, onErase }: { company?: string; children: ReactNode; onErase?: () => void }) {
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col gap-4 bg-white p-4 text-slate-900">
       <header>
@@ -19,9 +19,10 @@ function Shell({ company, children }: { company?: string; children: ReactNode })
         {company && <h1 className="text-2xl font-extrabold">Interview for {company}</h1>}
       </header>
       <main className="flex flex-1 flex-col gap-4" aria-live="polite">{children}</main>
-      <footer className="border-t border-slate-200 pt-3 text-xs text-slate-600">
+      <footer className="space-y-2 border-t border-slate-200 pt-3 text-xs text-slate-600">
         <span className="mr-2 rounded bg-amber-400 px-1.5 py-0.5 font-extrabold uppercase text-slate-900">Featured</span>
         The anchor in this video is AI-generated. Your answers are used only in this video.
+        {onErase && <button type="button" className="mt-1 block underline" onClick={onErase}>Delete all of my recordings</button>}
       </footer>
     </div>
   );
@@ -41,6 +42,7 @@ export default function Founder() {
   const [kind, setKind] = useState<"video" | "audio">("video");
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [qi, setQi] = useState(0);
+  const [erased, setErased] = useState(false);
   const refresh = useCallback(() => qc.invalidateQueries({ queryKey: ["guest", token] }), [qc, token]);
 
   useEffect(() => () => stream?.getTracks().forEach((t) => t.stop()), [stream]);
@@ -50,6 +52,7 @@ export default function Founder() {
     setPhase(v.submitted ? "done" : !v.consented ? "welcome" : "devices");
   }, [view.data, phase]);
 
+  if (erased) return <Shell><Note tone="ok">Your recordings have been permanently deleted. You can close this page.</Note></Shell>;
   if (view.isLoading) return <Shell><p aria-busy="true">Loading…</p></Shell>;
   if (view.error || !view.data) return <Shell><Note tone="warn">This link is no longer valid. Please ask the person who invited you to send a new one.</Note></Shell>;
   const v = view.data;
@@ -65,7 +68,15 @@ export default function Founder() {
   const open = (i: number) => { setQi(i); setPhase("answer"); };
 
   return (
-    <Shell company={v.company}>
+    <Shell
+      company={v.company}
+      onErase={async () => {
+        if (!confirm("Delete all of your recordings and photos? This can't be undone.")) return;
+        await guest.DELETE("/v1/interview/{token}/data", { params: { path: { token } } });
+        stream?.getTracks().forEach((t) => t.stop());
+        setErased(true);
+      }}
+    >
       {phase === "welcome" && (
         <Welcome name={v.founder_name} text={v.consent_text} onAccept={async () => { await must(guest.POST("/v1/interview/{token}/consent", { params: { path: { token } } })); await refresh(); setPhase("devices"); }} />
       )}

@@ -215,3 +215,14 @@ async def test_moderation_endpoints_are_scoped(client, workspace, maker):
     assert (
         await client.get(f"/v1/projects/{pid}/moderation", headers={"Authorization": "Bearer dev:other@example.com"})
     ).status_code == 404
+
+
+async def test_an_approval_survives_resaving_identical_text_but_not_an_edit(client, workspace):
+    pid, body = await make_script(client, "Acme offers guaranteed returns on every order.")
+    await client.post(f"/v1/projects/{pid}/script/approve", headers=OWNER)
+    case = (await client.get("/v1/admin/moderation", headers=OPS)).json()[0]
+    await client.post(f"/v1/admin/moderation/{case['id']}/decision", json={"decision": "approve"}, headers=OPS)
+    # the editor re-saves the script (a new version, same words) before every approve click
+    await client.put(f"/v1/projects/{pid}/script", json=body, headers=OWNER)
+    r = await client.post(f"/v1/projects/{pid}/script/approve", headers=OWNER)
+    assert r.status_code == 200

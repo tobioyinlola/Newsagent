@@ -161,3 +161,10 @@ async def test_usage_and_ledger_are_private_to_the_workspace(client, workspace, 
 async def test_summary(client, workspace):
     s = (await client.get("/v1/billing/summary", headers=OWNER)).json()
     assert Decimal(s["credit_balance"]) == Decimal("10") and Decimal(s["low_balance_threshold"]) == Decimal("5")
+
+
+async def test_redeeming_an_invite_for_an_existing_account_is_a_clean_409(client, workspace):
+    r = await client.post("/v1/admin/invites", json={"email": "ops@example.com", "workspace_name": "Dup"}, headers=OPS)
+    code = r.json()["code"]
+    again = await client.post("/v1/auth/redeem", json={"code": code}, headers=OPS)  # ops already has an account
+    assert again.status_code == 409 and "already has an account" in again.json()["detail"]
