@@ -18,10 +18,16 @@ async function ok<T>(r: Awaited<ReturnType<APIRequestContext["get"]>>): Promise<
   return (await r.json()) as T;
 }
 
+async function redeem(request: APIRequestContext, code: string, email: string) {
+  await ok(await request.post(`${API}/v1/auth/signup/start`, { data: { invite_code: code } }));
+  const mail = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: email } })).json();
+  await ok(await request.post(`${API}/v1/auth/signup/verify`, { data: { invite_code: code, code: /\b(\d{6})\b/.exec(mail.text)![1] } }));
+}
+
 async function setupProject(request: APIRequestContext): Promise<string> {
   for (const vendor of ["mock", "renderer", "transcription"]) await ok(await request.put(`${API}/v1/admin/vendor-budgets`, { headers: OPS, data: { vendor, limit: "100" } }));
   const inv = await ok<{ code: string }>(await request.post(`${API}/v1/admin/invites`, { headers: OPS, data: { email: OWNER_EMAIL, workspace_name: "Acme Farms", credits: "50", spend_cap: "100" } }));
-  await ok(await request.post(`${API}/v1/auth/redeem`, { headers: OWNER, data: { code: inv.code } }));
+  await redeem(request, inv.code, OWNER_EMAIL);
   const p = await ok<{ id: string }>(await request.post(`${API}/v1/projects`, { headers: OWNER, data: { brief_text: "Acme Farms helps farmers sell produce online across Ghana.", region: "GH", voice_accent: "ghanaian" } }));
   const script = await ok<{ ticker_lines: string[]; lower_thirds: unknown[] }>(await request.post(`${API}/v1/projects/${p.id}/script/generate`, { headers: OWNER }));
   await ok(await request.put(`${API}/v1/projects/${p.id}/script`, { headers: OWNER, data: {

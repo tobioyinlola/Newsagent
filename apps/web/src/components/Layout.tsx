@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { signOut } from "../lib/auth";
+import { Notice } from "./ui";
 
 export function useMe() {
   return useQuery({ queryKey: ["me"], queryFn: () => unwrap(api.GET("/v1/me")), retry: false });
@@ -22,14 +23,20 @@ export function Layout() {
           <NavLink to="/brand" className={link}>Brand kit</NavLink>
           <NavLink to="/billing" className={link}>Credits</NavLink>
           <NavLink to="/account" className={link}>Your data</NavLink>
+          <NavLink to="/security" className={link}>Security</NavLink>
           {me.data?.is_operator && <NavLink to="/admin" className={link}>Admin</NavLink>}
           <span className="ml-auto flex items-center gap-3 text-sm text-slate-700">
             {me.data && <span>{me.data.workspace_name} · {Number(me.data.credit_balance).toFixed(2)} credits</span>}
-            <button className="underline" onClick={() => { signOut(); nav("/login"); }}>Sign out</button>
+            <button className="underline" onClick={async () => { await api.POST("/v1/auth/logout").catch(() => undefined); signOut(); nav("/login"); }}>Sign out</button>
           </span>
         </nav>
       </header>
-      <main className="mx-auto max-w-5xl space-y-4 px-4 py-6"><Outlet /></main>
+      <main className="mx-auto max-w-5xl space-y-4 px-4 py-6">
+        {me.data?.is_operator && !me.data.mfa_enabled && (
+          <Notice tone="warn">Operator accounts must use an authenticator app before the admin console opens. <Link className="underline" to="/security">Set it up</Link>.</Notice>
+        )}
+        <Outlet />
+      </main>
     </div>
   );
 }

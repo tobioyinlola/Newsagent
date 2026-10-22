@@ -9,6 +9,18 @@ async function ok<T>(r: Awaited<ReturnType<APIRequestContext["get"]>>): Promise<
   return (await r.json()) as T;
 }
 
+
+// In-house sign-up through the real endpoints. The mock mailbox is readable at /v1/dev/last-email locally.
+export async function emailedCode(request: APIRequestContext, to: string): Promise<string> {
+  const r = await request.get(`${API}/v1/dev/last-email`, { params: { to } });
+  return /\b(\d{6})\b/.exec((await r.json()).text)![1];
+}
+
+async function redeem(request: APIRequestContext, code: string, email: string) {
+  await ok(await request.post(`${API}/v1/auth/signup/start`, { data: { invite_code: code } }));
+  await ok(await request.post(`${API}/v1/auth/signup/verify`, { data: { invite_code: code, code: await emailedCode(request, email) } }));
+}
+
 let n = 0;
 // each test gets its own owner so they never collide on the shared database
 async function setup(request: APIRequestContext) {
@@ -16,7 +28,7 @@ async function setup(request: APIRequestContext) {
   for (const vendor of ["mock", "renderer", "transcription"]) await ok(await request.put(`${API}/v1/admin/vendor-budgets`, { headers: OPS, data: { vendor, limit: "1000" } }));
   const OWNER = bearer(OWNER_EMAIL);
   const inv = await ok<{ code: string; workspace_id: string }>(await request.post(`${API}/v1/admin/invites`, { headers: OPS, data: { email: OWNER_EMAIL, workspace_name: "Pilot Co", credits: "20", spend_cap: "500" } }));
-  await ok(await request.post(`${API}/v1/auth/redeem`, { headers: OWNER, data: { code: inv.code } }));
+  await redeem(request, inv.code, OWNER_EMAIL);
   return { workspace: inv.workspace_id, email: OWNER_EMAIL, OWNER };
 }
 

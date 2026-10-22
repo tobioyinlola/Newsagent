@@ -6,6 +6,7 @@ The schema must already exist (alembic upgrade head). Never run against producti
 
 import asyncio
 import os
+import re
 import sys
 from decimal import Decimal
 from pathlib import Path
@@ -31,7 +32,10 @@ async def main(n: int) -> None:
             await c.put("/v1/admin/vendor-budgets", json={"vendor": vendor, "limit": "100000"}, headers=OPS)
         inv = (await c.post("/v1/admin/invites", json={"email": "seed@startup.example.com", "workspace_name": "Seed Co", "credits": "100000", "spend_cap": "100000"}, headers=OPS)).json()
         owner = {"Authorization": "Bearer dev:seed@startup.example.com"}
-        await c.post("/v1/auth/redeem", json={"code": inv["code"]}, headers=owner)
+        await c.post("/v1/auth/signup/start", json={"invite_code": inv["code"]})
+        mail = (await c.get("/v1/dev/last-email", params={"to": "seed@startup.example.com"})).json()["text"]
+        code = re.search(r"\b(\d{6})\b", mail).group(1)  # type: ignore[union-attr]
+        await c.post("/v1/auth/signup/verify", json={"invite_code": inv["code"], "code": code})
         await c.patch(f"/v1/admin/workspaces/{inv['workspace_id']}", json={"max_videos_per_day": 10000}, headers=OPS)
         for i in range(n):
             ratelimit.reset()  # the seeder is a trusted batch, not a user

@@ -10,7 +10,7 @@ built and what is left, so the gate can be called honestly.
 | Download MP4 (16:9, 9:16), SRT, thumbnail; revocable share link; copy-ready captions with the mandatory disclosure | Built and tested end to end |
 | Founder interview merged into the video | Built; verified on emulated 4G with real ffmpeg + Remotion (`docs/gate-2.md`) |
 | Anchor from a **real** avatar provider | **Blocked**: needs a HeyGen key and avatar id (and the Option A/B spike). Everything else runs on mocks for the avatar and transcription |
-| Real sign-in | **Blocked**: Clerk or Auth0 not chosen |
+| Real sign-in | **Built in-house** (email code + TOTP); needs Resend sending domain verified to deliver real codes |
 | Deployed environment | **Not created** (deferred by you) |
 
 ## 2. Cost per video known for 10 pilot videos
@@ -51,7 +51,7 @@ Recommendation: concurrency 2 per 4 vCPU; scale by adding instances. Sandbox num
 
 ## 6. What I need from you to finish Gate 3
 1. A HeyGen key and avatar id (anchor spike; real cost per minute).
-2. Clerk or Auth0 decision, a payment provider decision (Stripe / Paystack / Flutterwave), a transcription vendor.
+2. A payment provider decision (Stripe / Paystack / Flutterwave), a transcription vendor.
 3. Prices: credit packs, markup, and what a credit is worth (`USD_PER_CREDIT`).
 4. A lawyer, and someone to own moderation policy.
 5. Permission to deploy staging (Railway) so the checklist and a real pen test can happen.

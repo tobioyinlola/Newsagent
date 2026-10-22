@@ -83,7 +83,7 @@ Commands assume the API's environment variables (`DATABASE_URL`, ...) are set, e
 | `BILLING_WEBHOOK_SECRET` | change at the provider and in Railway together | webhooks fail between the two changes: replay them |
 | `SECRET_KEY` (Fernet) | generate a new key, deploy | stored founder-reminder links become unreadable: reminders for open interviews stop and the owner must create a new link; **founder links themselves keep working** |
 | R2 keys | new token in Cloudflare, update Railway, redeploy | in-flight signed URLs are invalidated |
-| Auth provider secrets | per provider | users may be signed out |
+| `SECRET_KEY` also keys sign-in code hashes and authenticator secrets | see above | **everyone is signed out, pending codes die, and enrolled authenticators stop working**: run `reset-mfa` for each MFA user (operators re-enrol) |
 Then run `git log -p | grep` style scan if the leak might be in the repo; the history is clean as of this review.
 
 ### 2.9 Restore the database
@@ -98,6 +98,14 @@ Then run `git log -p | grep` style scan if the leak might be in the repo; the hi
    enable bucket replication (note the deletion caveat in `security-review.md` section 7).
 - **Targets (proposed, not yet measured at scale)**: RPO 24 h (daily backup), RTO 1 h. The only measured restore was a
   small seeded database (52 KB, 0.2 s): re-measure on staging with realistic data before relying on RTO.
+
+### 2.9a A user (or operator) lost their authenticator or recovery codes
+- Verify who they are out of band first (call back, known contact). Then, from a shell with the API environment:
+  `python -m app.cli reset-mfa their@email.com`. It turns off two-step verification, deletes recovery codes, signs every session
+  out and writes an audit entry (actor "cli"). They sign in with an emailed code and enrol again (operators are forced to).
+- If **no operator** can get in, run `reset-mfa` for an operator, then sign in and enrol immediately. If the sign-in email
+  itself isn't arriving, check Resend status and the sending-domain DNS first.
+- Suspected stolen session: the user's **Security** page → *Sign out everywhere*, or `reset-mfa` as above (it revokes all sessions).
 
 ### 2.10 Someone asks for their data, or to be deleted
 - Owner: they can self-serve **Your data** (export, delete workspace). Founder: the **Delete all of my recordings** button on
