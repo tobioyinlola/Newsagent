@@ -11,11 +11,17 @@ export async function getBundle(): Promise<string> {
 
 const browserExecutable = process.env.CHROMIUM_PATH || undefined;
 
+const COMPOSITIONS = ["NewsStudio", "InterviewMerge"];
+export function compositionName(name?: string): string {
+  if (name && !COMPOSITIONS.includes(name)) throw new Error(`unknown composition: ${name}`);
+  return name ?? "NewsStudio";
+}
+
 export async function renderOne(opts: {
-  format: "16x9" | "9x16"; props: NewsProps; outFile: string; scale?: number; onProgress?: (p: number) => void;
+  composition?: string; format: "16x9" | "9x16"; props: NewsProps | Record<string, unknown>; outFile: string; scale?: number; onProgress?: (p: number) => void;
 }) {
   const url = await getBundle();
-  const id = `NewsStudio-${opts.format}`;
+  const id = `${compositionName(opts.composition)}-${opts.format}`;
   const comp = await selectComposition({ serveUrl: url, id, inputProps: opts.props, browserExecutable });
   await renderMedia({
     composition: comp, serveUrl: url, codec: "h264", audioCodec: "aac", outputLocation: opts.outFile,
@@ -29,10 +35,10 @@ export async function renderOne(opts: {
   return comp;
 }
 
-export async function renderThumbnail(format: "16x9" | "9x16", props: NewsProps, outFile: string) {
+export async function renderThumbnail(format: "16x9" | "9x16", props: NewsProps | Record<string, unknown>, outFile: string, composition?: string) {
   const url = await getBundle();
-  const comp = await selectComposition({ serveUrl: url, id: `NewsStudio-${format}`, inputProps: props, browserExecutable });
-  await renderStill({ composition: comp, serveUrl: url, output: outFile, frame: 45, inputProps: props, browserExecutable });
+  const comp = await selectComposition({ serveUrl: url, id: `${compositionName(composition)}-${format}`, inputProps: props, browserExecutable });
+  await renderStill({ composition: comp, serveUrl: url, output: outFile, frame: Math.min(45, comp.durationInFrames - 1), inputProps: props, browserExecutable });
 }
 
 // H.264 needs even dimensions: reject scales that would produce odd pixel sizes before launching Chrome.

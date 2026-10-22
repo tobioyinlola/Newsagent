@@ -9,7 +9,7 @@ export async function putFile(key: string, file: string): Promise<void> {
       endpoint: process.env.STORAGE_ENDPOINT, region: "auto", forcePathStyle: true,
       credentials: { accessKeyId: process.env.STORAGE_ACCESS_KEY!, secretAccessKey: process.env.STORAGE_SECRET_KEY! },
     });
-    await s3.send(new PutObjectCommand({ Bucket: process.env.STORAGE_BUCKET!, Key: key, Body: fs.createReadStream(file), ContentType: file.endsWith(".png") ? "image/png" : "video/mp4" }));
+    await s3.send(new PutObjectCommand({ Bucket: process.env.STORAGE_BUCKET!, Key: key, Body: fs.createReadStream(file), ContentType: file.endsWith(".png") ? "image/png" : file.endsWith(".mp3") ? "audio/mpeg" : "video/mp4" }));
   } else {
     const dest = path.join(process.env.LOCAL_OUTPUT_DIR || "out/uploads", key);
     fs.mkdirSync(path.dirname(dest), { recursive: true });

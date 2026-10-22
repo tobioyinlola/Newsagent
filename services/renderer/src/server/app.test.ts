@@ -41,7 +41,7 @@ describe("renderer API", () => {
         { kind: "video", format: "16x9", name: "preview", scale: 0.5, width: 1920, height: 1080 },
         { kind: "thumbnail", format: "16x9", name: "thumbnail", width: 1920, height: 1080 },
       ];
-      const { render_id } = await (await fetch(`${b}/renders`, { method: "POST", headers: h, body: JSON.stringify({ composition: "x", props: {}, outputs, output_prefix: "p/final" }) })).json();
+      const { render_id } = await (await fetch(`${b}/renders`, { method: "POST", headers: h, body: JSON.stringify({ composition: "NewsStudio", props: {}, outputs, output_prefix: "p/final" }) })).json();
       for (let i = 0; i < 50; i++) {
         const s = await (await fetch(`${b}/renders/${render_id}`, { headers: h })).json();
         if (s.status === "succeeded") { expect(s.output_keys).toEqual(["p/final/preview.mp4", "p/final/thumbnail.png"]); expect(seen).toEqual([0.5]); return; }
@@ -55,9 +55,39 @@ describe("renderer API", () => {
     const renderFn = async () => {};
     await withServer(async (b) => {
       const h = { "x-renderer-secret": "s3cret", "content-type": "application/json" };
-      const { render_id } = await (await fetch(`${b}/renders`, { method: "POST", headers: h, body: JSON.stringify({ composition: "x", props: {}, outputs: [{ format: "16x9", name: "../evil", width: 1, height: 1 }], output_prefix: "p" }) })).json();
+      const { render_id } = await (await fetch(`${b}/renders`, { method: "POST", headers: h, body: JSON.stringify({ composition: "NewsStudio", props: {}, outputs: [{ format: "16x9", name: "../evil", width: 1, height: 1 }], output_prefix: "p" }) })).json();
       await new Promise((r) => setTimeout(r, 200));
       expect((await (await fetch(`${b}/renders/${render_id}`, { headers: h })).json()).status).toBe("failed");
     }, renderFn);
+  });
+
+  it("rejects unknown compositions", async () => {
+    await withServer(async (b) => {
+      const h = { "x-renderer-secret": "s3cret", "content-type": "application/json" };
+      const r = await fetch(`${b}/renders`, { method: "POST", headers: h, body: JSON.stringify({ composition: "Evil", props: {}, outputs: [{ format: "16x9", width: 1, height: 1 }], output_prefix: "p" }) });
+      expect(r.status).toBe(400);
+    });
+  });
+  it("/process validates input, runs a job and exposes the result", async () => {
+    const processFn = async () => { const fs = await import("node:fs"); const os = await import("node:os"); const d = fs.mkdtempSync(os.tmpdir() + "/pt-"); fs.writeFileSync(d + "/a.mp4", "v"); fs.writeFileSync(d + "/a.mp3", "a"); return { dir: d, video_path: d + "/a.mp4", audio_path: d + "/a.mp3", duration_s: 4.2, width: 640, height: 360, flags: ["dark_video"], stats: { mean_volume_db: -20, max_volume_db: -3, brightness: 10, speech_s: 3.9 } } as any; };
+    const server = createApp({ secret: "s3cret", processFn }).listen(0);
+    const b = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    try {
+      const h = { "x-renderer-secret": "s3cret", "content-type": "application/json" };
+      for (const bad of [{}, { chunk_urls: [], kind: "video", ext: "webm", output_prefix: "p" }, { chunk_urls: ["http://x"], kind: "video", ext: "webm", output_prefix: "../p" }, { chunk_urls: ["http://x"], kind: "video", ext: "we/bm", output_prefix: "p" }]) {
+        expect((await fetch(`${b}/process`, { method: "POST", headers: h, body: JSON.stringify(bad) })).status).toBe(400);
+      }
+      const { render_id } = await (await fetch(`${b}/process`, { method: "POST", headers: h, body: JSON.stringify({ chunk_urls: ["http://x/1"], kind: "video", ext: "webm", output_prefix: "projects/p1/takes/t1" }) })).json();
+      for (let i = 0; i < 50; i++) {
+        const s = await (await fetch(`${b}/renders/${render_id}`, { headers: h })).json();
+        if (s.status === "succeeded") {
+          expect(s.result).toMatchObject({ video_key: "projects/p1/takes/t1/answer.mp4", audio_key: "projects/p1/takes/t1/answer.mp3", duration_s: 4.2, flags: ["dark_video"] });
+          return;
+        }
+        if (s.status === "failed") throw new Error(s.error);
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      throw new Error("did not finish");
+    } finally { server.close(); }
   });
 });

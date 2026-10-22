@@ -9,6 +9,7 @@
     "studio": "remotion studio src/index.ts",
     "bench": "tsx src/bench.ts",
     "smoke": "tsx src/smoke.ts",
+    "smoke:merge": "tsx src/smoke-merge.ts",
     "test": "vitest run"
   },
   "dependencies": {

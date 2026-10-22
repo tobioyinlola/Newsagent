@@ -1,5 +1,6 @@
 import React from "react";
 import { AbsoluteFill, Easing, OffthreadVideo, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { Chrome } from "./Chrome";
 import { NewsProps } from "./types";
 
 // Original fictional channel identity. Do not use any real network's name, marks, music or trade dress.
@@ -11,9 +12,6 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
   const slide = (start: number) =>
     interpolate(frame - start, [0, 15], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
 
-  const ticker = p.tickerLines.join("   •   ") + "   •   ";
-  const tickerW = ticker.length * 22 * u;
-  const tickerX = -((frame * 3 * u) % tickerW);
   const lt = p.lowerThirds[Math.min(p.lowerThirds.length - 1, Math.floor(frame / (fps * 8)))];
   const ltStart = fps;
   const ltOut = interpolate(frame, [durationInFrames - 20, durationInFrames - 5], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
@@ -39,17 +37,7 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
         )}
       </AbsoluteFill>
 
-      {/* channel bug */}
-      <div style={{ position: "absolute", top: 40 * u, left: 48 * u, display: "flex", gap: 12 * u, alignItems: "center" }}>
-        <div style={{ width: 14 * u, height: 44 * u, background: p.brand.accent }} />
-        <div style={{ color: "#fff", fontWeight: 800, fontSize: 30 * u, letterSpacing: 2 * u, textTransform: "uppercase" }}>{p.channel.name}</div>
-      </div>
-
-      {/* mandatory disclosures: always rendered, not controllable by users */}
-      <div style={{ position: "absolute", top: 40 * u, right: 48 * u, textAlign: "right" }}>
-        <div style={{ display: "inline-block", background: p.brand.accent, color: "#111", fontWeight: 900, fontSize: 28 * u, padding: `${6 * u}px ${18 * u}px`, textTransform: "uppercase", letterSpacing: 2 * u }}>{p.disclosures.tag}</div>
-        <div style={{ color: "#fff", opacity: 0.9, fontSize: 22 * u, marginTop: 8 * u }}>{p.disclosures.anchor}</div>
-      </div>
+      <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} />
 
       {/* breaking-news style banner */}
       <div style={{ position: "absolute", left: 0, bottom: (portrait ? 31 : 19) * 1 + "%", transform: `translateX(${(1 - slide(5)) * -100}%)` }}>
@@ -67,13 +55,6 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
           </div>
         </div>
       )}
-
-      {/* ticker */}
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 72 * u, background: "#050B1A", overflow: "hidden", borderTop: `${4 * u}px solid ${p.brand.accent}` }}>
-        <div style={{ whiteSpace: "nowrap", color: "#fff", fontSize: 32 * u, lineHeight: `${68 * u}px`, transform: `translateX(${tickerX}px)` }}>
-          {ticker.repeat(Math.ceil((width * 2) / tickerW) + 2)}
-        </div>
-      </div>
     </AbsoluteFill>
   );
 };

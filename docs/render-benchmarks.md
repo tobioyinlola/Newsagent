@@ -56,3 +56,16 @@ transparent anchor served over HTTP, then calls `/analyze` on each. Verified: du
 present, finals land at about -16 LUFS after normalisation, previews are left un-normalised by design, and a
 960x540 preview is produced. The stand-in clip comes from a script:
 Run `services/renderer/scripts/make-standin-anchor.sh` to create it.
+
+## Correction: the stand-in anchor was invisible in the earlier benchmarks
+The first stand-in clip was entirely transparent (`drawbox` does not write opaque alpha), so earlier renders decoded
+the clip but never showed an anchor. Decode and compositing cost was still paid, so the timings above remain a fair
+guide, but the clip is now built with a colour key (real alpha, ~43% opaque) and the composition was visually
+checked: **Remotion's OffthreadVideo honours VP9 alpha and composites the anchor over the studio plate.** This
+confirms the compositing half of Option B; whether HeyGen's matted output looks clean is still part of the spike.
+
+## Interview merge render (`pnpm smoke:merge`)
+10 s merged video (anchor, question, 4 s founder answer with PiP + lower-third, outro): 28 s for 16:9 PiP and 26 s
+for 9:16 split on the 4 vCPU sandbox, about 10 fps. Founder portrait video is letterboxed in 16:9 (shown large,
+not cropped). Takes processing (`/process`: join chunks, trim silence, denoise, loudnorm, flags) runs in 2-5 s for an
+8 s take.
