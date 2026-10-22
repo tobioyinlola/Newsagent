@@ -52,11 +52,11 @@ export function ProjectDetail() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Video {p.id.slice(0, 6)}</h1>
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-sm" aria-live="polite">{stateLabel(p.state)}</span>
+        <span className="rounded-full bg-paper px-3 py-1 text-sm" aria-live="polite">{stateLabel(p.state)}</span>
       </div>
       <ol className="flex flex-wrap gap-2" aria-label="Progress">
         {steps.map((s, i) => (
-          <li key={s.label} aria-current={i === cur ? "step" : undefined} className={`rounded-full px-3 py-1 text-sm ${i < cur || p.state === "final_ready" ? "bg-green-100 text-green-900" : i === cur ? "bg-blue-700 text-white" : "bg-slate-100 text-slate-700"}`}>{s.label}</li>
+          <li key={s.label} aria-current={i === cur ? "step" : undefined} className={`rounded-full px-3 py-1 text-sm ${i < cur || p.state === "final_ready" ? "bg-lime-tint text-ink" : i === cur ? "bg-brand-purple text-white" : "bg-paper text-muted"}`}>{s.label}</li>
         ))}
       </ol>
 
@@ -94,9 +94,9 @@ export function ProjectDetail() {
       {costs.data && costs.data.lines.length > 0 && (
         <Card title="Cost">
           <table className="w-full text-sm"><caption className="sr-only">Cost by step</caption>
-            <thead><tr className="text-left text-slate-600"><th className="py-1">Step</th><th>Status</th><th className="text-right">Credits</th></tr></thead>
-            <tbody>{costs.data.lines.map((l) => <tr key={l.stage} className="border-t border-slate-200"><td className="py-1">{l.stage.replace("_", " ")}</td><td>{l.status}</td><td className="text-right">{Number(l.cost).toFixed(4)}</td></tr>)}
-              <tr className="border-t border-slate-300 font-semibold"><td className="py-1" colSpan={2}>Total</td><td className="text-right">{Number(costs.data.total).toFixed(4)}</td></tr></tbody></table>
+            <thead><tr className="text-left text-muted"><th className="py-1">Step</th><th>Status</th><th className="text-right">Credits</th></tr></thead>
+            <tbody>{costs.data.lines.map((l) => <tr key={l.stage} className="border-t border-line"><td className="py-1">{l.stage.replace("_", " ")}</td><td>{l.status}</td><td className="text-right">{Number(l.cost).toFixed(4)}</td></tr>)}
+              <tr className="border-t border-ink font-semibold"><td className="py-1" colSpan={2}>Total</td><td className="text-right">{Number(costs.data.total).toFixed(4)}</td></tr></tbody></table>
         </Card>
       )}
     </>

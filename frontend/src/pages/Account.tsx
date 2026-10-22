@@ -22,7 +22,7 @@ export function Account() {
     <>
       <h1 className="text-2xl font-bold">Your data</h1>
       <Card title="Download your data">
-        <p className="mb-3 text-sm text-slate-700">Everything we hold about your workspace as a JSON file: your videos' scripts, founder interview details, credit history and links to your finished files.</p>
+        <p className="mb-3 text-sm text-muted">Everything we hold about your workspace as a JSON file: your videos' scripts, founder interview details, credit history and links to your finished files.</p>
         <Button variant="secondary" onClick={() => downloadAuthed("/v1/account/export", "my-data.json").catch((e) => setErr(e.message))}>Download my data</Button>
         {err && <div className="mt-2"><ErrorBox error={new Error(err)} /></div>}
       </Card>

@@ -7,20 +7,20 @@ import { ChunkStore } from "./store";
 import { type UploadState, TakeUploader } from "./uploader";
 
 const store = new ChunkStore();
-const btn = "w-full rounded-xl px-5 py-4 text-lg font-semibold focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-300 disabled:opacity-50";
-const primary = `${btn} bg-blue-700 text-white active:bg-blue-900`;
-const secondary = `${btn} border-2 border-slate-300 bg-white text-slate-900`;
+const btn = "w-full rounded-xl px-5 py-4 text-lg font-semibold focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-purple disabled:opacity-50";
+const primary = `${btn} border-2 border-ink bg-brand-green text-ink active:bg-ink active:text-brand-green`;
+const secondary = `${btn} border-2 border-ink bg-white text-ink`;
 
 function Shell({ company, children, onErase }: { company?: string; children: ReactNode; onErase?: () => void }) {
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col gap-4 bg-white p-4 text-slate-900">
+    <div className="mx-auto flex min-h-screen max-w-md flex-col gap-4 bg-white p-4 text-ink">
       <header>
-        <p className="text-xs font-bold uppercase tracking-widest text-blue-800">Startup Spotlight Network</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-ink">Startup Spotlight Network</p>
         {company && <h1 className="text-2xl font-extrabold">Interview for {company}</h1>}
       </header>
       <main className="flex flex-1 flex-col gap-4" aria-live="polite">{children}</main>
-      <footer className="space-y-2 border-t border-slate-200 pt-3 text-xs text-slate-600">
-        <span className="mr-2 rounded bg-amber-400 px-1.5 py-0.5 font-extrabold uppercase text-slate-900">Featured</span>
+      <footer className="space-y-2 border-t border-line pt-3 text-xs text-muted">
+        <span className="mr-2 rounded bg-brand-peach px-1.5 py-0.5 font-extrabold uppercase text-ink">Featured</span>
         The anchor in this video is AI-generated. Your answers are used only in this video.
         {onErase && <button type="button" className="mt-1 block underline" onClick={onErase}>Delete all of my recordings</button>}
       </footer>
@@ -29,7 +29,7 @@ function Shell({ company, children, onErase }: { company?: string; children: Rea
 }
 
 const Note = ({ tone = "info", children }: { tone?: "info" | "warn" | "ok"; children: ReactNode }) => (
-  <p role="status" className={`rounded-lg border p-3 text-base ${{ info: "border-blue-200 bg-blue-50", warn: "border-amber-300 bg-amber-50", ok: "border-green-300 bg-green-50" }[tone]}`}>{children}</p>
+  <p role="status" className={`rounded-lg border p-3 text-base ${{ info: "border-brand-purple bg-lilac", warn: "border-brand-peach bg-peach-tint", ok: "border-ink bg-lime-tint" }[tone]}`}>{children}</p>
 );
 
 type Phase = "welcome" | "devices" | "hub" | "answer" | "done";
@@ -103,7 +103,7 @@ function Welcome({ name, text, onAccept }: { name: string; text: string; onAccep
   return (
     <>
       <p className="text-lg">Hi {name || "there"}! You've been asked to answer a few questions on camera. It takes about 10 minutes.</p>
-      <section className="rounded-lg border border-slate-300 bg-slate-50 p-3 text-base" aria-labelledby="consent-h">
+      <section className="rounded-lg border border-ink bg-paper p-3 text-base" aria-labelledby="consent-h">
         <h2 id="consent-h" className="mb-1 font-bold">How your recording will be used</h2>
         <p>{text}</p>
       </section>
@@ -180,7 +180,7 @@ function Devices({ token, onReady }: { token: string; onReady: (s: MediaStream, 
             </div>
           )}
           <div><p className="mb-1 font-medium">Microphone: {heardSound ? "we can hear you ✓" : "say something…"}</p>
-            <div className="h-3 overflow-hidden rounded bg-slate-200" role="meter" aria-valuenow={Math.round(level * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Microphone level"><div className="h-full bg-green-600 transition-all" style={{ width: `${level * 100}%` }} /></div></div>
+            <div className="h-3 overflow-hidden rounded bg-line" role="meter" aria-valuenow={Math.round(level * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Microphone level"><div className="h-full bg-brand-green transition-all" style={{ width: `${level * 100}%` }} /></div></div>
           <p>{kind === "video" ? "Keep your face inside the oval, with light on your face and a quiet room." : "Find a quiet room."}</p>
           <p aria-live="polite">Connection: {speed === null ? "testing…" : speed === 0 ? "couldn't test" : `${speed.toFixed(1)} Mbps ${slow ? "(slow)" : "(good)"}`}</p>
           {slow && kind === "video" && <Note tone="warn">Your connection looks slow. Video still works (it saves on your phone while it uploads), but sound-only is faster.</Note>}
@@ -316,33 +316,33 @@ function Answer({ token, q, total, stream, kind, onFinished, onBack }: { token: 
 
   return (
     <>
-      <p className="text-sm font-semibold text-slate-600">Question {q.index + 1} of {total}</p>
+      <p className="text-sm font-semibold text-muted">Question {q.index + 1} of {total}</p>
       <h2 className="text-2xl font-bold">{q.text}</h2>
 
       {sub === "prompt" && (
         <>
           {q.clip_url && <video className="w-full rounded-xl bg-black" src={q.clip_url} controls playsInline aria-label="The anchor asks this question" />}
-          <p className="text-slate-700">Answer in about 30 to 60 seconds. You can record again as many times as you like.</p>
+          <p className="text-muted">Answer in about 30 to 60 seconds. You can record again as many times as you like.</p>
           {q.attempts_left <= 0 && <Note tone="warn">You've used all your takes for this question. Please keep your best one.</Note>}
           {error && <Note tone="warn">{error}</Note>}
           <button className={primary} onClick={begin} disabled={q.attempts_left <= 0}>I'm ready, start recording</button>
           <button className={secondary} onClick={onBack}>Back to all questions</button>
         </>
       )}
-      {sub === "countdown" && <p className="py-12 text-center text-8xl font-extrabold text-blue-800" aria-live="assertive">{count > 0 ? count : "Go"}</p>}
+      {sub === "countdown" && <p className="py-12 text-center text-8xl font-extrabold text-ink" aria-live="assertive">{count > 0 ? count : "Go"}</p>}
       {sub === "recording" && (
         <>
           {kind === "video" && <video ref={live} autoPlay muted playsInline className="aspect-[3/4] w-full rounded-xl bg-black object-cover [transform:scaleX(-1)]" aria-label="Your camera" />}
-          <p className="text-center text-3xl font-bold tabular-nums" aria-live="off"><span className="mr-2 inline-block h-4 w-4 animate-pulse rounded-full bg-red-600 align-middle" aria-hidden />{mm(elapsed)} <span className="text-base font-normal text-slate-600">/ {mm(HARD_CAP_S)} max</span></p>
+          <p className="text-center text-3xl font-bold tabular-nums" aria-live="off"><span className="mr-2 inline-block h-4 w-4 animate-pulse rounded-full bg-brand-red align-middle" aria-hidden />{mm(elapsed)} <span className="text-base font-normal text-muted">/ {mm(HARD_CAP_S)} max</span></p>
           {up && up.pending > 3 && <Note tone="warn">Your connection is slow. Keep going: your answer is saved on this device while it uploads.</Note>}
-          <button className={`${btn} bg-red-700 text-white`} onClick={stop}>Stop recording</button>
+          <button className={`${btn} bg-brand-red text-white`} onClick={stop}>Stop recording</button>
         </>
       )}
       {sub === "review" && (
         <>
           {resumed && <Note tone="info">We found a recording you hadn't finished. It's saved on this device.</Note>}
           {blobUrl && (kind === "video" ? <video src={blobUrl} controls playsInline className="aspect-[3/4] w-full rounded-xl bg-black object-cover" aria-label="Review your answer" /> : <audio src={blobUrl} controls className="w-full" aria-label="Review your answer" />)}
-          <p aria-live="polite" className="text-sm text-slate-700">{up ? (waiting ? (up.online ? `Uploading… ${up.confirmed} of ${up.confirmed + up.pending} parts sent` : "No connection. Your answer is safe on this device and will send when you're back online.") : "Saved ✓") : ""}</p>
+          <p aria-live="polite" className="text-sm text-muted">{up ? (waiting ? (up.online ? `Uploading… ${up.confirmed} of ${up.confirmed + up.pending} parts sent` : "No connection. Your answer is safe on this device and will send when you're back online.") : "Saved ✓") : ""}</p>
           {error && <Note tone="warn">{error}</Note>}
           <button className={primary} onClick={keep}>Keep this answer</button>
           <button className={secondary} onClick={discard}>Record again</button>
@@ -351,7 +351,7 @@ function Answer({ token, q, total, stream, kind, onFinished, onBack }: { token: 
       {sub === "checking" && (
         <>
           <p aria-busy="true" className="text-lg">{waiting ? (up!.online ? "Sending your answer…" : "Waiting for your connection to come back…") : "Checking your recording…"}</p>
-          {waiting && <p className="text-sm text-slate-700">{up!.confirmed} of {up!.confirmed + up!.pending} parts sent. Please keep this page open.</p>}
+          {waiting && <p className="text-sm text-muted">{up!.confirmed} of {up!.confirmed + up!.pending} parts sent. Please keep this page open.</p>}
         </>
       )}
       {sub === "flagged" && flag && (
@@ -398,17 +398,17 @@ function Hub({ token, view, kind, onOpen, onSubmitted }: { token: string; view: 
   return (
     <>
       <h2 className="text-xl font-bold">Your answers</h2>
-      <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200">
+      <ul className="divide-y divide-line rounded-lg border border-line">
         {view.questions.map((q) => (
           <li key={q.index} className="flex items-center justify-between gap-3 p-3">
-            <div><p className="font-medium">{q.text}</p><p className="text-sm text-slate-600">{label(q.take)}</p></div>
-            <button className="rounded-lg border-2 border-slate-300 px-3 py-2 text-sm font-semibold" onClick={() => onOpen(q.index)}>{q.take ? "Re-record" : "Record"}</button>
+            <div><p className="font-medium">{q.text}</p><p className="text-sm text-muted">{label(q.take)}</p></div>
+            <button className="rounded-lg border-2 border-ink px-3 py-2 text-sm font-semibold" onClick={() => onOpen(q.index)}>{q.take ? "Re-record" : "Record"}</button>
           </li>
         ))}
       </ul>
       {audioTakes && (
         <div className="space-y-2"><p className="font-medium">Add a photo of yourself {photoOk && "✓"}</p>
-          <p className="text-sm text-slate-700">Because some answers are sound only, we show a photo of you while your voice plays.</p>
+          <p className="text-sm text-muted">Because some answers are sound only, we show a photo of you while your voice plays.</p>
           <input aria-label="Choose a photo" type="file" accept="image/png,image/jpeg" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); }} /></div>
       )}
       {err && <Note tone="warn">{err}</Note>}

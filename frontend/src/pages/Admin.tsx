@@ -22,10 +22,10 @@ export function Admin() {
   return (
     <>
       <h1 className="text-2xl font-bold">Operator console</h1>
-      <div role="tablist" aria-label="Operator sections" className="flex flex-wrap gap-1 border-b border-slate-200">
+      <div role="tablist" aria-label="Operator sections" className="flex flex-wrap gap-1 border-b border-line">
         {TABS.map((t) => (
           <button key={t.id} role="tab" id={`tab-${t.id}`} aria-selected={tab === t.id} aria-controls={`panel-${t.id}`} onClick={() => setTab(t.id)}
-            className={`rounded-t px-3 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${tab === t.id ? "border-b-2 border-blue-700 text-blue-900" : "text-slate-700 hover:bg-slate-100"}`}>{t.label}</button>
+            className={`rounded-t px-3 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple ${tab === t.id ? "border-b-2 border-brand-purple text-ink" : "text-muted hover:bg-paper"}`}>{t.label}</button>
         ))}
       </div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="space-y-4">{TABS.find((t) => t.id === tab)!.el}</div>

@@ -33,7 +33,7 @@ export function NewProject() {
             </select>
           )}
         </Field>
-        <p className="text-sm text-slate-700">Writing the script is free. Nothing is rendered until you approve it.</p>
+        <p className="text-sm text-muted">Writing the script is free. Nothing is rendered until you approve it.</p>
         <ErrorBox error={m.error} />
         <Button type="submit" disabled={m.isPending}>{m.isPending ? "Writing your script…" : "Write my script"}</Button>
       </form>

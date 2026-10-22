@@ -29,25 +29,25 @@ export function Delivery({ projectId }: { projectId: string }) {
         <ErrorBox error={dl.error} />
       </Card>
       <Card title="Downloads">
-        <ul className="divide-y divide-slate-200">
+        <ul className="divide-y divide-line">
           {items.map((i) => (
             <li key={i.filename} className="flex items-center justify-between py-2">
               <span>{label(i.type, i.format)}</span>
-              <a className="rounded-md border border-slate-300 px-3 py-1 text-sm font-medium hover:bg-slate-50" href={i.url} download={i.filename}>Download</a>
+              <a className="rounded-md border border-ink px-3 py-1 text-sm font-medium hover:bg-paper" href={i.url} download={i.filename}>Download</a>
             </li>
           ))}
         </ul>
-        <p className="mt-2 text-xs text-slate-600">Download links expire after 15 minutes. Reload this page for fresh ones.</p>
+        <p className="mt-2 text-xs text-muted">Download links expire after 15 minutes. Reload this page for fresh ones.</p>
       </Card>
       <Card title="Share">
         <div className="space-y-3">
           {shareUrl ? (
             <div className="space-y-2">
               <p className="text-sm">Anyone with this private link can watch. It is shown once, so copy it now.</p>
-              <div className="flex gap-2"><input readOnly aria-label="Share link" className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm" value={shareUrl} onFocus={(e) => e.currentTarget.select()} />
+              <div className="flex gap-2"><input readOnly aria-label="Share link" className="w-full rounded-md border border-ink bg-paper px-3 py-2 text-sm" value={shareUrl} onFocus={(e) => e.currentTarget.select()} />
                 <Button variant="secondary" onClick={() => copy("share", shareUrl)}>{copied === "share" ? "Copied" : "Copy"}</Button></div>
             </div>
-          ) : <p className="text-sm text-slate-700">{caps.data?.has_active_share ? "A share link is active. For security the link itself can't be shown again; create a new one or revoke access." : "Create a private link you can send to anyone."}</p>}
+          ) : <p className="text-sm text-muted">{caps.data?.has_active_share ? "A share link is active. For security the link itself can't be shown again; create a new one or revoke access." : "Create a private link you can send to anyone."}</p>}
           <div className="flex gap-2">
             <Button onClick={() => share.mutate()} disabled={share.isPending}>Create share link</Button>
             <Button variant="danger" onClick={() => revoke.mutate()} disabled={revoke.isPending}>Revoke all links</Button>
@@ -56,13 +56,13 @@ export function Delivery({ projectId }: { projectId: string }) {
         </div>
       </Card>
       <Card title="Suggested captions">
-        <p className="mb-3 text-sm text-slate-700">Copy-ready text for each platform. The disclosure is included and can't be removed.</p>
+        <p className="mb-3 text-sm text-muted">Copy-ready text for each platform. The disclosure is included and can't be removed.</p>
         <div className="space-y-4">
           {Object.entries(caps.data?.captions ?? {}).map(([platform, text]) => (
             <div key={platform} className="space-y-1">
               <div className="flex items-center justify-between"><h3 className="text-sm font-semibold capitalize">{platform === "x" ? "X" : platform}</h3>
                 <Button variant="secondary" onClick={() => copy(platform, text)}>{copied === platform ? "Copied" : "Copy"}</Button></div>
-              <pre className="whitespace-pre-wrap rounded-md bg-slate-50 p-3 text-sm">{text}</pre>
+              <pre className="whitespace-pre-wrap rounded-md bg-paper p-3 text-sm">{text}</pre>
             </div>
           ))}
         </div>

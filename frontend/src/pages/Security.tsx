@@ -40,12 +40,12 @@ function Sessions() {
   return (
     <Card title="Where you’re signed in">
       <ErrorBox error={list.error ?? revoke.error ?? all.error} />
-      <ul className="divide-y divide-slate-200">
+      <ul className="divide-y divide-line">
         {list.data?.map((s) => (
           <li key={s.id} className="flex items-center justify-between gap-3 py-2 text-sm">
             <span>
               {s.user_agent?.slice(0, 60) ?? "Unknown device"}{s.current && <strong> (this device)</strong>}
-              <br /><span className="text-slate-600">Last used {new Date(s.last_used_at).toLocaleString()}</span>
+              <br /><span className="text-muted">Last used {new Date(s.last_used_at).toLocaleString()}</span>
             </span>
             {!s.current && <Button variant="secondary" onClick={() => revoke.mutate(s.id)}>Sign out</Button>}
           </li>

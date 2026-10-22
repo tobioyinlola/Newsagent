@@ -35,9 +35,9 @@ export function Setup() {
       </Card>
 
       <Card title="Vendor budgets (this month)">
-        <p className="mb-3 text-sm text-slate-700">A vendor with no budget is blocked. Operators are alerted at 80%.</p>
-        <table className="mb-4 w-full text-sm"><caption className="sr-only">Vendor budgets</caption><thead><tr className="text-left text-slate-600"><th>Vendor</th><th>Period</th><th className="text-right">Spent</th><th className="text-right">Limit</th></tr></thead>
-          <tbody>{budgets.data?.map((b) => <tr key={b.vendor + b.period} className="border-t border-slate-200"><td className="py-1">{b.vendor}</td><td>{b.period}</td><td className="text-right">{Number(b.spent).toFixed(2)}</td><td className="text-right">{Number(b.limit).toFixed(2)}</td></tr>)}</tbody></table>
+        <p className="mb-3 text-sm text-muted">A vendor with no budget is blocked. Operators are alerted at 80%.</p>
+        <table className="mb-4 w-full text-sm"><caption className="sr-only">Vendor budgets</caption><thead><tr className="text-left text-muted"><th>Vendor</th><th>Period</th><th className="text-right">Spent</th><th className="text-right">Limit</th></tr></thead>
+          <tbody>{budgets.data?.map((b) => <tr key={b.vendor + b.period} className="border-t border-line"><td className="py-1">{b.vendor}</td><td>{b.period}</td><td className="text-right">{Number(b.spent).toFixed(2)}</td><td className="text-right">{Number(b.limit).toFixed(2)}</td></tr>)}</tbody></table>
         <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); setBudget.mutate(); }}>
           <Field label="Vendor">{(id) => <select id={id} className={inputCls} value={vb.vendor} onChange={(e) => setVb({ ...vb, vendor: e.target.value })}>{["heygen", "renderer", "transcription", "mock"].map((v) => <option key={v}>{v}</option>)}</select>}</Field>
           <Field label="Monthly limit">{(id) => <input id={id} type="number" min="0" step="any" className={inputCls} value={vb.limit} onChange={(e) => setVb({ ...vb, limit: e.target.value })} />}</Field>
@@ -48,7 +48,7 @@ export function Setup() {
 
       <Card title="Workspaces">
         <ErrorBox error={ws.error ?? patch.error} />
-        <ul className="divide-y divide-slate-200">
+        <ul className="divide-y divide-line">
           {ws.data?.map((w) => (
             <li key={w.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
               <span><strong>{w.name}</strong> · {Number(w.credit_balance).toFixed(2)} credits · spent {Number(w.spent_total).toFixed(2)} / cap {Number(w.spend_cap).toFixed(2)}{w.suspended && " · suspended"}{w.share_disabled && " · sharing off"}</span>

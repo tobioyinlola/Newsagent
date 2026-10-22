@@ -3,15 +3,18 @@ import { type ReactNode, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { api, type Schemas, unwrap } from "../api/client";
 import { Button, Card, ErrorBox, Field, inputCls, Notice } from "../components/ui";
+import { Logo } from "../components/Logo";
 import { getToken, setToken } from "../lib/auth";
 
 type Session = Schemas["SessionOut"];
 
 function Shell({ children }: { children: ReactNode }) {
   return (
-    <div className="mx-auto max-w-md space-y-4 p-6">
-      <h1 className="text-2xl font-extrabold text-blue-900">Newsagent</h1>
-      {children}
+    <div className="cf-stripes flex min-h-screen items-center justify-center p-6">
+      <div className="w-full max-w-md space-y-6">
+        <Logo className="w-52 text-brand-green" />
+        {children}
+      </div>
     </div>
   );
 }
@@ -66,7 +69,7 @@ export function Login() {
         </form>
         <p className="mt-3 text-sm"><Link className="underline" to="/forgot">Forgot your password?</Link></p>
       </Card>
-      <p className="text-sm text-slate-600">Invite-only pilot. Have an invite link? Open it to create your workspace.</p>
+      <p className="text-sm text-white">Invite-only pilot. Have an invite link? Open it to create your workspace.</p>
     </Shell>
   );
 }

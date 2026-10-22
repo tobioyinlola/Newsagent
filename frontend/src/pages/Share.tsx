@@ -10,7 +10,7 @@ export function Share() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
       {q.isLoading && <p aria-busy="true">Loading…</p>}
-      {q.error && <p role="alert" className="rounded-md border border-slate-300 bg-white p-6 text-center">This link is no longer available.</p>}
+      {q.error && <p role="alert" className="rounded-md border border-ink bg-white p-6 text-center">This link is no longer available.</p>}
       {q.data && (
         <>
           <h1 className="text-2xl font-bold">{q.data.title}</h1>

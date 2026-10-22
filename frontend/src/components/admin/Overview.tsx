@@ -8,8 +8,8 @@ const PROVIDERS = ["heygen", "synthesia", "mock"];
 function Counts({ title, data }: { title: string; data: Record<string, number> | undefined }) {
   const rows = Object.entries(data ?? {});
   return (
-    <div><h3 className="mb-1 text-sm font-semibold text-slate-700">{title}</h3>
-      {rows.length ? <ul className="text-sm">{rows.map(([k, n]) => <li key={k} className="flex justify-between"><span>{k.replace("_", " ")}</span><span className="tabular-nums font-medium">{n}</span></li>)}</ul> : <p className="text-sm text-slate-500">none</p>}</div>
+    <div><h3 className="mb-1 text-sm font-semibold text-muted">{title}</h3>
+      {rows.length ? <ul className="text-sm">{rows.map(([k, n]) => <li key={k} className="flex justify-between"><span>{k.replace("_", " ")}</span><span className="tabular-nums font-medium">{n}</span></li>)}</ul> : <p className="text-sm text-muted">none</p>}</div>
   );
 }
 
@@ -30,11 +30,11 @@ export function Overview() {
       <Card title="Queue">
         <div className="grid gap-6 sm:grid-cols-4">
           <Counts title="Videos" data={q?.projects} /><Counts title="Jobs" data={q?.jobs} /><Counts title="Founder answers" data={q?.takes} />
-          <div><h3 className="mb-1 text-sm font-semibold text-slate-700">Waiting for review</h3><p className="text-3xl font-bold tabular-nums">{q?.moderation_pending ?? 0}</p></div>
+          <div><h3 className="mb-1 text-sm font-semibold text-muted">Waiting for review</h3><p className="text-3xl font-bold tabular-nums">{q?.moderation_pending ?? 0}</p></div>
         </div>
       </Card>
       <Card title="Emergency pause">
-        <p className="mb-3 text-sm text-slate-700">Stops every paid step (avatar, rendering, transcription) immediately. Videos in progress move to "limit reached" and resume with Retry once you turn this off. Use it for a vendor incident or runaway spend.</p>
+        <p className="mb-3 text-sm text-muted">Stops every paid step (avatar, rendering, transcription) immediately. Videos in progress move to "limit reached" and resume with Retry once you turn this off. Use it for a vendor incident or runaway spend.</p>
         <div className="flex flex-wrap items-end gap-3">
           {!s?.paused && <Field label="Reason (shown to nobody, kept in the audit log)">{(id) => <input id={id} className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} />}</Field>}
           <Button variant={s?.paused ? "primary" : "danger"} disabled={patch.isPending} onClick={() => patch.mutate({ paused: !s?.paused, pause_reason: s?.paused ? "" : reason })}>{s?.paused ? "Resume paid steps" : "Pause all paid steps"}</Button>
@@ -42,7 +42,7 @@ export function Overview() {
         <ErrorBox error={patch.error} />
       </Card>
       <Card title="Avatar provider failover">
-        <p className="mb-3 text-sm text-slate-700">If the primary provider fails or its monthly budget is used up, clips are made with the secondary (its own budget applies). Operators are emailed.</p>
+        <p className="mb-3 text-sm text-muted">If the primary provider fails or its monthly budget is used up, clips are made with the secondary (its own budget applies). Operators are emailed.</p>
         <div className="grid gap-3 sm:grid-cols-3">
           <Field label="Primary">{(id) => <select id={id} className={inputCls} value={s?.avatar_primary ?? "heygen"} onChange={(e) => patch.mutate({ avatar_primary: e.target.value })}>{PROVIDERS.map((p) => <option key={p}>{p}</option>)}</select>}</Field>
           <Field label="Secondary">{(id) => <select id={id} className={inputCls} value={s?.avatar_secondary ?? "none"} onChange={(e) => patch.mutate({ avatar_secondary: e.target.value })}>{["none", ...PROVIDERS].map((p) => <option key={p}>{p}</option>)}</select>}</Field>

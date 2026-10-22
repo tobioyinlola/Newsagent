@@ -15,11 +15,11 @@ export function BillingAdmin() {
   return (
     <>
       <Card title="Credit packs">
-        <p className="mb-3 text-sm text-slate-700">What customers can buy. Prices are decided by you; the payment provider is configured separately.</p>
-        <ul className="mb-4 divide-y divide-slate-200 text-sm">{packs.data?.map((k) => (
+        <p className="mb-3 text-sm text-muted">What customers can buy. Prices are decided by you; the payment provider is configured separately.</p>
+        <ul className="mb-4 divide-y divide-line text-sm">{packs.data?.map((k) => (
           <li key={k.id} className="flex items-center justify-between py-2"><span><strong>{k.name}</strong> · {Number(k.credits)} credits · ${Number(k.price_usd).toFixed(2)}</span>
             <Button variant="secondary" onClick={() => toggle.mutate({ id: k.id, active: false })}>Retire</Button></li>))}
-          {packs.data?.length === 0 && <li className="py-2 text-slate-600">No packs yet.</li>}</ul>
+          {packs.data?.length === 0 && <li className="py-2 text-muted">No packs yet.</li>}</ul>
         <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); create.mutate(); }}>
           <Field label="Name">{(id) => <input id={id} required className={inputCls} value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} />}</Field>
           <Field label="Credits">{(id) => <input id={id} type="number" min="1" step="any" className={inputCls} value={p.credits} onChange={(e) => setP({ ...p, credits: e.target.value })} />}</Field>
@@ -29,7 +29,7 @@ export function BillingAdmin() {
         <ErrorBox error={create.error ?? toggle.error} />
       </Card>
       <Card title="Record an offline payment">
-        <p className="mb-3 text-sm text-slate-700">For a bank transfer or invoice. The reference makes a double submit harmless.</p>
+        <p className="mb-3 text-sm text-muted">For a bank transfer or invoice. The reference makes a double submit harmless.</p>
         <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); manual.mutate(); }}>
           <Field label="Workspace">{(id) => <select id={id} required className={inputCls} value={m.workspace} onChange={(e) => setM({ ...m, workspace: e.target.value })}><option value="">Choose…</option>{ws.data?.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select>}</Field>
           <Field label="Credits">{(id) => <input id={id} type="number" min="0.01" step="any" className={inputCls} value={m.credits} onChange={(e) => setM({ ...m, credits: e.target.value })} />}</Field>

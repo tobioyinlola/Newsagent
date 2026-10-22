@@ -32,7 +32,7 @@ function ColorField({ label, value, onChange, textOn }: { label: string; value: 
     <Field label={label} hint={ok ? `Contrast with ${textOn === "#FFFFFF" ? "white" : "dark"} text: ${ratio}:1 ${ratio >= 4.5 ? "(passes)" : "(too low to read comfortably, try a darker or lighter shade)"}` : "Enter a color like #0B3D91"}>
       {(id) => (
         <div className="flex gap-2">
-          <input aria-label={`${label} picker`} type="color" className="h-10 w-12 rounded border border-slate-300" value={ok ? value : "#000000"} onChange={(e) => onChange(e.target.value.toUpperCase())} />
+          <input aria-label={`${label} picker`} type="color" className="h-10 w-12 rounded border border-ink" value={ok ? value : "#000000"} onChange={(e) => onChange(e.target.value.toUpperCase())} />
           <input id={id} className={inputCls} value={value} onChange={(e) => onChange(e.target.value)} maxLength={7} />
         </div>
       )}
@@ -75,7 +75,7 @@ export function Brand() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold">Brand kit <span className="text-base font-normal text-slate-600">version {kit.data.version}</span></h1>
+      <h1 className="text-2xl font-bold">Brand kit <span className="text-base font-normal text-muted">version {kit.data.version}</span></h1>
       <Notice>Your colors, fonts and tone style the graphics. The news-channel look and the “Featured” and “AI-generated anchor” labels are fixed for every video.</Notice>
 
       <Card title="Import from your website">
@@ -102,7 +102,7 @@ export function Brand() {
         {kit.data.accent_alternatives.length > 0 && (
           <div className="mt-4"><p className="mb-2 text-sm font-medium">Accent options</p>
             <div className="flex flex-wrap gap-2">{kit.data.accent_alternatives.map((c) => (
-              <button key={c} type="button" aria-label={`Use accent ${c}`} onClick={() => set({ accent_color: c })} className="flex items-center gap-2 rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-50"><span className="inline-block h-5 w-5 rounded border" style={{ background: c }} />{c}</button>
+              <button key={c} type="button" aria-label={`Use accent ${c}`} onClick={() => set({ accent_color: c })} className="flex items-center gap-2 rounded border border-ink px-2 py-1 text-sm hover:bg-paper"><span className="inline-block h-5 w-5 rounded border" style={{ background: c }} />{c}</button>
             ))}</div></div>
         )}
         {kit.data.contrast.some((c) => !c.passes) && (
@@ -111,7 +111,7 @@ export function Brand() {
       </Card>
 
       <Card title="Logos and files">
-        <p className="mb-3 text-sm text-slate-700">SVG or transparent PNG logos work best. Every file is checked and virus-scanned before it can be used. Save the brand kit after uploading a logo.</p>
+        <p className="mb-3 text-sm text-muted">SVG or transparent PNG logos work best. Every file is checked and virus-scanned before it can be used. Save the brand kit after uploading a logo.</p>
         <div className="grid gap-4 sm:grid-cols-2">
           {UPLOADS.map((u) => (
             <Field key={u.kind} label={u.label}>
@@ -124,13 +124,13 @@ export function Brand() {
         <ErrorBox error={upload.error} />
         {upload.isSuccess && <div className="mt-2"><Notice tone="ok">Uploaded and checked: {upload.data.kind.replace("_", " ")}.</Notice></div>}
         {assets.data && assets.data.length > 0 && (
-          <ul className="mt-4 divide-y divide-slate-200 text-sm" aria-label="Uploaded files">
+          <ul className="mt-4 divide-y divide-line text-sm" aria-label="Uploaded files">
             {assets.data.map((a) => (
               <li key={a.key} className="flex items-center gap-3 py-2">
                 {a.content_type.startsWith("image/") && a.url && <img src={a.url} alt="" className="h-8 w-8 rounded border object-contain" />}
                 <span>{a.kind.replace("_", " ")}</span>
-                <span className="text-slate-600">{Math.max(1, Math.round(a.size_bytes / 1024))} KB</span>
-                {(a.key === form.logo_light_key || a.key === form.logo_dark_key) && <span className="rounded bg-green-100 px-2 py-0.5 text-xs text-green-900">in use</span>}
+                <span className="text-muted">{Math.max(1, Math.round(a.size_bytes / 1024))} KB</span>
+                {(a.key === form.logo_light_key || a.key === form.logo_dark_key) && <span className="rounded bg-lime-tint px-2 py-0.5 text-xs text-ink">in use</span>}
               </li>
             ))}
           </ul>
@@ -147,7 +147,7 @@ export function Brand() {
       </Card>
 
       <Card title="Pronunciation">
-        <p className="mb-3 text-sm text-slate-700">Names the anchor might get wrong: your startup, product and founders.</p>
+        <p className="mb-3 text-sm text-muted">Names the anchor might get wrong: your startup, product and founders.</p>
         <div className="space-y-2">
           {glossary.map((g, i) => (
             <div key={i} className="flex gap-2">

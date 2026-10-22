@@ -56,7 +56,7 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
           <label htmlFor="ticker" className="text-sm font-medium">News ticker (one line each)</label>
           <textarea id="ticker" rows={3} className={inputCls} value={ticker} onChange={(e) => setTicker(e.target.value)} />
         </div>
-        <fieldset className="space-y-2 rounded-md border border-slate-300 p-3">
+        <fieldset className="space-y-2 rounded-md border border-ink p-3">
           <legend className="px-1 text-sm font-semibold">Founder interview (optional)</legend>
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" className="mt-1" checked={withInterview} onChange={(e) => setWithInterview(e.target.checked)} />
@@ -71,18 +71,18 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
                 </div>
               ))}
               {questions.length < 5 && <Button variant="secondary" onClick={() => setQuestions([...questions, ""])}>Add a question</Button>}
-              <p className="text-xs text-slate-600">1 to 5 questions. Short, open questions get the best answers.</p>
+              <p className="text-xs text-muted">1 to 5 questions. Short, open questions get the best answers.</p>
             </div>
           )}
         </fieldset>
         {flags.length > 0 && (
-          <fieldset className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3">
-            <legend className="px-1 text-sm font-semibold text-amber-950">Confirm these claims are accurate</legend>
-            <p className="text-sm text-amber-950">Revenue, user counts, funding, rankings and “first/best” statements must be confirmed by you before we render.</p>
+          <fieldset className="space-y-2 rounded-md border border-brand-peach bg-peach-tint p-3">
+            <legend className="px-1 text-sm font-semibold text-ink">Confirm these claims are accurate</legend>
+            <p className="text-sm text-ink">Revenue, user counts, funding, rankings and “first/best” statements must be confirmed by you before we render.</p>
             {flags.map((t) => (
               <label key={t} className="flex items-start gap-2 text-sm">
                 <input type="checkbox" className="mt-1" checked={confirmed.has(t)} onChange={() => toggle(t)} />
-                <span>{t} <span className="text-xs text-amber-900">({[...new Set(flagMap.get(t))].join(", ")})</span></span>
+                <span>{t} <span className="text-xs text-ink">({[...new Set(flagMap.get(t))].join(", ")})</span></span>
               </label>
             ))}
           </fieldset>

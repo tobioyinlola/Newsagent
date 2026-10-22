@@ -1,1 +1,43 @@
 @import "tailwindcss";
+@import "@fontsource/space-mono/400.css";
+@import "@fontsource/space-mono/700.css";
+@import "@fontsource/roboto/400.css";
+@import "@fontsource/roboto/500.css";
+@import "@fontsource/roboto/700.css";
+
+/* Cover Founder brand guideline: palette, typography. Colours are used as approved, no gradients or effects on the logo. */
+@theme {
+  --font-sans: "Roboto", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, monospace;
+
+  --color-ink: #222222; /* the dark ground and headline colour */
+  --color-navy: #191a30; /* paragraph text */
+  --color-muted: #4b4b57; /* secondary text; 8:1 on white */
+  --color-paper: #f3f3ee; /* quiet panel ground */
+  --color-line: #d6d6d0; /* hairlines */
+  --color-stripe: #2e3128; /* the olive diagonal stripes on dark grounds */
+
+  --color-brand-green: #c0fe73; /* Pastel Green */
+  --color-brand-red: #eb464b; /* Vivid Red */
+  --color-brand-purple: #634ea0; /* Gray Purple */
+  --color-brand-aqua: #0cc0df; /* Aqua Blue (secondary) */
+  --color-brand-peach: #ffbd59; /* Peach (secondary) */
+
+  --color-lime-tint: #f0ffd9;
+  --color-lilac: #eeeaf6;
+  --color-peach-tint: #fff1d8;
+  --color-red-tint: #fde8e9;
+}
+
+html { font-family: var(--font-sans); color: var(--color-navy); background: #fff; }
+h1, h2, h3, h4 { font-family: var(--font-mono); font-weight: 700; color: var(--color-ink); }
+:focus-visible { outline: 3px solid var(--color-brand-purple); outline-offset: 2px; }
+
+/* Signature diagonal stripes for dark panels (guideline cover pages). Purely decorative. */
+.cf-stripes {
+  background-color: var(--color-ink);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400' preserveAspectRatio='none'%3E%3Cg fill='%232e3128'%3E%3Cpolygon points='215,0 355,0 285,200 145,200'/%3E%3Cpolygon points='275,200 345,200 275,400 205,400'/%3E%3Cpolygon points='345,200 395,200 325,400 275,400'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right bottom;
+  background-size: cover;
+}
