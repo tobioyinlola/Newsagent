@@ -3,14 +3,16 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
-from app.cli import reset_mfa
 from app.config import get_settings
 from app.integrations import registry
-from app.models import AuditLog, AuthCode, Invite, RecoveryCode, User, UserSession, Workspace
-from app.services import totp
+from app.models import AuditLog, AuthCode, Invite, User, UserSession, Workspace
+from app.services import passwords
 from tests.conftest import OPS, OWNER
 
 NEW = "newfounder@startup.example.com"
+PW = "correct horse battery"
+OPS_EMAIL = "ops@example.com"
+PW2 = "another long passphrase"
 
 
 def bearer(token):
@@ -29,42 +31,43 @@ async def invite_for(client, email=NEW, name="NewCo"):
     return r.json()["code"]
 
 
-async def signup(client, email=NEW):
+async def signup(client, email=NEW, password=PW):
     code = await invite_for(client, email)
-    assert (await client.post("/v1/auth/signup/start", json={"invite_code": code})).status_code == 200
+    r = await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": password})
+    assert r.status_code == 200, r.text
     r = await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": last_code(email)})
     assert r.status_code == 200, r.text
     return r.json()
 
 
-async def login(client, email=NEW):
-    assert (await client.post("/v1/auth/login/start", json={"email": email})).status_code == 200
-    r = await client.post("/v1/auth/login/verify", json={"email": email, "code": last_code(email)})
+async def login(client, email=NEW, password=PW):
+    r = await client.post("/v1/auth/login", json={"email": email, "password": password})
     assert r.status_code == 200, r.text
     return r.json()
 
 
-def now_code(secret, offset=0):
-    return totp._code(secret, int(datetime.now(UTC).timestamp() // 30) + offset)
+async def set_password(client, email, password):
+    """For accounts created without one (operators): the forgot-password flow."""
+    await client.post("/v1/auth/password/forgot", json={"email": email})
+    r = await client.post(
+        "/v1/auth/password/reset", json={"email": email, "code": last_code(email), "new_password": password}
+    )
+    assert r.status_code == 200, r.text
 
 
-# ---------- TOTP ----------
-def test_totp_matches_rfc6238_vectors():
-    secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"  # ASCII "12345678901234567890"
-    assert totp._code(secret, 59 // 30) == "287082"
-    assert totp._code(secret, 1111111109 // 30) == "081804"
-    assert totp.verify(secret, "287082", now=59) == 1
-
-
-def test_totp_window_replay_and_junk():
-    s = totp.new_secret()
-    t = 1_700_000_000.0
-    step = int(t // 30)
-    assert totp.verify(s, totp._code(s, step - 1), now=t) == step - 1  # one step of clock drift is fine
-    assert totp.verify(s, totp._code(s, step - 3), now=t) is None
-    assert totp.verify(s, totp._code(s, step), last_step=step, now=t) is None  # replay of a used code
-    assert totp.verify(s, "12345", now=t) is None and totp.verify(s, "abcdef", now=t) is None
-    assert totp.provisioning_uri(s, "a@b.com").startswith("otpauth://totp/Newsagent:a%40b.com?secret=")
+# ---------- passwords ----------
+def test_password_hashing_and_policy():
+    h = passwords.hash_password(PW)
+    assert h.startswith("scrypt$") and PW not in h and h != passwords.hash_password(PW)  # salted
+    assert passwords.verify_password(PW, h) and not passwords.verify_password(PW + "x", h)
+    assert not passwords.verify_password(PW, None) and not passwords.verify_password(PW, "garbage")
+    assert passwords.policy_error("short", "a@b.com")
+    assert passwords.policy_error("password123", "a@b.com")
+    assert passwords.policy_error("aaaaaaaaaaaa", "a@b.com")
+    assert passwords.policy_error("jane.doe@x.com", "jane.doe@x.com")
+    assert passwords.policy_error("myjanedoe-pass99", "janedoe@x.com")
+    assert passwords.policy_error("x" * 129, "a@b.com")
+    assert passwords.policy_error(PW, "a@b.com") is None
 
 
 # ---------- sign up ----------
@@ -80,120 +83,203 @@ async def test_invite_preview_hides_the_email_and_rejects_bad_links(client, work
     assert (await client.get(f"/v1/auth/invite/{code}")).status_code == 404
 
 
-async def test_signup_proves_control_of_the_invited_email_and_signs_you_in(client, workspace, maker):
-    s = await signup(client)
-    assert s["token"].startswith("nas_") and s["mfa_required"] is False and s["mfa_enrolment_required"] is False
+async def test_signup_needs_the_emailed_code_and_then_signs_you_in(client, workspace, maker):
+    code = await invite_for(client)
+    r = await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})
+    assert r.status_code == 200 and r.json()["email_hint"].endswith("@startup.example.com")
+    async with maker() as db:  # nothing exists until the code is verified
+        assert (await db.execute(select(User).where(User.email == NEW))).scalar_one_or_none() is None
+    s = (await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": last_code(NEW)})).json()
+    assert s["token"].startswith("nas_") and s["otp_required"] is False
     me = (await client.get("/v1/me", headers=bearer(s["token"]))).json()
     assert me["email"] == NEW and me["workspace_name"] == "NewCo" and float(me["credit_balance"]) == 5.0
     async with maker() as db:
-        assert (await db.execute(select(User).where(User.email == NEW))).scalar_one().last_login_at is not None
+        u = (await db.execute(select(User).where(User.email == NEW))).scalar_one()
+        assert u.password_hash.startswith("scrypt$") and PW not in u.password_hash and u.last_login_at is not None
         ws = (await db.execute(select(Workspace).where(Workspace.name == "NewCo"))).scalar_one()
         assert ws.brand_kit_id is not None
         assert (await db.execute(select(AuditLog).where(AuditLog.action == "auth.signup"))).scalar_one().actor == NEW
+        assert (await db.execute(select(AuthCode))).scalar_one().password_hash is None  # wiped after use
+
+
+async def test_the_password_is_checked_before_a_code_is_sent_and_never_stored_in_plain_text(client, workspace, maker):
+    code = await invite_for(client)
+    for bad in ("short", "password123", NEW):
+        r = await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": bad})
+        assert r.status_code in (422,), (bad, r.text)
+    assert not [m for m in registry.get_email().sent if m["to"] == NEW]
+    await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})
+    async with maker() as db:
+        row = (await db.execute(select(AuthCode))).scalar_one()
+        assert PW not in (row.password_hash or "") and PW not in row.code_hash
+        assert last_code(NEW) not in row.code_hash and len(row.code_hash) == 64 and row.purpose == "signup"
 
 
 async def test_a_used_invite_and_an_existing_account_are_refused(client, workspace):
-    code = await invite_for(client)
-    await client.post("/v1/auth/signup/start", json={"invite_code": code})
-    await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": last_code(NEW)})
-    assert (await client.post("/v1/auth/signup/start", json={"invite_code": code})).status_code == 404  # already used
-    dup = await invite_for(
-        client, "owner@acme.example.com"
-    )  # other invite, but give it an email that already has an account
-    from app.models import User as U  # noqa: F401
-
+    await signup(client)
     r = await client.post("/v1/admin/invites", json={"email": "ops@example.com", "workspace_name": "Dup"}, headers=OPS)
-    assert (await client.post("/v1/auth/signup/start", json={"invite_code": r.json()["code"]})).status_code == 409
-    assert dup
+    res = await client.post("/v1/auth/signup/start", json={"invite_code": r.json()["code"], "password": PW})
+    assert res.status_code == 409
 
 
-async def test_codes_are_not_stored_in_plain_text(client, workspace, maker):
+async def test_a_used_invite_cannot_be_used_again(client, workspace):
     code = await invite_for(client)
-    await client.post("/v1/auth/signup/start", json={"invite_code": code})
-    plain = last_code(NEW)
-    async with maker() as db:
-        row = (await db.execute(select(AuthCode))).scalar_one()
-        assert plain not in row.code_hash and len(row.code_hash) == 64 and row.purpose == "signup"
+    await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})
+    await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": last_code(NEW)})
+    assert (await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})).status_code == 404
 
 
 # ---------- one-time code rules ----------
-async def test_five_wrong_guesses_burn_the_code_even_for_the_right_answer(client, workspace):
-    await signup(client)
-    await client.post("/v1/auth/login/start", json={"email": NEW})
+async def test_five_wrong_guesses_burn_the_code(client, workspace):
+    code = await invite_for(client)
+    await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})
     good = last_code(NEW)
     wrong = "000000" if good != "000000" else "111111"
     for _ in range(5):
-        assert (await client.post("/v1/auth/login/verify", json={"email": NEW, "code": wrong})).status_code == 401
-    assert (await client.post("/v1/auth/login/verify", json={"email": NEW, "code": good})).status_code == 401  # burned
-    await client.post("/v1/auth/login/start", json={"email": NEW})  # a fresh code works
-    assert (await client.post("/v1/auth/login/verify", json={"email": NEW, "code": last_code(NEW)})).status_code == 200
+        assert (
+            await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": wrong})
+        ).status_code == 401
+    assert (await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": good})).status_code == 401
+    await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})  # a fresh code works
+    assert (
+        await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": last_code(NEW)})
+    ).status_code == 200
 
 
-async def test_a_code_works_once_and_a_new_one_cancels_the_old(client, workspace):
-    await signup(client)
-    await client.post("/v1/auth/login/start", json={"email": NEW})
+async def test_a_new_code_cancels_the_old_and_expired_codes_fail(client, workspace, maker):
+    code = await invite_for(client)
+    await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})
     first = last_code(NEW)
-    await client.post("/v1/auth/login/start", json={"email": NEW})
+    await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW2})
     second = last_code(NEW)
     assert first != second
-    assert (await client.post("/v1/auth/login/verify", json={"email": NEW, "code": first})).status_code == 401
-    assert (await client.post("/v1/auth/login/verify", json={"email": NEW, "code": second})).status_code == 200
-    assert (
-        await client.post("/v1/auth/login/verify", json={"email": NEW, "code": second})
-    ).status_code == 401  # single use
-
-
-async def test_expired_code_is_refused(client, workspace, maker):
-    await signup(client)
-    await client.post("/v1/auth/login/start", json={"email": NEW})
+    assert (await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": first})).status_code == 401
     async with maker() as db:
-        row = (await db.execute(select(AuthCode).where(AuthCode.purpose == "login"))).scalar_one()
+        row = (await db.execute(select(AuthCode).where(AuthCode.consumed_at.is_(None)))).scalar_one()
         row.expires_at = datetime.now(UTC) - timedelta(seconds=1)
         await db.commit()
-    assert (await client.post("/v1/auth/login/verify", json={"email": NEW, "code": last_code(NEW)})).status_code == 401
+    assert (await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": second})).status_code == 401
 
 
-async def test_a_signup_code_cannot_be_used_to_log_in(client, workspace):
-    code = await invite_for(client)
-    await client.post("/v1/auth/signup/start", json={"invite_code": code})
-    r = await client.post("/v1/auth/login/verify", json={"email": NEW, "code": last_code(NEW)})
+async def test_a_code_for_one_purpose_cannot_be_used_for_another(client, workspace):
+    await signup(client)
+    await client.post("/v1/auth/password/forgot", json={"email": NEW})
+    r = await client.post("/v1/auth/password/reset", json={"email": NEW, "code": last_code(NEW), "new_password": PW2})
+    assert r.status_code == 200
+    code = await invite_for(client, "other@startup.example.com")
+    await client.post("/v1/auth/password/forgot", json={"email": NEW})
+    r = await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": last_code(NEW)})
     assert r.status_code == 401
 
 
-# ---------- no account enumeration ----------
-async def test_login_start_looks_identical_for_unknown_and_known_emails(client, workspace):
-    await signup(client)
-    registry.get_email().sent.clear()
-    known = await client.post("/v1/auth/login/start", json={"email": NEW})
-    unknown = await client.post("/v1/auth/login/start", json={"email": "nobody@startup.example.com"})
-    assert known.status_code == unknown.status_code == 200 and known.json() == unknown.json()
-    assert [m["to"] for m in registry.get_email().sent] == [NEW]  # only the real account gets an email
-    bad_unknown = await client.post(
-        "/v1/auth/login/verify", json={"email": "nobody@startup.example.com", "code": "123456"}
-    )
-    bad_known = await client.post("/v1/auth/login/verify", json={"email": NEW, "code": "123456"})
-    assert bad_unknown.status_code == bad_known.status_code == 401 and bad_unknown.json() == bad_known.json()
-
-
 async def test_input_validation(client, workspace):
-    assert (await client.post("/v1/auth/login/start", json={"email": "not-an-email"})).status_code == 422
-    for code in ("12345", "1234567", "abcdef", ""):
-        assert (await client.post("/v1/auth/login/verify", json={"email": NEW, "code": code})).status_code == 422
+    assert (await client.post("/v1/auth/login", json={"email": "not-an-email", "password": "x"})).status_code == 422
+    code = await invite_for(client)
+    for bad in ("12345", "1234567", "abcdef", ""):
+        assert (await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": bad})).status_code == 422
 
 
-# ---------- rate limits ----------
-async def test_login_start_is_limited_per_email(client, workspace):
+# ---------- password sign in ----------
+async def test_login_with_the_right_password_only(client, workspace):
     await signup(client)
-    codes = [await client.post("/v1/auth/login/start", json={"email": NEW}) for _ in range(6)]
-    assert [r.status_code for r in codes] == [200, 200, 200, 200, 200, 429]
+    s = await login(client)
+    assert s["otp_required"] is False and (await client.get("/v1/me", headers=bearer(s["token"]))).status_code == 200
+    for email, pw in ((NEW, "wrong password!"), ("nobody@startup.example.com", PW), (NEW.upper(), "x")):
+        r = await client.post("/v1/auth/login", json={"email": email, "password": pw})
+        assert r.status_code == 401
+    assert (
+        await client.post("/v1/auth/login", json={"email": NEW.upper(), "password": PW})
+    ).status_code == 200  # case-insensitive email
 
 
-async def test_verify_attempts_are_throttled(client, workspace):
-    statuses = [
-        (await client.post("/v1/auth/login/verify", json={"email": NEW, "code": "123456"})).status_code
+async def test_wrong_password_looks_the_same_for_unknown_and_known_emails(client, workspace, maker):
+    await signup(client)
+    no_password = OPS_EMAIL  # an account that has no password yet
+    async with maker() as db:
+        u = (await db.execute(select(User).where(User.email == no_password))).scalar_one_or_none()
+        assert u is not None and u.password_hash is None
+    bodies = []
+    for email in (NEW, "nobody@startup.example.com", no_password):
+        r = await client.post("/v1/auth/login", json={"email": email, "password": "not the password"})
+        assert r.status_code == 401
+        bodies.append(r.json())
+    assert bodies[0] == bodies[1] == bodies[2]
+
+
+async def test_login_is_throttled_per_email(client, workspace):
+    await signup(client)
+    codes = [
+        (await client.post("/v1/auth/login", json={"email": NEW, "password": "bad password!"})).status_code
         for _ in range(12)
     ]
-    assert statuses[:10] == [401] * 10 and statuses[10:] == [429, 429]
+    assert codes[:10] == [401] * 10 and codes[10:] == [429, 429]
+    assert (
+        await client.post("/v1/auth/login", json={"email": NEW, "password": PW})
+    ).status_code == 429  # even the right one
+
+
+async def test_signup_code_requests_are_throttled(client, workspace):
+    code = await invite_for(client)
+    codes = [
+        (await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})).status_code
+        for _ in range(6)
+    ]
+    assert codes == [200] * 5 + [429]
+
+
+# ---------- forgot / change password ----------
+async def test_forgot_password_never_reveals_accounts(client, workspace):
+    await signup(client)
+    registry.get_email().sent.clear()
+    known = await client.post("/v1/auth/password/forgot", json={"email": NEW})
+    unknown = await client.post("/v1/auth/password/forgot", json={"email": "nobody@startup.example.com"})
+    assert known.status_code == unknown.status_code == 200 and known.json() == unknown.json()
+    assert [m["to"] for m in registry.get_email().sent] == [NEW]
+
+
+async def test_reset_sets_a_new_password_and_signs_everyone_out(client, workspace):
+    a = await signup(client)
+    await client.post("/v1/auth/password/forgot", json={"email": NEW})
+    code = last_code(NEW)
+    weak = await client.post("/v1/auth/password/reset", json={"email": NEW, "code": code, "new_password": "short"})
+    assert weak.status_code == 422
+    r = await client.post("/v1/auth/password/reset", json={"email": NEW, "code": code, "new_password": PW2})
+    assert r.status_code == 200
+    assert (await client.get("/v1/me", headers=bearer(a["token"]))).status_code == 401
+    assert (await client.post("/v1/auth/login", json={"email": NEW, "password": PW})).status_code == 401
+    await login(client, password=PW2)
+    again = await client.post("/v1/auth/password/reset", json={"email": NEW, "code": code, "new_password": PW})
+    assert again.status_code == 401  # single use
+
+
+async def test_reset_with_a_wrong_code_or_unknown_email_fails_identically(client, workspace):
+    await signup(client)
+    await client.post("/v1/auth/password/forgot", json={"email": NEW})
+    a = await client.post("/v1/auth/password/reset", json={"email": NEW, "code": "000000", "new_password": PW2})
+    b = await client.post(
+        "/v1/auth/password/reset", json={"email": "nobody@startup.example.com", "code": "000000", "new_password": PW2}
+    )
+    assert a.status_code == b.status_code == 401 and a.json() == b.json()
+
+
+async def test_change_password_needs_the_current_one_and_keeps_only_this_device(client, workspace):
+    a = await signup(client)
+    b = await login(client)
+    h = bearer(a["token"])
+    assert (
+        await client.post(
+            "/v1/auth/password/change", json={"current_password": "wrong one!!", "new_password": PW2}, headers=h
+        )
+    ).status_code == 401
+    assert (
+        await client.post("/v1/auth/password/change", json={"current_password": PW, "new_password": "short"}, headers=h)
+    ).status_code == 422
+    assert (
+        await client.post("/v1/auth/password/change", json={"current_password": PW, "new_password": PW2}, headers=h)
+    ).status_code == 200
+    assert (await client.get("/v1/me", headers=h)).status_code == 200
+    assert (await client.get("/v1/me", headers=bearer(b["token"]))).status_code == 401
+    await login(client, password=PW2)
 
 
 # ---------- sessions ----------
@@ -207,9 +293,7 @@ async def test_only_a_hash_of_the_token_is_stored_and_logout_revokes_it(client, 
 
 
 async def test_sessions_list_revoke_and_logout_everywhere(client, workspace):
-    a = await signup(client)
-    b = await login(client)
-    c = await login(client)
+    a, b, c = await signup(client), await login(client), await login(client)
     ha = bearer(a["token"])
     lst = (await client.get("/v1/auth/sessions", headers=ha)).json()
     assert len(lst) == 3 and sum(x["current"] for x in lst) == 1
@@ -230,19 +314,30 @@ async def test_you_cannot_revoke_someone_elses_session(client, workspace):
     assert (await client.get("/v1/me", headers=bearer(a["token"]))).status_code == 200
 
 
-async def test_absolute_and_idle_expiry(client, workspace, maker):
+async def test_signed_out_after_one_hour_idle_but_activity_keeps_you_in(client, workspace, maker):
+    assert get_settings().session_idle_minutes == 60
     s = await signup(client)
     async with maker() as db:
         row = (await db.execute(select(UserSession))).scalar_one()
-        row.last_used_at = datetime.now(UTC) - timedelta(days=8)  # idle 7 days is the limit
+        row.last_used_at = datetime.now(UTC) - timedelta(minutes=59)
+        await db.commit()
+    assert (await client.get("/v1/me", headers=bearer(s["token"]))).status_code == 200  # used again: the clock restarts
+    async with maker() as db:
+        row = (await db.execute(select(UserSession))).scalar_one()
+        assert datetime.now(UTC) - row.last_used_at.replace(tzinfo=UTC) < timedelta(minutes=2)
+        row.last_used_at = datetime.now(UTC) - timedelta(minutes=61)
         await db.commit()
     assert (await client.get("/v1/me", headers=bearer(s["token"]))).status_code == 401
-    s2 = await login(client)
+    assert (await client.get("/v1/me", headers=bearer(s["token"]))).status_code == 401  # and it stays dead
+
+
+async def test_absolute_expiry(client, workspace, maker):
+    s = await signup(client)
     async with maker() as db:
-        row = (await db.execute(select(UserSession).where(UserSession.revoked_at.is_(None)))).scalars().all()[-1]
+        row = (await db.execute(select(UserSession))).scalar_one()
         row.expires_at = datetime.now(UTC) - timedelta(seconds=1)
         await db.commit()
-    assert (await client.get("/v1/me", headers=bearer(s2["token"]))).status_code == 401
+    assert (await client.get("/v1/me", headers=bearer(s["token"]))).status_code == 401
 
 
 async def test_garbage_and_missing_tokens(client, workspace):
@@ -266,160 +361,57 @@ async def test_deleting_the_workspace_signs_everyone_out(client, workspace, make
         assert (await db.execute(select(AuthCode).where(AuthCode.email == NEW))).scalars().all() == []
 
 
-# ---------- two-factor ----------
-async def enrol(client, token):
-    h = bearer(token)
-    setup = (await client.post("/v1/auth/mfa/setup", headers=h)).json()
-    r = await client.post("/v1/auth/mfa/enable", json={"code": now_code(setup["secret"])}, headers=h)
-    assert r.status_code == 200, r.text
-    return setup["secret"], r.json()["recovery_codes"]
+# ---------- operators confirm each sign-in with an emailed code ----------
 
 
-async def test_enrolment_needs_a_correct_code_and_returns_recovery_codes(client, workspace, maker):
-    s = await signup(client)
+async def operator_login(client):
+    return await login(client, OPS_EMAIL, PW)
+
+
+async def test_operators_confirm_each_sign_in_with_a_code(client, workspace):
+    await set_password(client, OPS_EMAIL, PW)
+    s = await operator_login(client)
+    assert s["otp_required"] is True
     h = bearer(s["token"])
-    setup = (await client.post("/v1/auth/mfa/setup", headers=h)).json()
-    assert setup["otpauth_uri"].startswith("otpauth://") and setup["secret"] in setup["otpauth_uri"]
-    assert (await client.post("/v1/auth/mfa/enable", json={"code": "000000"}, headers=h)).status_code == 422
-    r = await client.post("/v1/auth/mfa/enable", json={"code": now_code(setup["secret"])}, headers=h)
-    codes = r.json()["recovery_codes"]
-    assert len(codes) == 8 and all(re.fullmatch(r"[0-9a-f]{5}-[0-9a-f]{5}", c) for c in codes)
-    async with maker() as db:
-        u = (await db.execute(select(User).where(User.email == NEW))).scalar_one()
-        assert u.totp_enabled and setup["secret"] not in u.totp_secret_enc  # encrypted at rest
-        assert len((await db.execute(select(RecoveryCode))).scalars().all()) == 8
-        assert codes[0].replace("-", "") not in str((await db.execute(select(RecoveryCode.code_hash))).scalars().all())
-    assert (await client.post("/v1/auth/mfa/setup", headers=h)).status_code == 409  # already on
-
-
-async def test_after_enrolment_login_needs_the_second_factor(client, workspace):
-    s = await signup(client)
-    secret, _ = await enrol(client, s["token"])
-    assert (
-        await client.get("/v1/me", headers=bearer(s["token"]))
-    ).status_code == 200  # the enrolling session stays valid
-    again = await login(client)
-    assert again["mfa_required"] is True
-    h = bearer(again["token"])
-    blocked = await client.get("/v1/me", headers=h)
-    assert blocked.status_code == 401 and blocked.json()["detail"]["error"] == "mfa_required"
-    assert (await client.get("/v1/auth/status", headers=h)).json() == {
-        "email": NEW,
-        "mfa_enabled": True,
-        "mfa_verified": False,
-        "is_operator": False,
-        "mfa_enrolment_required": False,
-    }
-    assert (await client.post("/v1/auth/mfa/verify", json={"code": "000000"}, headers=h)).status_code == 401
-    ok = await client.post(
-        "/v1/auth/mfa/verify", json={"code": now_code(secret, 1)}, headers=h
-    )  # next step is within the window
-    assert ok.status_code == 200 and (await client.get("/v1/me", headers=h)).status_code == 200
-
-
-async def test_a_used_authenticator_code_cannot_be_replayed(client, workspace):
-    s = await signup(client)
-    secret, _ = await enrol(client, s["token"])
-    code = now_code(secret, 1)
-    one = await login(client)
-    assert (
-        await client.post("/v1/auth/mfa/verify", json={"code": code}, headers=bearer(one["token"]))
-    ).status_code == 200
-    two = await login(client)
-    assert (
-        await client.post("/v1/auth/mfa/verify", json={"code": code}, headers=bearer(two["token"]))
-    ).status_code == 401
-
-
-async def test_recovery_codes_work_once(client, workspace):
-    s = await signup(client)
-    _, codes = await enrol(client, s["token"])
-    one = await login(client)
-    r = await client.post("/v1/auth/mfa/verify", json={"code": codes[0].upper()}, headers=bearer(one["token"]))
-    assert r.status_code == 200 and r.json()["recovery_code_used"] is True
-    two = await login(client)
-    assert (
-        await client.post("/v1/auth/mfa/verify", json={"code": codes[0]}, headers=bearer(two["token"]))
-    ).status_code == 401
-    assert (
-        await client.post("/v1/auth/mfa/verify", json={"code": codes[1]}, headers=bearer(two["token"]))
-    ).status_code == 200
-
-
-async def test_enabling_mfa_signs_out_other_devices(client, workspace):
-    a = await signup(client)
-    b = await login(client)
-    await enrol(client, a["token"])
-    assert (await client.get("/v1/me", headers=bearer(b["token"]))).status_code == 401
-    assert (await client.get("/v1/me", headers=bearer(a["token"]))).status_code == 200
-
-
-async def test_a_regular_user_can_turn_mfa_off_with_a_code(client, workspace):
-    s = await signup(client)
-    secret, _ = await enrol(client, s["token"])
-    h = bearer(s["token"])
-    assert (await client.post("/v1/auth/mfa/disable", json={"code": "000000"}, headers=h)).status_code == 401
-    assert (await client.post("/v1/auth/mfa/disable", json={"code": now_code(secret, 1)}, headers=h)).status_code == 200
-    assert (await login(client))["mfa_required"] is False
-
-
-async def test_new_recovery_codes_replace_the_old_ones(client, workspace):
-    s = await signup(client)
-    secret, old = await enrol(client, s["token"])
-    h = bearer(s["token"])
-    new = (await client.post("/v1/auth/mfa/recovery-codes", json={"code": now_code(secret, 1)}, headers=h)).json()[
-        "recovery_codes"
-    ]
-    assert len(new) == 8 and set(new).isdisjoint(old)
-    one = await login(client)
-    assert (
-        await client.post("/v1/auth/mfa/verify", json={"code": old[0]}, headers=bearer(one["token"]))
-    ).status_code == 401
-
-
-async def test_mfa_verify_is_throttled(client, workspace):
-    s = await signup(client)
-    await enrol(client, s["token"])
-    h = bearer((await login(client))["token"])
-    statuses = [
-        (await client.post("/v1/auth/mfa/verify", json={"code": "000000"}, headers=h)).status_code for _ in range(12)
-    ]
-    assert statuses[:8] == [401] * 8 and 429 in statuses  # shares the per-IP budget with the sign-in calls above
-
-
-# ---------- operators ----------
-async def operator_session(client, maker):
-    r = await client.post("/v1/auth/login/start", json={"email": "ops@example.com"})
-    assert r.status_code == 200
-    return (
-        await client.post(
-            "/v1/auth/login/verify", json={"email": "ops@example.com", "code": last_code("ops@example.com")}
-        )
-    ).json()
-
-
-async def test_operators_must_enrol_before_the_console_opens(client, workspace, maker):
-    s = await operator_session(client, maker)
-    assert s["mfa_enrolment_required"] is True and s["mfa_required"] is False
-    h = bearer(s["token"])
-    assert (await client.get("/v1/me", headers=h)).status_code == 200  # an operator is still a normal user
-    blocked = await client.get("/v1/admin/queue", headers=h)
-    assert blocked.status_code == 403 and blocked.json()["detail"]["error"] == "mfa_enrolment_required"
-    secret, _ = await enrol(client, s["token"])
+    held = await client.get("/v1/me", headers=h)
+    assert held.status_code == 401 and held.json()["detail"]["error"] == "otp_required"
+    assert (await client.get("/v1/admin/queue", headers=h)).status_code == 401
+    assert (await client.post("/v1/auth/login/otp", json={"code": "000000"}, headers=h)).status_code == 401
+    assert (await client.post("/v1/auth/login/otp", json={"code": last_code(OPS_EMAIL)}, headers=h)).status_code == 200
     assert (await client.get("/v1/admin/queue", headers=h)).status_code == 200
-    again = await operator_session(client, maker)
-    assert again["mfa_required"] is True and again["mfa_enrolment_required"] is False
-    ha = bearer(again["token"])
-    assert (await client.get("/v1/admin/queue", headers=ha)).status_code == 401  # password-less alone isn't enough
-    await client.post("/v1/auth/mfa/verify", json={"code": now_code(secret, 1)}, headers=ha)
-    assert (await client.get("/v1/admin/queue", headers=ha)).status_code == 200
+    again = await operator_login(client)  # every sign-in needs its own code
+    assert (await client.get("/v1/admin/queue", headers=bearer(again["token"]))).status_code == 401
 
 
-async def test_operators_cannot_turn_mfa_off_and_have_short_sessions(client, workspace, maker):
-    s = await operator_session(client, maker)
-    secret, _ = await enrol(client, s["token"])
-    r = await client.post("/v1/auth/mfa/disable", json={"code": now_code(secret, 1)}, headers=bearer(s["token"]))
-    assert r.status_code == 403
+async def test_operator_code_can_be_resent_and_is_throttled(client, workspace):
+    await set_password(client, OPS_EMAIL, PW)
+    h = bearer((await operator_login(client))["token"])
+    first = last_code(OPS_EMAIL)
+    assert (await client.post("/v1/auth/login/otp/resend", headers=h)).status_code == 200
+    second = last_code(OPS_EMAIL)
+    assert (
+        await client.post("/v1/auth/login/otp", json={"code": first}, headers=h)
+    ).status_code == 401 or first == second
+    assert (await client.post("/v1/auth/login/otp", json={"code": second}, headers=h)).status_code == 200
+    statuses = [
+        (
+            await client.post("/v1/auth/login/otp/resend", headers=bearer((await operator_login(client))["token"]))
+        ).status_code
+        for _ in range(1)
+    ]
+    assert statuses == [200]
+
+
+async def test_regular_users_are_not_asked_for_a_code_and_cannot_use_the_endpoint(client, workspace):
+    s = await signup(client)
+    assert s["otp_required"] is False
+    assert (await client.post("/v1/auth/login/otp/resend", headers=bearer(s["token"]))).status_code == 409
+
+
+async def test_operator_sessions_are_short_and_sign_ins_are_audited(client, workspace, maker):
+    await set_password(client, OPS_EMAIL, PW)
+    s = await operator_login(client)
+    await client.post("/v1/auth/login/otp", json={"code": last_code(OPS_EMAIL)}, headers=bearer(s["token"]))
     async with maker() as db:
         row = (await db.execute(select(UserSession).order_by(UserSession.created_at.desc()))).scalars().first()
         assert (
@@ -427,34 +419,11 @@ async def test_operators_cannot_turn_mfa_off_and_have_short_sessions(client, wor
             < row.expires_at.replace(tzinfo=UTC) - row.created_at.replace(tzinfo=UTC)
             < timedelta(hours=8, minutes=1)
         )
-        row.last_used_at = datetime.now(UTC) - timedelta(hours=2)  # operators idle out after an hour
-        await db.commit()
-    assert (await client.get("/v1/me", headers=bearer(s["token"]))).status_code == 401
-
-
-async def test_operator_sign_ins_and_mfa_changes_are_audited(client, workspace, maker):
-    s = await operator_session(client, maker)
-    await enrol(client, s["token"])
-    async with maker() as db:
-        actions = [a.action for a in (await db.execute(select(AuditLog).order_by(AuditLog.created_at))).scalars()]
-    assert "auth.login" in actions and "auth.mfa_enabled" in actions
-
-
-async def test_cli_reset_clears_two_factor_and_signs_the_user_out(client, workspace, maker):
-    s = await signup(client)
-    await enrol(client, s["token"])
-    assert await reset_mfa(NEW.upper()) is True
-    assert (await client.get("/v1/me", headers=bearer(s["token"]))).status_code == 401
-    assert (await login(client))["mfa_required"] is False
-    async with maker() as db:
-        assert (
-            await db.execute(select(AuditLog).where(AuditLog.action == "auth.mfa_reset"))
-        ).scalar_one().actor == "cli"
-    assert await reset_mfa("ghost@x.example.com") is False
+        actions = [a.action for a in (await db.execute(select(AuditLog))).scalars()]
+    assert {"auth.login", "auth.login_verified", "auth.password_reset"} <= set(actions)
 
 
 async def test_dev_mailbox_endpoint_exists_only_for_local_mock_mail(client, workspace):
-    await client.post("/v1/admin/invites", json={"email": NEW, "workspace_name": "X"}, headers=OPS)
     registry.get_email().sent.append({"to": NEW, "subject": "s", "text": "code 123456"})
     r = await client.get("/v1/dev/last-email", params={"to": NEW})
     assert r.status_code == 200 and "123456" in r.json()["text"]

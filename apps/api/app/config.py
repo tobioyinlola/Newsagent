@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     renderer_url: str = "http://localhost:4000"
     renderer_shared_secret: str = ""
     otp_ttl_minutes: int = 10
-    session_idle_days: int = 7
+    session_idle_minutes: int = 60
     session_absolute_days: int = 30
     operator_session_hours: int = 8
     sentry_dsn: str = ""

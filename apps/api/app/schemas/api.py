@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Annotated
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -10,7 +11,6 @@ class MeOut(BaseModel):
     workspace_name: str
     credit_balance: Decimal
     is_operator: bool
-    mfa_enabled: bool = False
 
 
 class ProjectCreate(BaseModel):
@@ -556,22 +556,42 @@ class InvitePreview(BaseModel):
     email_hint: str  # e.g. a***@startup.com
 
 
+Password = Annotated[str, Field(min_length=10, max_length=128)]
+Otp = Annotated[str, Field(min_length=6, max_length=6, pattern=r"^\d{6}$")]
+
+
 class SignupStartIn(BaseModel):
     invite_code: str = Field(min_length=8, max_length=100)
+    password: Password
 
 
 class SignupVerifyIn(BaseModel):
     invite_code: str = Field(min_length=8, max_length=100)
-    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+    code: Otp
 
 
-class LoginStartIn(BaseModel):
+class LoginIn(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=128)
+
+
+class OtpIn(BaseModel):
+    code: Otp
+
+
+class ForgotIn(BaseModel):
     email: EmailStr
 
 
-class LoginVerifyIn(BaseModel):
+class ResetIn(BaseModel):
     email: EmailStr
-    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+    code: Otp
+    new_password: Password
+
+
+class ChangePasswordIn(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: Password
 
 
 class CodeSentOut(BaseModel):
@@ -583,21 +603,7 @@ class CodeSentOut(BaseModel):
 class SessionOut(BaseModel):
     token: str
     expires_at: datetime
-    mfa_required: bool  # an authenticator code is still needed (call /auth/mfa/verify)
-    mfa_enrolment_required: bool  # operators must set up an authenticator before using the console
-
-
-class MfaCodeIn(BaseModel):
-    code: str = Field(min_length=6, max_length=20)  # an authenticator code, or a recovery code
-
-
-class MfaSetupOut(BaseModel):
-    secret: str
-    otpauth_uri: str
-
-
-class MfaEnableOut(BaseModel):
-    recovery_codes: list[str]  # shown once
+    otp_required: bool  # operators confirm every sign-in with an emailed code (call /auth/login/otp)
 
 
 class SessionInfo(BaseModel):

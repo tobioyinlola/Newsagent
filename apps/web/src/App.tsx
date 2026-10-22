@@ -7,7 +7,7 @@ import { Security } from "./pages/Security";
 import { Admin } from "./pages/Admin";
 import { Billing, MockPay } from "./pages/Billing";
 import { Brand } from "./pages/Brand";
-import { Login, MfaChallenge, Signup } from "./pages/Login";
+import { Forgot, Login, OtpChallenge, Signup } from "./pages/Login";
 import { NewProject } from "./pages/NewProject";
 import { ProjectDetail } from "./pages/ProjectDetail";
 import { Projects } from "./pages/Projects";
@@ -21,7 +21,8 @@ export function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
-      <Route path="/mfa" element={<MfaChallenge />} />
+      <Route path="/otp" element={<OtpChallenge />} />
+      <Route path="/forgot" element={<Forgot />} />
       <Route path="/s/:token" element={<Share />} />
       <Route path="/i/:token" element={<Suspense fallback={<p className="p-6">Loading…</p>}><Founder /></Suspense>} />
       <Route path="/billing/pay/:checkoutId" element={<MockPay />} />

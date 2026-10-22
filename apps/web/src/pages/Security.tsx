@@ -1,85 +1,26 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import qrcode from "qrcode-generator";
-import { useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { Button, Card, ErrorBox, Field, inputCls, Notice } from "../components/ui";
 import { setToken } from "../lib/auth";
-import { useMe } from "../components/Layout";
 
-function Qr({ value }: { value: string }) {
-  const svg = useMemo(() => {
-    const q = qrcode(0, "M");
-    q.addData(value);
-    q.make();
-    return q.createDataURL(4, 8);
-  }, [value]);
-  return <img src={svg} alt="QR code for your authenticator app" width={176} height={176} />;
-}
-
-function RecoveryCodes({ codes }: { codes: string[] }) {
+function ChangePassword() {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const change = useMutation({
+    mutationFn: () => unwrap(api.POST("/v1/auth/password/change", { body: { current_password: current, new_password: next } })),
+    onSuccess: () => { setCurrent(""); setNext(""); },
+  });
   return (
-    <Notice tone="warn">
-      <p className="font-semibold">Save these recovery codes now. Each works once, and they will not be shown again.</p>
-      <ul className="mt-2 grid grid-cols-2 gap-1 font-mono text-sm">{codes.map((c) => <li key={c}>{c}</li>)}</ul>
-    </Notice>
-  );
-}
-
-function Mfa() {
-  const me = useMe();
-  const qc = useQueryClient();
-  const [params] = useSearchParams();
-  const [code, setCode] = useState("");
-  const [codes, setCodes] = useState<string[] | null>(null);
-  const setup = useMutation({ mutationFn: () => unwrap(api.POST("/v1/auth/mfa/setup")) });
-  const done = () => { setCode(""); qc.invalidateQueries({ queryKey: ["me"] }); };
-  const enable = useMutation({
-    mutationFn: () => unwrap(api.POST("/v1/auth/mfa/enable", { body: { code: code.trim() } })),
-    onSuccess: (r) => { setCodes(r.recovery_codes); setup.reset(); done(); },
-  });
-  const disable = useMutation({
-    mutationFn: () => unwrap(api.POST("/v1/auth/mfa/disable", { body: { code: code.trim() } })),
-    onSuccess: () => { setCodes(null); done(); },
-  });
-  const regen = useMutation({
-    mutationFn: () => unwrap(api.POST("/v1/auth/mfa/recovery-codes", { body: { code: code.trim() } })),
-    onSuccess: (r) => { setCodes(r.recovery_codes); done(); },
-  });
-  const on = me.data?.mfa_enabled;
-  const codeField = (
-    <Field label="Authenticator code">{(id) => <input id={id} required inputMode="numeric" autoComplete="one-time-code" className={inputCls} value={code} onChange={(e) => setCode(e.target.value)} />}</Field>
-  );
-  return (
-    <Card title="Two-step verification">
-      {params.get("setup") && !on && <Notice tone="warn">Operator accounts must turn this on before the admin console opens.</Notice>}
-      {codes && <RecoveryCodes codes={codes} />}
-      {on ? (
-        <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-          <p>Two-step verification is <strong>on</strong>. Enter a current code to change it.</p>
-          {codeField}
-          <ErrorBox error={disable.error ?? regen.error} />
-          <div className="flex flex-wrap gap-3">
-            <Button type="button" variant="secondary" onClick={() => regen.mutate()} disabled={regen.isPending}>New recovery codes</Button>
-            {!me.data?.is_operator && <Button type="button" variant="danger" onClick={() => disable.mutate()} disabled={disable.isPending}>Turn off</Button>}
-          </div>
-        </form>
-      ) : setup.data ? (
-        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); enable.mutate(); }}>
-          <p>Scan this with an authenticator app (1Password, Authy, Google Authenticator), then enter the code it shows.</p>
-          <Qr value={setup.data.otpauth_uri} />
-          <p className="text-sm">Can’t scan? Enter this key: <code className="break-all">{setup.data.secret}</code></p>
-          {codeField}
-          <ErrorBox error={enable.error} />
-          <Button type="submit" disabled={enable.isPending}>Turn on</Button>
-        </form>
-      ) : (
-        <div className="space-y-4">
-          <p>Add a second step: a code from an authenticator app each time you sign in. Turning it on signs out your other devices.</p>
-          <ErrorBox error={setup.error} />
-          <Button onClick={() => setup.mutate()} disabled={setup.isPending}>Set up</Button>
-        </div>
-      )}
+    <Card title="Change password">
+      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); change.mutate(); }}>
+        <Field label="Current password">{(id) => <input id={id} type="password" required autoComplete="current-password" className={inputCls} value={current} onChange={(e) => setCurrent(e.target.value)} />}</Field>
+        <Field label="New password" hint="At least 10 characters. Changing it signs out your other devices.">{(id) => <input id={id} type="password" required autoComplete="new-password" className={inputCls} value={next} onChange={(e) => setNext(e.target.value)} />}</Field>
+        <ErrorBox error={change.error} />
+        {change.isSuccess && <Notice tone="ok">Password changed. Your other devices were signed out.</Notice>}
+        <Button type="submit" disabled={change.isPending}>Change password</Button>
+      </form>
     </Card>
   );
 }
@@ -119,7 +60,7 @@ export function Security() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">Security</h1>
-      <Mfa />
+      <ChangePassword />
       <Sessions />
     </div>
   );

@@ -10,7 +10,7 @@ built and what is left, so the gate can be called honestly.
 | Download MP4 (16:9, 9:16), SRT, thumbnail; revocable share link; copy-ready captions with the mandatory disclosure | Built and tested end to end |
 | Founder interview merged into the video | Built; verified on emulated 4G with real ffmpeg + Remotion (`docs/gate-2.md`) |
 | Anchor from a **real** avatar provider | **Blocked**: needs a HeyGen key and avatar id (and the Option A/B spike). Everything else runs on mocks for the avatar and transcription |
-| Real sign-in | **Built in-house** (email code + TOTP); needs Resend sending domain verified to deliver real codes |
+| Real sign-in | **Built in-house** (password + emailed code); needs Resend sending domain verified to deliver real codes |
 | Deployed environment | **Not created** (deferred by you) |
 
 ## 2. Cost per video known for 10 pilot videos

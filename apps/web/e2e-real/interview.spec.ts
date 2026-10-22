@@ -19,7 +19,7 @@ async function ok<T>(r: Awaited<ReturnType<APIRequestContext["get"]>>): Promise<
 }
 
 async function redeem(request: APIRequestContext, code: string, email: string) {
-  await ok(await request.post(`${API}/v1/auth/signup/start`, { data: { invite_code: code } }));
+  await ok(await request.post(`${API}/v1/auth/signup/start`, { data: { invite_code: code, password: "correct horse battery" } }));
   const mail = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: email } })).json();
   await ok(await request.post(`${API}/v1/auth/signup/verify`, { data: { invite_code: code, code: /\b(\d{6})\b/.exec(mail.text)![1] } }));
 }

@@ -16,7 +16,7 @@ from app.services import crypto
 from app.services.ratelimit import client_ip
 
 MAX_CODE_ATTEMPTS = 5
-TOUCH_EVERY = timedelta(minutes=5)  # don't write on every request
+TOUCH_EVERY = timedelta(minutes=1)  # don't write on every request
 
 
 def _utc(d: datetime) -> datetime:
@@ -38,7 +38,13 @@ def hash_code(email: str, purpose: str, code: str) -> str:
 
 
 async def issue_code(
-    session: AsyncSession, email: str, purpose: str, *, invite_id: str | None = None, ip: str | None = None
+    session: AsyncSession,
+    email: str,
+    purpose: str,
+    *,
+    invite_id: str | None = None,
+    password_hash: str | None = None,
+    ip: str | None = None,
 ) -> str:
     """Create a fresh code; any earlier unused code for the same email and purpose stops working."""
     email = email.lower()
@@ -55,6 +61,7 @@ async def issue_code(
             purpose=purpose,
             code_hash=hash_code(email, purpose, code),
             invite_id=invite_id,
+            password_hash=password_hash,
             ip=ip,
             expires_at=now + timedelta(minutes=get_settings().otp_ttl_minutes),
         )
@@ -65,8 +72,8 @@ async def issue_code(
 
 async def check_code(
     session: AsyncSession, email: str, purpose: str, code: str, *, invite_id: str | None = None
-) -> bool:
-    """True once, for the right unexpired code. Five wrong guesses burn the code. Compares in constant time."""
+) -> AuthCode | None:
+    """The code's row, once, for the right unexpired code; None otherwise. Five wrong guesses burn the code. Compares in constant time."""
     email = email.lower()
     now = datetime.now(UTC)
     row = (
@@ -83,17 +90,17 @@ async def check_code(
     expected = row.code_hash if row else hash_code(email, purpose, "000000")  # same work whether or not a code exists
     ok = hmac.compare_digest(expected, hash_code(email, purpose, code.strip()))
     if row is None or _utc(row.expires_at) < now or (invite_id is not None and row.invite_id != invite_id):
-        return False
+        return None
     if row.attempts >= MAX_CODE_ATTEMPTS:
         row.consumed_at = now
-        return False
+        return None
     if not ok:
         row.attempts += 1
         if row.attempts >= MAX_CODE_ATTEMPTS:
             row.consumed_at = now  # burned: the attacker must request a new code (which is rate limited)
-        return False
+        return None
     row.consumed_at = now
-    return True
+    return row
 
 
 # ---------- sessions ----------
@@ -119,7 +126,7 @@ class NewSession:
 
 
 async def create_session(
-    session: AsyncSession, user: User, request: Request | None, *, mfa_verified: bool
+    session: AsyncSession, user: User, request: Request | None, *, otp_verified: bool
 ) -> NewSession:
     token = "nas_" + secrets.token_urlsafe(32)  # recognisable prefix so secret scanners can find a leaked one
     now = datetime.now(UTC)
@@ -128,7 +135,7 @@ async def create_session(
         token_hash=hash_token(token),
         expires_at=now + lifetime_for(user),
         last_used_at=now,
-        mfa_verified=mfa_verified,
+        otp_verified=otp_verified,
         user_agent=(request.headers.get("user-agent", "")[:300] if request else None),
         ip=client_ip(request) if request else None,
     )
@@ -141,7 +148,7 @@ async def create_session(
 def session_is_live(row: UserSession, user: User, now: datetime | None = None) -> bool:
     now = now or datetime.now(UTC)
     s = get_settings()
-    idle = timedelta(hours=1) if is_operator_email(user.email) else timedelta(days=s.session_idle_days)
+    idle = timedelta(minutes=s.session_idle_minutes)  # signed out after an hour without activity
     return row.revoked_at is None and _utc(row.expires_at) > now and now - _utc(row.last_used_at) <= idle
 
 

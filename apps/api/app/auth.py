@@ -1,8 +1,8 @@
 """Request authentication: server-side sessions (bearer token, stored hashed).
 
 `Authorization: Bearer nas_...`. Local development also accepts `Bearer dev:<email>` (only when ENVIRONMENT=local).
-A session may be "pre-MFA": the user proved the email code but has not yet given their authenticator code. Such a
-session can only call the MFA endpoints and sign out; everything else needs a fully verified one.
+Operators confirm every sign-in with an emailed code. Until they do, their session is "pre-OTP": it can only call
+/auth/login/otp (and resend) and sign out; everything else needs a fully verified session.
 """
 
 from dataclasses import dataclass
@@ -26,14 +26,14 @@ class AuthCtx:
     row: UserSession | None  # None for local dev tokens
 
     @property
-    def mfa_ok(self) -> bool:
-        return self.row is None or not self.user.totp_enabled or self.row.mfa_verified
+    def otp_ok(self) -> bool:
+        return self.row is None or self.row.otp_verified
 
 
 async def auth_ctx_any(
     authorization: str | None = Header(default=None), db: AsyncSession = Depends(get_session)
 ) -> AuthCtx:
-    """Any live session, including one still waiting for its authenticator code."""
+    """Any live session, including one still waiting for its emailed sign-in code."""
     if not authorization or not authorization.lower().startswith("bearer "):
         raise UNAUTHENTICATED
     token = authorization[7:].strip()
@@ -56,8 +56,8 @@ async def auth_ctx_any(
 
 
 async def auth_ctx(ctx: AuthCtx = Depends(auth_ctx_any)) -> AuthCtx:
-    if not ctx.mfa_ok:
-        raise HTTPException(401, {"error": "mfa_required", "message": "Enter your authenticator code to continue."})
+    if not ctx.otp_ok:
+        raise HTTPException(401, {"error": "otp_required", "message": "Enter the code we emailed you to continue."})
     return ctx
 
 
@@ -77,12 +77,4 @@ async def current_principal(ctx: AuthCtx = Depends(auth_ctx), db: AsyncSession =
 async def operator(p: Principal = Depends(current_principal)) -> Principal:
     if not p.is_operator:
         raise HTTPException(403, "Operator only")
-    if p.session is not None and not p.user.totp_enabled:  # operators must have a second factor
-        raise HTTPException(
-            403,
-            {
-                "error": "mfa_enrolment_required",
-                "message": "Set up your authenticator app to use the operator console.",
-            },
-        )
     return p

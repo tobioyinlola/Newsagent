@@ -1,44 +1,48 @@
-"""Sign-up (invite only), sign-in, sessions and two-factor (TOTP). No passwords: a code emailed to the address proves
-control of it, then a server-side session is issued.
+"""Sign-up (invite only), password sign-in, emailed one-time codes and server-side sessions.
 
-Responses never reveal whether an email has an account: login/start always answers the same way, and a wrong,
-expired or unknown code all give the same 401.
+Sign-up: choose a password, then prove control of the invited address with a 6-digit emailed code. Sign-in is
+email + password; operators also confirm each sign-in with an emailed code. Forgot-password uses an emailed code too.
+
+Responses never reveal whether an email has an account: a wrong password, an unknown email and an account with no
+password all give the same 401, forgot-password always answers the same way, and a wrong, expired or unknown code
+all give the same 401.
 """
 
 import hashlib
-import secrets
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import AuthCtx, Principal, auth_ctx, auth_ctx_any, current_principal
 from app.config import get_settings
 from app.db import get_session
-from app.models import BrandKit, Invite, RecoveryCode, User, UserSession, Workspace
+from app.models import BrandKit, Invite, User, UserSession, Workspace
 from app.schemas.api import (
+    ChangePasswordIn,
     CodeSentOut,
+    ForgotIn,
     InvitePreview,
-    LoginStartIn,
-    LoginVerifyIn,
+    LoginIn,
     MeOut,
-    MfaCodeIn,
-    MfaEnableOut,
-    MfaSetupOut,
+    OtpIn,
+    ResetIn,
     SessionInfo,
     SessionOut,
     SignupStartIn,
     SignupVerifyIn,
 )
-from app.services import crypto, ratelimit, totp
+from app.services import passwords, ratelimit
 from app.services import sessions as sess
 from app.services.audit import audit
 from app.services.notifications import send_email
 
 router = APIRouter(prefix="/v1", tags=["auth"])
 BAD_CODE = HTTPException(401, "That code is incorrect or has expired. Request a new one and try again.")
+BAD_LOGIN = HTTPException(401, "That email and password don't match. Check them and try again, or reset your password.")
 BAD_INVITE = HTTPException(404, "That invite link isn't valid or has expired.")
+KIND_TEXT = {"signup": "confirm your email", "login": "finish signing in", "reset": "reset your password"}
 
 
 async def _throttle(
@@ -58,22 +62,19 @@ async def _invite(db: AsyncSession, code: str) -> Invite:
     return inv
 
 
-def _session_out(ns: sess.NewSession, user: User, *, mfa_required: bool) -> SessionOut:
-    return SessionOut(
-        token=ns.token,
-        expires_at=ns.row.expires_at,
-        mfa_required=mfa_required,
-        mfa_enrolment_required=sess.is_operator_email(user.email) and not user.totp_enabled,
-    )
+def _check_password(password: str, email: str) -> None:
+    problem = passwords.policy_error(password, email)
+    if problem:
+        raise HTTPException(422, problem)
 
 
 def _email(kind: str, code: str) -> tuple[str, str]:
     mins = get_settings().otp_ttl_minutes
-    what = "sign up" if kind == "signup" else "sign in"
+    what = KIND_TEXT[kind]
     return (
-        f"Your Newsagent {what} code: {code}",
+        f"Your Newsagent code: {code}",
         f"Your code to {what} is:\n\n    {code}\n\nIt works once and expires in {mins} minutes. If you didn't ask for it, "
-        "ignore this email: nobody can get in without the code. Never share it with anyone.\n",
+        "ignore this email: nobody can get in without it. Never share it with anyone.\n",
     )
 
 
@@ -94,7 +95,15 @@ async def signup_start(
     inv = await _invite(db, body.invite_code)
     if (await db.execute(select(User.id).where(User.email == inv.email.lower()))).first():
         raise HTTPException(409, "This email already has an account. Sign in instead.")
-    code = await sess.issue_code(db, inv.email, "signup", invite_id=inv.id, ip=ratelimit.client_ip(request))
+    _check_password(body.password, inv.email)
+    code = await sess.issue_code(
+        db,
+        inv.email,
+        "signup",
+        invite_id=inv.id,
+        password_hash=passwords.hash_password(body.password),
+        ip=ratelimit.client_ip(request),
+    )
     await db.commit()
     subject, text = _email("signup", code)
     bg.add_task(send_email, inv.email, subject, text)
@@ -105,65 +114,128 @@ async def signup_start(
 async def signup_verify(body: SignupVerifyIn, request: Request, db: AsyncSession = Depends(get_session)) -> SessionOut:
     await _throttle(request, "signup-verify", body.invite_code, (10, 600), (30, 600))
     inv = await _invite(db, body.invite_code)
-    ok = await sess.check_code(db, inv.email, "signup", body.code, invite_id=inv.id)
+    row = await sess.check_code(db, inv.email, "signup", body.code, invite_id=inv.id)
     await db.commit()  # persists the failed-attempt counter too
-    if not ok:
+    if row is None or not row.password_hash:
         raise BAD_CODE
     if (await db.execute(select(User.id).where(User.email == inv.email.lower()))).first():
         raise HTTPException(409, "This email already has an account. Sign in instead.")
     ws = await db.get(Workspace, inv.workspace_id)
     assert ws is not None
-    user = User(email=inv.email.lower(), role="owner", workspace_id=ws.id)
+    user = User(email=inv.email.lower(), role="owner", workspace_id=ws.id, password_hash=row.password_hash)
     db.add(user)
     kit = BrandKit(workspace_id=ws.id)  # neutral fallback kit (spec section 10)
     db.add(kit)
     await db.flush()
     ws.brand_kit_id = kit.id
     inv.used_at = datetime.now(UTC)
-    ns = await sess.create_session(db, user, request, mfa_verified=True)
+    row.password_hash = None  # not needed any more
+    ns = await sess.create_session(db, user, request, otp_verified=True)
     audit(db, user.email, "auth.signup", target_type="workspace", target_id=ws.id, request=request)
     await db.commit()
-    return _session_out(ns, user, mfa_required=False)
+    return SessionOut(token=ns.token, expires_at=ns.row.expires_at, otp_required=False)
 
 
 # ---------- sign in ----------
-@router.post("/auth/login/start", response_model=CodeSentOut)
-async def login_start(
-    body: LoginStartIn, request: Request, bg: BackgroundTasks, db: AsyncSession = Depends(get_session)
+@router.post("/auth/login", response_model=SessionOut)
+async def login(
+    body: LoginIn, request: Request, bg: BackgroundTasks, db: AsyncSession = Depends(get_session)
+) -> SessionOut:
+    email = body.email.lower()
+    await _throttle(request, "login", email, (10, 600), (40, 600))
+    user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
+    ok = passwords.verify_password(body.password, user.password_hash if user else None)  # same work either way
+    if not ok or user is None:
+        raise BAD_LOGIN
+    operator = sess.is_operator_email(email)
+    ns = await sess.create_session(db, user, request, otp_verified=not operator)
+    if operator:  # second step: operators confirm each sign-in with an emailed code
+        code = await sess.issue_code(db, email, "login", ip=ratelimit.client_ip(request))
+        subject, text = _email("login", code)
+        bg.add_task(send_email, email, subject, text)
+        audit(db, email, "auth.login", target_type="user", target_id=user.id, detail={"otp": "sent"}, request=request)
+    await db.commit()
+    return SessionOut(token=ns.token, expires_at=ns.row.expires_at, otp_required=operator)
+
+
+@router.post("/auth/login/otp")
+async def login_otp(
+    body: OtpIn, request: Request, ctx: AuthCtx = Depends(auth_ctx_any), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Operators: finish signing in with the emailed code."""
+    if ctx.row is None or ctx.otp_ok:
+        return {"ok": True}
+    await _throttle(request, "login-otp", ctx.user.id, (10, 600), (40, 600))
+    row = await sess.check_code(db, ctx.user.email, "login", body.code)
+    if row is None:
+        await db.commit()  # keep the attempt count
+        raise BAD_CODE
+    ctx.row.otp_verified = True
+    audit(db, ctx.user.email, "auth.login_verified", target_type="user", target_id=ctx.user.id, request=request)
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post("/auth/login/otp/resend", response_model=CodeSentOut)
+async def login_otp_resend(
+    request: Request, bg: BackgroundTasks, ctx: AuthCtx = Depends(auth_ctx_any), db: AsyncSession = Depends(get_session)
+) -> CodeSentOut:
+    if ctx.row is None or ctx.otp_ok:
+        raise HTTPException(409, "This session doesn't need a code.")
+    await _throttle(request, "login-resend", ctx.user.id, (5, 3600), (20, 3600))
+    code = await sess.issue_code(db, ctx.user.email, "login", ip=ratelimit.client_ip(request))
+    await db.commit()
+    subject, text = _email("login", code)
+    bg.add_task(send_email, ctx.user.email, subject, text)
+    return CodeSentOut(email_hint=sess.mask_email(ctx.user.email), expires_in_s=get_settings().otp_ttl_minutes * 60)
+
+
+# ---------- passwords ----------
+@router.post("/auth/password/forgot", response_model=CodeSentOut)
+async def password_forgot(
+    body: ForgotIn, request: Request, bg: BackgroundTasks, db: AsyncSession = Depends(get_session)
 ) -> CodeSentOut:
     email = body.email.lower()
-    await _throttle(request, "login", email, (5, 3600), (20, 3600))
+    await _throttle(request, "forgot", email, (5, 3600), (20, 3600))
     user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
     if user is not None:  # unknown emails get the identical response and no email
-        code = await sess.issue_code(db, email, "login", ip=ratelimit.client_ip(request))
+        code = await sess.issue_code(db, email, "reset", ip=ratelimit.client_ip(request))
         await db.commit()
-        subject, text = _email("login", code)
+        subject, text = _email("reset", code)
         bg.add_task(send_email, email, subject, text)
     return CodeSentOut(expires_in_s=get_settings().otp_ttl_minutes * 60)
 
 
-@router.post("/auth/login/verify", response_model=SessionOut)
-async def login_verify(body: LoginVerifyIn, request: Request, db: AsyncSession = Depends(get_session)) -> SessionOut:
+@router.post("/auth/password/reset")
+async def password_reset(body: ResetIn, request: Request, db: AsyncSession = Depends(get_session)) -> dict:
     email = body.email.lower()
-    await _throttle(request, "login-verify", email, (10, 600), (30, 600))
+    await _throttle(request, "reset", email, (10, 600), (30, 600))
     user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
-    ok = await sess.check_code(db, email, "login", body.code)  # always run: same work for unknown emails
+    row = await sess.check_code(db, email, "reset", body.code)  # always run: same work for unknown emails
     await db.commit()
-    if not ok or user is None:
+    if row is None or user is None:
         raise BAD_CODE
-    ns = await sess.create_session(db, user, request, mfa_verified=not user.totp_enabled)
-    if sess.is_operator_email(email):
-        audit(
-            db,
-            email,
-            "auth.login",
-            target_type="user",
-            target_id=user.id,
-            detail={"mfa": user.totp_enabled},
-            request=request,
-        )
+    _check_password(body.new_password, email)
+    user.password_hash = passwords.hash_password(body.new_password)
+    await sess.revoke_all(db, user.id)  # whoever had the old password is signed out
+    audit(db, email, "auth.password_reset", target_type="user", target_id=user.id, request=request)
     await db.commit()
-    return _session_out(ns, user, mfa_required=user.totp_enabled)
+    return {"ok": True}
+
+
+@router.post("/auth/password/change")
+async def password_change(
+    body: ChangePasswordIn, request: Request, ctx: AuthCtx = Depends(auth_ctx), db: AsyncSession = Depends(get_session)
+) -> dict:
+    await _throttle(request, "pwchange", ctx.user.id, (10, 600), (40, 600))
+    if not passwords.verify_password(body.current_password, ctx.user.password_hash):
+        raise HTTPException(401, "Your current password is incorrect.")
+    _check_password(body.new_password, ctx.user.email)
+    ctx.user.password_hash = passwords.hash_password(body.new_password)
+    await sess.revoke_all(db, ctx.user.id, except_id=ctx.row.id if ctx.row else None)
+    audit(db, ctx.user.email, "auth.password_changed", target_type="user", target_id=ctx.user.id, request=request)
+    await db.commit()
+    return {"ok": True}
 
 
 # ---------- who am I ----------
@@ -175,140 +247,7 @@ async def me(p: Principal = Depends(current_principal)) -> MeOut:
         workspace_name=p.workspace.name,
         credit_balance=p.workspace.credit_balance,
         is_operator=p.is_operator,
-        mfa_enabled=p.user.totp_enabled,
     )
-
-
-@router.get("/auth/status")
-async def auth_status(ctx: AuthCtx = Depends(auth_ctx_any)) -> dict:
-    """Lets the app route correctly even for a session still waiting for its authenticator code."""
-    op = sess.is_operator_email(ctx.user.email)
-    return {
-        "email": ctx.user.email,
-        "mfa_enabled": ctx.user.totp_enabled,
-        "mfa_verified": ctx.mfa_ok,
-        "is_operator": op,
-        "mfa_enrolment_required": op and not ctx.user.totp_enabled,
-    }
-
-
-# ---------- two-factor (TOTP) ----------
-def _recovery_hash(email: str, code: str) -> str:
-    return sess.hash_code(email, "recovery", code.strip().lower().replace("-", ""))
-
-
-async def _new_recovery_codes(db: AsyncSession, user: User) -> list[str]:
-    await db.execute(delete(RecoveryCode).where(RecoveryCode.user_id == user.id))
-    codes = []
-    for _ in range(8):
-        raw = secrets.token_hex(5)  # 40 bits each, single use
-        codes.append(f"{raw[:5]}-{raw[5:]}")
-        db.add(RecoveryCode(user_id=user.id, code_hash=_recovery_hash(user.email, raw)))
-    return codes
-
-
-@router.post("/auth/mfa/verify")
-async def mfa_verify(
-    body: MfaCodeIn, request: Request, ctx: AuthCtx = Depends(auth_ctx_any), db: AsyncSession = Depends(get_session)
-) -> dict:
-    """Second step of sign-in: an authenticator code, or a one-time recovery code."""
-    user, row = ctx.user, ctx.row
-    if row is None or not user.totp_enabled or not user.totp_secret_enc:
-        raise HTTPException(409, "Two-factor sign-in isn't turned on for this account.")
-    await _throttle(request, "mfa", user.id, (10, 600), (60, 600))
-    step = totp.verify(crypto.decrypt(user.totp_secret_enc), body.code, user.totp_last_step)
-    used_recovery = False
-    if step is None:
-        rc = (
-            await db.execute(
-                select(RecoveryCode).where(
-                    RecoveryCode.user_id == user.id,
-                    RecoveryCode.used_at.is_(None),
-                    RecoveryCode.code_hash == _recovery_hash(user.email, body.code),
-                )
-            )
-        ).scalar_one_or_none()
-        if rc is None:
-            raise HTTPException(401, "That code is incorrect. Check your authenticator app and try again.")
-        rc.used_at, used_recovery = datetime.now(UTC), True
-    else:
-        user.totp_last_step = step
-    row.mfa_verified = True
-    if used_recovery:
-        audit(db, user.email, "auth.recovery_code_used", target_type="user", target_id=user.id, request=request)
-    await db.commit()
-    return {"ok": True, "recovery_code_used": used_recovery}
-
-
-@router.post("/auth/mfa/setup", response_model=MfaSetupOut)
-async def mfa_setup(ctx: AuthCtx = Depends(auth_ctx), db: AsyncSession = Depends(get_session)) -> MfaSetupOut:
-    if ctx.user.totp_enabled:
-        raise HTTPException(409, "Two-factor sign-in is already on.")
-    secret = totp.new_secret()
-    ctx.user.totp_secret_enc = crypto.encrypt(secret)  # pending until /enable proves the app works
-    await db.commit()
-    return MfaSetupOut(secret=secret, otpauth_uri=totp.provisioning_uri(secret, ctx.user.email))
-
-
-@router.post("/auth/mfa/enable", response_model=MfaEnableOut)
-async def mfa_enable(
-    body: MfaCodeIn, request: Request, ctx: AuthCtx = Depends(auth_ctx), db: AsyncSession = Depends(get_session)
-) -> MfaEnableOut:
-    user = ctx.user
-    if user.totp_enabled or not user.totp_secret_enc:
-        raise HTTPException(409, "Start setup first.")
-    await _throttle(request, "mfa", user.id, (10, 600), (60, 600))
-    step = totp.verify(crypto.decrypt(user.totp_secret_enc), body.code)
-    if step is None:
-        raise HTTPException(422, "That code didn't match. Check the time on your phone and try again.")
-    user.totp_enabled, user.totp_last_step = True, step
-    if ctx.row:
-        ctx.row.mfa_verified = True
-        await sess.revoke_all(db, user.id, except_id=ctx.row.id)  # other devices must now pass the second factor
-    codes = await _new_recovery_codes(db, user)
-    audit(db, user.email, "auth.mfa_enabled", target_type="user", target_id=user.id, request=request)
-    await db.commit()
-    return MfaEnableOut(recovery_codes=codes)
-
-
-@router.post("/auth/mfa/disable")
-async def mfa_disable(
-    body: MfaCodeIn, request: Request, ctx: AuthCtx = Depends(auth_ctx), db: AsyncSession = Depends(get_session)
-) -> dict:
-    user = ctx.user
-    if sess.is_operator_email(user.email):
-        raise HTTPException(
-            403, "Operators must keep two-factor sign-in on. Ask another operator to reset it if you are locked out."
-        )
-    if not user.totp_enabled or not user.totp_secret_enc:
-        raise HTTPException(409, "Two-factor sign-in isn't on.")
-    await _throttle(request, "mfa", user.id, (10, 600), (60, 600))
-    if totp.verify(crypto.decrypt(user.totp_secret_enc), body.code, user.totp_last_step) is None:
-        raise HTTPException(401, "That code is incorrect.")
-    user.totp_enabled, user.totp_secret_enc, user.totp_last_step = False, None, None
-    await db.execute(delete(RecoveryCode).where(RecoveryCode.user_id == user.id))
-    if ctx.row:
-        await sess.revoke_all(db, user.id, except_id=ctx.row.id)
-    audit(db, user.email, "auth.mfa_disabled", target_type="user", target_id=user.id, request=request)
-    await db.commit()
-    return {"ok": True}
-
-
-@router.post("/auth/mfa/recovery-codes", response_model=MfaEnableOut)
-async def mfa_new_recovery_codes(
-    body: MfaCodeIn, request: Request, ctx: AuthCtx = Depends(auth_ctx), db: AsyncSession = Depends(get_session)
-) -> MfaEnableOut:
-    user = ctx.user
-    if not user.totp_enabled or not user.totp_secret_enc:
-        raise HTTPException(409, "Two-factor sign-in isn't on.")
-    await _throttle(request, "mfa", user.id, (10, 600), (60, 600))
-    step = totp.verify(crypto.decrypt(user.totp_secret_enc), body.code, user.totp_last_step)
-    if step is None:
-        raise HTTPException(401, "That code is incorrect.")
-    user.totp_last_step = step
-    codes = await _new_recovery_codes(db, user)
-    await db.commit()
-    return MfaEnableOut(recovery_codes=codes)
 
 
 # ---------- sessions / sign out ----------

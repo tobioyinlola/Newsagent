@@ -56,10 +56,7 @@ class User(Base, TimestampMixin):
     role: Mapped[str] = mapped_column(String(20), default="owner")
     workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"))
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    # Authenticator-app (TOTP) second factor. Required for operators; optional for everyone else.
-    totp_secret_enc: Mapped[str | None] = mapped_column(Text, nullable=True)  # Fernet-encrypted
-    totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
-    totp_last_step: Mapped[int | None] = mapped_column(Integer, nullable=True)  # blocks replay of a used code
+    password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)  # scrypt; None until the user sets one
 
 
 class BrandKit(Base, TimestampMixin):
@@ -320,9 +317,12 @@ class AuthCode(Base, TimestampMixin):
     __tablename__ = "auth_codes"
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
     email: Mapped[str] = mapped_column(String(320), index=True)
-    purpose: Mapped[str] = mapped_column(String(10))  # login | signup
+    purpose: Mapped[str] = mapped_column(String(10))  # signup | login (operator 2nd step) | reset
     code_hash: Mapped[str] = mapped_column(String(64))
     invite_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    password_hash: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )  # signup: the chosen password, held until the code is verified
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -339,14 +339,6 @@ class UserSession(Base, TimestampMixin):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))  # absolute lifetime
     last_used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)  # idle timeout
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    mfa_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    otp_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     user_agent: Mapped[str | None] = mapped_column(String(300), nullable=True)
     ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
-
-
-class RecoveryCode(Base, TimestampMixin):
-    __tablename__ = "recovery_codes"
-    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
-    code_hash: Mapped[str] = mapped_column(String(64))
-    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

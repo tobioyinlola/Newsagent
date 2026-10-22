@@ -1,8 +1,7 @@
-import { createHmac } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 // Full pilot journey against the real API with mocked vendors: operator invites a startup, the startup
-// signs up with an emailed code, sets a brand kit, writes and approves a script (claims enforced), gets a video, and shares it.
+// signs up with a password and an emailed code, sets a brand kit, writes and approves a script (claims enforced), gets a video, and shares it.
 test("invite to shared video", async ({ page, browser }) => {
   // --- operator
   // operators normally enrol an authenticator; `dev:` tokens (local only) skip that so the suite can drive the console
@@ -22,16 +21,19 @@ test("invite to shared video", async ({ page, browser }) => {
   const inviteLink = await page.locator("code").innerText();
   expect(inviteLink).toContain("/login?invite=");
 
-  // --- startup founder signs up: invite link, then a code sent to the invited address
+  // --- startup founder signs up: invite link, a password, then a code sent to the invited address
   const founder = await browser.newContext();
   const fp = await founder.newPage();
   await fp.goto(inviteLink.replace(/^https?:\/\/[^/]+/, "http://localhost:5173"));
   await expect(fp.getByRole("heading", { name: "Create your workspace" })).toBeVisible();
   await expect(fp.getByText("Acme Farms")).toBeVisible();
-  await fp.getByRole("button", { name: "Email me a code" }).click();
+  await fp.getByLabel("Password", { exact: true }).fill("correct horse battery");
+  await fp.getByLabel("Confirm password").fill("correct horse battery");
+  await fp.getByRole("button", { name: "Continue" }).click();
+  await expect(fp.getByLabel("6-digit code")).toBeVisible();
   const mail = await (await fp.request.get("http://localhost:8000/v1/dev/last-email", { params: { to: "founder@startup.example.com" } })).json();
-  await fp.getByLabel("Sign-in code").fill(/\b(\d{6})\b/.exec(mail.text)![1]);
-  await fp.getByRole("button", { name: "Sign in" }).click();
+  await fp.getByLabel("6-digit code").fill(/\b(\d{6})\b/.exec(mail.text)![1]);
+  await fp.getByRole("button", { name: "Verify and create workspace" }).click();
 
   // --- brand kit
   await expect(fp.getByRole("heading", { name: /Brand kit/ })).toBeVisible();
@@ -89,56 +91,47 @@ test("invite to shared video", async ({ page, browser }) => {
   await expect(fp.getByText("No videos yet.")).toBeVisible();
 });
 
-test("sign-in never reveals whether an email has an account", async ({ page }) => {
+test("a wrong password gets one generic message", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("Email").fill("stranger@example.com");
-  await page.getByRole("button", { name: "Email me a code" }).click();
-  await expect(page.getByText(/If stranger@example.com can sign in/)).toBeVisible();
-  await page.getByLabel("Sign-in code").fill("123456");
+  await page.getByLabel("Password").fill("not the password");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("don't match");
   await expect(page).toHaveURL(/\/login/);
 });
 
-function totp(secret: string, stepOffset = 0): string {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  let bits = "";
-  for (const ch of secret.replace(/=+$/, "")) bits += alphabet.indexOf(ch).toString(2).padStart(5, "0");
-  const key = Buffer.from(bits.match(/.{8}/g)!.map((b) => parseInt(b, 2)));
-  const msg = Buffer.alloc(8);
-  msg.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000) + stepOffset));
-  const h = createHmac("sha1", key).update(msg).digest();
-  const o = h[h.length - 1] & 15;
-  return String((h.readUInt32BE(o) & 0x7fffffff) % 1_000_000).padStart(6, "0");
-}
-
-test("a user turns on an authenticator, then signing in needs the code", async ({ page, request }) => {
+test("sign up with a password, verify the emailed code, sign out, sign back in, and mismatched passwords are caught", async ({ page, request }) => {
   const API = "http://localhost:8000";
-  const email = `mfa${Date.now()}@startup.example.com`;
+  const email = `pw${Date.now()}@startup.example.com`;
+  const pw = "correct horse battery";
   const OPS = { Authorization: "Bearer dev:ops@example.com" };
-  const inv = await (await request.post(`${API}/v1/admin/invites`, { headers: OPS, data: { email, workspace_name: "MFA Co", credits: "1" } })).json();
-  const codeFor = async () => /\b(\d{6})\b/.exec((await (await request.get(`${API}/v1/dev/last-email`, { params: { to: email } })).json()).text)![1];
+  const inv = await (await request.post(`${API}/v1/admin/invites`, { headers: OPS, data: { email, workspace_name: "Password Co", credits: "1" } })).json();
 
   await page.goto(`/login?invite=${inv.code}`);
-  await page.getByRole("button", { name: "Email me a code" }).click();
-  await expect(page.getByLabel("Sign-in code")).toBeVisible();
-  await page.getByLabel("Sign-in code").fill(await codeFor());
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await page.getByRole("link", { name: "Security" }).click();
-  await page.getByRole("button", { name: "Set up" }).click();
-  const secret = (await page.locator("code").innerText()).trim();
-  await page.getByLabel("Authenticator code").fill(totp(secret));
-  await page.getByRole("button", { name: "Turn on" }).click();
-  await expect(page.getByText(/Save these recovery codes/)).toBeVisible();
+  await page.getByLabel("Password", { exact: true }).fill(pw);
+  await page.getByLabel("Confirm password").fill(pw + "x");
+  await expect(page.getByText("The passwords don’t match.")).toBeVisible();
+  await page.getByLabel("Confirm password").fill(pw);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByLabel("6-digit code")).toBeVisible();
+  await page.getByLabel("6-digit code").fill("000000");
+  await page.getByRole("button", { name: "Verify and create workspace" }).click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  const mail = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: email } })).json();
+  await page.getByLabel("6-digit code").fill(/\b(\d{6})\b/.exec(mail.text)![1]);
+  await page.getByRole("button", { name: "Verify and create workspace" }).click();
+  await expect(page.getByRole("heading", { name: /Brand kit/ })).toBeVisible();
 
   await page.getByRole("navigation", { name: "Main" }).getByRole("button", { name: "Sign out" }).click();
   await page.getByLabel("Email").fill(email);
-  await page.getByRole("button", { name: "Email me a code" }).click();
-  await expect(page.getByLabel("Sign-in code")).toBeVisible();
-  await page.getByLabel("Sign-in code").fill(await codeFor());
+  await page.getByLabel("Password").fill(pw);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("heading", { name: "Two-step verification" })).toBeVisible();
-  await page.getByLabel("Authenticator code").fill(totp(secret, 1));
-  await page.getByRole("button", { name: "Verify" }).click();
   await expect(page.getByRole("link", { name: "Videos" })).toBeVisible();
+});
+
+test("an expired session sends you back to sign in", async ({ page }) => {
+  await page.addInitScript(() => { if (!sessionStorage.getItem("seeded")) { sessionStorage.setItem("seeded", "1"); localStorage.setItem("newsagent.token", "nas_expired-or-revoked"); } });
+  await page.goto("/projects");
+  await expect(page).toHaveURL(/\/login\?expired=1/);
+  await expect(page.getByText(/after an hour without activity/)).toBeVisible();
 });

@@ -1,5 +1,5 @@
 import createClient, { type Middleware } from "openapi-fetch";
-import { getToken } from "../lib/auth";
+import { getToken, setToken } from "../lib/auth";
 import type { components, paths } from "./schema";
 
 const auth: Middleware = {
@@ -31,6 +31,15 @@ export async function unwrap<T>(p: Promise<{ data?: T; error?: unknown; response
   if (typeof detail === "string") message = detail;
   else if (detail && typeof detail === "object" && "message" in detail) message = String((detail as { message: unknown }).message);
   else if (detail && typeof detail === "object" && "error" in detail) message = String((detail as { error: unknown }).error);
-  if (response.status === 401) message = "Please sign in again.";
+  const signingIn = /\/v1\/auth\/(login|signup|password)/.test(response.url);
+  if (response.status === 401 && !signingIn) {
+    message = "Please sign in again.";
+    const otp = (detail as { error?: string } | undefined)?.error === "otp_required";
+    // expired (e.g. an hour idle) or revoked: clear the dead token and go to sign-in
+    if (!otp && getToken() && !location.pathname.startsWith("/login")) {
+      setToken(null);
+      location.assign("/login?expired=1");
+    }
+  }
   throw new ApiError(response.status, message, detail);
 }

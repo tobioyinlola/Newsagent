@@ -22,16 +22,16 @@ cd services/renderer && pnpm install && RENDERER_SHARED_SECRET=dev-secret pnpm d
 ```
 `USE_MOCKS=true` (default locally) swaps every vendor (avatar, LLM, renderer, storage, email, transcription) for a mock,
 so the full pipeline runs with no API keys. `ENVIRONMENT=local` accepts `Authorization: Bearer dev:<email>`;
-real sign-in is in-house: a 6-digit code emailed to the address (the local mock mailbox is readable at
-`GET /v1/dev/last-email?to=`), a revocable server-side session, and optional TOTP authenticator codes that are
-**mandatory for operators**. Sign-up is invite-only: an operator (`OPERATOR_EMAILS`) calls `POST /v1/admin/invites`, then
-the invitee opens the link and calls `POST /v1/auth/signup/start` and `/signup/verify`. Locked out of MFA:
-`python -m app.cli reset-mfa EMAIL`.
+real sign-in is in-house: email + password (scrypt), a 6-digit code emailed at sign-up to prove the address
+(the local mock mailbox is readable at `GET /v1/dev/last-email?to=`), forgot-password by emailed code, and revocable
+server-side sessions that end after **1 hour idle**. Operators also confirm each sign-in with an emailed code. Sign-up is
+invite-only: an operator (`OPERATOR_EMAILS`) calls `POST /v1/admin/invites`; the invitee opens the link, chooses a password
+(`/auth/signup/start`) and enters the code (`/auth/signup/verify`). A new operator has no password: use *Forgot password*.
 Operators also set budgets: `PUT /v1/admin/vendor-budgets` (the spend guard refuses any vendor without a budget).
 
 ## Test
 ```bash
-cd apps/api && uv run ruff check . && uv run mypy app && uv run pytest      # 259 tests; add TEST_DATABASE_URL=postgresql+asyncpg://... to run on Postgres
+cd apps/api && uv run ruff check . && uv run mypy app && uv run pytest      # 256 tests; add TEST_DATABASE_URL=postgresql+asyncpg://... to run on Postgres
 cd apps/web && pnpm lint && pnpm build && pnpm test      # unit
 cd apps/web && pnpm e2e                                    # browser journey; needs CHROMIUM_PATH locally, uses mocked vendors
 cd services/renderer && pnpm build && pnpm test
@@ -42,7 +42,7 @@ After changing API routes or schemas: `uv run python scripts/export_openapi.py &
 CI fails if the committed client is stale.
 
 ## API overview (v1, all under `/v1`)
-Auth `/auth/signup|login/start|verify`, `/auth/mfa/*`, `/auth/sessions`, `/auth/logout`, `GET /me` | Brand `GET|PUT /brand-kit`, `POST /brand-kit/import`, `POST /brand-kit/logo-upload`,
+Auth `/auth/signup/*`, `/auth/login`, `/auth/password/*`, `/auth/sessions`, `/auth/logout`, `GET /me` | Brand `GET|PUT /brand-kit`, `POST /brand-kit/import`, `POST /brand-kit/logo-upload`,
 `GET /voices` | Projects `POST|GET /projects`, `/projects/{id}/script/{generate,approve}`, `PUT /script`, `POST /retry` |
 Delivery `GET /projects/{id}/{downloads,captions,costs,events}` (events is SSE; use fetch streaming, not EventSource),
 `POST|DELETE /projects/{id}/share`, public `GET /share/{token}` | Admin `POST /admin/invites`,

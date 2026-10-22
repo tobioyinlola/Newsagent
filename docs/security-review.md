@@ -11,13 +11,13 @@ Everything below says which of those a claim rests on.
 | Code review of auth, tokens, uploads, SSRF surface, payments webhook, moderation, deletion, logging | Read the code paths; wrote a failing test for each claim before relying on it |
 | Dependency audit | `pip-audit` (Python), `pnpm audit --prod` (web, renderer) |
 | Secret scan | Regex scan of the working tree and **every commit** in git history; `.env` untracked |
-| Behavioural verification | 259 API tests (SQLite and Postgres), 29 renderer tests, 7 browser tests, a real-stack browser test run **under the production Content-Security-Policy with zero violations** |
+| Behavioural verification | 256 API tests (SQLite and Postgres), 29 renderer tests, 7 browser tests, a real-stack browser test run **under the production Content-Security-Policy with zero violations** |
 
 | Not done | Why it matters |
 | --- | --- |
 | Penetration test of a deployed system | No deployment exists. Needs an external tester before real customers |
 | Review of Railway / Cloudflare / DNS configuration | Not created. See checklist in section 9 |
-| In-house auth | Reviewed in code and tests (`tests/test_auth_flow.py`, 34 tests); not yet pen-tested. `dev:` tokens work only when `ENVIRONMENT=local` |
+| In-house auth | Reviewed in code and tests (`tests/test_auth_flow.py`, 31 tests); not yet pen-tested. `dev:` tokens work only when `ENVIRONMENT=local` |
 | Real HeyGen / Whisper / payment provider data flows | All mocked; their data-handling terms need reading |
 | Load or abuse testing of the API itself | Only the renderer was load tested |
 
@@ -40,7 +40,7 @@ Severity is my estimate for a pilot, not a CVSS score.
 | F12 | **Medium** | Rate limiter **fails open** if Redis is down | **Accepted, with caveat**: chosen so a Redis blip doesn't take the product down. Alert on `rate limiter backend unavailable` logs. Revisit before opening signup |
 | F13 | Medium | Reminder emails need the raw magic link, but the spec says tokens are stored hashed | **Mitigated**: hash for lookup **plus** a Fernet-encrypted copy, deleted on submit/revoke/expiry. Residual risk: anyone with both the database and `SECRET_KEY` can read live links. Rotation of `SECRET_KEY` currently invalidates stored copies (reminders stop; links still work) |
 | F14 | Medium | Moderation rules are keyword/regex starter rules written by an engineer | **Open**: a policy owner must review `services/moderation.py` and decide the LLM layer's role. English only |
-| F15 | Low | Operator authorization is "email in `OPERATOR_EMAILS` and has a user row": no second factor of its own | **Fixed**: operators must enrol TOTP before `/v1/admin` opens, cannot turn it off, have 8 h / 1 h-idle sessions, and sign-ins are audited |
+| F15 | Low | Operator authorization is "email in `OPERATOR_EMAILS` and has a user row": no second factor of its own | **Fixed**: operators confirm every sign-in with an emailed code before `/v1/admin` opens, have 8 h sessions, and sign-ins are audited |
 | F16 | Low | Founder takes could contain a minor's image/voice; nothing checks age | **Open (legal)**: see section 8 |
 | F17 | Low | Webhook signature has no timestamp tolerance (replays are harmless because processing is idempotent) | **Accepted** |
 | F18 | Info | Dependency scanners found **no** vulnerable Python packages; secret scan found nothing in the tree or history | |
@@ -66,9 +66,11 @@ do **not** strip the token from the address bar, because reloads on flaky mobile
 
 ## 4. Authentication and authorization
 - Every `/v1` route except health, public share, billing webhook and the founder routes requires a live session
-  token (`nas_...`, stored only as a SHA-256 hash, revocable, idle and absolute expiry). Sign-in is an emailed one-time code
-  (HMAC-hashed, single use, expires in 10 min, burned after 5 wrong tries); login never reveals whether an account exists.
-  Authenticator codes are replay-blocked. The token is kept in localStorage (no cookies, so no CSRF); XSS is the risk, which the CSP addresses.
+  token (`nas_...`, stored only as a SHA-256 hash, revocable, idle and absolute expiry). Sessions end after **1 hour idle**
+  (30 days absolute; operators 8 h). Sign-in is email + password (scrypt, salted; policy: 10+ chars, no email or common
+  passwords). Sign-up and forgot-password use an emailed one-time code (HMAC-hashed, single use, 10 min, burned after 5 wrong
+  tries); wrong password, unknown email and passwordless account all return the same 401. Changing or resetting a password
+  revokes other sessions. Operators also confirm each sign-in with an emailed code. The token is kept in localStorage (no cookies, so no CSRF); XSS is the risk, which the CSP addresses.
 - **Tenant isolation** is enforced per route by workspace id. Tests cover: projects, scripts, downloads, captions,
   costs, share, interview, brand assets, usage, ledger, moderation status, export, deletion, manual credits. Operators
   are separate (`/v1/admin/*`, 403 for owners, 401 without a token).
@@ -95,8 +97,9 @@ do **not** strip the token from the address bar, because reloads on flaky mobile
 ## 6. Rate limits
 | Surface | Limit | Backend |
 | --- | --- | --- |
-| Sign-up / sign-in code request | 5 / 10 min per email, plus per IP | memory/Redis |
-| Code and authenticator verify | 10 / 10 min | per email or session, and per IP |
+| Password sign-in | 10 / 10 min | per email, and 40 per IP (a victim can be locked out for 10 min; accepted) |
+| Code requests (sign-up, forgot, operator resend) | 5 / hour | per email or invite, plus per IP |
+| Code verify (sign-up, reset, operator) | 10 / 10 min | per email, invite or session, plus per IP |
 | Project creation | 20 / hour | per user and IP |
 | Script generation | 15 / hour | per user and IP |
 | Brand import / uploads | 10 / hour, 30 / hour | per user and IP |
@@ -162,7 +165,7 @@ OpenAI-compatible transcription vendor (undecided), Resend (email), Railway (hos
 - [ ] R2 bucket private; **CORS** allows only the web origin, methods PUT/GET, header `Content-Type`; object versioning off for media
 - [ ] `SECRET_KEY`, `RENDERER_SHARED_SECRET`, `BILLING_WEBHOOK_SECRET` generated and stored only as Railway variables
 - [ ] ClamAV reachable and definitions updating; upload of the EICAR file is refused in staging
-- [ ] `OPERATOR_EMAILS` set; every operator has enrolled an authenticator; email deliverability of sign-in codes checked (SPF/DKIM on the Resend domain)
+- [ ] `OPERATOR_EMAILS` set; every operator has set a password; email deliverability of sign-in codes checked (SPF/DKIM on the Resend domain)
 - [ ] `TRUST_PROXY_HEADERS=true`; Redis reachable; alert on rate-limiter failures
 - [ ] Sentry DSN set, PII off; alert on error spikes; log retention reviewed
 - [ ] Web served with the generated `Caddyfile` headers; HTTPS only; `API_ORIGIN`/`STORAGE_ORIGIN` set at build

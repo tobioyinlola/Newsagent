@@ -4,12 +4,13 @@
 1. **Option A vs B for the anchor** - spike not run (no vendor access). See `anchor-spike.md`.
 2. **Render speed** - resolved in the sandbox (forced `swangle` GL was the cause); re-verify on Railway.
 3. **Transcription vendor** - spec says "Whisper-class". Hosted (OpenAI/Groq/Replicate) or self-hosted?
-4. **Auth** - built in-house (decided; replaces Clerk/Auth0). Passwordless: a 6-digit emailed code (10 min, 5 tries, single
-   use, HMAC-hashed). Sessions are random `nas_` bearer tokens stored as SHA-256 and revocable (7 days idle / 30 absolute;
-   operators 1 h idle / 8 h). TOTP (RFC 6238, secret Fernet-encrypted, replay-blocked) with recovery codes; optional for users,
-   mandatory for operators. Sign-up stays invite-only; the code proves control of the invited address. Local dev still
-   accepts `Bearer dev:<email>` (only when `ENVIRONMENT=local`). Trade-off: we own the security of this code, and the token
-   sits in localStorage, so the CSP is its main protection.
+4. **Auth** - built in-house (decided; replaces Clerk/Auth0). Email + password (scrypt, min 10 chars, common-password check).
+   Sign-up is invite-only: choose a password, then verify a 6-digit emailed code (10 min, 5 tries, single use, HMAC-hashed)
+   that proves control of the invited address. Forgot-password uses the same kind of code. No authenticator-app (TOTP) by
+   decision. Operators confirm every sign-in with an emailed code instead. Sessions are random `nas_` bearer tokens stored as
+   SHA-256 and revocable: **1 hour idle** for everyone, 30 days absolute (operators 8 h). Local dev still accepts
+   `Bearer dev:<email>` (only when `ENVIRONMENT=local`). Trade-off: we own the security of this code, the token sits in
+   localStorage so the CSP is its main protection, and per-email login throttling lets someone lock a victim out for ~10 min.
 5. **Railway staging deploy** - deferred by the user.
 
 ## Phase 3 decisions

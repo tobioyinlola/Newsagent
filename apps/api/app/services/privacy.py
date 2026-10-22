@@ -19,7 +19,6 @@ from app.models import (
     Job,
     ModerationCase,
     Project,
-    RecoveryCode,
     ScriptVersion,
     ShareLink,
     Take,
@@ -83,7 +82,6 @@ async def delete_workspace(session: AsyncSession, ws: Workspace) -> None:
     emails = list((await session.execute(select(User.email).where(User.workspace_id == ws.id))).scalars())
     if uids:
         await session.execute(delete(UserSession).where(UserSession.user_id.in_(uids)))
-        await session.execute(delete(RecoveryCode).where(RecoveryCode.user_id.in_(uids)))
     if emails:
         await session.execute(delete(AuthCode).where(AuthCode.email.in_(emails)))
     await session.execute(delete(User).where(User.workspace_id == ws.id))

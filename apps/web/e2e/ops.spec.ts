@@ -17,7 +17,7 @@ export async function emailedCode(request: APIRequestContext, to: string): Promi
 }
 
 async function redeem(request: APIRequestContext, code: string, email: string) {
-  await ok(await request.post(`${API}/v1/auth/signup/start`, { data: { invite_code: code } }));
+  await ok(await request.post(`${API}/v1/auth/signup/start`, { data: { invite_code: code, password: "correct horse battery" } }));
   await ok(await request.post(`${API}/v1/auth/signup/verify`, { data: { invite_code: code, code: await emailedCode(request, email) } }));
 }
 

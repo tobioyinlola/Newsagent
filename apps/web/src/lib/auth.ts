@@ -1,4 +1,4 @@
-// Session token storage. Sign-in is in-house (email code, optional authenticator code); the API issues a
+// Session token storage. Sign-in is in-house (email + password, emailed code at sign-up); the API issues a
 // revocable `nas_` session token. It lives in localStorage, so the CSP (no inline/third-party script) is what
 // protects it; see docs/security-review.md.
 const KEY = "newsagent.token";
