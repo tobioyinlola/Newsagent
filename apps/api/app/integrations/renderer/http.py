@@ -23,12 +23,26 @@ class HttpRenderer(RendererClient):
             base_url=s.renderer_url, headers={"x-renderer-secret": s.renderer_shared_secret}, timeout=30
         )
 
+    async def _post(self, path: str, payload: dict, max_wait_s: float = 900) -> httpx.Response:
+        """POST, waiting out 429 'busy' answers (the renderer's queue is full): that is expected under load and must
+        not fail a customer's video. Gives up after max_wait_s."""
+        waited = 0.0
+        while True:
+            r = await self._client.post(path, json=payload)
+            if r.status_code != 429:
+                r.raise_for_status()
+                return r
+            delay = min(60.0, max(1.0, float(r.headers.get("retry-after", 5))))
+            if waited + delay > max_wait_s:
+                r.raise_for_status()
+            await asyncio.sleep(delay)
+            waited += delay
+
     def estimate_cost(self, req: RenderRequest) -> float:
         return COST_PER_OUTPUT * len(req.outputs)
 
     async def chroma_key(self, url: str, output_key: str) -> KeyResult:
-        r = await self._client.post("/chromakey", json={"url": url, "output_key": output_key})
-        r.raise_for_status()
+        r = await self._post("/chromakey", {"url": url, "output_key": output_key})
         rid = r.json()["render_id"]
         waited = 0.0
         while waited < VENDOR_POLICIES["renderer"].timeout_s:
@@ -42,11 +56,10 @@ class HttpRenderer(RendererClient):
         raise TimeoutError("chroma key timed out")
 
     async def process(self, req: ProcessRequest) -> ProcessResult:
-        r = await self._client.post(
+        r = await self._post(
             "/process",
-            json={"chunk_urls": req.chunk_urls, "kind": req.kind, "ext": req.ext, "output_prefix": req.output_prefix},
+            {"chunk_urls": req.chunk_urls, "kind": req.kind, "ext": req.ext, "output_prefix": req.output_prefix},
         )
-        r.raise_for_status()
         rid = r.json()["render_id"]
         waited = 0.0
         while waited < VENDOR_POLICIES["renderer"].timeout_s:
@@ -82,9 +95,9 @@ class HttpRenderer(RendererClient):
         )
 
     async def submit(self, req: RenderRequest) -> str:
-        r = await self._client.post(
+        r = await self._post(
             "/renders",
-            json={
+            {
                 "composition": req.composition,
                 "props": req.props,
                 "outputs": req.outputs,
@@ -92,7 +105,6 @@ class HttpRenderer(RendererClient):
                 "output_prefix": req.output_prefix,
             },
         )
-        r.raise_for_status()
         return r.json()["render_id"]
 
     async def status(self, render_id: str) -> RenderStatus:

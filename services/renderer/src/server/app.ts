@@ -13,13 +13,14 @@ import { putFile } from "./storage";
 type Job = { status: "queued" | "running" | "succeeded" | "failed"; progress: number; output_keys: string[]; error: string | null; result?: unknown };
 type Output = { kind?: "video" | "thumbnail"; name?: string; scale?: number; format: "16x9" | "9x16"; width: number; height: number };
 
-export function createApp(opts: { secret: string; maxConcurrent?: number; processFn?: typeof processTake; keyFn?: typeof chromaKey; renderFn?: typeof renderOne; thumbFn?: typeof renderThumbnail; analyzeFn?: (url: string) => Promise<Analysis>; normalizeFn?: (file: string) => Promise<void> }) {
+export function createApp(opts: { maxQueue?: number; secret: string; maxConcurrent?: number; processFn?: typeof processTake; keyFn?: typeof chromaKey; renderFn?: typeof renderOne; thumbFn?: typeof renderThumbnail; analyzeFn?: (url: string) => Promise<Analysis>; normalizeFn?: (file: string) => Promise<void> }) {
   const app = express();
   app.use(express.json({ limit: "1mb" }));
   const jobs = new Map<string, Job>();
   const queue: (() => Promise<void>)[] = [];
   let running = 0;
   const max = opts.maxConcurrent ?? Number(process.env.RENDER_JOBS_CONCURRENCY || 1);
+  const maxQueue = opts.maxQueue ?? Number(process.env.MAX_QUEUE || 20);
   const render = opts.renderFn ?? renderOne;
   const renderThumb = opts.thumbFn ?? renderThumbnail;
   const analyze = opts.analyzeFn ?? analyzeUrl;
@@ -46,7 +47,15 @@ export function createApp(opts: { secret: string; maxConcurrent?: number; proces
     next();
   });
 
-  app.post("/renders", (req, res) => {
+  // Back-pressure: when the waiting line is full, say so (429 + Retry-After) rather than queueing without bound.
+  const busy = (_req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (queue.length >= maxQueue) {
+      res.set("Retry-After", String(Math.min(60, 5 + queue.length * 2)));
+      return res.status(429).json({ error: "renderer busy", queued: queue.length });
+    }
+    next();
+  };
+  app.post("/renders", busy, (req, res) => {
     const { composition, props, outputs, input_urls, output_prefix } = req.body as {
       composition: string; props: Partial<NewsProps>; outputs: Output[]; input_urls?: Record<string, string>; output_prefix: string;
     };
@@ -94,7 +103,7 @@ export function createApp(opts: { secret: string; maxConcurrent?: number; proces
   });
 
   // Founder takes: concatenate uploaded chunks, clean up, trim, flag problems, upload results.
-  app.post("/process", (req, res) => {
+  app.post("/process", busy, (req, res) => {
     const { chunk_urls, kind, ext, output_prefix } = req.body as { chunk_urls: string[]; kind: "video" | "audio"; ext: string; output_prefix: string };
     if (!Array.isArray(chunk_urls) || !chunk_urls.length || chunk_urls.length > 400 || !["video", "audio"].includes(kind) || !output_prefix || output_prefix.includes("..") || !/^[a-z0-9]{2,5}$/i.test(ext ?? "")) {
       return res.status(400).json({ error: "invalid request" });
@@ -124,7 +133,7 @@ export function createApp(opts: { secret: string; maxConcurrent?: number; proces
   });
 
   // Green-screen avatar video -> transparent WebM, uploaded to output_key.
-  app.post("/chromakey", (req, res) => {
+  app.post("/chromakey", busy, (req, res) => {
     const { url, output_key, color, similarity, blend } = req.body as { url: string; output_key: string; color?: string; similarity?: number; blend?: number };
     if (!url || !output_key || output_key.includes("..") || !output_key.endsWith(".webm")) return res.status(400).json({ error: "invalid request" });
     const id = crypto.randomUUID();

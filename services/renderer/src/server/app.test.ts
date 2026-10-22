@@ -109,4 +109,24 @@ describe("renderer API", () => {
       throw new Error("did not finish");
     } finally { server.close(); }
   });
+  it("returns 429 with Retry-After when the queue is full, and recovers", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => { release = r; });
+    const fs = await import("node:fs");
+    const renderFn: any = async ({ outFile }: any) => { await gate; fs.writeFileSync(outFile, "x"); };
+    const server = createApp({ secret: "s3cret", renderFn, maxConcurrent: 1, maxQueue: 1, normalizeFn: async () => {} }).listen(0);
+    const b = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const h = { "x-renderer-secret": "s3cret", "content-type": "application/json" };
+    const post = () => fetch(`${b}/renders`, { method: "POST", headers: h, body: JSON.stringify({ composition: "NewsStudio", props: {}, outputs: [{ format: "16x9", width: 1920, height: 1080 }], output_prefix: "p" }) });
+    try {
+      expect((await post()).status).toBe(202); // starts running
+      expect((await post()).status).toBe(202); // waits in the queue (1 of 1)
+      const busy = await post();
+      expect(busy.status).toBe(429);
+      expect(Number(busy.headers.get("retry-after"))).toBeGreaterThan(0);
+      release();
+      await new Promise((r) => setTimeout(r, 300));
+      expect((await post()).status).toBe(202); // room again
+    } finally { release(); server.close(); }
+  });
 });

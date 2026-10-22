@@ -95,3 +95,40 @@ async def test_http_renderer_process_surfaces_failure(monkeypatch):
     r._client = httpx.AsyncClient(base_url="http://renderer", transport=httpx.MockTransport(handler))
     with pytest.raises(RuntimeError, match="chunk download failed"):
         await r.process(ProcessRequest(chunk_urls=["u1"], kind="video", ext="webm", output_prefix="p"))
+
+
+async def test_http_renderer_waits_out_429_busy_then_succeeds(monkeypatch):
+    from app.integrations.renderer.base import RenderRequest
+
+    sleeps, posts = [], []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        posts.append(1)
+        if len(posts) <= 2:
+            return httpx.Response(429, headers={"retry-after": "7"}, json={"error": "renderer busy"})
+        return httpx.Response(202, json={"render_id": "r9"})
+
+    async def fake_sleep(s):
+        sleeps.append(s)
+
+    monkeypatch.setattr("app.integrations.renderer.http.asyncio.sleep", fake_sleep)
+    r = HttpRenderer()
+    r._client = httpx.AsyncClient(base_url="http://renderer", transport=httpx.MockTransport(handler))
+    rid = await r.submit(
+        RenderRequest(composition="NewsStudio", props={}, outputs=[], input_urls={}, output_prefix="p")
+    )
+    assert rid == "r9" and sleeps == [7.0, 7.0] and len(posts) == 3
+
+
+async def test_http_renderer_gives_up_if_busy_for_too_long(monkeypatch):
+
+    async def fake_sleep(s):
+        return None
+
+    monkeypatch.setattr("app.integrations.renderer.http.asyncio.sleep", fake_sleep)
+    r = HttpRenderer()
+    r._client = httpx.AsyncClient(
+        base_url="http://x", transport=httpx.MockTransport(lambda q: httpx.Response(429, headers={"retry-after": "60"}))
+    )
+    with pytest.raises(httpx.HTTPStatusError):
+        await r._post("/renders", {}, max_wait_s=120)
