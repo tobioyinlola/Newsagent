@@ -30,7 +30,7 @@ FORMATS = [
 PREVIEW = [{"kind": "video", "format": "16x9", "name": "preview", "width": 1920, "height": 1080, "scale": 0.5}]
 
 # Locked channel identity and mandatory disclosures (hard rules 1 and 2). Never user-editable.
-CHANNEL_IDENTITY = {"name": "Startup Spotlight Network", "locked": True}
+CHANNEL_IDENTITY = {"name": "Cover Founder", "locked": True}
 DISCLOSURES = {"tag": "Featured", "anchor": "AI-generated anchor"}
 
 

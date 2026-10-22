@@ -9,7 +9,7 @@ export type NewsProps = {
 };
 
 export const defaultProps: NewsProps = {
-  channel: { name: "Startup Spotlight Network", locked: true },
+  channel: { name: "Cover Founder", locked: true },
   disclosures: { tag: "Featured", anchor: "AI-generated anchor" },
   brand: { primary: "#0B3D91", accent: "#F5A623" },
   tickerLines: ["FEATURED: Acme builds tools for farmers", "Sample ticker line two"],

@@ -15,7 +15,7 @@ function Shell({ company, children, onErase }: { company?: string; children: Rea
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col gap-4 bg-white p-4 text-ink">
       <header>
-        <p className="text-xs font-bold uppercase tracking-widest text-ink">Startup Spotlight Network</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-ink">Cover Founder</p>
         {company && <h1 className="text-2xl font-extrabold">Interview for {company}</h1>}
       </header>
       <main className="flex flex-1 flex-col gap-4" aria-live="polite">{children}</main>

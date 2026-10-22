@@ -11,7 +11,7 @@ if (!fs.existsSync("public/bench-anchor.webm")) throw new Error("run scripts/mak
 execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=s=720x1280:r=30:d=4", "-f", "lavfi", "-i", "sine=frequency=300:d=4", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "public/founder-answer.mp4"]);
 
 const props = {
-  channel: { name: "Startup Spotlight Network" }, disclosures: { tag: "Featured", anchor: "AI-generated anchor" },
+  channel: { name: "Cover Founder" }, disclosures: { tag: "Featured", anchor: "AI-generated anchor" },
   brand: { primary: "#0B3D91", accent: "#F5A623" }, tickerLines: ["FEATURED: Acme interview"], layout: "pip", totalSeconds: 11,
   scenes: [
     { type: "anchor", src: "bench-anchor.webm", seconds: 2 },

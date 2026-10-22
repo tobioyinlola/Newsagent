@@ -72,7 +72,7 @@
 - On-screen text limits (lower-third 40/60 chars, ticker 90 chars / 8 lines) are enforced at approval.
 - Rate limiting: Redis in staging/production, memory locally; fails OPEN if Redis is down (logged). Set
   `TRUST_PROXY_HEADERS=true` behind Railway so per-IP limits see real client IPs.
-- Mandatory disclosure labels and the fictional channel identity are constants in `pipeline/steps.py`, are passed
+- Mandatory disclosure labels and the channel identity (Cover Founder, our own brand) are constants in `pipeline/steps.py`, are passed
   as Remotion props, and are asserted by the quality gate. Banned real-network names are checked in overlays.
 - The in-memory rate limiter is fine for one API instance; move it to Redis before running several.
 - `docs/BUILD_SPEC.md` is not committed. Please add the spec file there.

@@ -22,5 +22,8 @@ Source: the Cover Founder brand guideline PDF (v1.0, 2026). Implemented in `fron
 - **Accessibility:** ink on green is 15:1, ink on red 4.6:1, white on purple 6.9:1; focus rings are 3px purple.
   The guideline's "High Contrast" mode is not built yet.
 
-Not changed on purpose: the mandatory "Featured" / "AI-generated anchor" labels and the fictional channel identity used
-inside the rendered videos (backend, hard rules 1 and 2), and the startup brand-kit editor, which is the *startup's* look.
+The channel name in rendered videos and on the founder page is **Cover Founder** (`CHANNEL_IDENTITY` in
+`backend/app/pipeline/steps.py`, defaults in `backend/renderer/src/compositions`). It is locked: no field edits it.
+Not changed on purpose: the mandatory "Featured" / "AI-generated anchor" labels (hard rule 2), and the startup
+brand-kit editor, which is the *startup's* look. The video graphics (channel bug, lower thirds) still use the studio
+look, not yet the Cover Founder palette.

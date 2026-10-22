@@ -26,7 +26,7 @@ export type MergeProps = {
 };
 
 export const defaultMergeProps: MergeProps = {
-  channel: { name: "Startup Spotlight Network" },
+  channel: { name: "Cover Founder" },
   disclosures: { tag: "Featured", anchor: "AI-generated anchor" },
   brand: { primary: "#0B3D91", accent: "#F5A623" },
   tickerLines: ["FEATURED: Interview"],

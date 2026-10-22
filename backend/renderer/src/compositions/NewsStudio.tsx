@@ -3,7 +3,7 @@ import { AbsoluteFill, Easing, OffthreadVideo, interpolate, staticFile, useCurre
 import { Chrome } from "./Chrome";
 import { NewsProps } from "./types";
 
-// Original fictional channel identity. Do not use any real network's name, marks, music or trade dress.
+// Channel identity: Cover Founder (our own brand). Do not use any other real network's name, marks, music or trade dress.
 export const NewsStudio: React.FC<NewsProps> = (p) => {
   const frame = useCurrentFrame();
   const { width, height, fps, durationInFrames } = useVideoConfig();
