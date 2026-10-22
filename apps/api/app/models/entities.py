@@ -14,7 +14,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, TimestampMixin, new_id
+from app.models.base import Base, TimestampMixin, new_id, utcnow
 
 Money = Numeric(12, 4)
 
@@ -33,6 +33,10 @@ class Workspace(Base, TimestampMixin):
     max_video_seconds: Mapped[int] = mapped_column(Integer, default=300)
     suspended: Mapped[bool] = mapped_column(Boolean, default=False)
     share_disabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    low_balance_alerted: Mapped[bool] = mapped_column(Boolean, default=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )  # tombstone: ledger is kept
 
 
 class Invite(Base, TimestampMixin):
@@ -221,3 +225,85 @@ class Take(Base, TimestampMixin):
     stats: Mapped[dict] = mapped_column(JSON, default=dict)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     raw_deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class SystemSetting(Base):
+    """Operator-controlled switches (pause paid steps, provider failover, moderation mode...)."""
+
+    __tablename__ = "system_settings"
+    key: Mapped[str] = mapped_column(String(100), primary_key=True)
+    value: Mapped[dict] = mapped_column(JSON, default=dict)
+    updated_by: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AuditLog(Base):
+    """Who did what, for every operator and sensitive action. Append-only."""
+
+    __tablename__ = "audit_logs"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    actor: Mapped[str] = mapped_column(String(320))
+    action: Mapped[str] = mapped_column(String(100), index=True)
+    target_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    target_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    detail: Mapped[dict] = mapped_column(JSON, default=dict)
+    ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class CreditTransaction(Base):
+    """Append-only ledger. The sum of a workspace's amounts always equals its credit_balance."""
+
+    __tablename__ = "credit_transactions"
+    __table_args__ = (UniqueConstraint("workspace_id", "ref"),)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    workspace_id: Mapped[str] = mapped_column(String(32), index=True)  # no FK: rows outlive a deleted workspace
+    kind: Mapped[str] = mapped_column(
+        String(20)
+    )  # grant | purchase | adjustment | usage | usage_adjust | usage_release
+    amount: Mapped[Decimal] = mapped_column(Money)  # + adds credits, - spends
+    balance_after: Mapped[Decimal] = mapped_column(Money)
+    project_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    stage: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    vendor: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    vendor_cost: Mapped[Decimal | None] = mapped_column(Money, nullable=True)  # what the vendor charges us (for margin)
+    ref: Mapped[str | None] = mapped_column(String(100), nullable=True)  # idempotency key, e.g. a payment id
+    description: Mapped[str | None] = mapped_column(String(300), nullable=True)
+
+
+class CreditPack(Base):
+    __tablename__ = "credit_packs"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(100))
+    credits: Mapped[Decimal] = mapped_column(Money)
+    price_usd: Mapped[Decimal] = mapped_column(Money)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class Checkout(Base, TimestampMixin):
+    __tablename__ = "checkouts"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), index=True)
+    pack_id: Mapped[str] = mapped_column(ForeignKey("credit_packs.id"))
+    credits: Mapped[Decimal] = mapped_column(Money)
+    amount_usd: Mapped[Decimal] = mapped_column(Money)
+    provider: Mapped[str] = mapped_column(String(30))
+    provider_ref: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | paid | failed | expired
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ModerationCase(Base, TimestampMixin):
+    __tablename__ = "moderation_cases"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    project_id: Mapped[str] = mapped_column(String(32), index=True)
+    workspace_id: Mapped[str] = mapped_column(String(32), index=True)
+    stage: Mapped[str] = mapped_column(String(20))  # brief | script | interview
+    subject_id: Mapped[str | None] = mapped_column(String(64), nullable=True)  # script version id / take ids hash
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | approved | rejected | blocked
+    reasons: Mapped[list] = mapped_column(JSON, default=list)
+    excerpt: Mapped[str] = mapped_column(Text, default="")
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_by: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

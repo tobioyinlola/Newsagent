@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     )
     local_storage_dir: str = ""  # shared folder for LocalStorage so a local renderer can read/write the same files
     mock_anchor_file: str = ""  # a real .webm the mock avatar copies as its output, for local end-to-end renders
+    credit_markup: str = (
+        "1"  # customer credits charged per 1 USD of vendor cost (pass-through until pricing is decided)
+    )
+    low_balance_threshold: str = "5"
     clamd_host: str = ""  # ClamAV daemon; required for uploads when USE_MOCKS=false
     clamd_port: int = 3310
     api_public_url: str = "http://localhost:8000"  # used by local dev storage URLs

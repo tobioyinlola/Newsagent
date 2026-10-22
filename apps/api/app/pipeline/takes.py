@@ -19,7 +19,7 @@ from app.models.base import new_id
 from app.pipeline import runner
 from app.pipeline.steps import input_hash
 from app.services.interview import BLOCKING_FLAGS
-from app.services.notifications import notify_owners, vendor_budget_alert
+from app.services.notifications import low_balance_alert, notify_owners, vendor_budget_alert
 from app.services.spend_guard import LimitReached, SpendGuard
 
 log = logging.getLogger("takes")
@@ -87,10 +87,14 @@ async def process_take(take_id: str) -> None:
             ).scalar_one()
             job.attempts = attempt
             job_id = job.id  # read now: attributes expire after a rollback
-            guard = SpendGuard(s, on_alert=vendor_budget_alert)
+            guard = SpendGuard(s, on_alert=vendor_budget_alert, on_low_balance=low_balance_alert)
             try:
-                res_r = await guard.reserve(project.workspace_id, "renderer", PROCESS_COST)
-                res_t = await guard.reserve(project.workspace_id, "transcription", TRANSCRIBE_RESERVE)
+                res_r = await guard.reserve(
+                    project.workspace_id, "renderer", PROCESS_COST, project_id=pid, stage="process_take"
+                )
+                res_t = await guard.reserve(
+                    project.workspace_id, "transcription", TRANSCRIBE_RESERVE, project_id=pid, stage="transcribe"
+                )
             except LimitReached as e:
                 await s.rollback()
                 async with session_maker()() as s2:  # a partial reservation was rolled back; nothing was charged

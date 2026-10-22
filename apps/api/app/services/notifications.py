@@ -117,3 +117,28 @@ async def email_founder_retake(to: str, founder_name: str, company: str, token: 
         f"Your private link:\n{founder_link(token)}\n"
     )
     return await send_email(to, f"Please re-record an answer for {company}", text)
+
+
+def low_balance_alert(workspace_id: str, balance) -> None:
+    """Sync callback for SpendGuard: tell the owners they are running low, without blocking the paid step."""
+    import asyncio
+
+    async def go() -> None:
+        try:
+            async with session_maker()() as session:
+                emails = (
+                    (await session.execute(select(User.email).where(User.workspace_id == workspace_id))).scalars().all()
+                )
+            for to in emails:
+                await send_email(
+                    to,
+                    "You're running low on credits",
+                    f"Your workspace has {float(balance):.2f} credits left. Add credits so your next video isn't paused:\n"
+                    f"{get_settings().app_base_url}/billing\n",
+                )
+        except Exception:  # noqa: BLE001
+            log.exception("low balance notification failed")
+
+    task = asyncio.get_running_loop().create_task(go())
+    _pending.add(task)
+    task.add_done_callback(_pending.discard)

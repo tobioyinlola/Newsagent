@@ -1,7 +1,8 @@
 import secrets
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +17,8 @@ from app.schemas.api import (
     WorkspaceAdminOut,
     WorkspacePatch,
 )
+from app.services import ledger
+from app.services.audit import audit
 from app.services.spend_guard import ensure_vendor_budget
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
@@ -23,11 +26,18 @@ router = APIRouter(prefix="/v1/admin", tags=["admin"])
 
 @router.post("/invites", response_model=InviteOut)
 async def create_invite(
-    body: InviteCreate, _: Principal = Depends(operator), session: AsyncSession = Depends(get_session)
+    body: InviteCreate,
+    request: Request,
+    op: Principal = Depends(operator),
+    session: AsyncSession = Depends(get_session),
 ) -> InviteOut:
-    ws = Workspace(name=body.workspace_name, credit_balance=body.credits, spend_cap=body.spend_cap)
+    ws = Workspace(name=body.workspace_name, credit_balance=Decimal("0"), spend_cap=body.spend_cap)
     session.add(ws)
     await session.flush()
+    if body.credits:
+        await ledger.apply(
+            session, ws, body.credits, "grant", description=f"Starting credits (invited by {op.user.email})"
+        )
     inv = Invite(
         email=body.email.lower(),
         code=secrets.token_urlsafe(24),
@@ -35,6 +45,15 @@ async def create_invite(
         expires_at=datetime.now(UTC) + timedelta(days=14),
     )
     session.add(inv)
+    audit(
+        session,
+        op.user.email,
+        "invite.create",
+        target_type="workspace",
+        target_id=ws.id,
+        detail={"email": inv.email, "credits": str(body.credits)},
+        request=request,
+    )
     await session.commit()
     return InviteOut(code=inv.code, workspace_id=ws.id, expires_at=inv.expires_at)
 
@@ -43,23 +62,54 @@ async def create_invite(
 async def patch_workspace(
     workspace_id: str,
     body: WorkspacePatch,
-    _: Principal = Depends(operator),
+    request: Request,
+    op: Principal = Depends(operator),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     ws = await session.get(Workspace, workspace_id)
     if ws is None:
         raise HTTPException(404, "Workspace not found")
-    for k, v in body.model_dump(exclude_none=True).items():
+    changes = body.model_dump(exclude_none=True)
+    target = changes.pop("credit_balance", None)
+    if target is not None:  # a balance edit is an adjustment in the ledger, never a silent overwrite
+        delta = Decimal(target) - ws.credit_balance
+        if delta:
+            await ledger.apply(session, ws, delta, "adjustment", description=f"Operator adjustment by {op.user.email}")
+    for k, v in changes.items():
         setattr(ws, k, v)
+    audit(
+        session,
+        op.user.email,
+        "workspace.update",
+        target_type="workspace",
+        target_id=ws.id,
+        detail={
+            **{k: str(v) for k, v in changes.items()},
+            **({"credit_balance": str(target)} if target is not None else {}),
+        },
+        request=request,
+    )
     await session.commit()
     return {"ok": True}
 
 
 @router.put("/vendor-budgets")
 async def set_vendor_budget(
-    body: VendorBudgetSet, _: Principal = Depends(operator), session: AsyncSession = Depends(get_session)
+    body: VendorBudgetSet,
+    request: Request,
+    op: Principal = Depends(operator),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     await ensure_vendor_budget(session, body.vendor, body.limit)
+    audit(
+        session,
+        op.user.email,
+        "vendor_budget.set",
+        target_type="vendor",
+        target_id=body.vendor,
+        detail={"limit": str(body.limit)},
+        request=request,
+    )
     await session.commit()
     return {"ok": True}
 

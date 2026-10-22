@@ -14,7 +14,7 @@ from app.main import app  # noqa: E402
 from app.models import Base, User, Workspace  # noqa: E402
 from app.pipeline import runner  # noqa: E402
 from app.pipeline.queue import InlineQueue, set_queue  # noqa: E402
-from app.services import ratelimit  # noqa: E402
+from app.services import ledger, ratelimit  # noqa: E402
 from app.services.spend_guard import ensure_vendor_budget  # noqa: E402
 
 
@@ -40,9 +40,10 @@ async def maker(tmp_path):
 @pytest.fixture
 async def workspace(maker):
     async with maker() as s:
-        ws = Workspace(name="Acme", credit_balance=Decimal("10"), spend_cap=Decimal("50"))
+        ws = Workspace(name="Acme", credit_balance=Decimal("0"), spend_cap=Decimal("50"))
         s.add(ws)
         await s.flush()
+        await ledger.apply(s, ws, Decimal("10"), "grant", description="test credits")
         s.add(User(email="owner@acme.test", workspace_id=ws.id))
         s.add(User(email="ops@example.com", workspace_id=ws.id))
         for vendor in ("mock", "heygen", "renderer", "transcription"):

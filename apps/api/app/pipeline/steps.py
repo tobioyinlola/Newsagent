@@ -162,7 +162,9 @@ async def _paid_avatar_asset(
         avatar_id=project.anchor_id,
         transparent=True,
     )
-    res = await guard.reserve(project.workspace_id, avatar.name, avatar.estimate_cost(req))
+    res = await guard.reserve(
+        project.workspace_id, avatar.name, avatar.estimate_cost(req), project_id=project.id, stage=atype
+    )
     try:
         out = await avatar.generate(req)
         await persist_avatar_video(key, out.video_url)
@@ -232,7 +234,9 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
         avatar_id=project.anchor_id,
         transparent=True,
     )
-    res = await guard.reserve(project.workspace_id, avatar.name, avatar.estimate_cost(req))
+    res = await guard.reserve(
+        project.workspace_id, avatar.name, avatar.estimate_cost(req), project_id=project.id, stage="anchor"
+    )
     key = f"projects/{project.id}/anchor.webm"
     try:
         out = await avatar.generate(req)
@@ -291,7 +295,9 @@ async def _submit_render(
         input_urls=input_urls,
         output_prefix=f"projects/{project.id}/{prefix}",
     )
-    res = await guard.reserve(project.workspace_id, "renderer", renderer.estimate_cost(req))
+    res = await guard.reserve(
+        project.workspace_id, "renderer", renderer.estimate_cost(req), project_id=project.id, stage=prefix
+    )
     try:
         render_id = await renderer.submit(req)
         status = await _wait(renderer, render_id)
