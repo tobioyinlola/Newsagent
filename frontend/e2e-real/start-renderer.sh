@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")/../../../services/renderer"
+cd "$(dirname "$0")/../../backend/renderer"
 mkdir -p /tmp/newsagent-e2e-store
 # Playwright's Chrome is not Remotion's, so CHROMIUM_PATH is never inherited. Set RENDERER_CHROMIUM_PATH to a
 # headless shell to use instead of Remotion's own download (e.g. in a sandbox that can't reach it).

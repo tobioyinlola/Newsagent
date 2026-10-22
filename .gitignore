@@ -10,12 +10,12 @@ out/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
-services/renderer/public/bench-anchor.webm
-services/renderer/src/_floor_entry.tsx
+backend/renderer/public/bench-anchor.webm
+backend/renderer/src/_floor_entry.tsx
 *.db
 e2e.db
 test-results/
 playwright-report/
 e2e-real/.media/
-apps/api/e2e-real.db
-apps/web/Caddyfile
+backend/e2e-real.db
+frontend/Caddyfile

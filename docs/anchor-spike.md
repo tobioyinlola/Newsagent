@@ -10,7 +10,7 @@ real videos and look at them, so I did not fabricate results.
 - `scripts/anchor_spike.py` generates 3 transparent-WebM videos through `HeyGenProvider` (Option B), prints
   wall-clock latency, media duration, estimated cost and an ffprobe of the pixel format/alpha tag.
 - The `NewsStudio` Remotion composition already composites an anchor clip over an original studio plate
-  (`services/renderer`), so an Option B anchor can be dropped in as soon as it exists. A stand-in transparent
+  (`backend/renderer`), so an Option B anchor can be dropped in as soon as it exists. A stand-in transparent
   VP9 clip was used for the benchmarks (see `render-benchmarks.md`).
 - `AvatarProvider` is the only way the pipeline reaches an avatar vendor, so A and B are interchangeable
   behind it. The pipeline runs today on `MockAvatarProvider`.

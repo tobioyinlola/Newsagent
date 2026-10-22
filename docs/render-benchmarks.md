@@ -1,6 +1,6 @@
 # Render benchmarks (Phase 0)
 
-Measured with `pnpm bench [seconds] [noanchor]` in `services/renderer`, Remotion 4.0.250.
+Measured with `pnpm bench [seconds] [noanchor]` in `backend/renderer`, Remotion 4.0.250.
 
 ## Environment (important caveat)
 Cloud sandbox container: 4 vCPU, 16 GB RAM, no GPU, Remotion's own headless-shell Chrome with software GL
@@ -55,7 +55,7 @@ Starts the renderer service, renders a preview (0.5 scale), a 9:16 final and a t
 transparent anchor served over HTTP, then calls `/analyze` on each. Verified: durations match the anchor, audio is
 present, finals land at about -16 LUFS after normalisation, previews are left un-normalised by design, and a
 960x540 preview is produced. The stand-in clip comes from a script:
-Run `services/renderer/scripts/make-standin-anchor.sh` to create it.
+Run `backend/renderer/scripts/make-standin-anchor.sh` to create it.
 
 ## Correction: the stand-in anchor was invisible in the earlier benchmarks
 The first stand-in clip was entirely transparent (`drawbox` does not write opaque alpha), so earlier renders decoded

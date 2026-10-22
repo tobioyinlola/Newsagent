@@ -4,10 +4,10 @@ Turns a startup's text brief into a news-style video with an AI anchor, optional
 interview. Status: **Phase 0** (see `docs/` for findings and open decisions).
 
 ```
-apps/api          FastAPI API + Celery worker (one codebase)
-apps/web          React + Vite app, typed client generated from the API's OpenAPI schema
-services/renderer Node + Remotion render service
-infra             docker-compose (postgres, redis, minio, mailpit)
+backend            FastAPI API + Celery worker (one codebase)
+backend/renderer   Node + Remotion render service (called by the API over HTTP)
+frontend           React + Vite app, typed client generated from the API's OpenAPI schema
+infra              docker-compose (postgres, redis, minio, mailpit)
 docs              spike report, render benchmarks, decisions log
 ```
 
@@ -15,10 +15,10 @@ docs              spike report, render benchmarks, decisions log
 ```bash
 cp .env.example .env
 docker compose -f infra/docker-compose.yml up -d          # postgres, redis, minio, mailpit
-cd apps/api && uv sync && uv run alembic upgrade head
+cd backend && uv sync && uv run alembic upgrade head
 OPERATOR_EMAILS=you@example.com uv run uvicorn app.main:app --reload    # http://localhost:8000/docs
-cd apps/web && pnpm install && pnpm dev                    # http://localhost:5173
-cd services/renderer && pnpm install && RENDERER_SHARED_SECRET=dev-secret pnpm dev
+cd frontend && pnpm install && pnpm dev                    # http://localhost:5173
+cd backend/renderer && pnpm install && RENDERER_SHARED_SECRET=dev-secret pnpm dev
 ```
 `USE_MOCKS=true` (default locally) swaps every vendor (avatar, LLM, renderer, storage, email, transcription) for a mock,
 so the full pipeline runs with no API keys. `ENVIRONMENT=local` accepts `Authorization: Bearer dev:<email>`;
@@ -31,14 +31,14 @@ Operators also set budgets: `PUT /v1/admin/vendor-budgets` (the spend guard refu
 
 ## Test
 ```bash
-cd apps/api && uv run ruff check . && uv run mypy app && uv run pytest      # 256 tests; add TEST_DATABASE_URL=postgresql+asyncpg://... to run on Postgres
-cd apps/web && pnpm lint && pnpm build && pnpm test      # unit
-cd apps/web && pnpm e2e                                    # browser journey; needs CHROMIUM_PATH locally, uses mocked vendors
-cd services/renderer && pnpm build && pnpm test
-cd services/renderer && pnpm smoke                                         # real render + analyze (first run scripts/make-standin-anchor.sh)
-cd services/renderer && pnpm bench 10                                      # render benchmark
+cd backend && uv run ruff check . && uv run mypy app && uv run pytest      # 256 tests; add TEST_DATABASE_URL=postgresql+asyncpg://... to run on Postgres
+cd frontend && pnpm lint && pnpm build && pnpm test      # unit
+cd frontend && pnpm e2e                                    # browser journey; needs CHROMIUM_PATH locally, uses mocked vendors
+cd backend/renderer && pnpm build && pnpm test
+cd backend/renderer && pnpm smoke                                         # real render + analyze (first run scripts/make-standin-anchor.sh)
+cd backend/renderer && pnpm bench 10                                      # render benchmark
 ```
-After changing API routes or schemas: `uv run python scripts/export_openapi.py && (cd apps/web && pnpm gen:api)`;
+After changing API routes or schemas: `uv run python scripts/export_openapi.py && (cd frontend && pnpm gen:api)`;
 CI fails if the committed client is stale.
 
 ## API overview (v1, all under `/v1`)
@@ -47,7 +47,7 @@ Auth `/auth/signup/*`, `/auth/login`, `/auth/password/*`, `/auth/sessions`, `/au
 Delivery `GET /projects/{id}/{downloads,captions,costs,events}` (events is SSE; use fetch streaming, not EventSource),
 `POST|DELETE /projects/{id}/share`, public `GET /share/{token}` | Admin `POST /admin/invites`,
 `PATCH /admin/workspaces/{id}`, `GET|PUT /admin/vendor-budgets`, `GET /admin/workspaces`. Uploads: `POST /brand-kit/uploads` then `/uploads/confirm`.
-First operator: `cd apps/api && uv run python -m app.cli bootstrap-operator you@example.com 100`. Full contract: `/docs`.
+First operator: `cd backend && uv run python -m app.cli bootstrap-operator you@example.com 100`. Full contract: `/docs`.
 
 ## Founder interview (Phase 2)
 Owner ticks "Include a founder interview" when approving the script. After the anchor and per-question clips render, the
@@ -58,7 +58,7 @@ split layout, trims/reorders/drops answers, and makes the final video. Raw recor
 is finished unless the owner keeps them. See `docs/gate-2.md` for what has and hasn't been verified.
 
 Local real-stack run (real ffmpeg + Remotion, mocked HeyGen/Whisper/email):
-`cd apps/web && E2E_QUESTIONS=5 pnpm e2e:real`. Periodic jobs: `celery -A app.pipeline.celery_app beat` (one instance).
+`cd frontend && E2E_QUESTIONS=5 pnpm e2e:real`. Periodic jobs: `celery -A app.pipeline.celery_app beat` (one instance).
 
 ## Operating it (Phase 3)
 - **Operator console** (`/admin`): queue and jobs, review queue, costs and margin, credit packs, failover and an emergency
@@ -67,7 +67,7 @@ Local real-stack run (real ffmpeg + Remotion, mocked HeyGen/Whisper/email):
 - Moderation holds borderline briefs, scripts and founder answers for a human; blocks clearly disallowed content.
 - `docs/runbook.md` (incidents), `docs/security-review.md`, `docs/gate-3.md` (what is and isn't done), `docs/render-benchmarks.md` (load test).
 - Backups: `python scripts/backup.py --upload`; prove one restores: `python scripts/restore_test.py <file.dump>`.
-- Renderer load test: `cd services/renderer && pnpm loadtest 6 5 2`.
+- Renderer load test: `cd backend/renderer && pnpm loadtest 6 5 2`.
 - In staging/production the API **refuses to start** with an insecure configuration and lists every problem.
 
 ## Pipeline
@@ -79,7 +79,7 @@ Local `QUEUE_BACKEND=inline` runs steps in-process; `celery` uses Redis.
 
 ## Deploy (Railway)
 Services: `web`, `api`, `worker`, `scheduler` (exactly one), `renderer` (private network only), Postgres, Redis.
-`apps/api/railway.toml` runs `alembic upgrade head` as the pre-deploy step. Worker start command:
+`backend/railway.toml` runs `alembic upgrade head` as the pre-deploy step. Worker start command:
 `celery -A app.pipeline.celery_app worker --concurrency 2`. Set the variables from `.env.example` per environment;
 staging must use separate keys, database and low spend caps. **Staging is not deployed yet.**
 

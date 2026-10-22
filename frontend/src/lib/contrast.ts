@@ -1,4 +1,4 @@
-// Mirrors apps/api/app/services/brand.py so the editor can warn live; the API remains the source of truth.
+// Mirrors backend/app/services/brand.py so the editor can warn live; the API remains the source of truth.
 function channel(c: number) { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }
 export function luminance(hex: string): number {
   const n = parseInt(hex.slice(1), 16);

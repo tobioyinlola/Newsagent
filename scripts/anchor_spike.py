@@ -1,7 +1,7 @@
 """Anchor spike, Option B: request a transparent WebM from HeyGen and report the result.
 
 Needs HEYGEN_API_KEY and HEYGEN_AVATAR_ID (an avatar trained with matting; Cinematic Avatar does not
-support webm). Run: HEYGEN_API_KEY=... HEYGEN_AVATAR_ID=... uv run --project apps/api python scripts/anchor_spike.py
+support webm). Run: HEYGEN_API_KEY=... HEYGEN_AVATAR_ID=... uv run --project backend python scripts/anchor_spike.py
 Prints per-video latency, duration, and whether the output has an alpha channel.
 Field names beyond those in the build spec are unverified; adjust after reading the live API reference.
 """
@@ -12,7 +12,7 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "apps" / "api"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 os.environ.setdefault("USE_MOCKS", "false")
 
 import httpx  # noqa: E402

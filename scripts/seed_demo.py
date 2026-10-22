@@ -1,6 +1,6 @@
 """Fill a database with realistic data using the real API and mocked vendors (for restore and load tests).
 
-  DATABASE_URL=postgresql+asyncpg://... uv run --project apps/api python scripts/seed_demo.py [N_PROJECTS]
+  DATABASE_URL=postgresql+asyncpg://... uv run --project backend python scripts/seed_demo.py [N_PROJECTS]
 The schema must already exist (alembic upgrade head). Never run against production.
 """
 
@@ -12,7 +12,7 @@ from decimal import Decimal
 from pathlib import Path
 
 os.environ.update(ENVIRONMENT="local", USE_MOCKS="true", QUEUE_BACKEND="inline", OPERATOR_EMAILS="ops@example.com")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "apps" / "api"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 
 import httpx  # noqa: E402
 
