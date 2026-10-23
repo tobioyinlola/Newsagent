@@ -41,3 +41,6 @@ brand-kit editor, which is the *startup's* look.
 Live-interview answers use the `column` layout: the founder's video on the left, a dark panel on the right with the question
 label in Pastel Green, the question, the founder's name and title, then their words revealed line by line in sync. The back
 office (`admin/`) uses the same tokens in a denser, operator-oriented layout.
+
+## Presenter footage (added)
+Presenter clips play full frame under the same channel bug, "Featured" tag, "AI-generated anchor" label and ticker as every other scene.

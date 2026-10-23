@@ -1,3 +1,6 @@
+import { execFileSync } from "node:child_process";
+import os from "node:os";
+import path from "node:path";
 import { type APIRequestContext, type Page, expect, test } from "@playwright/test";
 
 const API = "http://localhost:8000";
@@ -156,4 +159,35 @@ test("the sidebar collapses to icons and remembers it", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Expand sidebar" })).toBeVisible();
   await sidebar(page).getByRole("link", { name: "Customers" }).click();
   await expect(page).toHaveURL(/\/customers/);
+});
+
+test("operators upload presenter clips, see them listed, switch them off and delete them", async ({ page, request }) => {
+  const mp4 = path.join(os.tmpdir(), `presenter-${Date.now()}.mp4`);
+  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=s=1280x720:r=30:d=6", "-f", "lavfi", "-i", "sine=frequency=440:d=6", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", mp4]);
+  await asOperator(page);
+  await page.goto("/");
+  await sidebar(page).getByRole("link", { name: "Presenter clips" }).click();
+  await expect(page.getByRole("heading", { name: "Presenter clips" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Upload clip" })).toBeDisabled(); // nothing chosen, rights not confirmed
+  await page.getByLabel("Title").fill("Studio wide, evening");
+  await page.getByLabel("How it is used").selectOption("intro");
+  await page.getByLabel("Video file").setInputFiles(mp4);
+  await expect(page.getByRole("button", { name: "Upload clip" })).toBeDisabled(); // rights still unconfirmed
+  await page.getByLabel(/I own this footage/).check();
+  await page.getByRole("button", { name: "Upload clip" }).click();
+  await expect(page.getByText("Added. It will be used in new videos from now on.")).toBeVisible();
+  const card = page.getByRole("listitem").filter({ hasText: "Studio wide, evening" });
+  await expect(card).toContainText(/6\.0 s · \d+×\d+ · with sound/);
+  await expect(card.getByLabel("Preview: Studio wide, evening")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Opening shot (1 in use)" })).toBeVisible();
+  await card.getByRole("button", { name: "In use: switch off" }).click();
+  await expect(page.getByRole("heading", { name: "Opening shot (0 in use)" })).toBeVisible();
+  page.once("dialog", (d) => d.accept());
+  await card.getByRole("button", { name: "Delete" }).click();
+  await expect(card).toHaveCount(0);
+});
+
+test("a customer cannot reach the presenter clips", async ({ request }) => {
+  const c = await customer(request, "Gamma Co");
+  expect((await request.get(`${API}/v1/admin/presenter-clips`, { headers: c.headers })).status()).toBe(403);
 });

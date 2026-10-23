@@ -5,6 +5,7 @@ from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     Numeric,
@@ -209,6 +210,26 @@ class BrandAsset(Base, TimestampMixin):
     content_type: Mapped[str] = mapped_column(String(100))
     size_bytes: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | clean | rejected
+
+
+class PresenterClip(Base, TimestampMixin):
+    """A clip of a TV-style presenter the operator uploaded. Merged videos mix these in around the AI presenter."""
+
+    __tablename__ = "presenter_clips"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    title: Mapped[str] = mapped_column(String(200))
+    role: Mapped[str] = mapped_column(String(20))  # intro | cutaway | outro
+    key: Mapped[str] = mapped_column(String(500), unique=True)
+    content_type: Mapped[str] = mapped_column(String(100))
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | clean | rejected
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    duration_s: Mapped[float | None] = mapped_column(Float, nullable=True)
+    width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    height: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    has_audio: Mapped[bool] = mapped_column(Boolean, default=False)
+    rights_confirmed_by: Mapped[str] = mapped_column(String(320))  # the operator who confirmed the rights
+    rights_confirmed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class Take(Base, TimestampMixin):

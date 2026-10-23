@@ -92,6 +92,8 @@ class HttpRenderer(RendererClient):
             audio_duration_s=d.get("audio_duration_s"),
             loudness_lufs=d.get("loudness_lufs"),
             true_peak_db=d.get("true_peak_db"),
+            width=d.get("width"),
+            height=d.get("height"),
         )
 
     async def submit(self, req: RenderRequest) -> str:

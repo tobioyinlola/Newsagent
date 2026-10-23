@@ -1,7 +1,8 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Kpis(BaseModel):
@@ -143,3 +144,40 @@ class Payments(BaseModel):
     offline_credits: Decimal
     paying_companies: list[PayingCompany]
     items: list[PaymentRow]
+
+
+class PresenterClipUploadIn(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    role: Literal["intro", "cutaway", "outro"]
+    content_type: str
+    size_bytes: int = Field(gt=0)
+    # the operator's statement that the footage is theirs to use and its presenter agreed to appear
+    rights_confirmed: bool
+
+
+class PresenterClipUploadOut(BaseModel):
+    id: str
+    upload_url: str
+    max_bytes: int
+
+
+class PresenterClipOut(BaseModel):
+    id: str
+    title: str
+    role: str
+    active: bool
+    status: str
+    duration_s: float | None
+    width: int | None
+    height: int | None
+    has_audio: bool
+    size_bytes: int
+    rights_confirmed_by: str
+    created_at: datetime
+    url: str | None = None  # a short-lived link to preview the clip
+
+
+class PresenterClipPatch(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    role: Literal["intro", "cutaway", "outro"] | None = None
+    active: bool | None = None

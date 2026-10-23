@@ -17,6 +17,7 @@ RULES: dict[str, UploadRule] = {
     "logo_dark": UploadRule({"image/svg+xml": "svg", "image/png": "png"}, 2 * MB),
     "guide_pdf": UploadRule({"application/pdf": "pdf"}, 10 * MB),
     "product_image": UploadRule({"image/png": "png", "image/jpeg": "jpg"}, 5 * MB),
+    "presenter_clip": UploadRule({"video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov"}, 150 * MB),
 }
 
 _SVG_DANGER = re.compile(
@@ -36,6 +37,10 @@ def validate_content(content_type: str, data: bytes) -> None:
         ok = data.startswith(b"\x89PNG\r\n\x1a\n")
     elif content_type == "image/jpeg":
         ok = data.startswith(b"\xff\xd8\xff")
+    elif content_type in {"video/mp4", "video/quicktime"}:
+        ok = data[4:8] == b"ftyp"
+    elif content_type == "video/webm":
+        ok = data.startswith(b"\x1a\x45\xdf\xa3")
     elif content_type == "application/pdf":
         ok = data.startswith(b"%PDF-") and not _PDF_DANGER.search(data)
     elif content_type == "image/svg+xml":

@@ -5,6 +5,7 @@ import { CF, Fonts, MONO, SANS } from "./theme";
 
 export type Scene =
   | { type: "anchor" | "question"; src: string; seconds: number }
+  | { type: "clip"; src: string; seconds: number } // real presenter footage from the operator's library, full frame
   | {
       type: "answer";
       seconds: number;
@@ -52,6 +53,13 @@ const AnchorShot: React.FC<{ src: string; muted?: boolean; height: string }> = (
 const AnchorScene: React.FC<{ src: string; portrait: boolean }> = ({ src, portrait }) => (
   <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "18%" : "9%" }}>
     <AnchorShot src={src} height={portrait ? "58%" : "88%"} />
+  </AbsoluteFill>
+);
+
+// Presenter footage fills the frame (landscape clips are centre-cropped for 9:16); its own sound plays.
+const ClipScene: React.FC<{ src: string }> = ({ src }) => (
+  <AbsoluteFill style={{ background: CF.ink }}>
+    <OffthreadVideo src={url(src)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
   </AbsoluteFill>
 );
 
@@ -191,7 +199,7 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
       <Series>
         {p.scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={Math.max(1, Math.round(s.seconds * fps))}>
-            {s.type === "answer" ? <AnswerScene scene={s} layout={p.layout} brand={p.brand} /> : <AnchorScene src={s.src} portrait={portrait} />}
+            {s.type === "answer" ? <AnswerScene scene={s} layout={p.layout} brand={p.brand} /> : s.type === "clip" ? <ClipScene src={s.src} /> : <AnchorScene src={s.src} portrait={portrait} />}
           </Series.Sequence>
         ))}
       </Series>

@@ -32,7 +32,7 @@ Operators also set budgets: `PUT /v1/admin/vendor-budgets` (the spend guard refu
 
 ## Test
 ```bash
-cd backend && uv run ruff check . && uv run mypy app && uv run pytest      # 291 tests; add TEST_DATABASE_URL=postgresql+asyncpg://... to run on Postgres
+cd backend && uv run ruff check . && uv run mypy app && uv run pytest      # 300 tests; add TEST_DATABASE_URL=postgresql+asyncpg://... to run on Postgres
 cd frontend && pnpm lint && pnpm build && pnpm test      # unit
 cd frontend && pnpm e2e                                    # browser journey; needs CHROMIUM_PATH locally, uses mocked vendors
 cd backend/renderer && pnpm build && pnpm test
@@ -63,6 +63,15 @@ column beside the founder's video that shows the question and what they said, li
   vendor budget. Without it, the browser's own voice speaks and the interview still works.
 - The questions are generated when the script is written (not adaptive follow-ups).
 - Real-stack check: `cd frontend && pnpm e2e:real` (invite flow plus `live-interview.spec.ts`).
+
+### Presenter clips (real presenter footage)
+Operators upload TV-style presenter clips in the back office (**Presenter clips**, `admin/`): an *opening shot* (3-20 s), *cutaways*
+(2-10 s) and a *sign-off* (3-20 s). MP4, MOV or WebM, landscape, 720p or more, up to 150 MB, sound kept. Uploads are checked
+(real file type, malware scan, real length and size read by the renderer) and the operator confirms they own or license the
+footage and the presenter agreed. Interview videos then open with an active opening shot, cut away to the presenter between
+answers, and close with a sign-off; clips are chosen per project from what is switched on. Clips are not used in the
+presenter-only video made when the founder skips the interview. The "AI-generated anchor" label stays on screen throughout.
+The stand-in presenter used in local runs is an illustrated anchor (`AnchorFigure.tsx`); `scripts/make-standin-anchor.sh` renders it.
 
 ## Founder interview by invite link (Phase 2)
 Owner ticks "Include a founder interview" when approving the script. After the anchor and per-question clips render, the

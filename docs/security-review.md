@@ -181,3 +181,8 @@ OpenAI-compatible transcription vendor (undecided), Resend (email), Railway (hos
   capped; the voice endpoint spends from the `tts` vendor budget and caps text at 600 characters.
 - Camera takes are video-only and size-capped; snapshots go through the same image checks as uploads.
 - Residual: the TTS provider receives the interview question text (not the founder's answers).
+
+## Presenter clips (added)
+- Operator-only endpoints (`/v1/admin/presenter-clips`), rate limited, every action audited, rights attestation recorded.
+- Uploaded video is verified by magic bytes, malware-scanned (fails closed) and measured by the renderer before it can be used;
+  cap 150 MB; the renderer downloads it through the same allow-listed host rules as other media.

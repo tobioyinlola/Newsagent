@@ -25,6 +25,18 @@ test("AI interview, recorded for real, merged with the answers column", async ({
   const mail = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: OWNER_EMAIL } })).json();
   await ok(await request.post(`${API}/v1/auth/signup/verify`, { data: { invite_code: inv.code, code: /\b(\d{6})\b/.exec(mail.text)![1] } }));
 
+  // the operator's presenter footage: real landscape clips with sound, checked by the real renderer
+  for (const [role, seconds] of [["intro", 4], ["cutaway", 3], ["outro", 4]] as const) {
+    const f = path.join(os.tmpdir(), `presenter-${role}-${Date.now()}.mp4`);
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", `smptebars=s=1920x1080:r=30:d=${seconds}`, "-f", "lavfi", "-i", `sine=frequency=500:d=${seconds}`, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", f]);
+    const data = fs.readFileSync(f);
+    const slot = await ok<{ id: string; upload_url: string }>(await request.post(`${API}/v1/admin/presenter-clips`, { headers: OPS, data: { title: `${role} clip`, role, content_type: "video/mp4", size_bytes: data.length, rights_confirmed: true } }));
+    await ok(await request.put(slot.upload_url, { data, headers: { "content-type": "video/mp4" } }));
+    const c = await ok<{ duration_s: number; width: number }>(await request.post(`${API}/v1/admin/presenter-clips/${slot.id}/confirm`, { headers: OPS }));
+    expect(c.width).toBe(1920);
+    expect(c.duration_s).toBeGreaterThan(seconds - 0.5);
+  }
+
   const p = await ok<{ id: string }>(await request.post(`${API}/v1/projects`, { headers: OWNER, data: { brief_text: "Live Co helps farmers sell produce online across Ghana.", founder_name: "Tobi Oyinlola", founder_title: "CEO, Live Co" } }));
   const script = await ok<{ ticker_lines: string[]; lower_thirds: unknown[] }>(await request.post(`${API}/v1/projects/${p.id}/script/generate`, { headers: OWNER }));
   await ok(await request.put(`${API}/v1/projects/${p.id}/script`, { headers: OWNER, data: {
@@ -71,12 +83,21 @@ test("AI interview, recorded for real, merged with the answers column", async ({
   expect(info.streams.find((s: { codec_type: string }) => s.codec_type === "video")).toMatchObject({ width: 1920, height: 1080 });
   expect(info.streams.some((s: { codec_type: string }) => s.codec_type === "audio")).toBe(true);
   const pixel = (t: number, x: number, y: number): number[] => [...execFileSync("ffmpeg", ["-v", "error", "-ss", String(t), "-i", tmp, "-frames:v", "1", "-vf", `crop=1:1:${x}:${y},format=rgb24`, "-f", "rawvideo", "-"])];
-  // the stand-in anchor is ~6 s, then the first answer: the founder's video on the left, the brand column on the right
-  const col = (t: number, x: number, y: number) => pixel(t, x, y);
-  const green = [1225, 1230, 1235, 1240].map((x) => col(8, x, 600)).find((px) => px[1] > 200 && px[0] > 150 && px[2] < 160);
-  expect(green, "Pastel Green border between the video and the column").toBeTruthy();
-  const panel = col(8, 1700, 1000);
-  expect(Math.max(...panel), `column background pixel ${panel}`).toBeLessThan(80); // the brand's dark ink
+  // frames around the clock: the opening shot (SMPTE bars, light grey at the left) plays first, and the founder's answer
+  // is beside the brand column (Pastel Green border, dark panel) at some point after the AI presenter
+  const duration = Number(info.format.duration);
+  expect(duration, "intro 4 s + cutaway 3 s + sign-off 4 s are on top of the presenter and the answers").toBeGreaterThan(30);
+  const opening = pixel(1, 200, 300);
+  expect(Math.min(...opening), `opening shot pixel ${opening}`).toBeGreaterThan(150);
+  let column = false;
+  for (let t = 5; t < duration - 4 && !column; t += 1) {
+    const green = [1225, 1230, 1235, 1240].map((x) => pixel(t, x, 600)).find((px) => px[1] > 200 && px[0] > 150 && px[2] < 160);
+    const panel = pixel(t, 1700, 1000);
+    column = !!green && Math.max(...panel) < 80;
+  }
+  expect(column, "the answers column is on screen during an answer").toBe(true);
+  const ending = pixel(duration - 1, 200, 300);
+  expect(Math.min(...ending), `sign-off pixel ${ending}`).toBeGreaterThan(150);
   const costs = await (await request.get(`${API}/v1/projects/${p.id}/costs`, { headers: OWNER })).json();
   expect(costs.lines.map((l: { stage: string }) => l.stage)).toEqual(expect.arrayContaining(["anchor_render", "question_clips", "process_take", "merge_render"]));
 });

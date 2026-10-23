@@ -11,6 +11,7 @@ import { RequireOperator } from "./components/RequireOperator";
 import { CustomerDetail, Customers } from "./pages/Customers";
 import { Forgot, Login, OtpChallenge } from "./pages/Login";
 import { Overview } from "./pages/Overview";
+import { Presenter } from "./pages/Presenter";
 import { Revenue } from "./pages/Revenue";
 import { Security } from "./pages/Security";
 
@@ -37,6 +38,7 @@ export function App() {
           <Route path="/review" element={<Page title="Review queue"><Review /></Page>} />
           <Route path="/jobs" element={<Page title="Jobs"><JobsTab /></Page>} />
           <Route path="/costs" element={<Page title="Costs"><Costs /></Page>} />
+          <Route path="/presenter" element={<Presenter />} />
           <Route path="/billing" element={<Page title="Credit packs and payments"><BillingAdmin /></Page>} />
           <Route path="/setup" element={<Page title="Setup"><Setup /></Page>} />
           <Route path="/audit" element={<Page title="Audit log"><Audit /></Page>} />

@@ -93,3 +93,13 @@
   Origin is the customer app, CORS lists both origins, CSP is per site. The admin app copies a few UI files from `frontend/`
   rather than sharing a package (cheap now; extract a package if they drift).
 - Revenue figures count card checkouts only; offline/manual payments show up as credits granted, not revenue.
+
+## Presenter clips
+- Real presenter footage is a platform-wide library managed by operators in the back office, not per customer. It frames the AI
+  presenter (opening shot, cutaways between answers, sign-off); it does not replace the avatar's lip-synced reading of the script,
+  which pre-recorded clips cannot do.
+- Rights are an explicit, audited attestation on upload (who confirmed, when). We cannot verify rights ourselves.
+- A clip's length must suit its role so cutaways cannot bury the founder; clips are not transcribed, so captions are shifted around them.
+- Selection is deterministic per project (project id picks among active clips), so re-rendering a project does not change its shots;
+  changing the library changes the merge input hash and re-renders.
+- Not yet used in the presenter-only (no interview) video.

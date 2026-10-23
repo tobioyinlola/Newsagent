@@ -13,6 +13,7 @@ from app.integrations import registry
 from app.integrations.avatar.base import AvatarRequest
 from app.integrations.renderer.base import RenderRequest
 from app.models import Asset, BrandKit, InterviewSession, Job, Project, ScriptVersion, Take
+from app.services import presenter as clip_lib
 from app.services import state_machine as sm
 from app.services.captions import build_srt
 from app.services.interview import answer_cues, merge_srt, parse_srt, shifted_cues
@@ -458,11 +459,22 @@ async def merge_render(session: AsyncSession, project: Project, guard: SpendGuar
 
     main_text, outro_text = split_segments(script)
     main_srt = build_srt([{"text": main_text or anchor_text(script)}], float(main.duration or 60))
-    scenes: list[dict] = [
+    # real presenter footage from the library frames the AI presenter: an opening shot, cutaways between answers, a sign-off
+    clips = await clip_lib.select_clips(session, project.id)
+
+    def clip_scene(c) -> dict:
+        return {"type": "clip", "src": storage.presign_get(c.key), "seconds": float(c.duration_s or 0)}
+
+    scenes: list[dict] = []
+    t_cursor = 0.0
+    if clips.intro:
+        scenes.append(clip_scene(clips.intro))
+        t_cursor += float(clips.intro.duration_s or 0)
+    scenes.append(
         {"type": "anchor", "src": storage.presign_get(main.storage_key), "seconds": float(main.duration or 0)}
-    ]
-    cues = [(a, b, t) for a, b, t in parse_srt(main_srt)]
-    t_cursor = float(main.duration or 0)
+    )
+    cues = [(a + t_cursor, b + t_cursor, t) for a, b, t in parse_srt(main_srt)]
+    t_cursor += float(main.duration or 0)
 
     def usable(q: int) -> bool:
         take, ans = takes.get(q), answers.get(q, {})
@@ -510,6 +522,10 @@ async def merge_render(session: AsyncSession, project: Project, guard: SpendGuar
         scenes.append(scene)
         cues += shifted_cues(take.srt or "", t_cursor, ans.get("trim_start_s", 0), window)
         t_cursor += window
+        if clips.cutaways and q != shown[-1]:  # a cutaway to the presenter between answers, never after the last one
+            cut = clips.cutaways[shown.index(q) % len(clips.cutaways)]
+            scenes.append(clip_scene(cut))
+            t_cursor += float(cut.duration_s or 0)
     if outro:
         scenes.append(
             {"type": "anchor", "src": storage.presign_get(outro.storage_key), "seconds": float(outro.duration or 0)}
@@ -519,6 +535,9 @@ async def merge_render(session: AsyncSession, project: Project, guard: SpendGuar
             for a, b, t in parse_srt(build_srt([{"text": outro_text}], float(outro.duration or 1)))
         ]
         t_cursor += float(outro.duration or 0)
+    if clips.outro:
+        scenes.append(clip_scene(clips.outro))
+        t_cursor += float(clips.outro.duration_s or 0)
 
     base = await build_overlay_props(session, project, script, t_cursor)
     props = {**base, "layout": plan["layout"], "scenes": scenes, "totalSeconds": t_cursor}
@@ -538,6 +557,7 @@ async def merge_render(session: AsyncSession, project: Project, guard: SpendGuar
 async def merge_inputs(session: AsyncSession, project: Project) -> dict:
     takes = await latest_takes(session, project.id)
     return {
+        "clips": (await clip_lib.select_clips(session, project.id)).ids,  # a changed library re-renders
         "plan": project.merge_plan,
         "takes": {q: [t.id, t.status, str(t.duration_s)] for q, t in sorted(takes.items())},
     }

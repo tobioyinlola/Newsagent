@@ -277,6 +277,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/presenter-clips": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Clips */
+        get: operations["list_clips_v1_admin_presenter_clips_get"];
+        put?: never;
+        /** Start Upload */
+        post: operations["start_upload_v1_admin_presenter_clips_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/presenter-clips/{clip_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Clip */
+        delete: operations["delete_clip_v1_admin_presenter_clips__clip_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Clip */
+        patch: operations["update_clip_v1_admin_presenter_clips__clip_id__patch"];
+        trace?: never;
+    };
+    "/v1/admin/presenter-clips/{clip_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Upload
+         * @description Read what was really uploaded: right file type, malware-free, real video of a usable length and size.
+         */
+        post: operations["confirm_upload_v1_admin_presenter_clips__clip_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/projects/{project_id}/retry": {
         parameters: {
             query?: never;
@@ -2632,6 +2688,72 @@ export interface components {
              */
             trim_start_s: number;
         };
+        /** PresenterClipOut */
+        PresenterClipOut: {
+            /** Active */
+            active: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Duration S */
+            duration_s: number | null;
+            /** Has Audio */
+            has_audio: boolean;
+            /** Height */
+            height: number | null;
+            /** Id */
+            id: string;
+            /** Rights Confirmed By */
+            rights_confirmed_by: string;
+            /** Role */
+            role: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
+            /** Url */
+            url?: string | null;
+            /** Width */
+            width: number | null;
+        };
+        /** PresenterClipPatch */
+        PresenterClipPatch: {
+            /** Active */
+            active?: boolean | null;
+            /** Role */
+            role?: ("intro" | "cutaway" | "outro") | null;
+            /** Title */
+            title?: string | null;
+        };
+        /** PresenterClipUploadIn */
+        PresenterClipUploadIn: {
+            /** Content Type */
+            content_type: string;
+            /** Rights Confirmed */
+            rights_confirmed: boolean;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "intro" | "cutaway" | "outro";
+            /** Size Bytes */
+            size_bytes: number;
+            /** Title */
+            title: string;
+        };
+        /** PresenterClipUploadOut */
+        PresenterClipUploadOut: {
+            /** Id */
+            id: string;
+            /** Max Bytes */
+            max_bytes: number;
+            /** Upload Url */
+            upload_url: string;
+        };
         /** ProjectCreate */
         ProjectCreate: {
             /** Accent Override */
@@ -3706,6 +3828,173 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Payments"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_clips_v1_admin_presenter_clips_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresenterClipOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_upload_v1_admin_presenter_clips_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresenterClipUploadIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresenterClipUploadOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_clip_v1_admin_presenter_clips__clip_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                clip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_clip_v1_admin_presenter_clips__clip_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                clip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresenterClipPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresenterClipOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_upload_v1_admin_presenter_clips__clip_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                clip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresenterClipOut"];
                 };
             };
             /** @description Validation Error */

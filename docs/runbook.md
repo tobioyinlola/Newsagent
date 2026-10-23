@@ -154,3 +154,9 @@ Never run a destructive migration in the same release that stops using the colum
 - Set a monthly budget for the **tts** vendor next to the others, or the interviewer falls back to the browser voice.
 - A founder stuck in an interview: the project stays in `interviewing` and costs nothing; they can reopen the project and
   resume, or press skip to get the anchor-only video. A camera that will not start is the most common cause: check the browser permission.
+
+## Presenter clips
+- Manage them in the back office under *Presenter clips*. Switch a clip off to stop using it in new videos; deleting removes the file
+  (videos already made are unaffected). If a video must not contain a clip any more, delete the clip and re-run the video's merge.
+- An upload that stays "checking" usually means the renderer or the malware scanner is unreachable: the clip stays pending and the
+  operator can retry; nothing unscanned is ever used.

@@ -21,6 +21,7 @@ const I = {
   review: <Icon><path d="M4 4h16v12H8l-4 4z" /><path d="M8 9h8M8 12h5" /></Icon>,
   jobs: <Icon><rect x="3" y="4" width="18" height="16" /><path d="M3 9h18M8 4v5" /></Icon>,
   costs: <Icon><path d="M4 20V10M10 20V4M16 20v-8M22 20H2" /></Icon>,
+  clips: <Icon><rect x="3" y="5" width="18" height="14" /><path d="M10 9l5 3-5 3z" fill="currentColor" /></Icon>,
   packs: <Icon><path d="M3 8l9-5 9 5v8l-9 5-9-5z" /><path d="M3 8l9 5 9-5M12 13v8" /></Icon>,
   setup: <Icon><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" /></Icon>,
   audit: <Icon><path d="M6 3h9l4 4v14H6z" /><path d="M9 12h7M9 16h7" /></Icon>,
@@ -31,7 +32,7 @@ const I = {
 const GROUPS: { title: string; items: [string, string, ReactNode][] }[] = [
   { title: "Business", items: [["/", "Overview", I.overview], ["/customers", "Customers", I.customers], ["/revenue", "Revenue", I.revenue]] },
   { title: "Operations", items: [["/operations", "Operations", I.ops], ["/review", "Review queue", I.review], ["/jobs", "Jobs", I.jobs], ["/costs", "Costs", I.costs]] },
-  { title: "Admin", items: [["/billing", "Credit packs", I.packs], ["/setup", "Setup", I.setup], ["/audit", "Audit log", I.audit]] },
+  { title: "Admin", items: [["/presenter", "Presenter clips", I.clips], ["/billing", "Credit packs", I.packs], ["/setup", "Setup", I.setup], ["/audit", "Audit log", I.audit]] },
   { title: "You", items: [["/security", "Security", I.security]] },
 ];
 
