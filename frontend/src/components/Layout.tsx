@@ -36,6 +36,12 @@ export function Layout() {
   const [open, setOpen] = useState(false); // phone slide-over
   const loc = useLocation();
   useEffect(() => setOpen(false), [loc.pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
   const toggle = () => {
     setCollapsed((c) => {
       try { localStorage.setItem(KEY, c ? "expanded" : "collapsed"); } catch { /* storage unavailable: lasts until reload */ }
@@ -66,16 +72,24 @@ export function Layout() {
           <CFSymbol className="h-8 w-auto" />
           <span className="font-mono text-lg font-bold text-white">Cover Founder</span>
         </Link>
-        <button type="button" className="rounded-sm border-2 border-brand-green px-3 py-1.5 text-sm font-bold text-brand-green" aria-expanded={open} aria-controls="sidebar" onClick={() => setOpen((o) => !o)}>
-          {open ? "Close" : "Menu"}
+        <button type="button" className="rounded-sm border-2 border-brand-green px-3 py-1.5 text-sm font-bold text-brand-green" aria-expanded={open} aria-controls="sidebar" onClick={() => setOpen(true)}>
+          Menu
         </button>
       </div>
 
+      {/* phone scrim: tap outside the menu to close it */}
+      {open && <div className="fixed inset-0 z-20 bg-ink/60 md:hidden" aria-hidden onClick={() => setOpen(false)} />}
+
+      {/* On phones the menu slides in from the right; from md up it is the static sidebar. */}
       <aside
         id="sidebar"
-        className={`${open ? "block" : "hidden"} z-20 bg-ink md:sticky md:top-0 md:block md:h-screen md:shrink-0 md:overflow-y-auto ${collapsed ? "md:w-[72px]" : "md:w-64"}`}
+        className={`fixed inset-y-0 right-0 z-30 w-72 max-w-[85vw] overflow-y-auto bg-ink transition-transform duration-200 md:sticky md:top-0 md:z-auto md:h-screen md:max-w-none md:shrink-0 md:translate-x-0 md:visible ${collapsed ? "md:w-[72px]" : "md:w-64"} ${open ? "translate-x-0" : "invisible translate-x-full"}`}
       >
         <nav aria-label="Main" className="flex h-full flex-col gap-1 p-3">
+          <div className="mb-2 flex items-center justify-between md:hidden">
+            <span className="font-mono text-lg font-bold text-white">Menu</span>
+            <button type="button" className="rounded-sm border-2 border-brand-green px-3 py-1.5 text-sm font-bold text-brand-green" onClick={() => setOpen(false)}>Close</button>
+          </div>
           <Link to="/projects" className={`mb-4 hidden items-center gap-2 px-1 py-1 text-brand-green md:flex ${rail ? "justify-center" : ""}`} aria-label="Cover Founder home">
             <CFSymbol className={rail ? "h-8 w-auto" : "h-9 w-auto"} />
             {!rail && <span className="font-mono text-lg font-bold text-white">Cover Founder</span>}
