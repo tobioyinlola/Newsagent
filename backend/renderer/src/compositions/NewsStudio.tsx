@@ -1,5 +1,6 @@
 import React from "react";
 import { AbsoluteFill, Easing, OffthreadVideo, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AnchorFigure } from "./AnchorFigure";
 import { Backdrop, Chrome } from "./Chrome";
 import { CF, Fonts, MONO, SANS } from "./theme";
 import { NewsProps } from "./types";
@@ -27,10 +28,7 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
         {p.anchorSrc ? (
           <OffthreadVideo src={p.anchorSrc.startsWith("http") ? p.anchorSrc : staticFile(p.anchorSrc)} transparent style={{ height: portrait ? "58%" : "88%", objectFit: "contain" }} />
         ) : (
-          <svg viewBox="0 0 200 260" style={{ height: portrait ? "50%" : "78%" }}>
-            <circle cx="100" cy="70" r="42" fill="#d9c2a7" />
-            <path d="M20 260 C20 160 60 130 100 130 C140 130 180 160 180 260Z" fill="#1c2b4a" />
-          </svg>
+          <AnchorFigure height={portrait ? "68%" : "86%"} />
         )}
       </AbsoluteFill>
 
