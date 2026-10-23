@@ -30,7 +30,8 @@ export function speak(line: VoiceLine, onStart?: () => void): Speaking {
       const u = new SpeechSynthesisUtterance(line.text);
       u.lang = "en-GB"; u.rate = 1;
       u.onstart = () => onStart?.();
-      u.onend = finish; u.onerror = finish;
+      u.onend = finish;
+      u.onerror = () => setTimeout(finish, Math.max(1500, words * 380)); // a browser with no voice: pace it like reading
       stop = () => synth.cancel();
       onStart?.();
       synth.speak(u);

@@ -7,6 +7,7 @@ import { TakeUploader } from "../founder/uploader";
 import { grabFrame, uploadSnapshot } from "./snapshot";
 import { MAX_TOTAL_S, answerWindow, mmss } from "./timing";
 import { type VoiceLine, speak } from "./voice";
+import { VoiceWave } from "./VoiceWave";
 
 const store = new ChunkStore();
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -107,7 +108,7 @@ export function InterviewRoom(p: RoomProps) {
     const mime = pickMime("video");
     if (!mime) throw new Error("This browser can't record video. Please use Chrome, Edge or Safari.");
     const win = answerWindow(elapsedNow(), left, p.limits.maxAnswer, p.limits.minAnswer);
-    setAnsWindow(win); setAnsElapsed(0); setPhase("answering"); setCaption("");
+    setAnsWindow(win); setAnsElapsed(0); setPhase("answering"); setCaption(lineFor(`q${q}`).text); // the question stays on screen while they answer
     const take = await must(guest.POST("/v1/interview/{token}/takes", { params: { path: { token: p.token } }, body: { question_index: q, kind: "video", mime } }));
     await store.setMeta({ takeId: take.id, question: q, kind: "video", mime });
     const up = new TakeUploader(p.token, take.id, store, () => undefined);
@@ -284,12 +285,13 @@ export function InterviewRoom(p: RoomProps) {
 
       <aside className="flex w-full flex-col gap-4 border-t-8 border-brand-green bg-ink p-5 md:w-[26rem] md:border-l-8 md:border-t-0" aria-live="polite">
         <div className="flex items-center gap-3">
-          <span className={`text-brand-green ${speaking ? "animate-pulse" : ""}`}><CFSymbol className="h-10 w-auto" title="Cover Founder interviewer" /></span>
+          <span className="text-brand-green"><CFSymbol className="h-10 w-auto" title="Cover Founder interviewer" /></span>
           <div>
             <p className="font-mono text-sm font-bold uppercase tracking-widest text-brand-green">AI interviewer</p>
             <p className="text-sm text-white">{status}</p>
           </div>
         </div>
+        <VoiceWave speaking={speaking} />
         {phase !== "attention" && phase !== "done" && (
           <p className="font-mono text-xs font-bold uppercase tracking-widest text-brand-green">
             {phase === "greeting" || phase === "starting" ? `${total} question${total === 1 ? "" : "s"}` : `Question ${Math.min(pos + 1, total)} of ${total}`}
