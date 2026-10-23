@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { type ReactNode, useEffect, useState } from "react";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { signOut } from "../lib/auth";
 import { CFSymbol } from "./Logo";
@@ -8,34 +9,135 @@ export function useMe() {
   return useQuery({ queryKey: ["me"], queryFn: () => unwrap(api.GET("/v1/me")), retry: false });
 }
 
-const link = ({ isActive }: { isActive: boolean }) =>
-  `rounded-sm px-3 py-2 text-sm font-bold ${isActive ? "bg-brand-green text-ink" : "text-white hover:bg-stripe"}`;
+const KEY = "newsagent.sidebar";
+const readCollapsed = () => {
+  try { return localStorage.getItem(KEY) === "collapsed"; } catch { return false; }
+};
 
+const Icon = ({ children }: { children: ReactNode }) => (
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter" aria-hidden className="shrink-0">{children}</svg>
+);
+const ICONS = {
+  videos: <Icon><rect x="3" y="5" width="18" height="14" /><path d="M10 9v6l5-3z" /></Icon>,
+  brand: <Icon><rect x="3" y="3" width="18" height="18" /><path d="M12 3v18M3 15h9" /></Icon>,
+  credits: <Icon><circle cx="12" cy="12" r="9" /><path d="M12 7v10M9 10h6M9 14h6" /></Icon>,
+  data: <Icon><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /></Icon>,
+  security: <Icon><rect x="5" y="11" width="14" height="10" /><path d="M8 11V7a4 4 0 018 0v4" /></Icon>,
+  admin: <Icon><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="9" cy="6" r="2" fill="currentColor" /><circle cx="15" cy="12" r="2" fill="currentColor" /><circle cx="8" cy="18" r="2" fill="currentColor" /></Icon>,
+  out: <Icon><path d="M9 4H4v16h5M16 8l4 4-4 4M20 12H9" /></Icon>,
+};
+
+// Collapsible sidebar: full width with labels, or a narrow icon rail (remembered between visits).
+// On phones it becomes a slide-over opened from a top bar.
 export function Layout() {
   const me = useMe();
   const nav = useNavigate();
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const [open, setOpen] = useState(false); // phone slide-over
+  const loc = useLocation();
+  useEffect(() => setOpen(false), [loc.pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+  const toggle = () => {
+    setCollapsed((c) => {
+      try { localStorage.setItem(KEY, c ? "expanded" : "collapsed"); } catch { /* storage unavailable: lasts until reload */ }
+      return !c;
+    });
+  };
+  const rail = collapsed && !open; // the phone slide-over is always full width
+
+  const item = (to: string, label: string, icon: ReactNode) => (
+    <NavLink
+      to={to}
+      title={rail ? label : undefined}
+      className={({ isActive }) =>
+        `flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-bold ${rail ? "justify-center" : ""} ${isActive ? "bg-brand-green text-ink" : "text-white hover:bg-stripe"}`
+      }
+    >
+      {icon}
+      <span className={rail ? "sr-only" : ""}>{label}</span>
+    </NavLink>
+  );
+  const signOutNow = async () => { await api.POST("/v1/auth/logout").catch(() => undefined); signOut(); nav("/login"); };
+
   return (
-    <div className="min-h-screen bg-paper text-ink">
-      <header className="bg-ink">
-        <nav aria-label="Main" className="mx-auto flex max-w-5xl flex-wrap items-center gap-1 px-4 py-2">
-          <Link to="/projects" className="mr-4 flex items-center gap-2 text-brand-green" aria-label="Cover Founder home">
-            <CFSymbol className="h-8 w-auto" />
-            <span className="font-mono text-lg font-bold text-white">Cover Founder</span>
+    <div className="min-h-screen bg-paper text-ink md:flex">
+      {/* phone top bar */}
+      <div className="flex items-center justify-between bg-ink px-4 py-2 md:hidden">
+        <Link to="/projects" className="flex items-center gap-2 text-brand-green" aria-label="Cover Founder home">
+          <CFSymbol className="h-8 w-auto" />
+          <span className="font-mono text-lg font-bold text-white">Cover Founder</span>
+        </Link>
+        <button type="button" className="rounded-sm border-2 border-brand-green px-3 py-1.5 text-sm font-bold text-brand-green" aria-expanded={open} aria-controls="sidebar" onClick={() => setOpen(true)}>
+          Menu
+        </button>
+      </div>
+
+      {/* phone scrim: tap outside the menu to close it */}
+      {open && <div className="fixed inset-0 z-20 bg-ink/60 md:hidden" aria-hidden onClick={() => setOpen(false)} />}
+
+      {/* On phones the menu slides in from the right; from md up it is the static sidebar. */}
+      <aside
+        id="sidebar"
+        className={`fixed inset-y-0 right-0 z-30 w-72 max-w-[85vw] overflow-y-auto bg-ink transition-transform duration-200 md:sticky md:top-0 md:z-auto md:h-screen md:max-w-none md:shrink-0 md:translate-x-0 md:visible ${collapsed ? "md:w-[72px]" : "md:w-64"} ${open ? "translate-x-0" : "invisible translate-x-full"}`}
+      >
+        <nav aria-label="Main" className="flex h-full flex-col gap-1 p-3">
+          <div className="mb-2 flex items-center justify-between md:hidden">
+            <span className="font-mono text-lg font-bold text-white">Menu</span>
+            <button type="button" className="rounded-sm border-2 border-brand-green px-3 py-1.5 text-sm font-bold text-brand-green" onClick={() => setOpen(false)}>Close</button>
+          </div>
+          <Link to="/projects" className={`mb-4 hidden items-center gap-2 px-1 py-1 text-brand-green md:flex ${rail ? "justify-center" : ""}`} aria-label="Cover Founder home">
+            <CFSymbol className={rail ? "h-8 w-auto" : "h-9 w-auto"} />
+            {!rail && <span className="font-mono text-lg font-bold text-white">Cover Founder</span>}
           </Link>
-          <NavLink to="/projects" className={link}>Videos</NavLink>
-          <NavLink to="/brand" className={link}>Brand kit</NavLink>
-          <NavLink to="/billing" className={link}>Credits</NavLink>
-          <NavLink to="/account" className={link}>Your data</NavLink>
-          <NavLink to="/security" className={link}>Security</NavLink>
-          {me.data?.is_operator && <NavLink to="/admin" className={link}>Admin</NavLink>}
-          <span className="ml-auto flex items-center gap-3 text-sm text-white">
-            {me.data && <span>{me.data.workspace_name} · {Number(me.data.credit_balance).toFixed(2)} credits</span>}
-            <button className="font-bold text-brand-green underline" onClick={async () => { await api.POST("/v1/auth/logout").catch(() => undefined); signOut(); nav("/login"); }}>Sign out</button>
-          </span>
+
+          {item("/projects", "Videos", ICONS.videos)}
+          {item("/brand", "Brand kit", ICONS.brand)}
+          {item("/billing", "Credits", ICONS.credits)}
+          {item("/account", "Your data", ICONS.data)}
+          {item("/security", "Security", ICONS.security)}
+          {me.data?.is_operator && item("/admin", "Admin", ICONS.admin)}
+
+          <div className="mt-auto space-y-2 border-t-2 border-stripe pt-3">
+            {me.data && !rail && (
+              <p className="px-3 text-sm text-white">
+                <span className="block font-bold">{me.data.workspace_name}</span>
+                <span className="text-brand-green">{Number(me.data.credit_balance).toFixed(2)} credits</span>
+              </p>
+            )}
+            {me.data && rail && (
+              <p className="text-center font-mono text-xs font-bold text-brand-green" title={`${me.data.workspace_name}: ${Number(me.data.credit_balance).toFixed(2)} credits`}>
+                {Number(me.data.credit_balance).toFixed(0)}
+                <span className="sr-only"> credits in {me.data.workspace_name}</span>
+              </p>
+            )}
+            <button type="button" onClick={signOutNow} title={rail ? "Sign out" : undefined} className={`flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-bold text-brand-green hover:bg-stripe ${rail ? "justify-center" : ""}`}>
+              {ICONS.out}
+              <span className={rail ? "sr-only" : ""}>Sign out</span>
+            </button>
+            <button
+              type="button"
+              onClick={toggle}
+              aria-expanded={!collapsed}
+              aria-controls="sidebar"
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              className={`hidden w-full items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-bold text-white hover:bg-stripe md:flex ${collapsed ? "justify-center" : ""}`}
+            >
+              <Icon>{collapsed ? <path d="M9 5l7 7-7 7" /> : <path d="M15 5l-7 7 7 7" />}</Icon>
+              <span className={collapsed ? "sr-only" : ""}>{collapsed ? "Expand sidebar" : "Collapse sidebar"}</span>
+            </button>
+          </div>
         </nav>
-      </header>
-      <main className="mx-auto max-w-5xl space-y-4 px-4 py-6">
-        <Outlet />
+      </aside>
+
+      <main className="min-w-0 flex-1">
+        <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
