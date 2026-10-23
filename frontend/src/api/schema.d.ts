@@ -106,6 +106,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Customers */
+        get: operations["customers_v1_admin_customers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/customers/{workspace_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Customer */
+        get: operations["customer_v1_admin_customers__workspace_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/invites": {
         parameters: {
             query?: never;
@@ -174,6 +208,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overview */
+        get: operations["overview_v1_admin_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/packs": {
         parameters: {
             query?: never;
@@ -207,6 +258,23 @@ export interface paths {
         head?: never;
         /** Patch Pack */
         patch: operations["patch_pack_v1_admin_packs__pack_id__patch"];
+        trace?: never;
+    };
+    "/v1/admin/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Payments */
+        get: operations["payments_v1_admin_payments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/admin/projects/{project_id}/retry": {
@@ -1542,6 +1610,17 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** Attention */
+        Attention: {
+            /** Failed Videos */
+            failed_videos: number;
+            /** Paused */
+            paused: boolean;
+            /** Pending Reviews */
+            pending_reviews: number;
+            /** Suspended Workspaces */
+            suspended_workspaces: number;
+        };
         /** AuditOut */
         AuditOut: {
             /** Action */
@@ -1858,6 +1937,116 @@ export interface components {
             /** Total */
             total: string;
         };
+        /** CustomerDetail */
+        CustomerDetail: {
+            /** Company */
+            company: string;
+            /** Credits */
+            credits: string;
+            /** Payments */
+            payments: components["schemas"]["PaymentRow"][];
+            /** Plan */
+            plan: string;
+            /** Projects */
+            projects: components["schemas"]["CustomerProject"][];
+            /**
+             * Signed Up At
+             * Format: date-time
+             */
+            signed_up_at: string;
+            /** Spend Cap */
+            spend_cap: string;
+            /** Spent Credits */
+            spent_credits: string;
+            /** Status */
+            status: string;
+            /** Users */
+            users: components["schemas"]["CustomerUser"][];
+            /** Workspace Id */
+            workspace_id: string;
+        };
+        /** CustomerList */
+        CustomerList: {
+            /** Items */
+            items: components["schemas"]["CustomerRow"][];
+            /** Total */
+            total: number;
+        };
+        /** CustomerProject */
+        CustomerProject: {
+            /** Completed At */
+            completed_at: string | null;
+            /** Cost Usd */
+            cost_usd: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: string;
+            /** Interview */
+            interview: string;
+            /** State */
+            state: string;
+        };
+        /** CustomerRow */
+        CustomerRow: {
+            /** Company */
+            company: string;
+            /** Credits */
+            credits: string;
+            /** Last Login At */
+            last_login_at: string | null;
+            /** Last Video At */
+            last_video_at: string | null;
+            /** Owner Email */
+            owner_email: string;
+            /** Paid Usd */
+            paid_usd: string;
+            /** Purchases */
+            purchases: number;
+            /**
+             * Signed Up At
+             * Format: date-time
+             */
+            signed_up_at: string;
+            /** Status */
+            status: string;
+            /** Videos */
+            videos: number;
+            /** Workspace Id */
+            workspace_id: string;
+        };
+        /** CustomerUser */
+        CustomerUser: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Email */
+            email: string;
+            /** Last Login At */
+            last_login_at: string | null;
+            /** Role */
+            role: string;
+        };
+        /** DayCount */
+        DayCount: {
+            /**
+             * Count
+             * @default 0
+             */
+            count: number;
+            /** Date */
+            date: string;
+            /**
+             * Usd
+             * @default 0
+             */
+            usd: string;
+        };
         /** DeleteAccountIn */
         DeleteAccountIn: {
             /** Confirm */
@@ -1890,6 +2079,17 @@ export interface components {
              * Format: email
              */
             email: string;
+        };
+        /** Funnel */
+        Funnel: {
+            /** Accepted */
+            accepted: number;
+            /** Expired */
+            expired: number;
+            /** Invites Sent */
+            invites_sent: number;
+            /** Pending */
+            pending: number;
         };
         /** GuestQuestion */
         GuestQuestion: {
@@ -2128,6 +2328,33 @@ export interface components {
             /** Keep */
             keep: boolean;
         };
+        /** Kpis */
+        Kpis: {
+            /** Active 30D */
+            active_30d: number;
+            /** Credits Outstanding */
+            credits_outstanding: string;
+            /** Customers */
+            customers: number;
+            /** Paying Companies */
+            paying_companies: number;
+            /** Revenue Usd 30D */
+            revenue_usd_30d: string;
+            /** Revenue Usd Total */
+            revenue_usd_total: string;
+            /** Signups 30D */
+            signups_30d: number;
+            /** Signups 7D */
+            signups_7d: number;
+            /** Vendor Cost Usd 30D */
+            vendor_cost_usd_30d: string;
+            /** Videos 30D */
+            videos_30d: number;
+            /** Videos Ready */
+            videos_ready: number;
+            /** Videos Total */
+            videos_total: number;
+        };
         /** LedgerEntry */
         LedgerEntry: {
             /** Amount */
@@ -2279,6 +2506,24 @@ export interface components {
             /** Code */
             code: string;
         };
+        /** Overview */
+        Overview: {
+            attention: components["schemas"]["Attention"];
+            funnel: components["schemas"]["Funnel"];
+            kpis: components["schemas"]["Kpis"];
+            /** Recent Signups */
+            recent_signups: components["schemas"]["SignupRow"][];
+            /** Revenue By Day */
+            revenue_by_day: components["schemas"]["DayCount"][];
+            /** Signups By Day */
+            signups_by_day: components["schemas"]["DayCount"][];
+            /** Top Customers */
+            top_customers: components["schemas"]["TopCustomer"][];
+            /** Videos By State */
+            videos_by_state: {
+                [key: string]: number;
+            };
+        };
         /** PackIn */
         PackIn: {
             /** Credits */
@@ -2303,6 +2548,57 @@ export interface components {
         PackPatch: {
             /** Active */
             active: boolean;
+        };
+        /** PayingCompany */
+        PayingCompany: {
+            /** Company */
+            company: string;
+            /** Last Paid At */
+            last_paid_at: string | null;
+            /** Payments */
+            payments: number;
+            /** Usd */
+            usd: string;
+            /** Workspace Id */
+            workspace_id: string;
+        };
+        /** PaymentRow */
+        PaymentRow: {
+            /** Company */
+            company: string;
+            /** Credits */
+            credits: string;
+            /** Kind */
+            kind: string;
+            /** Provider */
+            provider?: string | null;
+            /**
+             * Status
+             * @default paid
+             */
+            status: string;
+            /** Usd */
+            usd: string | null;
+            /**
+             * When
+             * Format: date-time
+             */
+            when: string;
+            /** Workspace Id */
+            workspace_id: string;
+        };
+        /** Payments */
+        Payments: {
+            /** Items */
+            items: components["schemas"]["PaymentRow"][];
+            /** Offline Credits */
+            offline_credits: string;
+            /** Paying Companies */
+            paying_companies: components["schemas"]["PayingCompany"][];
+            /** Total Usd */
+            total_usd: string;
+            /** Total Usd 30D */
+            total_usd_30d: string;
         };
         /** PhotoConfirmIn */
         PhotoConfirmIn: {
@@ -2623,6 +2919,28 @@ export interface components {
             /** Video Url */
             video_url: string;
         };
+        /** SignupRow */
+        SignupRow: {
+            /** Company */
+            company: string;
+            /** Credits */
+            credits: string;
+            /** Email */
+            email: string;
+            /** Last Login At */
+            last_login_at: string | null;
+            /** Paid */
+            paid: boolean;
+            /**
+             * Signed Up At
+             * Format: date-time
+             */
+            signed_up_at: string;
+            /** Videos */
+            videos: number;
+            /** Workspace Id */
+            workspace_id: string;
+        };
         /** SignupStartIn */
         SignupStartIn: {
             /** Invite Code */
@@ -2669,6 +2987,19 @@ export interface components {
             transcript?: string | null;
             /** Video Url */
             video_url?: string | null;
+        };
+        /** TopCustomer */
+        TopCustomer: {
+            /** Company */
+            company: string;
+            /** Last Video At */
+            last_video_at: string | null;
+            /** Revenue Usd */
+            revenue_usd: string;
+            /** Videos */
+            videos: number;
+            /** Workspace Id */
+            workspace_id: string;
         };
         /** UploadConfirmIn */
         UploadConfirmIn: {
@@ -3009,6 +3340,74 @@ export interface operations {
             };
         };
     };
+    customers_v1_admin_customers_get: {
+        parameters: {
+            query?: {
+                q?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    customer_v1_admin_customers__workspace_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_invite_v1_admin_invites_post: {
         parameters: {
             query?: never;
@@ -3151,6 +3550,39 @@ export interface operations {
             };
         };
     };
+    overview_v1_admin_overview_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Overview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     admin_packs_v1_admin_packs_get: {
         parameters: {
             query?: never;
@@ -3243,6 +3675,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    payments_v1_admin_payments_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Payments"];
                 };
             };
             /** @description Validation Error */
