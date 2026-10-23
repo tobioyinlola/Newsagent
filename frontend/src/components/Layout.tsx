@@ -23,7 +23,6 @@ const ICONS = {
   credits: <Icon><circle cx="12" cy="12" r="9" /><path d="M12 7v10M9 10h6M9 14h6" /></Icon>,
   data: <Icon><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /></Icon>,
   security: <Icon><rect x="5" y="11" width="14" height="10" /><path d="M8 11V7a4 4 0 018 0v4" /></Icon>,
-  admin: <Icon><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="9" cy="6" r="2" fill="currentColor" /><circle cx="15" cy="12" r="2" fill="currentColor" /><circle cx="8" cy="18" r="2" fill="currentColor" /></Icon>,
   out: <Icon><path d="M9 4H4v16h5M16 8l4 4-4 4M20 12H9" /></Icon>,
 };
 
@@ -100,7 +99,6 @@ export function Layout() {
           {item("/billing", "Credits", ICONS.credits)}
           {item("/account", "Your data", ICONS.data)}
           {item("/security", "Security", ICONS.security)}
-          {me.data?.is_operator && item("/admin", "Admin", ICONS.admin)}
 
           <div className="mt-auto space-y-2 border-t-2 border-stripe pt-3">
             {me.data && !rail && (

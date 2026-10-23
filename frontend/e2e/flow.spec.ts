@@ -3,23 +3,12 @@ import { expect, test } from "@playwright/test";
 // Full pilot journey against the real API with mocked vendors: operator invites a startup, the startup
 // signs up with a password and an emailed code, sets a brand kit, writes and approves a script (claims enforced), gets a video, and shares it.
 test("invite to shared video", async ({ page, browser }) => {
-  // --- operator
-  // operators normally enrol an authenticator; `dev:` tokens (local only) skip that so the suite can drive the console
-  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:ops@example.com"));
-  await page.goto("/projects");
-  await page.getByRole("link", { name: "Admin" }).click();
-  await page.getByRole("tab", { name: "Setup" }).click();
-  for (const vendor of ["mock", "renderer"]) {
-    await page.getByLabel("Vendor").selectOption(vendor);
-    await page.getByLabel("Monthly limit").fill("100");
-    await page.getByRole("button", { name: "Set budget" }).click();
-    await expect(page.getByRole("cell", { name: vendor, exact: true })).toBeVisible();
-  }
-  await page.getByLabel("Invitee email").fill("founder@startup.example.com");
-  await page.getByLabel("Startup name").fill("Acme Farms");
-  await page.getByRole("button", { name: "Create invite" }).click();
-  const inviteLink = await page.locator("code").innerText();
-  expect(inviteLink).toContain("/login?invite=");
+  // --- operator prep: the back office is a separate app (see admin/), so the budgets and the invite are made through the API here
+  const API = "http://localhost:8000";
+  const OPS = { Authorization: "Bearer dev:ops@example.com" };
+  for (const vendor of ["mock", "renderer"]) expect((await page.request.put(`${API}/v1/admin/vendor-budgets`, { headers: OPS, data: { vendor, limit: "100" } })).ok()).toBeTruthy();
+  const inv = await (await page.request.post(`${API}/v1/admin/invites`, { headers: OPS, data: { email: "founder@startup.example.com", workspace_name: "Acme Farms", credits: "25", spend_cap: "100" } })).json();
+  const inviteLink = `http://localhost:5173/login?invite=${inv.code}`;
 
   // --- startup founder signs up: invite link, a password, then a code sent to the invited address
   const founder = await browser.newContext();
@@ -55,12 +44,14 @@ test("invite to shared video", async ({ page, browser }) => {
   // --- brief -> script
   await fp.getByRole("link", { name: "Videos" }).click();
   await fp.getByRole("link", { name: "New video" }).click();
-  await fp.getByLabel("Tell us about your startup").fill("Acme Farms helps farmers sell produce online. We have 5,000 users and we are the first of our kind in Ghana.");
-  await fp.getByRole("button", { name: "Write my script" }).click();
+  await fp.getByLabel("Paste your announcement or news script").fill("Acme Farms helps farmers sell produce online. We have 5,000 users and we are the first of our kind in Ghana.");
+  await fp.getByLabel("Your name").fill("Ada Obi");
+  await fp.getByRole("button", { name: "Read it and write my script" }).click();
   await expect(fp.getByRole("heading", { name: /Script \(version 1\)/ })).toBeVisible();
 
   // the owner adds a claim to what the anchor will say; it must be confirmed before anything is rendered
   await fp.getByLabel("Intro").fill("Tonight we feature Acme Farms. They have 5,000 users and are the first in Ghana.");
+  await fp.getByLabel("No interview").check(); // this journey is the presenter-only video; the interview has its own test
   await fp.getByRole("button", { name: "Approve and make my video" }).click();
   await expect(fp.getByRole("alert")).toContainText("confirm each flagged claim");
   await expect(fp.getByRole("group", { name: "Confirm these claims are accurate" })).toBeVisible();
@@ -79,7 +70,7 @@ test("invite to shared video", async ({ page, browser }) => {
   const shareUrl = await fp.getByLabel("Share link").inputValue();
   const viewer = await browser.newPage();
   await viewer.goto(shareUrl.replace(/^https?:\/\/[^/]+/, "http://localhost:5173"));
-  await expect(viewer.getByRole("heading", { name: "Acme", exact: true })).toBeVisible();
+  await expect(viewer.getByRole("heading", { name: "Acme Farms", exact: true })).toBeVisible();
   await expect(viewer.getByText("AI-generated anchor").first()).toBeVisible();
   await fp.getByRole("button", { name: "Revoke all links" }).click();
   await viewer.reload();

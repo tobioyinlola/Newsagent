@@ -26,6 +26,7 @@ GOOD = dict(
     database_url="postgresql+asyncpg://u:p@db.railway.internal/app",
     redis_url="redis://redis.railway.internal:6379",
     app_base_url="https://app.example.com",
+    admin_base_url="https://admin.example.com",
     queue_backend="celery",
     trust_proxy_headers=True,
 )
@@ -59,6 +60,8 @@ def test_local_is_exempt():
         ({"storage_access_key": "minioadmin"}, "MinIO defaults"),
         ({"database_url": "postgresql+asyncpg://newsagent:newsagent@localhost/x"}, "DATABASE_URL"),
         ({"app_base_url": "http://app.example.com"}, "https"),
+        ({"admin_base_url": "http://admin.example.com"}, "ADMIN_BASE_URL"),
+        ({"admin_base_url": "https://app.example.com"}, "different site"),
         ({"queue_backend": "inline"}, "QUEUE_BACKEND"),
         ({"environment": "prod"}, "ENVIRONMENT"),
     ],

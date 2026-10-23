@@ -91,6 +91,11 @@ class Project(Base, TimestampMixin):
     failure_retryable: Mapped[bool] = mapped_column(Boolean, default=False)
     failed_from: Mapped[str | None] = mapped_column(String(32), nullable=True)
     interview_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    # "invite": a founder records from a private link after the anchor is made. "live": the owner is interviewed by the
+    # AI interviewer on the dashboard BEFORE anything paid runs, then the anchor and the merge follow.
+    interview_mode: Mapped[str] = mapped_column(String(10), default="invite")
+    founder_name: Mapped[str] = mapped_column(String(200), default="")  # who the AI interviewer greets by name
+    founder_title: Mapped[str] = mapped_column(String(200), default="")
     keep_raw_takes: Mapped[bool] = mapped_column(Boolean, default=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     merge_plan: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # owner's layout/order/trim/drop choices
@@ -154,6 +159,7 @@ class InterviewSession(Base, TimestampMixin):
     # session is submitted, revoked or expired. Lookups always use token_hash.
     token_enc: Mapped[str | None] = mapped_column(Text, nullable=True)
     photo_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    mode: Mapped[str] = mapped_column(String(10), default="invite")  # invite | live (AI interviewer on the dashboard)
 
 
 class Job(Base, TimestampMixin):
@@ -227,6 +233,7 @@ class Take(Base, TimestampMixin):
     stats: Mapped[dict] = mapped_column(JSON, default=dict)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     raw_deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    snapshot_key: Mapped[str | None] = mapped_column(String(500), nullable=True)  # camera still taken mid-answer
 
 
 class SystemSetting(Base):

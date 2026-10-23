@@ -15,7 +15,7 @@ from app.integrations.renderer.base import RenderRequest
 from app.models import Asset, BrandKit, InterviewSession, Job, Project, ScriptVersion, Take
 from app.services import state_machine as sm
 from app.services.captions import build_srt
-from app.services.interview import merge_srt, parse_srt, shifted_cues
+from app.services.interview import answer_cues, merge_srt, parse_srt, shifted_cues
 from app.services.notifications import notify_operators
 from app.services.safety import find_banned
 from app.services.spend_guard import LimitReached, SpendGuard
@@ -405,9 +405,9 @@ async def final_render(session: AsyncSession, project: Project, guard: SpendGuar
     )
 
 
-def default_plan(question_count: int) -> dict:
+def default_plan(question_count: int, layout: str = "pip") -> dict:
     return {
-        "layout": "pip",
+        "layout": layout,
         "order": list(range(question_count)),
         "answers": [
             {"question_index": q, "include": True, "trim_start_s": 0, "trim_end_s": 0} for q in range(question_count)
@@ -463,30 +463,41 @@ async def merge_render(session: AsyncSession, project: Project, guard: SpendGuar
     ]
     cues = [(a, b, t) for a, b, t in parse_srt(main_srt)]
     t_cursor = float(main.duration or 0)
-    for q in plan["order"]:
-        take, ans, qclip = takes.get(q), answers.get(q, {}), assets.get(("question_clip", f"q{q}"))
+
+    def usable(q: int) -> bool:
+        take, ans = takes.get(q), answers.get(q, {})
+        qclip = assets.get(("question_clip", f"q{q}"))
         if (
             take is None
             or not ans.get("include", True)
             or take.status not in {"ready", "needs_retake"}
             or qclip is None
         ):
-            continue
+            return False
+        return float(take.duration_s or 0) - ans.get("trim_start_s", 0) - ans.get("trim_end_s", 0) >= 1.0
+
+    shown = [q for q in plan["order"] if usable(q)]
+    for q in shown:
+        take, ans, qclip = takes[q], answers.get(q, {}), assets[("question_clip", f"q{q}")]
         window = float(take.duration_s or 0) - ans.get("trim_start_s", 0) - ans.get("trim_end_s", 0)
-        if window < 1.0:
-            continue
         qsec = float(qclip.duration or 0)
         qsrc = storage.presign_get(qclip.storage_key)
         scenes.append({"type": "question", "src": qsrc, "seconds": qsec})
         cues.append((t_cursor, t_cursor + qsec, script.interview_questions[q]))
         t_cursor += qsec
+        trim = float(ans.get("trim_start_s", 0))
         scene: dict = {
             "type": "answer",
             "seconds": window,
-            "startFromSeconds": ans.get("trim_start_s", 0),
+            "startFromSeconds": trim,
             "pipSrc": qsrc,
             "founder": founder,
             "src": None,
+            # the "answers column": the question, which one it is, and the founder's words timed to the answer
+            "question": script.interview_questions[q],
+            "questionNumber": shown.index(q) + 1,
+            "totalQuestions": len(shown),
+            "cues": answer_cues(take.srt or "", take.transcript or "", trim, window),
         }
         if take.kind == "video" and take.processed_video_key:
             scene["src"] = storage.presign_get(take.processed_video_key)
@@ -494,6 +505,8 @@ async def merge_render(session: AsyncSession, project: Project, guard: SpendGuar
             scene["audioSrc"] = storage.presign_get(take.processed_audio_key or "")
             if isession and isession.photo_key:
                 scene["photoSrc"] = storage.presign_get(isession.photo_key)
+        if take.snapshot_key:
+            scene["posterSrc"] = storage.presign_get(take.snapshot_key)
         scenes.append(scene)
         cues += shifted_cues(take.srt or "", t_cursor, ans.get("trim_start_s", 0), window)
         t_cursor += window

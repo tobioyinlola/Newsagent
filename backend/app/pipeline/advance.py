@@ -15,7 +15,10 @@ async def advance(session: AsyncSession, project_id: str) -> None:
         return
     payload = {"project_id": project_id}
     state = project.state
-    if state == "script_approved":
+    if state == "script_approved" and project.interview_enabled and project.interview_mode == "live":
+        sm.transition(project, "interviewing")  # nothing paid runs until the owner has been interviewed and proceeds
+        await session.commit()
+    elif state == "script_approved":
         sm.transition(project, "rendering_anchor")
         await session.commit()
         enqueue("anchor_render", payload)
@@ -24,6 +27,11 @@ async def advance(session: AsyncSession, project_id: str) -> None:
         enqueue("anchor_render", payload)
     elif state == "anchor_ready" and project.interview_enabled:
         if await steps.question_clips_complete(session, project):
+            if project.interview_mode == "live":
+                sm.transition(project, "merging")  # the interview is already recorded: put the video together
+                await session.commit()
+                enqueue("merge_render", payload)
+                return
             sm.transition(project, "awaiting_founder")  # the owner now invites the founder
             await session.commit()
             await notify_owners(project_id, "ready_to_invite")

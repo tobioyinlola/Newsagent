@@ -979,7 +979,12 @@ export interface paths {
         get: operations["take_status_v1_interview__token__takes__take_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Abandon Take
+         * @description Drop a recording that will never be finished (the camera went off, or the person left), so it can't block
+         *     submitting. A finished take is never touched: re-recording replaces it instead.
+         */
+        delete: operations["abandon_take_v1_interview__token__takes__take_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1047,6 +1052,27 @@ export interface paths {
         put?: never;
         /** Reprocess */
         post: operations["reprocess_v1_interview__token__takes__take_id__reprocess_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interview/{token}/voice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prepare Voice
+         * @description What the AI interviewer says, with audio for each line when a voice provider is configured. The greeting
+         *     uses the founder's name. Called while the device check runs, so the interview itself never waits.
+         */
+        post: operations["prepare_voice_v1_interview__token__voice_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1194,6 +1220,46 @@ export interface paths {
         post: operations["create_invite_v1_projects__project_id__interview_post"];
         /** Revoke Invite */
         delete: operations["revoke_invite_v1_projects__project_id__interview_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/interview/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Live
+         * @description Open the AI interviewer's room for the owner. Returns the credential the browser recorder uses.
+         */
+        post: operations["start_live_v1_projects__project_id__interview_live_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/interview/live/skip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Skip Live
+         * @description Not doing the interview after all: make the anchor-only video.
+         */
+        post: operations["skip_live_v1_projects__project_id__interview_live_skip_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1374,6 +1440,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{project_id}/understanding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Understanding
+         * @description What the system understood from the pasted announcement, so the owner can check it before approving.
+         */
+        get: operations["understanding_v1_projects__project_id__understanding_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/share/{token}": {
         parameters: {
             query?: never;
@@ -1434,6 +1520,11 @@ export interface components {
     schemas: {
         /** ApproveIn */
         ApproveIn: {
+            /**
+             * Interview Mode
+             * @default invite
+             */
+            interview_mode: string;
             /**
              * With Interview
              * @default false
@@ -1597,6 +1688,39 @@ export interface components {
             tone: string;
             /** Version */
             version: number;
+        };
+        /** BriefUnderstandingOut */
+        BriefUnderstandingOut: {
+            /**
+             * Announcement
+             * @default
+             */
+            announcement: string;
+            /**
+             * Company
+             * @default
+             */
+            company: string;
+            /**
+             * Founder Name
+             * @default
+             */
+            founder_name: string;
+            /**
+             * Founder Title
+             * @default
+             */
+            founder_title: string;
+            /**
+             * Key Facts
+             * @default []
+             */
+            key_facts: string[];
+            /**
+             * Problem
+             * @default
+             */
+            problem: string;
         };
         /** CaptionsOut */
         CaptionsOut: {
@@ -1837,6 +1961,11 @@ export interface components {
             max_chunk_bytes: number;
             /** Max Chunks */
             max_chunks: number;
+            /**
+             * Mode
+             * @default invite
+             */
+            mode: string;
             /** Questions */
             questions: components["schemas"]["GuestQuestion"][];
             /** Submitted */
@@ -1875,6 +2004,8 @@ export interface components {
         InterviewStatusOut: {
             /** Active */
             active: boolean;
+            /** Consent Text */
+            consent_text?: string | null;
             /**
              * Consented
              * @default false
@@ -1888,6 +2019,11 @@ export interface components {
             founder_name?: string | null;
             /** Founder Title */
             founder_title?: string | null;
+            /**
+             * Mode
+             * @default invite
+             */
+            mode: string;
             /** Photo Url */
             photo_url?: string | null;
             /** Plan */
@@ -2014,6 +2150,42 @@ export interface components {
             /** Stage */
             stage: string | null;
         };
+        /** LiveStartIn */
+        LiveStartIn: {
+            /** Consent */
+            consent: boolean;
+            /** Founder Name */
+            founder_name: string;
+            /**
+             * Founder Title
+             * @default
+             */
+            founder_title: string;
+        };
+        /** LiveStartOut */
+        LiveStartOut: {
+            /** Company */
+            company: string;
+            /** Consent Text */
+            consent_text: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Founder Name */
+            founder_name: string;
+            /** Max Answer S */
+            max_answer_s: number;
+            /** Max Total S */
+            max_total_s: number;
+            /** Min Answer S */
+            min_answer_s: number;
+            /** Questions */
+            questions: string[];
+            /** Token */
+            token: string;
+        };
         /** LoginIn */
         LoginIn: {
             /**
@@ -2136,6 +2308,8 @@ export interface components {
         PhotoConfirmIn: {
             /** Key */
             key: string;
+            /** Take Id */
+            take_id?: string | null;
         };
         /** PhotoIn */
         PhotoIn: {
@@ -2168,6 +2342,16 @@ export interface components {
             accent_override?: string | null;
             /** Brief Text */
             brief_text: string;
+            /**
+             * Founder Name
+             * @default
+             */
+            founder_name: string;
+            /**
+             * Founder Title
+             * @default
+             */
+            founder_title: string;
             /**
              * Region
              * @default NG
@@ -2213,6 +2397,16 @@ export interface components {
             failure_reason: string | null;
             /** Failure Retryable */
             failure_retryable: boolean;
+            /**
+             * Founder Name
+             * @default
+             */
+            founder_name: string;
+            /**
+             * Founder Title
+             * @default
+             */
+            founder_title: string;
             /** Id */
             id: string;
             /**
@@ -2220,6 +2414,11 @@ export interface components {
              * @default false
              */
             interview_enabled: boolean;
+            /**
+             * Interview Mode
+             * @default invite
+             */
+            interview_mode: string;
             /**
              * Keep Raw Takes
              * @default false
@@ -2462,6 +2661,8 @@ export interface components {
             messages: string[];
             /** Question Index */
             question_index: number;
+            /** Snapshot Url */
+            snapshot_url?: string | null;
             /** Status */
             status: string;
             /** Transcript */
@@ -2548,6 +2749,15 @@ export interface components {
             /** Vendor */
             vendor: string;
         };
+        /** VoiceLine */
+        VoiceLine: {
+            /** Audio Url */
+            audio_url?: string | null;
+            /** Key */
+            key: string;
+            /** Text */
+            text: string;
+        };
         /** VoiceOut */
         VoiceOut: {
             /** Accent */
@@ -2556,6 +2766,11 @@ export interface components {
             id: string;
             /** Preview Url */
             preview_url?: string | null;
+        };
+        /** VoicePrepareOut */
+        VoicePrepareOut: {
+            /** Lines */
+            lines: components["schemas"]["VoiceLine"][];
         };
         /** WorkspaceAdminOut */
         WorkspaceAdminOut: {
@@ -4652,6 +4867,40 @@ export interface operations {
             };
         };
     };
+    abandon_take_v1_interview__token__takes__take_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+                take_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     chunk_urls_v1_interview__token__takes__take_id__chunk_urls_post: {
         parameters: {
             query?: never;
@@ -4776,6 +5025,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GuestTake"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prepare_voice_v1_interview__token__voice_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoicePrepareOut"];
                 };
             };
             /** @description Validation Error */
@@ -5178,6 +5458,76 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_live_v1_projects__project_id__interview_live_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LiveStartIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiveStartOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    skip_live_v1_projects__project_id__interview_live_skip_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"];
                 };
             };
             /** @description Validation Error */
@@ -5602,6 +5952,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    understanding_v1_projects__project_id__understanding_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BriefUnderstandingOut"];
                 };
             };
             /** @description Validation Error */

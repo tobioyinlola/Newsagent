@@ -3,6 +3,12 @@
     "schemas": {
       "ApproveIn": {
         "properties": {
+          "interview_mode": {
+            "default": "invite",
+            "pattern": "^(invite|live)$",
+            "title": "Interview Mode",
+            "type": "string"
+          },
           "with_interview": {
             "default": false,
             "title": "With Interview",
@@ -45,6 +51,34 @@
           "storage_key"
         ],
         "title": "AssetOut",
+        "type": "object"
+      },
+      "Attention": {
+        "properties": {
+          "failed_videos": {
+            "title": "Failed Videos",
+            "type": "integer"
+          },
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "pending_reviews": {
+            "title": "Pending Reviews",
+            "type": "integer"
+          },
+          "suspended_workspaces": {
+            "title": "Suspended Workspaces",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pending_reviews",
+          "failed_videos",
+          "suspended_workspaces",
+          "paused"
+        ],
+        "title": "Attention",
         "type": "object"
       },
       "AuditOut": {
@@ -450,6 +484,45 @@
         "title": "BrandKitOut",
         "type": "object"
       },
+      "BriefUnderstandingOut": {
+        "properties": {
+          "announcement": {
+            "default": "",
+            "title": "Announcement",
+            "type": "string"
+          },
+          "company": {
+            "default": "",
+            "title": "Company",
+            "type": "string"
+          },
+          "founder_name": {
+            "default": "",
+            "title": "Founder Name",
+            "type": "string"
+          },
+          "founder_title": {
+            "default": "",
+            "title": "Founder Title",
+            "type": "string"
+          },
+          "key_facts": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Key Facts",
+            "type": "array"
+          },
+          "problem": {
+            "default": "",
+            "title": "Problem",
+            "type": "string"
+          }
+        },
+        "title": "BriefUnderstandingOut",
+        "type": "object"
+      },
       "CaptionsOut": {
         "properties": {
           "captions": {
@@ -835,6 +908,287 @@
         "title": "CostsOut",
         "type": "object"
       },
+      "CustomerDetail": {
+        "properties": {
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "string"
+          },
+          "payments": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentRow"
+            },
+            "title": "Payments",
+            "type": "array"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          },
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerProject"
+            },
+            "title": "Projects",
+            "type": "array"
+          },
+          "signed_up_at": {
+            "format": "date-time",
+            "title": "Signed Up At",
+            "type": "string"
+          },
+          "spend_cap": {
+            "title": "Spend Cap",
+            "type": "string"
+          },
+          "spent_credits": {
+            "title": "Spent Credits",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "users": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerUser"
+            },
+            "title": "Users",
+            "type": "array"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "company",
+          "plan",
+          "status",
+          "signed_up_at",
+          "credits",
+          "spent_credits",
+          "spend_cap",
+          "users",
+          "projects",
+          "payments"
+        ],
+        "title": "CustomerDetail",
+        "type": "object"
+      },
+      "CustomerList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "CustomerList",
+        "type": "object"
+      },
+      "CustomerProject": {
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "interview": {
+            "title": "Interview",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "created_at",
+          "completed_at",
+          "cost_usd",
+          "interview"
+        ],
+        "title": "CustomerProject",
+        "type": "object"
+      },
+      "CustomerRow": {
+        "properties": {
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "string"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "last_video_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Video At"
+          },
+          "owner_email": {
+            "title": "Owner Email",
+            "type": "string"
+          },
+          "paid_usd": {
+            "title": "Paid Usd",
+            "type": "string"
+          },
+          "purchases": {
+            "title": "Purchases",
+            "type": "integer"
+          },
+          "signed_up_at": {
+            "format": "date-time",
+            "title": "Signed Up At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "videos": {
+            "title": "Videos",
+            "type": "integer"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "company",
+          "owner_email",
+          "signed_up_at",
+          "last_login_at",
+          "status",
+          "credits",
+          "paid_usd",
+          "purchases",
+          "videos",
+          "last_video_at"
+        ],
+        "title": "CustomerRow",
+        "type": "object"
+      },
+      "CustomerUser": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "role",
+          "created_at",
+          "last_login_at"
+        ],
+        "title": "CustomerUser",
+        "type": "object"
+      },
+      "DayCount": {
+        "properties": {
+          "count": {
+            "default": 0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "usd": {
+            "default": "0",
+            "title": "Usd",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date"
+        ],
+        "title": "DayCount",
+        "type": "object"
+      },
       "DeleteAccountIn": {
         "properties": {
           "confirm": {
@@ -921,6 +1275,34 @@
           "email"
         ],
         "title": "ForgotIn",
+        "type": "object"
+      },
+      "Funnel": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "integer"
+          },
+          "expired": {
+            "title": "Expired",
+            "type": "integer"
+          },
+          "invites_sent": {
+            "title": "Invites Sent",
+            "type": "integer"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "invites_sent",
+          "accepted",
+          "pending",
+          "expired"
+        ],
+        "title": "Funnel",
         "type": "object"
       },
       "GuestQuestion": {
@@ -1091,6 +1473,11 @@
             "title": "Max Chunks",
             "type": "integer"
           },
+          "mode": {
+            "default": "invite",
+            "title": "Mode",
+            "type": "string"
+          },
           "questions": {
             "items": {
               "$ref": "#/components/schemas/GuestQuestion"
@@ -1195,6 +1582,17 @@
             "title": "Active",
             "type": "boolean"
           },
+          "consent_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Text"
+          },
           "consented": {
             "default": false,
             "title": "Consented",
@@ -1244,6 +1642,11 @@
               }
             ],
             "title": "Founder Title"
+          },
+          "mode": {
+            "default": "invite",
+            "title": "Mode",
+            "type": "string"
           },
           "photo_url": {
             "anyOf": [
@@ -1495,6 +1898,74 @@
         "title": "KeepRawIn",
         "type": "object"
       },
+      "Kpis": {
+        "properties": {
+          "active_30d": {
+            "title": "Active 30D",
+            "type": "integer"
+          },
+          "credits_outstanding": {
+            "title": "Credits Outstanding",
+            "type": "string"
+          },
+          "customers": {
+            "title": "Customers",
+            "type": "integer"
+          },
+          "paying_companies": {
+            "title": "Paying Companies",
+            "type": "integer"
+          },
+          "revenue_usd_30d": {
+            "title": "Revenue Usd 30D",
+            "type": "string"
+          },
+          "revenue_usd_total": {
+            "title": "Revenue Usd Total",
+            "type": "string"
+          },
+          "signups_30d": {
+            "title": "Signups 30D",
+            "type": "integer"
+          },
+          "signups_7d": {
+            "title": "Signups 7D",
+            "type": "integer"
+          },
+          "vendor_cost_usd_30d": {
+            "title": "Vendor Cost Usd 30D",
+            "type": "string"
+          },
+          "videos_30d": {
+            "title": "Videos 30D",
+            "type": "integer"
+          },
+          "videos_ready": {
+            "title": "Videos Ready",
+            "type": "integer"
+          },
+          "videos_total": {
+            "title": "Videos Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "customers",
+          "signups_7d",
+          "signups_30d",
+          "paying_companies",
+          "revenue_usd_total",
+          "revenue_usd_30d",
+          "vendor_cost_usd_30d",
+          "videos_total",
+          "videos_30d",
+          "videos_ready",
+          "active_30d",
+          "credits_outstanding"
+        ],
+        "title": "Kpis",
+        "type": "object"
+      },
       "LedgerEntry": {
         "properties": {
           "amount": {
@@ -1563,6 +2034,89 @@
           "description"
         ],
         "title": "LedgerEntry",
+        "type": "object"
+      },
+      "LiveStartIn": {
+        "properties": {
+          "consent": {
+            "title": "Consent",
+            "type": "boolean"
+          },
+          "founder_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Founder Name",
+            "type": "string"
+          },
+          "founder_title": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Founder Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "founder_name",
+          "consent"
+        ],
+        "title": "LiveStartIn",
+        "type": "object"
+      },
+      "LiveStartOut": {
+        "properties": {
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "consent_text": {
+            "title": "Consent Text",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "founder_name": {
+            "title": "Founder Name",
+            "type": "string"
+          },
+          "max_answer_s": {
+            "title": "Max Answer S",
+            "type": "integer"
+          },
+          "max_total_s": {
+            "title": "Max Total S",
+            "type": "integer"
+          },
+          "min_answer_s": {
+            "title": "Min Answer S",
+            "type": "integer"
+          },
+          "questions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "company",
+          "founder_name",
+          "expires_at",
+          "consent_text",
+          "questions",
+          "max_total_s",
+          "max_answer_s",
+          "min_answer_s"
+        ],
+        "title": "LiveStartOut",
         "type": "object"
       },
       "LoginIn": {
@@ -1808,6 +2362,66 @@
         "title": "OtpIn",
         "type": "object"
       },
+      "Overview": {
+        "properties": {
+          "attention": {
+            "$ref": "#/components/schemas/Attention"
+          },
+          "funnel": {
+            "$ref": "#/components/schemas/Funnel"
+          },
+          "kpis": {
+            "$ref": "#/components/schemas/Kpis"
+          },
+          "recent_signups": {
+            "items": {
+              "$ref": "#/components/schemas/SignupRow"
+            },
+            "title": "Recent Signups",
+            "type": "array"
+          },
+          "revenue_by_day": {
+            "items": {
+              "$ref": "#/components/schemas/DayCount"
+            },
+            "title": "Revenue By Day",
+            "type": "array"
+          },
+          "signups_by_day": {
+            "items": {
+              "$ref": "#/components/schemas/DayCount"
+            },
+            "title": "Signups By Day",
+            "type": "array"
+          },
+          "top_customers": {
+            "items": {
+              "$ref": "#/components/schemas/TopCustomer"
+            },
+            "title": "Top Customers",
+            "type": "array"
+          },
+          "videos_by_state": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Videos By State",
+            "type": "object"
+          }
+        },
+        "required": [
+          "kpis",
+          "funnel",
+          "attention",
+          "signups_by_day",
+          "revenue_by_day",
+          "videos_by_state",
+          "recent_signups",
+          "top_customers"
+        ],
+        "title": "Overview",
+        "type": "object"
+      },
       "PackIn": {
         "properties": {
           "credits": {
@@ -1890,11 +2504,164 @@
         "title": "PackPatch",
         "type": "object"
       },
+      "PayingCompany": {
+        "properties": {
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "last_paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Paid At"
+          },
+          "payments": {
+            "title": "Payments",
+            "type": "integer"
+          },
+          "usd": {
+            "title": "Usd",
+            "type": "string"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "company",
+          "payments",
+          "usd",
+          "last_paid_at"
+        ],
+        "title": "PayingCompany",
+        "type": "object"
+      },
+      "PaymentRow": {
+        "properties": {
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "status": {
+            "default": "paid",
+            "title": "Status",
+            "type": "string"
+          },
+          "usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usd"
+          },
+          "when": {
+            "format": "date-time",
+            "title": "When",
+            "type": "string"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "when",
+          "workspace_id",
+          "company",
+          "kind",
+          "usd",
+          "credits"
+        ],
+        "title": "PaymentRow",
+        "type": "object"
+      },
+      "Payments": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "offline_credits": {
+            "title": "Offline Credits",
+            "type": "string"
+          },
+          "paying_companies": {
+            "items": {
+              "$ref": "#/components/schemas/PayingCompany"
+            },
+            "title": "Paying Companies",
+            "type": "array"
+          },
+          "total_usd": {
+            "title": "Total Usd",
+            "type": "string"
+          },
+          "total_usd_30d": {
+            "title": "Total Usd 30D",
+            "type": "string"
+          }
+        },
+        "required": [
+          "total_usd",
+          "total_usd_30d",
+          "offline_credits",
+          "paying_companies",
+          "items"
+        ],
+        "title": "Payments",
+        "type": "object"
+      },
       "PhotoConfirmIn": {
         "properties": {
           "key": {
             "title": "Key",
             "type": "string"
+          },
+          "take_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Take Id"
           }
         },
         "required": [
@@ -1962,6 +2729,18 @@
             "maxLength": 8000,
             "minLength": 20,
             "title": "Brief Text",
+            "type": "string"
+          },
+          "founder_name": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Founder Name",
+            "type": "string"
+          },
+          "founder_title": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Founder Title",
             "type": "string"
           },
           "region": {
@@ -2061,6 +2840,16 @@
             "title": "Failure Retryable",
             "type": "boolean"
           },
+          "founder_name": {
+            "default": "",
+            "title": "Founder Name",
+            "type": "string"
+          },
+          "founder_title": {
+            "default": "",
+            "title": "Founder Title",
+            "type": "string"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -2069,6 +2858,11 @@
             "default": false,
             "title": "Interview Enabled",
             "type": "boolean"
+          },
+          "interview_mode": {
+            "default": "invite",
+            "title": "Interview Mode",
+            "type": "string"
           },
           "keep_raw_takes": {
             "default": false,
@@ -2572,6 +3366,63 @@
         "title": "SharePublic",
         "type": "object"
       },
+      "SignupRow": {
+        "properties": {
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "paid": {
+            "title": "Paid",
+            "type": "boolean"
+          },
+          "signed_up_at": {
+            "format": "date-time",
+            "title": "Signed Up At",
+            "type": "string"
+          },
+          "videos": {
+            "title": "Videos",
+            "type": "integer"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "company",
+          "email",
+          "signed_up_at",
+          "last_login_at",
+          "credits",
+          "videos",
+          "paid"
+        ],
+        "title": "SignupRow",
+        "type": "object"
+      },
       "SignupStartIn": {
         "properties": {
           "invite_code": {
@@ -2673,6 +3524,17 @@
             "title": "Question Index",
             "type": "integer"
           },
+          "snapshot_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Url"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -2708,6 +3570,47 @@
           "flags"
         ],
         "title": "TakeOut",
+        "type": "object"
+      },
+      "TopCustomer": {
+        "properties": {
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "last_video_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Video At"
+          },
+          "revenue_usd": {
+            "title": "Revenue Usd",
+            "type": "string"
+          },
+          "videos": {
+            "title": "Videos",
+            "type": "integer"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "company",
+          "revenue_usd",
+          "videos",
+          "last_video_at"
+        ],
+        "title": "TopCustomer",
         "type": "object"
       },
       "UploadConfirmIn": {
@@ -2945,6 +3848,35 @@
         "title": "VendorBudgetSet",
         "type": "object"
       },
+      "VoiceLine": {
+        "properties": {
+          "audio_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Url"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "text"
+        ],
+        "title": "VoiceLine",
+        "type": "object"
+      },
       "VoiceOut": {
         "properties": {
           "accent": {
@@ -2972,6 +3904,22 @@
           "accent"
         ],
         "title": "VoiceOut",
+        "type": "object"
+      },
+      "VoicePrepareOut": {
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/VoiceLine"
+            },
+            "title": "Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "lines"
+        ],
+        "title": "VoicePrepareOut",
         "type": "object"
       },
       "WorkspaceAdminOut": {
@@ -3440,6 +4388,147 @@
         ]
       }
     },
+    "/v1/admin/customers": {
+      "get": {
+        "operationId": "customers_v1_admin_customers_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Customers",
+        "tags": [
+          "backoffice"
+        ]
+      }
+    },
+    "/v1/admin/customers/{workspace_id}": {
+      "get": {
+        "operationId": "customer_v1_admin_customers__workspace_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Customer",
+        "tags": [
+          "backoffice"
+        ]
+      }
+    },
     "/v1/admin/invites": {
       "post": {
         "operationId": "create_invite_v1_admin_invites_post",
@@ -3727,6 +4816,67 @@
         ]
       }
     },
+    "/v1/admin/overview": {
+      "get": {
+        "operationId": "overview_v1_admin_overview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 90,
+              "minimum": 7,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Overview",
+        "tags": [
+          "backoffice"
+        ]
+      }
+    },
     "/v1/admin/packs": {
       "get": {
         "operationId": "admin_packs_v1_admin_packs_get",
@@ -3904,6 +5054,55 @@
         "summary": "Patch Pack",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/v1/admin/payments": {
+      "get": {
+        "operationId": "payments_v1_admin_payments_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payments"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Payments",
+        "tags": [
+          "backoffice"
         ]
       }
     },
@@ -6373,6 +7572,58 @@
       }
     },
     "/v1/interview/{token}/takes/{take_id}": {
+      "delete": {
+        "description": "Drop a recording that will never be finished (the camera went off, or the person left), so it can't block\nsubmitting. A finished take is never touched: re-recording replaces it instead.",
+        "operationId": "abandon_take_v1_interview__token__takes__take_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "take_id",
+            "required": true,
+            "schema": {
+              "title": "Take Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Abandon Take V1 Interview  Token  Takes  Take Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abandon Take",
+        "tags": [
+          "founder"
+        ]
+      },
       "get": {
         "operationId": "take_status_v1_interview__token__takes__take_id__get",
         "parameters": [
@@ -6651,6 +7902,49 @@
           }
         },
         "summary": "Reprocess",
+        "tags": [
+          "founder"
+        ]
+      }
+    },
+    "/v1/interview/{token}/voice": {
+      "post": {
+        "description": "What the AI interviewer says, with audio for each line when a voice provider is configured. The greeting\nuses the founder's name. Called while the device check runs, so the interview itself never waits.",
+        "operationId": "prepare_voice_v1_interview__token__voice_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoicePrepareOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prepare Voice",
         "tags": [
           "founder"
         ]
@@ -7340,6 +8634,134 @@
           }
         },
         "summary": "Create Invite",
+        "tags": [
+          "interview"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/interview/live": {
+      "post": {
+        "description": "Open the AI interviewer's room for the owner. Returns the credential the browser recorder uses.",
+        "operationId": "start_live_v1_projects__project_id__interview_live_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveStartIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveStartOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Live",
+        "tags": [
+          "interview"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/interview/live/skip": {
+      "post": {
+        "description": "Not doing the interview after all: make the anchor-only video.",
+        "operationId": "skip_live_v1_projects__project_id__interview_live_skip_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Skip Live",
         "tags": [
           "interview"
         ]
@@ -8104,6 +9526,65 @@
         "summary": "Create Share",
         "tags": [
           "delivery"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/understanding": {
+      "get": {
+        "description": "What the system understood from the pasted announcement, so the owner can check it before approving.",
+        "operationId": "understanding_v1_projects__project_id__understanding_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BriefUnderstandingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Understanding",
+        "tags": [
+          "projects"
         ]
       }
     },

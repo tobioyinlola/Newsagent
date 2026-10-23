@@ -1,4 +1,4 @@
-"""Write the FastAPI OpenAPI schema to frontend/openapi.json (input to the generated TS client)."""
+"""Write the FastAPI OpenAPI schema to frontend/openapi.json and admin/openapi.json (inputs to the generated TS clients)."""
 import json
 import sys
 from pathlib import Path
@@ -6,6 +6,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 from app.main import app  # noqa: E402
 
-out = Path(__file__).resolve().parents[1] / "frontend" / "openapi.json"
-out.write_text(json.dumps(app.openapi(), indent=2, sort_keys=True) + "\n")
-print(f"wrote {out}")
+root = Path(__file__).resolve().parents[1]
+text = json.dumps(app.openapi(), indent=2, sort_keys=True) + "\n"
+for target in ("frontend", "admin"):
+    out = root / target / "openapi.json"
+    out.parent.mkdir(exist_ok=True)
+    out.write_text(text)
+    print(f"wrote {out}")

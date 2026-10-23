@@ -35,8 +35,10 @@ class AnthropicScriptLLM(ScriptLLM):
 
     async def parse_brief(self, brief_text: str, website_url: str | None) -> dict:
         return await self._json(
-            "Extract JSON with keys company, problem, usp, key_facts (list), region, tone from this "
-            f"brief:\n{brief_text}\nWebsite: {website_url or 'n/a'}"
+            "The text below is a startup's announcement, news script or brief. Work out what they are announcing. "
+            "Extract JSON with keys company (the startup's name), announcement (one sentence: what is being "
+            "announced), problem, usp, key_facts (list of short concrete facts, at most 8), region, tone from "
+            f"this text:\n{brief_text}\nWebsite: {website_url or 'n/a'}"
         )
 
     async def moderate(self, text: str) -> dict:
@@ -56,6 +58,9 @@ class AnthropicScriptLLM(ScriptLLM):
         raw = await self._json(
             "Write a 60-90 second anchor script as JSON with keys segments [{kind,text}], "
             "ticker_lines [str], lower_thirds [{title,subtitle}], interview_questions [str]. "
+            "interview_questions: exactly 4 short, open questions (each under 25 words, never yes/no) that a "
+            "presenter would ask the founder about THIS announcement, each answerable in about 40 seconds, "
+            "ordered from the story to the vision; address the founder directly, do not name them in the questions. "
             f"Tone: {tone}. Facts: {json.dumps(facts)}"
         )
         draft = ScriptDraft.model_validate(raw)

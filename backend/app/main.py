@@ -5,9 +5,23 @@ import re
 import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.routes import account, admin, auth, billing, brand, delivery, guest, health, interview, ops, projects
+from app.routes import (
+    account,
+    admin,
+    auth,
+    backoffice,
+    billing,
+    brand,
+    delivery,
+    guest,
+    health,
+    interview,
+    ops,
+    projects,
+)
 from app.runtime_checks import assert_runtime_ok
 
 # Magic-link and share tokens are credentials. They live in URL paths, so scrub them from every log line.
@@ -53,7 +67,9 @@ def create_app() -> FastAPI:
     if s.sentry_dsn:
         sentry_sdk.init(dsn=s.sentry_dsn, environment=s.environment, before_send=_scrub_sentry, send_default_pii=False)
     app = FastAPI(title="Newsagent API", version="0.1.0")
-    app.add_middleware(CORSMiddleware, allow_origins=[s.app_base_url], allow_methods=["*"], allow_headers=["*"])
+    app.add_middleware(
+        CORSMiddleware, allow_origins=[s.app_base_url, s.admin_base_url], allow_methods=["*"], allow_headers=["*"]
+    )
     if s.is_local and s.use_mocks:
         from app.routes import devmail, devstorage
 
@@ -62,6 +78,14 @@ def create_app() -> FastAPI:
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
+        # The back office is its own app. A page served by the CUSTOMER app must never be able to call it, even
+        # with an operator's session: refuse any /v1/admin request that comes from the customer app's origin.
+        if (
+            request.url.path.startswith("/v1/admin")
+            and request.headers.get("origin") == s.app_base_url
+            and s.app_base_url != s.admin_base_url
+        ):
+            return JSONResponse({"detail": "The back office is not available from this app."}, status_code=403)
         resp = await call_next(request)
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         resp.headers.setdefault("X-Frame-Options", "DENY")
@@ -86,6 +110,7 @@ def create_app() -> FastAPI:
         interview.router,
         guest.router,
         admin.router,
+        backoffice.router,
         account.router,
         ops.router,
     ):

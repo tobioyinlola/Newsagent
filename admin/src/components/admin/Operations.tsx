@@ -13,7 +13,7 @@ function Counts({ title, data }: { title: string; data: Record<string, number> |
   );
 }
 
-export function Overview() {
+export function Operations() {
   const qc = useQueryClient();
   const queue = useQuery({ queryKey: ["admin-queue"], queryFn: () => unwrap(api.GET("/v1/admin/queue")), refetchInterval: 10000 });
   const settings = useQuery({ queryKey: ["admin-settings"], queryFn: () => unwrap(api.GET("/v1/admin/settings")) });

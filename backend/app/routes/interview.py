@@ -18,6 +18,8 @@ from app.schemas.api import (
     InterviewInviteOut,
     InterviewStatusOut,
     KeepRawIn,
+    LiveStartIn,
+    LiveStartOut,
     MergePlanIn,
     ProjectOut,
     RetakeIn,
@@ -73,6 +75,7 @@ def take_out(t: Take, attempts: int, include_urls: bool) -> TakeOut:
         audio_url=storage.presign_get(t.processed_audio_key, URL_TTL)
         if include_urls and t.processed_audio_key
         else None,
+        snapshot_url=storage.presign_get(t.snapshot_key, URL_TTL) if include_urls and t.snapshot_key else None,
     )
 
 
@@ -148,8 +151,11 @@ async def interview_status(
     takes = await latest_takes(session, project_id)
     attempts = await attempts_by_question(session, project_id)
     storage = registry.get_storage()
+    company = (script.lower_thirds[0].get("title") if script.lower_thirds else "") or p.workspace.name
     return InterviewStatusOut(
         active=s is not None,
+        mode=project.interview_mode,
+        consent_text=iv.consent_text(company),
         founder_name=s.founder_name if s else None,
         founder_title=s.founder_title if s else None,
         founder_email=s.founder_email if s else None,
@@ -159,7 +165,8 @@ async def interview_status(
         reminders_sent=s.reminders_sent if s else 0,
         questions=list(script.interview_questions),
         takes=[take_out(t, attempts.get(q, 1), True) for q, t in sorted(takes.items()) if t.status != "recording"],
-        plan=project.merge_plan or default_plan(len(script.interview_questions)),
+        plan=project.merge_plan
+        or default_plan(len(script.interview_questions), "column" if project.interview_mode == "live" else "pip"),
         photo_url=storage.presign_get(s.photo_key, URL_TTL) if s and s.photo_key else None,
     )
 
@@ -172,7 +179,7 @@ async def save_plan(
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     project = await _owned(session, project_id, p)
-    if project.state not in {"awaiting_founder", "processing_founder"}:
+    if project.state not in {"awaiting_founder", "processing_founder", "interviewing"}:
         raise HTTPException(409, "The layout can only be changed before the final video is made.")
     script = await approved_script(session, project_id)
     takes = await latest_takes(session, project_id)
@@ -195,6 +202,8 @@ async def make_final(
     from app.routes.projects import _out
 
     project = await _owned(session, project_id, p)
+    if project.state == "interviewing":
+        return await _proceed_live(session, project, p)
     if project.state not in {"awaiting_founder", "processing_founder"}:
         raise HTTPException(409, "Nothing to merge yet.")
     if project.state == "processing_founder":
@@ -218,6 +227,114 @@ async def make_final(
     if s:
         s.revoked_at, s.token_enc = datetime.now(UTC), None  # the founder link stops working once we merge
     sm.transition(project, "merging")
+    await session.commit()
+    await advance(session, project_id)
+    await session.refresh(project)
+    return await _out(session, project)
+
+
+async def _proceed_live(session: AsyncSession, project: Project, p: Principal) -> ProjectOut:
+    """The owner has reviewed their live interview and wants the video. Nothing paid has run yet, so this is where
+    the answers are screened (what they SAID is published) and where the anchor starts being made."""
+    from app.routes.projects import _out
+
+    script = await approved_script(session, project.id)
+    takes = await latest_takes(session, project.id)
+    n = len(script.interview_questions)
+    if any(takes.get(q) is None for q in range(n)):
+        raise HTTPException(409, "Answer every question first.")
+    if any(t.status in {"recording", "uploaded", "processing"} for t in takes.values()):
+        raise HTTPException(409, "Your answers are still being checked. Try again in a moment.")
+    plan_now = project.merge_plan or default_plan(n, "column")
+    included = {a["question_index"] for a in plan_now["answers"] if a.get("include", True)}
+    if not included:
+        raise HTTPException(409, "Include at least one answer, or skip the interview.")
+    s = await active_session(session, project.id)
+    spoken = " ".join(t.transcript or "" for q, t in sorted(takes.items()) if q in included)
+    await moderation_flow.enforce(
+        session,
+        project_id=project.id,
+        workspace_id=project.workspace_id,
+        stage="interview",
+        subject_id=fingerprint(*(f"{t.id}:{t.transcript}" for _, t in sorted(takes.items()))),
+        text=f"{project.founder_name} {project.founder_title}\n{spoken}",
+    )
+    if s:
+        s.revoked_at, s.token_enc = datetime.now(UTC), None
+    project.merge_plan = plan_now
+    project.layout = plan_now["layout"]
+    sm.transition(project, "rendering_anchor")
+    await session.commit()
+    await advance(session, project.id)  # the presenter is made now, then the interview is merged in
+    await session.refresh(project)
+    return await _out(session, project)
+
+
+@router.post("/interview/live", response_model=LiveStartOut, dependencies=[Depends(limit("live-start", 30, 3600))])
+async def start_live(
+    project_id: str,
+    body: LiveStartIn,
+    p: Principal = Depends(current_principal),
+    session: AsyncSession = Depends(get_session),
+) -> LiveStartOut:
+    """Open the AI interviewer's room for the owner. Returns the credential the browser recorder uses."""
+    project = await _owned(session, project_id, p)
+    if project.state != "interviewing" or project.interview_mode != "live":
+        raise HTTPException(409, "The interview isn't ready to start.")
+    if not body.consent:
+        raise HTTPException(422, "Please read and accept how your recording will be used first.")
+    script = await approved_script(session, project_id)
+    company = (script.lower_thirds[0].get("title") if script.lower_thirds else "") or p.workspace.name
+    project.founder_name, project.founder_title = body.founder_name.strip(), body.founder_title.strip()
+    now = datetime.now(UTC)
+    s = await active_session(session, project_id)
+    token = crypto.decrypt(s.token_enc) if s and s.mode == "live" and s.token_enc and not s.submitted_at else None
+    if s is not None and token is None:  # a finished or foreign session: start a fresh one
+        s.revoked_at, s.token_enc = now, None
+        s = None
+    if s is None:
+        token = iv.new_token()
+        s = InterviewSession(
+            project_id=project_id,
+            token_hash=iv.hash_token(token),
+            mode="live",
+            invited_at=now,
+            expiry=now + timedelta(hours=6),
+            token_enc=crypto.encrypt(token),
+        )
+        session.add(s)
+    s.founder_name, s.founder_title = project.founder_name, project.founder_title
+    s.consent_at, s.consent_version = now, iv.CONSENT_VERSION
+    await session.commit()
+    assert token is not None
+    return LiveStartOut(
+        token=token,
+        company=company,
+        founder_name=s.founder_name,
+        expires_at=s.expiry,
+        consent_text=iv.consent_text(company),
+        questions=list(script.interview_questions),
+        max_total_s=iv.LIVE_MAX_TOTAL_S,
+        max_answer_s=iv.LIVE_MAX_ANSWER_S,
+        min_answer_s=iv.LIVE_MIN_ANSWER_S,
+    )
+
+
+@router.post("/interview/live/skip", response_model=ProjectOut)
+async def skip_live(
+    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> ProjectOut:
+    """Not doing the interview after all: make the anchor-only video."""
+    from app.routes.projects import _out
+
+    project = await _owned(session, project_id, p)
+    if project.state != "interviewing":
+        raise HTTPException(409, "There is no interview to skip.")
+    s = await active_session(session, project_id)
+    if s:
+        s.revoked_at, s.token_enc = datetime.now(UTC), None
+    project.interview_enabled, project.interview_mode = False, "invite"
+    sm.transition(project, "rendering_anchor")
     await session.commit()
     await advance(session, project_id)
     await session.refresh(project)

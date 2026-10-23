@@ -10,7 +10,7 @@ from app.db import get_session
 from app.integrations import registry
 from app.models import Asset, Brief, Project, ScriptVersion
 from app.pipeline.advance import advance
-from app.schemas.api import ApproveIn, ProjectCreate, ProjectOut, ScriptOut, ScriptUpdate
+from app.schemas.api import ApproveIn, BriefUnderstandingOut, ProjectCreate, ProjectOut, ScriptOut, ScriptUpdate
 from app.services import interview as iv
 from app.services import moderation_flow, privacy
 from app.services import state_machine as sm
@@ -87,6 +87,8 @@ async def create_project(
         region=body.region,
         voice_accent=body.voice_accent,
         accent_override=body.accent_override,
+        founder_name=body.founder_name.strip(),
+        founder_title=body.founder_title.strip(),
     )
     session.add(project)
     await session.flush()
@@ -117,7 +119,8 @@ async def generate_script(
         raise HTTPException(409, "Project has no brief")
     # Stages 1 and 2 are cheap; they are not charged against render budgets (spec section 8).
     brief.structured_facts = await llm.parse_brief(brief.raw_text, brief.website_url)
-    draft = await llm.write_script(brief.structured_facts, "confident")
+    facts = {**brief.structured_facts, "founder_name": project.founder_name, "founder_title": project.founder_title}
+    draft = await llm.write_script(facts, "confident")
     prev = await _latest_script(session, project_id)
     sv = ScriptVersion(
         project_id=project_id,
@@ -133,6 +136,24 @@ async def generate_script(
         sm.transition(project, "script_ready")
     await session.commit()
     return sv
+
+
+@router.get("/{project_id}/understanding", response_model=BriefUnderstandingOut)
+async def understanding(
+    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> BriefUnderstandingOut:
+    """What the system understood from the pasted announcement, so the owner can check it before approving."""
+    project = await _owned(session, project_id, p)
+    facts = (project.brief.structured_facts if project.brief else None) or {}
+    key_facts = facts.get("key_facts") or []
+    return BriefUnderstandingOut(
+        company=str(facts.get("company") or ""),
+        announcement=str(facts.get("announcement") or ""),
+        problem=str(facts.get("problem") or ""),
+        key_facts=[str(k) for k in key_facts][:8] if isinstance(key_facts, list) else [],
+        founder_name=project.founder_name,
+        founder_title=project.founder_title,
+    )
 
 
 @router.get("/{project_id}/script", response_model=ScriptOut)
@@ -252,6 +273,7 @@ async def approve_script(
             },
         )
     project.interview_enabled = with_interview
+    project.interview_mode = body.interview_mode if (with_interview and body) else "invite"
     sv.approved, sv.approved_by, sv.approved_at = True, p.user.email, datetime.now(UTC)
     sm.transition(project, "script_approved")
     await session.commit()

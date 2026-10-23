@@ -8,6 +8,7 @@ from app.integrations.malware.base import MalwareScanner
 from app.integrations.renderer.base import RendererClient
 from app.integrations.storage.base import StorageProvider
 from app.integrations.transcription.base import TranscriptionProvider
+from app.integrations.tts.base import TTSProvider
 
 _cache: dict[str, object] = {}
 
@@ -138,6 +139,19 @@ def get_transcription() -> TranscriptionProvider:
         return WhisperApiTranscription()
 
     return _get("transcription", make)  # type: ignore[return-value]
+
+
+def get_tts() -> TTSProvider:
+    def make() -> TTSProvider:
+        if get_settings().use_mocks:
+            from app.integrations.tts.mock import MockTTS
+
+            return MockTTS()
+        from app.integrations.tts.openai import OpenAITTS
+
+        return OpenAITTS()
+
+    return _get("tts", make)  # type: ignore[return-value]
 
 
 def get_scanner() -> MalwareScanner:

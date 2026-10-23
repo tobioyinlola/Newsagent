@@ -9,6 +9,7 @@ STATES = {
     "draft",
     "script_ready",
     "script_approved",
+    "interviewing",
     "rendering_anchor",
     "anchor_ready",
     "awaiting_founder",
@@ -22,9 +23,11 @@ STATES = {
 ALLOWED: dict[str, set[str]] = {
     "draft": {"script_ready"},
     "script_ready": {"script_ready", "script_approved"},
-    "script_approved": {"rendering_anchor"},
+    "script_approved": {"rendering_anchor", "interviewing"},
+    # live interview: the owner is interviewed first; proceeding starts the paid pipeline
+    "interviewing": {"rendering_anchor"},
     "rendering_anchor": {"anchor_ready"},
-    "anchor_ready": {"awaiting_founder", "final_ready"},
+    "anchor_ready": {"awaiting_founder", "final_ready", "merging"},  # merging: live interview already recorded
     # awaiting_founder -> merging is the owner choosing to skip the interview (anchor-only cut)
     "awaiting_founder": {"processing_founder", "merging"},
     "processing_founder": {"merging", "awaiting_founder"},  # retake request goes back

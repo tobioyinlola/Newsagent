@@ -32,7 +32,7 @@ async function setup(request: APIRequestContext) {
   return { workspace: inv.workspace_id, email: OWNER_EMAIL, OWNER };
 }
 
-test("moderation holds risky content; the operator reviews it in the console; the owner continues", async ({ browser, request }) => {
+test("moderation holds risky content; once an operator approves it the owner continues", async ({ browser, request }) => {
   const { email: OWNER_EMAIL, OWNER } = await setup(request);
   const p = await ok<{ id: string }>(await request.post(`${API}/v1/projects`, { headers: OWNER, data: { brief_text: "Pilot Co sells solar lamps to market traders in Kumasi." } }));
   const sc = await ok<{ ticker_lines: string[]; lower_thirds: unknown[] }>(await request.post(`${API}/v1/projects/${p.id}/script/generate`, { headers: OWNER }));
@@ -42,31 +42,23 @@ test("moderation holds risky content; the operator reviews it in the console; th
   await ownerCtx.addInitScript((t) => localStorage.setItem("newsagent.token", t), `dev:${OWNER_EMAIL}`);
   const owner = await ownerCtx.newPage();
   await owner.goto(`/projects/${p.id}`);
+  await owner.getByLabel("No interview").check();
   await owner.getByRole("button", { name: "Approve and make my video" }).click();
   await expect(owner.getByRole("alert")).toContainText("member of our team is checking");
   await owner.reload();
   await expect(owner.getByText("A member of our team is checking your script")).toBeVisible();
 
-  // operator
-  const opsCtx = await browser.newContext();
-  await opsCtx.addInitScript((t) => localStorage.setItem("newsagent.token", t), "dev:ops@example.com");
-  const ops = await opsCtx.newPage();
-  await ops.goto("/admin");
-  await ops.getByRole("tab", { name: "Review queue" }).click();
-  await expect(ops.getByLabel("Content under review")).toContainText("guaranteed returns");
-  await expect(ops.getByText("financial promises")).toBeVisible();
-  await ops.getByLabel("Note to the owner").fill("Fine, but avoid return promises next time.");
-  await ops.getByRole("button", { name: "Approve" }).click();
-  await expect(ops.getByText("Nothing waiting.")).toBeVisible();
+  // the operator's review happens in the back office app (covered by admin/e2e); here the decision is made through the API
+  const cases = await ok<{ id: string }[]>(await request.get(`${API}/v1/admin/moderation`, { headers: OPS }));
+  await ok(await request.post(`${API}/v1/admin/moderation/${cases[0].id}/decision`, { headers: OPS, data: { decision: "approve", note: "Fine, but avoid return promises next time." } }));
 
   // owner carries on
+  await owner.getByLabel("No interview").check();
   await owner.getByRole("button", { name: "Approve and make my video" }).click();
   await expect(owner.getByRole("heading", { name: "Your video" })).toBeVisible({ timeout: 60_000 });
-  await ops.getByRole("tab", { name: "Audit log" }).click();
-  await expect(ops.getByRole("cell", { name: "moderation.approve" })).toBeVisible();
 });
 
-test("owner buys credits through checkout; operator sees costs and can pause paid steps", async ({ browser, request }) => {
+test("owner buys credits through checkout", async ({ browser, request }) => {
   const { workspace: wid, email: OWNER_EMAIL } = await setup(request);
   await ok(await request.post(`${API}/v1/admin/packs`, { headers: OPS, data: { name: "Starter", credits: "30", price_usd: "29" } }));
 
@@ -82,16 +74,6 @@ test("owner buys credits through checkout; operator sees costs and can pause pai
   await expect(owner.getByLabel("Credit balance")).toContainText("50.00");
   await expect(owner.getByRole("cell", { name: /Purchase/ })).toBeVisible();
 
-  const opsCtx = await browser.newContext();
-  await opsCtx.addInitScript((t) => localStorage.setItem("newsagent.token", t), "dev:ops@example.com");
-  const ops = await opsCtx.newPage();
-  await ops.goto("/admin");
-  await ops.getByRole("button", { name: "Pause all paid steps" }).click();
-  await expect(ops.getByText("Paid steps are paused.")).toBeVisible();
-  await ops.getByRole("button", { name: "Resume paid steps" }).click();
-  await expect(ops.getByText("Paid steps are paused.")).toHaveCount(0);
-  await ops.getByRole("tab", { name: "Costs" }).click();
-  await expect(ops.getByRole("heading", { name: /Cost per finished video/ })).toBeVisible();
   expect(wid).toBeTruthy();
 });
 

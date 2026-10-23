@@ -11,7 +11,8 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
   const [segments, setSegments] = useState<Seg[]>(script.segments as Seg[]);
   const [ticker, setTicker] = useState(script.ticker_lines.join("\n"));
   const [questions, setQuestions] = useState<string[]>(script.interview_questions);
-  const [withInterview, setWithInterview] = useState(false);
+  const [mode, setMode] = useState<"live" | "invite" | "none">("live");
+  const withInterview = mode !== "none";
   const [confirmed, setConfirmed] = useState<Set<string>>(new Set(script.claim_flags.filter((c) => c.confirmed).map((c) => String(c.text))));
   useEffect(() => {
     setSegments(script.segments as Seg[]);
@@ -30,7 +31,7 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
     mutationFn: async () => {
       const saved = await unwrap(api.PUT("/v1/projects/{project_id}/script", { ...path, body: body() }));
       if (saved.claim_flags.some((c) => !c.confirmed)) throw new Error("Please confirm each flagged claim before approving.");
-      return unwrap(api.POST("/v1/projects/{project_id}/script/approve", { ...path, body: { with_interview: withInterview } }));
+      return unwrap(api.POST("/v1/projects/{project_id}/script/approve", { ...path, body: { with_interview: withInterview, interview_mode: mode === "invite" ? "invite" : "live" } }));
     },
     onSettled: refresh, // also on failure: the save above may have produced claims to confirm
   });
@@ -56,14 +57,21 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
           <label htmlFor="ticker" className="text-sm font-medium">News ticker (one line each)</label>
           <textarea id="ticker" rows={3} className={inputCls} value={ticker} onChange={(e) => setTicker(e.target.value)} />
         </div>
-        <fieldset className="space-y-2 rounded-md border border-ink p-3">
-          <legend className="px-1 text-sm font-semibold">Founder interview (optional)</legend>
-          <label className="flex items-start gap-2 text-sm">
-            <input type="checkbox" className="mt-1" checked={withInterview} onChange={(e) => setWithInterview(e.target.checked)} />
-            <span>Include a founder interview. The anchor asks these questions and your founder answers on their phone. If you skip this, you get the anchor-only video.</span>
-          </label>
+        <fieldset className="space-y-3 rounded-md border-2 border-ink p-3">
+          <legend className="px-1 text-sm font-semibold">Interview</legend>
+          {([
+            ["live", "Interview me now with the AI interviewer (recommended)", "The AI interviewer greets you by name, asks these questions out loud, and records your answers on camera. About 4 minutes, never more than 5. Your camera must be on. Your answers appear in the video beside the AI presenter."],
+            ["invite", "Send an interview link to a founder", "The presenter asks the questions in the video and your founder answers from their phone, any time in the next 14 days."],
+            ["none", "No interview", "You get the AI presenter video only."],
+          ] as const).map(([value, label, hint]) => (
+            <label key={value} className="flex items-start gap-2 text-sm">
+              <input type="radio" name="interview-mode" className="mt-1" checked={mode === value} onChange={() => setMode(value)} />
+              <span><span className="font-bold">{label}</span><br /><span className="text-muted">{hint}</span></span>
+            </label>
+          ))}
           {withInterview && (
             <div className="space-y-2">
+              <p className="text-sm font-medium">Interview questions</p>
               {questions.map((q, i) => (
                 <div key={i} className="flex gap-2">
                   <input aria-label={`Interview question ${i + 1}`} maxLength={200} className={inputCls} value={q} onChange={(e) => setQuestions(questions.map((x, j) => (j === i ? e.target.value : x)))} />
@@ -71,7 +79,7 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
                 </div>
               ))}
               {questions.length < 5 && <Button variant="secondary" onClick={() => setQuestions([...questions, ""])}>Add a question</Button>}
-              <p className="text-xs text-muted">1 to 5 questions. Short, open questions get the best answers.</p>
+              <p className="text-xs text-muted">4 or 5 short, open questions fit the 5 minute interview. The most we allow is 5.</p>
             </div>
           )}
         </fieldset>

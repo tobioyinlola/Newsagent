@@ -19,6 +19,8 @@ class ProjectCreate(BaseModel):
     region: str = "NG"
     voice_accent: str = "british"
     accent_override: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    founder_name: str = Field(default="", max_length=200)  # the AI interviewer greets this person by name
+    founder_title: str = Field(default="", max_length=200)
 
 
 class AssetOut(BaseModel):
@@ -38,6 +40,9 @@ class ProjectOut(BaseModel):
     failure_reason: str | None
     failure_retryable: bool
     interview_enabled: bool = False
+    interview_mode: str = "invite"
+    founder_name: str = ""
+    founder_title: str = ""
     keep_raw_takes: bool = False
     created_at: datetime
     assets: list[AssetOut] = []
@@ -270,11 +275,14 @@ class TakeOut(BaseModel):
     transcript: str | None = None
     video_url: str | None = None
     audio_url: str | None = None
+    snapshot_url: str | None = None
     attempts: int = 1
 
 
 class InterviewStatusOut(BaseModel):
     active: bool
+    mode: str = "invite"
+    consent_text: str | None = None  # shown before a live interview starts
     founder_name: str | None = None
     founder_title: str | None = None
     founder_email: str | None = None
@@ -312,6 +320,7 @@ class KeepRawIn(BaseModel):
 
 class ApproveIn(BaseModel):
     with_interview: bool = False
+    interview_mode: str = Field(default="invite", pattern="^(invite|live)$")  # live = the AI interviewer, now
 
 
 # ---------- founder (guest) ----------
@@ -334,6 +343,7 @@ class GuestQuestion(BaseModel):
 
 
 class GuestView(BaseModel):
+    mode: str = "invite"
     company: str
     founder_name: str
     expires_at: datetime
@@ -376,6 +386,7 @@ class PhotoIn(BaseModel):
 
 class PhotoConfirmIn(BaseModel):
     key: str
+    take_id: str | None = None  # a snapshot of this answer rather than the founder's profile photo
 
 
 # ---------- billing ----------
@@ -613,3 +624,41 @@ class SessionInfo(BaseModel):
     user_agent: str | None
     ip: str | None
     current: bool
+
+
+# ---------- live AI interview (dashboard) ----------
+class LiveStartIn(BaseModel):
+    founder_name: str = Field(min_length=1, max_length=200)
+    founder_title: str = Field(default="", max_length=200)
+    consent: bool  # the owner ticked "I understand and agree" for their own recording
+
+
+class LiveStartOut(BaseModel):
+    token: str  # scopes the recorder to this one interview (the same credential a founder link carries)
+    company: str
+    founder_name: str
+    expires_at: datetime
+    consent_text: str
+    questions: list[str]
+    max_total_s: int
+    max_answer_s: int
+    min_answer_s: int
+
+
+class VoiceLine(BaseModel):
+    key: str  # greeting | q0.. | thanks | closing
+    text: str
+    audio_url: str | None = None  # None: the browser speaks it with its own voice
+
+
+class VoicePrepareOut(BaseModel):
+    lines: list[VoiceLine]
+
+
+class BriefUnderstandingOut(BaseModel):
+    company: str = ""
+    announcement: str = ""
+    problem: str = ""
+    key_facts: list[str] = []
+    founder_name: str = ""
+    founder_title: str = ""

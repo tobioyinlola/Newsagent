@@ -38,7 +38,7 @@ async def purge_takes(session: AsyncSession, project_id: str, *, keep_rows: bool
     for t in (await session.execute(select(Take).where(Take.project_id == project_id))).scalars():
         for idx in list(t.chunks or {}):
             await storage.delete(chunk_key(project_id, t.id, int(idx)))
-        for k in (t.processed_video_key, t.processed_audio_key):
+        for k in (t.processed_video_key, t.processed_audio_key, t.snapshot_key):
             if k:
                 await storage.delete(k)
         n += 1
