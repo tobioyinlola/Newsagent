@@ -1,12 +1,14 @@
 import React from "react";
-import { AbsoluteFill, Easing, OffthreadVideo, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Easing, OffthreadVideo, Series, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { AnchorFigure } from "./AnchorFigure";
 import { Backdrop, Chrome } from "./Chrome";
+import { ClipScene } from "./ClipScene";
 import { CF, Fonts, MONO, SANS } from "./theme";
 import { NewsProps } from "./types";
 
 // Channel identity: Cover Founder (our own brand). Do not use any other real network's name, marks, music or trade dress.
-export const NewsStudio: React.FC<NewsProps> = (p) => {
+// The studio over the AI presenter: backdrop, presenter, banner and lower third (the channel graphics are added by the caller).
+const StudioBody: React.FC<NewsProps> = (p) => {
   const frame = useCurrentFrame();
   const { width, height, fps, durationInFrames } = useVideoConfig();
   const portrait = height > width;
@@ -32,8 +34,6 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
         )}
       </AbsoluteFill>
 
-      <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} />
-
       {/* breaking-news style banner */}
       <div style={{ position: "absolute", left: 0, bottom: (portrait ? 31 : 24.5) + "%", transform: `translateX(${(1 - slide(5)) * -100}%)` }}>
         <div style={{ background: CF.green, color: CF.ink, fontFamily: MONO, fontWeight: 700, fontSize: 34 * u, padding: `${8 * u}px ${28 * u}px`, textTransform: "uppercase", letterSpacing: 3 * u }}>
@@ -50,6 +50,23 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
           </div>
         </div>
       )}
+    </AbsoluteFill>
+  );
+};
+
+// Optional presenter footage before and after the AI presenter. The channel bug, "Featured" tag, "AI-generated anchor"
+// label and ticker stay on screen for the whole video, clips included (hard rule 2).
+export const NewsStudio: React.FC<NewsProps> = (p) => {
+  const { fps } = useVideoConfig();
+  const frames = (s: number) => Math.max(1, Math.round(s * fps));
+  return (
+    <AbsoluteFill style={{ background: CF.ink, fontFamily: SANS }}>
+      <Series>
+        {p.introClip && <Series.Sequence durationInFrames={frames(p.introClip.seconds)}><ClipScene src={p.introClip.src} /></Series.Sequence>}
+        <Series.Sequence durationInFrames={frames(p.anchorDurationSeconds)}><StudioBody {...p} /></Series.Sequence>
+        {p.outroClip && <Series.Sequence durationInFrames={frames(p.outroClip.seconds)}><ClipScene src={p.outroClip.src} /></Series.Sequence>}
+      </Series>
+      <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} />
     </AbsoluteFill>
   );
 };

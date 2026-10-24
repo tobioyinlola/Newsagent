@@ -20,14 +20,14 @@ async def state(client, pid):
     return (await client.get(f"/v1/projects/{pid}", headers=OWNER)).json()["state"]
 
 
-async def live_project(client, questions=None, name="Tobi Oyinlola"):
+async def live_project(client, questions=None, name="Tobi Oyinlola", segments=None):
     r = await client.post(
         "/v1/projects", json={**BRIEF, "founder_name": name, "founder_title": "CEO, Acme"}, headers=OWNER
     )
     pid = r.json()["id"]
     script = (await client.post(f"/v1/projects/{pid}/script/generate", headers=OWNER)).json()
     body = {k: script[k] for k in ("segments", "ticker_lines", "lower_thirds", "interview_questions")}
-    body["segments"] = [
+    body["segments"] = segments or [
         {"kind": "intro", "text": "Tonight we feature Acme, a farm marketplace."},
         {"kind": "body", "text": "Acme connects farmers to buyers."},
         {"kind": "outro", "text": "That was Acme. Back to you."},
@@ -50,8 +50,8 @@ async def start(client, pid, name="Tobi Oyinlola", consent=True):
     )
 
 
-async def interviewed_project(client, answers=(0, 1, 2, 3)):
-    pid = await live_project(client)
+async def interviewed_project(client, answers=(0, 1, 2, 3), segments=None):
+    pid = await live_project(client, segments=segments)
     token = (await start(client, pid)).json()["token"]
     for q in answers:
         await record(client, token, q)

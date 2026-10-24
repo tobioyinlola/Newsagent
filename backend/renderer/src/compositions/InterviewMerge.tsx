@@ -1,6 +1,7 @@
 import React from "react";
 import { AbsoluteFill, Audio, Freeze, Img, OffthreadVideo, Series, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { Backdrop, Chrome } from "./Chrome";
+import { ClipScene } from "./ClipScene";
 import { CF, Fonts, MONO, SANS } from "./theme";
 
 export type Scene =
@@ -54,13 +55,6 @@ const AnchorShot: React.FC<{ src: string; muted?: boolean; height: string }> = (
 const AnchorScene: React.FC<{ src: string; portrait: boolean }> = ({ src, portrait }) => (
   <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "18%" : "9%" }}>
     <AnchorShot src={src} height={portrait ? "58%" : "88%"} />
-  </AbsoluteFill>
-);
-
-// Presenter footage fills the frame (landscape clips are centre-cropped for 9:16); its own sound plays.
-const ClipScene: React.FC<{ src: string }> = ({ src }) => (
-  <AbsoluteFill style={{ background: CF.ink }}>
-    <OffthreadVideo src={url(src)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
   </AbsoluteFill>
 );
 

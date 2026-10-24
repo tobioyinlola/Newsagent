@@ -6,7 +6,10 @@ import { NewsStudio } from "./compositions/NewsStudio";
 import { FPS, NewsProps, defaultProps } from "./compositions/types";
 
 const calc = ({ props }: { props: NewsProps }) => ({
-  durationInFrames: Math.max(FPS, Math.round(props.anchorDurationSeconds * FPS)),
+  durationInFrames: Math.max(
+    FPS,
+    Math.round((props.anchorDurationSeconds + (props.introClip?.seconds ?? 0) + (props.outroClip?.seconds ?? 0)) * FPS),
+  ),
 });
 
 const calcMerge = ({ props }: { props: MergeProps }) => ({

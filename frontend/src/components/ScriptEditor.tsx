@@ -21,7 +21,14 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
     setConfirmed(new Set(script.claim_flags.filter((c) => c.confirmed).map((c) => String(c.text))));
   }, [script.id]);
 
-  const body = () => ({ segments, ticker_lines: ticker.split("\n").map((s) => s.trim()).filter(Boolean), lower_thirds: script.lower_thirds, interview_questions: questions.map((q) => q.trim()).filter(Boolean), confirmed_claims: [...confirmed] });
+  const ORDER = ["intro", "body", "explanation", "analysis", "outro"];
+  const EXTRA: Record<string, string> = {
+    explanation: "Explanation: the presenter explains the startup before your interview",
+    analysis: "Analysis: the presenter reflects on your answers after the interview",
+  };
+  const addable = Object.keys(EXTRA).filter((k) => !segments.some((x) => x.kind === k));
+  const addPart = (kind: string) => setSegments([...segments, { kind, text: "" }].sort((a, b) => ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind)));
+  const body = () => ({ segments: segments.filter((x) => x.text.trim() || !(x.kind in EXTRA)), ticker_lines: ticker.split("\n").map((s) => s.trim()).filter(Boolean), lower_thirds: script.lower_thirds, interview_questions: questions.map((q) => q.trim()).filter(Boolean), confirmed_claims: [...confirmed] });
   const refresh = () => { qc.invalidateQueries({ queryKey: ["script", projectId] }); qc.invalidateQueries({ queryKey: ["project", projectId] }); };
   const path = { params: { path: { project_id: projectId } } };
 
@@ -53,6 +60,15 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
             <textarea id={`seg-${i}`} rows={3} className={inputCls} value={s.text} onChange={(e) => setSegments(segments.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} />
           </div>
         ))}
+        {withInterview && addable.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <label htmlFor="add-part" className="text-sm font-medium">Add a presenter part</label>
+            <select id="add-part" className={inputCls + " max-w-md"} value="" onChange={(e) => e.target.value && addPart(e.target.value)}>
+              <option value="">Choose…</option>
+              {addable.map((k) => <option key={k} value={k}>{EXTRA[k]}</option>)}
+            </select>
+          </div>
+        )}
         <div className="space-y-1">
           <label htmlFor="ticker" className="text-sm font-medium">News ticker (one line each)</label>
           <textarea id="ticker" rows={3} className={inputCls} value={ticker} onChange={(e) => setTicker(e.target.value)} />

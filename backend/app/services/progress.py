@@ -62,6 +62,12 @@ async def build(session: AsyncSession, project: Project) -> dict:
     plan.append(("presenter", "AI presenter: opening", ("anchor", "main") in have or ("anchor", None) in have, False))
     if has_outro:
         plan.append(("presenter_closing", "AI presenter: closing", ("anchor_outro", "outro") in have, False))
+    from app.pipeline.steps import segment_texts  # local import: steps imports services
+
+    parts = segment_texts(script) if script and project.interview_enabled else {}
+    for part, label in (("explanation", "AI presenter: explanation"), ("analysis", "AI presenter: analysis")):
+        if parts.get(part):
+            plan.append((f"presenter_{part}", label, ("anchor", part) in have, False))
     for i in range(len(questions)):
         plan.append((f"question_{i}", f"AI presenter: question {i + 1}", ("question_clip", f"q{i}") in have, False))
     plan.append(("render", "Final video made and checked", project.state == "final_ready", False))

@@ -299,17 +299,38 @@ async def _paid_avatar_asset(
     return cost
 
 
+EXTRA_KINDS = ("explanation", "analysis")
+
+
+def segment_texts(script: ScriptVersion) -> dict[str, str]:
+    """What the presenter says, by part. `explanation` plays right after the opening (before the interview), `analysis`
+    after the founder's answers (before the closing). Segments of any other kind but "outro" are the opening."""
+
+    def join(pred) -> str:
+        return " ".join(sg["text"] for sg in script.segments if pred(sg.get("kind")))
+
+    out = {
+        "main": join(lambda k: k != "outro" and k not in EXTRA_KINDS),
+        "explanation": join(lambda k: k == "explanation"),
+        "analysis": join(lambda k: k == "analysis"),
+        "outro": join(lambda k: k == "outro"),
+    }
+    if not out["main"] and out["explanation"]:  # a script that only has an explanation: it is the opening
+        out["main"], out["explanation"] = out["explanation"], ""
+    return out
+
+
 def split_segments(script: ScriptVersion) -> tuple[str, str]:
-    """Interview cut: the anchor speaks intro+body, then (after the interview) the outro."""
-    main = " ".join(s["text"] for s in script.segments if s.get("kind") != "outro")
-    outro = " ".join(s["text"] for s in script.segments if s.get("kind") == "outro")
-    return main, outro
+    """Interview cut: the anchor speaks the opening, then (after the interview) the outro."""
+    t = segment_texts(script)
+    return t["main"], t["outro"]
 
 
 async def anchor_render(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
     script = await approved_script(session, project.id)
     if project.interview_enabled:
-        main, outro = split_segments(script)
+        t = segment_texts(script)
+        main, outro = t["main"], t["outro"]
         total = await _paid_avatar_asset(
             session,
             project,
@@ -319,6 +340,17 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
             text=main or anchor_text(script),
             key=f"projects/{project.id}/anchor.webm",
         )
+        for part in EXTRA_KINDS:  # separate presenter clips only when the script has those parts
+            if t[part]:
+                total += await _paid_avatar_asset(
+                    session,
+                    project,
+                    guard,
+                    atype="anchor",
+                    fmt=part,
+                    text=t[part],
+                    key=f"projects/{project.id}/anchor-{part}.webm",
+                )
         if outro:
             total += await _paid_avatar_asset(
                 session,
@@ -412,6 +444,13 @@ async def _render(session: AsyncSession, project: Project, guard: SpendGuard, ou
     )
     assert anchor is not None, "anchor asset must exist before rendering"
     props = await build_overlay_props(session, project, script, float(anchor.duration or 60))
+    clips = await clip_lib.select_clips(
+        session, project.id
+    )  # the library's opening shot and sign-off frame the presenter
+    storage = registry.get_storage()
+    for field, c in (("introClip", clips.intro), ("outroClip", clips.outro)):
+        if c is not None:
+            props[field] = {"src": storage.presign_get(c.key), "seconds": float(c.duration_s or 0)}
     status, cost = await _submit_render(
         guard,
         project,
@@ -456,9 +495,17 @@ async def _store_srt(session: AsyncSession, project: Project, srt: str) -> str:
 async def final_render(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
     script, anchor, props, status, cost = await _render(session, project, guard, FORMATS, "final")
     analyses = await _record_outputs(session, project, status)
-    srt_key = await _store_srt(session, project, build_srt(script.segments, float(anchor.duration or 60)))
+    lead = float((props.get("introClip") or {}).get("seconds", 0))  # captions start after the opening shot
+    srt = build_srt(script.segments, float(anchor.duration or 60))
+    if lead:
+        srt = merge_srt([(a + lead, b + lead, t) for a, b, t in parse_srt(srt)])
+    srt_key = await _store_srt(session, project, srt)
+    safe = {k: v for k, v in props.items() if k not in {"introClip", "outroClip"}} | {
+        "introSeconds": lead,
+        "outroSeconds": float((props.get("outroClip") or {}).get("seconds", 0)),
+    }  # no signed URLs in the DB
     return StepOutcome(
-        {"props": props, "output_keys": status.output_keys, "srt_key": srt_key, "analyses": analyses}, cost
+        {"props": safe, "output_keys": status.output_keys, "srt_key": srt_key, "analyses": analyses}, cost
     )
 
 
@@ -522,7 +569,8 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
     )
     founder = {"name": isession.founder_name if isession else "", "title": isession.founder_title if isession else ""}
 
-    main_text, outro_text = split_segments(script)
+    texts = segment_texts(script)
+    main_text, outro_text = texts["main"], texts["outro"]
     main_srt = build_srt([{"text": main_text or anchor_text(script)}], float(main.duration or 60))
     # real presenter footage from the library frames the AI presenter: an opening shot, cutaways between answers, a sign-off
     clips = await clip_lib.select_clips(session, project.id)
@@ -573,6 +621,26 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
         asset=sp.AssetRef(kind="anchor", key=main.storage_key),
     )
     cues += [(a + start, b + start, t) for a, b, t in parse_srt(main_srt)]
+
+    def presenter_part(part: str, scene_type: str) -> None:
+        """An extra presenter clip (explanation before the interview, analysis after it), if the script has that part."""
+        if not texts[part]:
+            return
+        ref = assets.get(("anchor", part))
+        if ref is None:
+            raise sp.ScenePlanError([f"the presenter's {part} hasn't been made yet"])
+        at = cursor
+        add(
+            type=scene_type,
+            duration_s=float(ref.duration or 0),
+            narration=texts[part],
+            asset=sp.AssetRef(kind="anchor", key=ref.storage_key),
+        )
+        cues.extend(
+            (at + a, at + b, t) for a, b, t in parse_srt(build_srt([{"text": texts[part]}], float(ref.duration or 1)))
+        )
+
+    presenter_part("explanation", "anchor_explanation")
     for q in shown:
         take, ans, qclip = takes[q], answers.get(q, {}), assets[("question_clip", f"q{q}")]
         trim = float(ans.get("trim_start_s", 0))
@@ -624,6 +692,7 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
         ]
         if clips.cutaways and q != shown[-1]:  # a cutaway to the presenter between answers, never after the last one
             clip_scene(clips.cutaways[shown.index(q) % len(clips.cutaways)], "cutaway")
+    presenter_part("analysis", "anchor_analysis")
     if outro:
         start = cursor
         add(
@@ -706,11 +775,15 @@ def quality_gate(result: dict, outputs: int) -> list[str]:  # outputs = expected
         problems.append(f"banned network name in overlays: {term}")
     if len(result["output_keys"]) < outputs:
         problems.append("missing output formats")
-    expected = float(props["anchorDurationSeconds"])
+    expected = (
+        float(props["anchorDurationSeconds"])
+        + float(props.get("introSeconds", 0))
+        + float(props.get("outroSeconds", 0))
+    )
     for key, a in result.get("analyses", {}).items():
         name = key.rsplit("/", 1)[-1]
         if abs(a["duration_s"] - expected) > max(1.0, 0.05 * expected):
-            problems.append(f"{name}: length {a['duration_s']:.1f}s does not match the {expected:.1f}s anchor")
+            problems.append(f"{name}: length {a['duration_s']:.1f}s does not match the {expected:.1f}s planned")
         if not a["has_audio"]:
             problems.append(f"{name}: no audio track")
         peak = a.get("true_peak_db")

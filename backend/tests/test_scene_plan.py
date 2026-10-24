@@ -5,7 +5,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 
 from app.integrations import registry
-from app.models import Project, Take
+from app.models import Asset, Project, Take
 from app.pipeline.queue import get_queue
 from app.services import scene_plan as sp
 from tests.conftest import OWNER
@@ -137,3 +137,53 @@ async def test_the_plan_is_private_to_its_owner(client, workspace):
     assert r.status_code == 200 and r.json()["plan"]["project_id"] == pid and len(r.json()["hash"]) == 64
     other = {"Authorization": "Bearer dev:someone@else.test"}
     assert (await client.get(f"/v1/projects/{pid}/scene-plan", headers=other)).status_code in {401, 403, 404}
+
+
+SEGMENTS = [
+    {"kind": "intro", "text": "Tonight we feature Acme, a farm marketplace."},
+    {"kind": "explanation", "text": "Acme connects smallholder farmers to verified buyers."},
+    {"kind": "analysis", "text": "The founder's answers show a focus on same day payment."},
+    {"kind": "outro", "text": "That was Acme. Back to you."},
+]
+
+
+async def test_explanation_and_analysis_are_their_own_presenter_scenes(client, workspace, maker):
+    pid, token = await interviewed_project(client, answers=(0, 1), segments=SEGMENTS)
+    for q in (2, 3):
+        await record(client, token, q)
+    await client.post(f"/v1/interview/{token}/submit")
+    prog = (await client.get(f"/v1/projects/{pid}/progress", headers=OWNER)).json()
+    assert {"presenter_explanation", "presenter_analysis"} <= {s["key"] for s in prog["stages"]}
+    await client.post(f"/v1/projects/{pid}/interview/merge", headers=OWNER)
+    await get_queue().drain()
+    assert await state(client, pid) == "final_ready"
+    async with maker() as s:
+        saved = sp.ScenePlan.model_validate((await s.get(Project, pid)).scene_plan)
+        assets = {(a.type, a.format) for a in (await s.execute(select(Asset).where(Asset.project_id == pid))).scalars()}
+    assert [s.type for s in saved.scenes] == (
+        ["anchor_intro", "anchor_explanation"]
+        + ["anchor_question", "founder_column"] * 4
+        + ["anchor_analysis", "news_closing"]
+    )
+    assert {("anchor", "main"), ("anchor", "explanation"), ("anchor", "analysis"), ("anchor_outro", "outro")} <= assets
+    assert saved.scenes[1].narration.startswith("Acme connects") and saved.scenes[-2].narration.startswith(
+        "The founder's"
+    )
+    # the explanation's captions start when its scene starts (right after the opening), before any question
+    start = saved.scenes[0].duration_s
+    expl = [c for c in saved.captions if c.text.startswith("Acme connects smallholder")]
+    assert expl and abs(expl[0].start - start) < 0.01
+    first_q = next(c for c in saved.captions if c.text == saved.scenes[2].question)
+    assert first_q.start >= expl[-1].end - 0.01
+    assert (await client.get(f"/v1/projects/{pid}/progress", headers=OWNER)).json()["percent"] == 100
+
+
+async def test_a_script_without_those_parts_is_unchanged(client, workspace):
+    pid, token = await interviewed_project(client, answers=(0, 1))
+    for q in (2, 3):
+        await record(client, token, q)
+    await client.post(f"/v1/interview/{token}/submit")
+    await client.post(f"/v1/projects/{pid}/interview/merge", headers=OWNER)
+    await get_queue().drain()
+    kinds = [s["type"] for s in registry.get_renderer().requests[-1].props["scenes"]]
+    assert kinds == ["anchor"] + ["question", "answer"] * 4 + ["anchor"]

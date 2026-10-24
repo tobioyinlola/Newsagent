@@ -173,3 +173,29 @@ async def test_switched_off_clips_are_not_used(client, workspace):
     await client.post(f"/v1/projects/{pid}/interview/merge", headers=OWNER)
     await get_queue().drain()
     assert registry.get_renderer().requests[-1].props["scenes"][0]["type"] == "anchor"
+
+
+async def test_the_presenter_only_video_gets_the_opening_shot_and_sign_off(client, workspace):
+    from tests.helpers import make_final_ready
+
+    renderer = registry.get_renderer()
+    renderer.analysis_override = good(5)
+    for role in ("intro", "cutaway", "outro"):
+        assert (await add_clip(client, role, title=role)).status_code == 200
+    renderer.analysis_override = None
+    pid = await make_final_ready(client)
+    assert (await client.get(f"/v1/projects/{pid}", headers=OWNER)).json()["state"] == "final_ready"
+    req = [r for r in renderer.requests if r.composition == "NewsStudio" and r.output_prefix.endswith("/final")][-1]
+    assert req.props["introClip"]["seconds"] == 5 and req.props["outroClip"]["seconds"] == 5
+    assert "cutaway" not in str(req.props)  # cutaways only make sense between founder answers
+    # the quality gate measured the whole video, clips included
+    assert abs(renderer.duration_s - (req.props["anchorDurationSeconds"] + 10)) < 0.01
+
+
+async def test_without_clips_the_presenter_only_video_is_unchanged(client, workspace):
+    from tests.helpers import make_final_ready
+
+    pid = await make_final_ready(client)
+    req = [r for r in registry.get_renderer().requests if r.composition == "NewsStudio"][-1]
+    assert "introClip" not in req.props and "outroClip" not in req.props
+    assert (await client.get(f"/v1/projects/{pid}", headers=OWNER)).json()["state"] == "final_ready"

@@ -64,7 +64,11 @@ class MockRenderer(RendererClient):
 
     async def submit(self, req: RenderRequest) -> str:
         self.requests.append(req)
-        self.duration_s = float(req.props.get("anchorDurationSeconds", 0))
+        self.duration_s = (
+            float(req.props.get("anchorDurationSeconds", 0))
+            + float((req.props.get("introClip") or {}).get("seconds", 0))  # presenter footage before and after
+            + float((req.props.get("outroClip") or {}).get("seconds", 0))
+        )
         rid = f"mock-{len(self._done) + 1}"
         keys = []
         for o in req.outputs:
