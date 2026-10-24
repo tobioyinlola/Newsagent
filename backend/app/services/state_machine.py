@@ -35,7 +35,7 @@ ALLOWED: dict[str, set[str]] = {
     "awaiting_founder": {"processing_founder", "merging"},
     "processing_founder": {"merging", "awaiting_founder"},  # retake request goes back
     "merging": {"final_ready"},
-    "final_ready": set(),
+    "final_ready": {"rendering_anchor"},  # revising a finished video re-makes only what changed
     "limit_reached": set(),  # resumed explicitly via resume_from_limit
     "failed": set(),  # resumed explicitly via retry
     "cancelled": set(),  # the owner stopped it; resumed explicitly via retry

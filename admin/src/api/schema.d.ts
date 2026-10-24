@@ -1629,6 +1629,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{project_id}/revise": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revise
+         * @description Apply the edits: presenter clips whose words changed are made again (and paid for), everything else is reused,
+         *     and the video is rendered again. While this runs the previous video stays where it is.
+         */
+        post: operations["revise_v1_projects__project_id__revise_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{project_id}/scene-plan": {
         parameters: {
             query?: never;
@@ -1647,6 +1668,40 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/scenes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scenes */
+        get: operations["scenes_v1_projects__project_id__scenes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/scenes/{scene_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Scene */
+        patch: operations["patch_scene_v1_projects__project_id__scenes__scene_id__patch"];
         trace?: never;
     };
     "/v1/projects/{project_id}/script": {
@@ -2923,6 +2978,8 @@ export interface components {
              * @default true
              */
             include: boolean;
+            /** Layout */
+            layout?: string | null;
             /** Question Index */
             question_index: number;
             /**
@@ -3168,6 +3225,85 @@ export interface components {
             note: string;
             /** Question Index */
             question_index: number;
+        };
+        /** SceneOut */
+        SceneOut: {
+            /** Caption */
+            caption?: string | null;
+            /** Duration S */
+            duration_s: number;
+            /** Editable */
+            editable: string[];
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Layout */
+            layout?: string | null;
+            /** Narration */
+            narration?: string | null;
+            /** Order */
+            order: number;
+            /** Question Index */
+            question_index?: number | null;
+            /**
+             * Synthetic
+             * @default false
+             */
+            synthetic: boolean;
+            /** Trim End S */
+            trim_end_s?: number | null;
+            /** Trim Start S */
+            trim_start_s?: number | null;
+            /** Type */
+            type: string;
+        };
+        /** ScenePatch */
+        ScenePatch: {
+            /** Caption */
+            caption?: string | null;
+            /**
+             * Confirmed Claims
+             * @default []
+             */
+            confirmed_claims: string[];
+            /** Include */
+            include?: boolean | null;
+            /** Layout */
+            layout?: string | null;
+            /** Narration */
+            narration?: string | null;
+            /** Seconds */
+            seconds?: number | null;
+            /** Trim End S */
+            trim_end_s?: number | null;
+            /** Trim Start S */
+            trim_start_s?: number | null;
+        };
+        /** ScenePatchOut */
+        ScenePatchOut: {
+            /** Regenerates */
+            regenerates: string[];
+            /** Revision Pending */
+            revision_pending: boolean;
+        };
+        /** ScenesOut */
+        ScenesOut: {
+            /** Can Revise */
+            can_revise: boolean;
+            /**
+             * Excluded Answers
+             * @default []
+             */
+            excluded_answers: {
+                [key: string]: unknown;
+            }[];
+            /** Plan Hash */
+            plan_hash: string | null;
+            /** Revision Pending */
+            revision_pending: boolean;
+            /** Scenes */
+            scenes: components["schemas"]["SceneOut"][];
         };
         /** ScriptOut */
         ScriptOut: {
@@ -7049,6 +7185,39 @@ export interface operations {
             };
         };
     };
+    revise_v1_projects__project_id__revise_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     scene_plan_v1_projects__project_id__scene_plan_get: {
         parameters: {
             query?: never;
@@ -7071,6 +7240,77 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scenes_v1_projects__project_id__scenes_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_scene_v1_projects__project_id__scenes__scene_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+                scene_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScenePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenePatchOut"];
                 };
             };
             /** @description Validation Error */

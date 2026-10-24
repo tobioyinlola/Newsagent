@@ -5,6 +5,7 @@ import { api, unwrap } from "../api/client";
 import { Delivery } from "../components/Delivery";
 import { BrollPanel } from "../components/BrollPanel";
 import { ProgressPanel } from "../components/ProgressPanel";
+import { SceneEditor } from "../components/SceneEditor";
 import { ScriptEditor } from "../components/ScriptEditor";
 import { Button, Card, ErrorBox, Notice } from "../components/ui";
 import { streamProjectEvents } from "../lib/sse";
@@ -96,6 +97,7 @@ export function ProjectDetail() {
       {p.state === "processing_founder" && <ReviewPanel projectId={id} keepRaw={p.keep_raw_takes} />}
       {p.state === "merging" && <Card title="Making your final video"><p aria-busy="true">We're putting the interview together. You'll get an email when it is ready.</p></Card>}
       {p.state === "final_ready" && <Delivery projectId={id} />}
+      {p.state === "final_ready" && p.interview_enabled && <SceneEditor projectId={id} state={p.state} />}
 
       {!["script_approved", "rendering_anchor", "anchor_ready", "merging"].includes(p.state) && (
         <div className="flex items-center gap-3">

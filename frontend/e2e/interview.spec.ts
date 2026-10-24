@@ -92,9 +92,23 @@ test("AI interview: understands the announcement, interviews on camera, then mak
   await page.getByRole("button", { name: "Make my video" }).click();
 
   // the presenter is created and the interview is merged in, with no further clicks
-  await expect(page.getByRole("heading", { name: "Your video" })).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByRole("heading", { name: "Your video", exact: true })).toBeVisible({ timeout: 90_000 });
   await expect(page.getByRole("link", { name: "Download" }).first()).toBeVisible();
   await expect(page.getByText("AI-generated anchor").first()).toBeVisible();
+
+  // the finished video can be edited scene by scene; only what changed is made again
+  await expect(page.getByRole("heading", { name: "Edit your video" })).toBeVisible();
+  await page.getByLabel("How this answer appears").first().selectOption("full");
+  await expect(page.getByText("You have changes waiting.")).toBeVisible();
+  page.once("dialog", (d) => void d.accept());
+  await page.getByRole("button", { name: "Apply changes" }).click();
+  const projectId = /projects\/([0-9a-f]+)/.exec(page.url())![1];
+  await expect.poll(async () => {
+    const st = (await (await request.get(`${API}/v1/projects/${projectId}`, { headers: auth })).json()).state;
+    const types = st === "final_ready" ? ((await (await request.get(`${API}/v1/projects/${projectId}/scenes`, { headers: auth })).json()).scenes as { type: string }[]).map((x) => x.type) : [];
+    return st === "final_ready" && types.includes("founder_fullscreen");
+  }, { timeout: 60_000 }).toBe(true);
+  await expect(page.getByRole("heading", { name: "Your video", exact: true })).toBeVisible();
 });
 
 test("AI interview: the camera is required", async ({ page, request }) => {
@@ -116,5 +130,5 @@ test("AI interview: skipping makes the presenter-only video", async ({ page, req
   await toInterview(page, await owner(request));
   page.once("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "Skip the interview" }).click();
-  await expect(page.getByRole("heading", { name: "Your video" })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole("heading", { name: "Your video", exact: true })).toBeVisible({ timeout: 60_000 });
 });

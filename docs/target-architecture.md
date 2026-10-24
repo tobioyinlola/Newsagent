@@ -50,8 +50,8 @@ A modular monolith with background workers. Nothing here introduces new infrastr
 - **No separate queues or services yet.** A render backlog can delay presenter steps on a shared Celery queue; splitting queues is the first scaling step (see next phase).
 
 ## Not implemented (honest list)
-- Optional AI-generated B-roll and uploaded product footage inside the video (`product_broll`): no provider chosen, renderer scene not built.
-- `anchor_explanation` / `anchor_analysis` as separate presenter clips (the presenter reads intro + body as one clip).
-- A scene-by-scene editor UI (the owner can reorder, trim, drop answers and pick a layout; they cannot edit narration per scene after approval).
-- Presenter-clip footage in the presenter-only (no interview) video.
+- **A real AI B-roll provider.** The abstraction, labelling, billing and UI exist and run against a mock; no vendor has been chosen or
+  tested, and the request is synchronous (see the pipeline doc). Without a provider the product says AI shots are unavailable.
+- **Scene editing for presenter-only videos** (they have no scene plan); editing a finished video makes it unavailable to download while it re-renders.
+- Product footage with presenter voice-over (B-roll plays silent between the presenter and the interview).
 - Live HeyGen verification, HeyGen webhooks and a cost model from real invoices.

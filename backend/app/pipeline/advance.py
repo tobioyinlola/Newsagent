@@ -27,7 +27,7 @@ async def advance(session: AsyncSession, project_id: str) -> None:
         enqueue("anchor_render", payload)
     elif state == "anchor_ready" and project.interview_enabled:
         if await steps.question_clips_complete(session, project):
-            if project.interview_mode == "live":
+            if project.interview_mode == "live" or await steps.answers_recorded(session, project):
                 sm.transition(project, "merging")  # the interview is already recorded: put the video together
                 await session.commit()
                 enqueue("merge_render", payload)

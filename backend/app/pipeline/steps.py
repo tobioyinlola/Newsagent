@@ -372,6 +372,10 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
     )
     key = f"projects/{project.id}/anchor.webm"
     out, cost, vendor = await generate_anchor(session, project, guard, req, key, "anchor")
+    for old in (
+        await session.execute(select(Asset).where(Asset.project_id == project.id, Asset.type == "anchor"))
+    ).scalars():
+        await session.delete(old)  # a revised script replaces the earlier presenter clip
     session.add(Asset(project_id=project.id, type="anchor", storage_key=key, duration=Decimal(str(out.duration_s))))
     return StepOutcome({"vendor": vendor, "duration_s": out.duration_s, "key": key}, cost)
 
@@ -475,6 +479,12 @@ async def _record_outputs(session: AsyncSession, project: Project, status) -> di
     analyses = {}
     for o, key in zip(FORMATS, status.output_keys, strict=False):
         atype = "thumbnail" if o["kind"] == "thumbnail" else "render"
+        for old in (  # a re-render replaces the previous version in place (same storage key)
+            await session.execute(
+                select(Asset).where(Asset.project_id == project.id, Asset.type == atype, Asset.format == o["format"])
+            )
+        ).scalars():
+            await session.delete(old)
         session.add(Asset(project_id=project.id, type=atype, storage_key=key, format=o["format"]))
         if o["kind"] == "video":
             analyses[key] = asdict(await renderer.analyze(registry.get_storage().presign_get(key)))
@@ -530,6 +540,16 @@ async def latest_takes(session: AsyncSession, project_id: str) -> dict[int, Take
     for t in rows:
         out[t.question_index] = t
     return out
+
+
+async def answers_recorded(session: AsyncSession, project: Project) -> bool:
+    """Has every interview question got a usable answer already? (A revised video goes straight to the merge.)"""
+    script = await approved_script(session, project.id)
+    takes = await latest_takes(session, project.id)
+    return bool(script.interview_questions) and all(
+        (t := takes.get(q)) is not None and t.status in {"ready", "needs_retake"}
+        for q in range(len(script.interview_questions))
+    )
 
 
 async def merge_render(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
@@ -679,8 +699,9 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
             )
         )
         words = answer_cues(take.srt or "", take.transcript or "", trim, window)
+        own = ans.get("layout")
         add(
-            type=sp.LAYOUT_SCENE[layout],
+            type=sp.LAYOUT_SCENE[own if own in sp.LAYOUT_SCENE else layout],
             duration_s=window,
             asset=main_ref,
             question_asset=qref,

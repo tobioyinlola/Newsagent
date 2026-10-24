@@ -91,5 +91,6 @@ avatar provider interface gains `submit`/`poll`; `generate` stays as a compatibi
 | P1 progress, readiness, metrics, correlation logs, demo honesty | **Done** |
 | P1 HeyGen webhook | **Receiver built, off by default; contract unverified** |
 | P2 vendor concurrency cap, temp sweep, Celery visibility timeout | **Done** |
-| P3 B-roll, explanation/analysis scenes, scene editor, clips in presenter-only video | **Not done** (see target-architecture.md) |
+| P3 explanation/analysis scenes, product B-roll (uploads), scene editor, clips in presenter-only video | **Done** (see video-generation-pipeline.md) |
+| P3 AI-generated B-roll | **Abstraction, labelling, billing, UI done; no real provider exists** |
 | HeyGen live verification | **Blocked**: account has no credit and the developer docs were unreachable from the sandbox. `tests/live/test_heygen_live.py` is ready |

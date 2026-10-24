@@ -106,6 +106,8 @@ class Project(Base, TimestampMixin):
     state_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # product footage the owner chose to show: [{key, caption, seconds, synthetic}] (brand assets or generated clips)
     broll: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # edits made to a finished video that the next re-render will apply
+    revision_pending: Mapped[bool] = mapped_column(Boolean, default=False)
 
     brief: Mapped["Brief | None"] = relationship(uselist=False, lazy="selectin")
 

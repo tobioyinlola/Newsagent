@@ -107,7 +107,7 @@ def validate_plan(plan: dict, question_count: int, durations: dict[int, float]) 
     """Normalise {layout, order, answers:[{question_index, include, trim_start_s, trim_end_s}]}."""
     layout = plan.get("layout", "pip")
     if layout not in LAYOUTS:
-        raise InvalidPlan("Layout must be picture-in-picture, split screen, or answers column.")
+        raise InvalidPlan("Layout must be picture-in-picture, split screen, answers column or full screen.")
     order = plan.get("order") or list(range(question_count))
     if sorted(order) != list(range(question_count)):
         raise InvalidPlan("Order must list every question exactly once.")
@@ -121,9 +121,13 @@ def validate_plan(plan: dict, question_count: int, durations: dict[int, float]) 
         dur = durations.get(q)
         if dur is not None and a.get("include", True) and start + end > dur - 1.0:
             raise InvalidPlan(f"Answer {q + 1} would be shorter than 1 second after trimming.")
-        answers.append(
-            {"question_index": q, "include": bool(a.get("include", True)), "trim_start_s": start, "trim_end_s": end}
-        )
+        own = a.get("layout")
+        if own is not None and own not in LAYOUTS:
+            raise InvalidPlan("Layout must be picture-in-picture, split screen, answers column or full screen.")
+        entry = {"question_index": q, "include": bool(a.get("include", True)), "trim_start_s": start, "trim_end_s": end}
+        if own:
+            entry["layout"] = own  # this answer differs from the video's layout
+        answers.append(entry)
     return {"layout": layout, "order": order, "answers": answers}
 
 

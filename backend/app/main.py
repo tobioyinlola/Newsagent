@@ -23,6 +23,7 @@ from app.routes import (
     ops,
     presenter,
     projects,
+    scenes,
     system,
 )
 from app.runtime_checks import assert_runtime_ok
@@ -133,6 +134,7 @@ def create_app() -> FastAPI:
         admin.router,
         backoffice.router,
         presenter.router,
+        scenes.router,
         system.router,
         account.router,
         ops.router,

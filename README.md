@@ -101,6 +101,7 @@ Paid presenter clips are crash-safe (`provider_requests`: the vendor's job id is
 buying another). Failures are classified (auth / invalid input fail fast; rate limits and outages back off with jitter). Owners can cancel
 and retry (`/projects/{id}/cancel`, `/retry`), see per-piece progress (`/projects/{id}/progress`) and the saved scene plan
 (`/projects/{id}/scene-plan`). Operators get `/health/ready`, `/v1/admin/pipeline-metrics` and an hourly reconciliation of stuck projects.
+Finished interview videos can be edited scene by scene (new presenter words, per-answer layout, trims, product footage) and re-rendered, paying only for what changed.
 Full detail: `docs/video-generation-pipeline.md`, `docs/target-architecture.md`, `docs/architecture-audit.md`.
 
 Real HeyGen check (spends credit, off by default): `HEYGEN_LIVE=1 HEYGEN_API_KEY=... HEYGEN_TEST_AVATAR_ID=... pytest backend/tests/live -q -s`.

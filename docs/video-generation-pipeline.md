@@ -68,9 +68,28 @@ Scenes carry `provenance` (`owner_script`, `founder_statement`, `presenter_foota
 listed in `unconfirmed_claims` rather than asserted as fact. Rebuilding is deterministic for unchanged inputs, so the hash identifies
 a video; changing the answers, plan or clip library changes the hash and the merge's input hash, which re-renders.
 
-Scene types produced today: `anchor_intro`, `anchor_question`, `founder_picture_in_picture`, `founder_split`, `founder_column`,
-`founder_fullscreen`, `news_closing`, `presenter_clip`. Declared but not generated yet: `anchor_explanation`, `anchor_analysis`
-(they would need extra presenter clips) and `product_broll` (not drawable).
+Scene types, all renderable: `presenter_clip` (library footage), `anchor_intro`, `anchor_explanation`, `anchor_analysis`,
+`anchor_question`, `product_broll`, `founder_picture_in_picture`, `founder_split`, `founder_column`, `founder_fullscreen`, `news_closing`.
+- **Explanation and analysis**: a script may contain segments of kind `explanation` (spoken right after the opening, before the
+  interview) and `analysis` (after the answers, before the closing). Each becomes its own presenter clip, so editing one re-makes only
+  that clip. A script without them is unchanged: intro + body is one `anchor_intro` clip.
+- **Product B-roll** (`product_broll`): the owner picks up to 5 of their own product images (3-8 s, slow zoom) or videos (2-8 s, silent,
+  from the start) in the Brand kit uploads, with an optional caption. They play after the presenter's opening and explanation. Product videos are
+  measured by the renderer at upload (2-120 s, at least 480 px). Interview videos only.
+- **AI-generated shots** go through `integrations/broll` (`BrollProvider`). They are always `provenance="synthetic"`, labelled
+  "AI-generated visual" on screen, billed through the spend guard (vendor budget) and only used if the owner picks them. **No real
+  provider is implemented**: outside mock mode the API says AI shots are unavailable. Generation is synchronous in the request; a real, slow
+  provider must be moved onto a queued step (as presenter clips are) before it is enabled.
+- **Presenter library clips** also frame the presenter-only video (opening shot and sign-off; cutaways are for interview videos only).
+
+## 6a. Editing a finished video (`app/services/revisions.py`, `app/routes/scenes.py`)
+`GET /projects/{id}/scenes` lists the saved plan with what each scene allows: presenter parts allow new words; founder answers allow a layout
+of their own, trimming and removal (and putting back); product footage allows caption, length and removal. Presenter questions and the founder's
+recordings cannot be reworded. `PATCH /scenes/{id}` records the change (a words change creates a new approved script version that passes the same
+claims, banned-name and moderation checks as the first approval; it does not count against the daily video limit) and marks
+`revision_pending`. `POST /revise` then moves the project `final_ready → rendering_anchor`: presenter clips whose words changed are made
+(and charged) again, unchanged clips are reused by hash, the merge is rendered again and replaces the previous files. While it runs the
+previous video is not downloadable; if it fails, retry resumes. Presenter-only videos have no scene plan and are not editable this way.
 
 ## 7. Output checks
 The renderer normalises loudness and the **quality gate** (`steps.quality_gate`) measures each rendered file: length against the plan,

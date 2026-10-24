@@ -256,7 +256,7 @@ async def approve_script(
     since = datetime.now(UTC) - timedelta(days=1)
     today = (
         await session.execute(
-            select(func.count())
+            select(func.count(func.distinct(ScriptVersion.project_id)))
             .select_from(ScriptVersion)
             .join(Project, Project.id == ScriptVersion.project_id)
             .where(Project.workspace_id == ws.id, ScriptVersion.approved_at >= since)

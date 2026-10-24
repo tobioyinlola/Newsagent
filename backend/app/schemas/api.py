@@ -358,6 +358,7 @@ class PlanAnswer(BaseModel):
     include: bool = True
     trim_start_s: float = 0
     trim_end_s: float = 0
+    layout: str | None = None  # this answer's own layout; otherwise the video's
 
 
 class MergePlanIn(BaseModel):
@@ -719,3 +720,44 @@ class BriefUnderstandingOut(BaseModel):
     key_facts: list[str] = []
     founder_name: str = ""
     founder_title: str = ""
+
+
+# ---------- scene editor ----------
+class SceneOut(BaseModel):
+    id: str
+    order: int
+    type: str
+    label: str
+    duration_s: float
+    narration: str | None = None
+    caption: str | None = None
+    layout: str | None = None
+    question_index: int | None = None
+    trim_start_s: float | None = None
+    trim_end_s: float | None = None
+    synthetic: bool = False
+    editable: list[str]  # which of narration, layout, include, trim, caption, seconds this scene allows
+
+
+class ScenesOut(BaseModel):
+    plan_hash: str | None
+    revision_pending: bool
+    scenes: list[SceneOut]
+    excluded_answers: list[dict] = []  # answers left out of the video, which can be put back
+    can_revise: bool
+
+
+class ScenePatch(BaseModel):
+    narration: str | None = Field(default=None, max_length=2000)
+    layout: str | None = None
+    include: bool | None = None
+    trim_start_s: float | None = Field(default=None, ge=0)
+    trim_end_s: float | None = Field(default=None, ge=0)
+    caption: str | None = Field(default=None, max_length=80)
+    seconds: float | None = Field(default=None, ge=2, le=8)
+    confirmed_claims: list[str] = []
+
+
+class ScenePatchOut(BaseModel):
+    regenerates: list[str]  # what the next re-render will make again
+    revision_pending: bool

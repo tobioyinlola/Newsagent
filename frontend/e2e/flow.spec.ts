@@ -59,7 +59,7 @@ test("invite to shared video", async ({ page, browser }) => {
   await fp.getByRole("button", { name: "Approve and make my video" }).click();
 
   // --- render completes (mock vendors), live status
-  await expect(fp.getByRole("heading", { name: "Your video" })).toBeVisible({ timeout: 60_000 });
+  await expect(fp.getByRole("heading", { name: "Your video", exact: true })).toBeVisible({ timeout: 60_000 });
   await expect(fp.getByText("AI-generated anchor").first()).toBeVisible();
   await expect(fp.getByRole("link", { name: "Download" })).toHaveCount(4);
   await expect(fp.getByRole("heading", { name: "Suggested captions" })).toBeVisible();
