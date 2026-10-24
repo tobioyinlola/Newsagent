@@ -40,7 +40,7 @@ test("AI interview, recorded for real, merged with the answers column", async ({
   const p = await ok<{ id: string }>(await request.post(`${API}/v1/projects`, { headers: OWNER, data: { brief_text: "Live Co helps farmers sell produce online across Ghana.", founder_name: "Tobi Oyinlola", founder_title: "CEO, Live Co" } }));
   const script = await ok<{ ticker_lines: string[]; lower_thirds: unknown[] }>(await request.post(`${API}/v1/projects/${p.id}/script/generate`, { headers: OWNER }));
   await ok(await request.put(`${API}/v1/projects/${p.id}/script`, { headers: OWNER, data: {
-    segments: [{ kind: "intro", text: "Tonight we feature Live Co." }, { kind: "body", text: "Live Co connects farmers with buyers." }, { kind: "outro", text: "That was Live Co. Back to you." }],
+    segments: [{ kind: "intro", text: "Tonight we feature Live Co." }, { kind: "body", text: "Live Co connects farmers with buyers." }, { kind: "explanation", text: "It lets a farmer list produce from a phone." }, { kind: "analysis", text: "The founder focuses on same day payment." }, { kind: "outro", text: "That was Live Co. Back to you." }],
     ticker_lines: script.ticker_lines, lower_thirds: script.lower_thirds, interview_questions: QUESTIONS } }));
   await ok(await request.post(`${API}/v1/projects/${p.id}/script/approve`, { headers: OWNER, data: { with_interview: true, interview_mode: "live" } }));
 
@@ -95,7 +95,7 @@ test("AI interview, recorded for real, merged with the answers column", async ({
   // frames around the clock: the opening shot (SMPTE bars, light grey at the left) plays first, and the founder's answer
   // is beside the brand column (Pastel Green border, dark panel) at some point after the AI presenter
   const duration = Number(info.format.duration);
-  expect(duration, "intro 4 s + cutaway 3 s + sign-off 4 s + 4 s of product footage are on top of the presenter and the answers").toBeGreaterThan(34);
+  expect(duration, "intro 4 s + cutaway 3 s + sign-off 4 s + 4 s of product footage are on top of the presenter and the answers").toBeGreaterThan(40);
   const opening = pixel(1, 200, 300);
   expect(Math.min(...opening), `opening shot pixel ${opening}`).toBeGreaterThan(150);
   let column = false;
