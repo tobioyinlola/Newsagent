@@ -641,6 +641,14 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
         )
 
     presenter_part("explanation", "anchor_explanation")
+    for item in project.broll or []:  # the owner's product footage, silent, between the presenter and the interview
+        add(
+            type="product_broll",
+            duration_s=float(item["seconds"]),
+            headline=item.get("caption") or None,
+            asset=sp.AssetRef(kind="broll_image" if item["kind"] == "image" else "broll_video", key=item["key"]),
+            provenance="synthetic" if item.get("synthetic") else "owner_media",
+        )
     for q in shown:
         take, ans, qclip = takes[q], answers.get(q, {}), assets[("question_clip", f"q{q}")]
         trim = float(ans.get("trim_start_s", 0))
@@ -743,6 +751,7 @@ async def merge_inputs(session: AsyncSession, project: Project) -> dict:
     takes = await latest_takes(session, project.id)
     return {
         "clips": (await clip_lib.select_clips(session, project.id)).ids,  # a changed library re-renders
+        "broll": project.broll,
         "plan": project.merge_plan,
         "takes": {q: [t.id, t.status, str(t.duration_s)] for q, t in sorted(takes.items())},
     }

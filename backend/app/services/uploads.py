@@ -17,6 +17,7 @@ RULES: dict[str, UploadRule] = {
     "logo_dark": UploadRule({"image/svg+xml": "svg", "image/png": "png"}, 2 * MB),
     "guide_pdf": UploadRule({"application/pdf": "pdf"}, 10 * MB),
     "product_image": UploadRule({"image/png": "png", "image/jpeg": "jpg"}, 5 * MB),
+    "product_video": UploadRule({"video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov"}, 100 * MB),
     "presenter_clip": UploadRule({"video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov"}, 150 * MB),
 }
 

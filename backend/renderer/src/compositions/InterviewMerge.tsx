@@ -1,12 +1,15 @@
 import React from "react";
 import { AbsoluteFill, Audio, Freeze, Img, OffthreadVideo, Series, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { Backdrop, Chrome } from "./Chrome";
+import { BrollScene } from "./BrollScene";
 import { ClipScene } from "./ClipScene";
 import { CF, Fonts, MONO, SANS } from "./theme";
 
 export type Scene =
   | { type: "anchor" | "question"; src: string; seconds: number }
   | { type: "clip"; src: string; seconds: number } // real presenter footage from the operator's library, full frame
+  // the owner's product footage. `synthetic` shots (AI-generated) carry a mandatory on-screen label.
+  | { type: "broll"; src: string; seconds: number; kind: "image" | "video"; caption?: string; synthetic?: boolean }
   | {
       type: "answer";
       seconds: number;
@@ -203,7 +206,7 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
       <Series>
         {p.scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={Math.max(1, Math.round(s.seconds * fps))}>
-            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} /> : s.type === "clip" ? <ClipScene src={s.src} /> : <AnchorScene src={s.src} portrait={portrait} />}
+            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} /> : s.type === "clip" ? <ClipScene src={s.src} /> : s.type === "broll" ? <BrollScene scene={s} /> : <AnchorScene src={s.src} portrait={portrait} />}
           </Series.Sequence>
         ))}
       </Series>

@@ -179,6 +179,17 @@
             "title": "Content Type",
             "type": "string"
           },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
           "key": {
             "title": "Key",
             "type": "string"
@@ -521,6 +532,194 @@
           }
         },
         "title": "BriefUnderstandingOut",
+        "type": "object"
+      },
+      "BrollCandidate": {
+        "properties": {
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "synthetic": {
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "key",
+          "kind",
+          "source",
+          "synthetic"
+        ],
+        "title": "BrollCandidate",
+        "type": "object"
+      },
+      "BrollGenerateIn": {
+        "properties": {
+          "prompt": {
+            "maxLength": 300,
+            "minLength": 10,
+            "title": "Prompt",
+            "type": "string"
+          },
+          "seconds": {
+            "default": 5,
+            "maximum": 8.0,
+            "minimum": 3.0,
+            "title": "Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "title": "BrollGenerateIn",
+        "type": "object"
+      },
+      "BrollItemIn": {
+        "properties": {
+          "caption": {
+            "default": "",
+            "maxLength": 80,
+            "title": "Caption",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "seconds": {
+            "maximum": 8.0,
+            "minimum": 2.0,
+            "title": "Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "seconds"
+        ],
+        "title": "BrollItemIn",
+        "type": "object"
+      },
+      "BrollItemOut": {
+        "properties": {
+          "caption": {
+            "title": "Caption",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "seconds": {
+            "title": "Seconds",
+            "type": "number"
+          },
+          "synthetic": {
+            "title": "Synthetic",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "kind",
+          "caption",
+          "seconds",
+          "synthetic"
+        ],
+        "title": "BrollItemOut",
+        "type": "object"
+      },
+      "BrollOut": {
+        "properties": {
+          "ai_available": {
+            "title": "Ai Available",
+            "type": "boolean"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/BrollCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BrollItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "items",
+          "candidates",
+          "ai_available"
+        ],
+        "title": "BrollOut",
+        "type": "object"
+      },
+      "BrollPutIn": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BrollItemIn"
+            },
+            "maxItems": 5,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "BrollPutIn",
         "type": "object"
       },
       "CaptionsOut": {
@@ -3930,7 +4129,7 @@
             "type": "string"
           },
           "kind": {
-            "pattern": "^(logo_light|logo_dark|guide_pdf|product_image)$",
+            "pattern": "^(logo_light|logo_dark|guide_pdf|product_image|product_video)$",
             "title": "Kind",
             "type": "string"
           },
@@ -8933,6 +9132,199 @@
         "summary": "Get Project",
         "tags": [
           "projects"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/broll": {
+      "get": {
+        "operationId": "get_broll_v1_projects__project_id__broll_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrollOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Broll",
+        "tags": [
+          "broll"
+        ]
+      },
+      "put": {
+        "operationId": "put_broll_v1_projects__project_id__broll_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrollPutIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrollOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Broll",
+        "tags": [
+          "broll"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/broll/generate": {
+      "post": {
+        "description": "Make one SYNTHETIC shot. It is stored as a candidate, labelled as AI-generated wherever it is used, and only\nappears in the video if the owner picks it. UNAVAILABLE until a real provider is configured: no fake result.",
+        "operationId": "generate_broll_v1_projects__project_id__broll_generate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrollGenerateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrollOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate Broll",
+        "tags": [
+          "broll"
         ]
       }
     },

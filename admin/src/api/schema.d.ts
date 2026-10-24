@@ -1317,6 +1317,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{project_id}/broll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Broll */
+        get: operations["get_broll_v1_projects__project_id__broll_get"];
+        /** Put Broll */
+        put: operations["put_broll_v1_projects__project_id__broll_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/broll/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Broll
+         * @description Make one SYNTHETIC shot. It is stored as a candidate, labelled as AI-generated wherever it is used, and only
+         *     appears in the video if the owner picks it. UNAVAILABLE until a real provider is configured: no fake result.
+         */
+        post: operations["generate_broll_v1_projects__project_id__broll_generate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{project_id}/cancel": {
         parameters: {
             query?: never;
@@ -1857,6 +1896,8 @@ export interface components {
         BrandAssetOut: {
             /** Content Type */
             content_type: string;
+            /** Duration S */
+            duration_s?: number | null;
             /** Key */
             key: string;
             /** Kind */
@@ -1997,6 +2038,72 @@ export interface components {
              * @default
              */
             problem: string;
+        };
+        /** BrollCandidate */
+        BrollCandidate: {
+            /** Duration S */
+            duration_s?: number | null;
+            /** Key */
+            key: string;
+            /** Kind */
+            kind: string;
+            /** Source */
+            source: string;
+            /** Synthetic */
+            synthetic: boolean;
+            /** Url */
+            url?: string | null;
+        };
+        /** BrollGenerateIn */
+        BrollGenerateIn: {
+            /** Prompt */
+            prompt: string;
+            /**
+             * Seconds
+             * @default 5
+             */
+            seconds: number;
+        };
+        /** BrollItemIn */
+        BrollItemIn: {
+            /**
+             * Caption
+             * @default
+             */
+            caption: string;
+            /** Key */
+            key: string;
+            /** Seconds */
+            seconds: number;
+        };
+        /** BrollItemOut */
+        BrollItemOut: {
+            /** Caption */
+            caption: string;
+            /** Key */
+            key: string;
+            /** Kind */
+            kind: string;
+            /** Seconds */
+            seconds: number;
+            /** Synthetic */
+            synthetic: boolean;
+        };
+        /** BrollOut */
+        BrollOut: {
+            /** Ai Available */
+            ai_available: boolean;
+            /** Candidates */
+            candidates: components["schemas"]["BrollCandidate"][];
+            /** Items */
+            items: components["schemas"]["BrollItemOut"][];
+            /** Note */
+            note?: string | null;
+        };
+        /** BrollPutIn */
+        BrollPutIn: {
+            /** Items */
+            items: components["schemas"]["BrollItemIn"][];
         };
         /** CaptionsOut */
         CaptionsOut: {
@@ -6233,6 +6340,113 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_broll_v1_projects__project_id__broll_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrollOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_broll_v1_projects__project_id__broll_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrollPutIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrollOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_broll_v1_projects__project_id__broll_generate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrollGenerateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrollOut"];
                 };
             };
             /** @description Validation Error */

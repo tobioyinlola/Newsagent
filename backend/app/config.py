@@ -21,6 +21,7 @@ VENDOR_POLICIES: dict[str, VendorPolicy] = {
     "transcription": VendorPolicy(timeout_s=300, max_attempts=3),
     "email": VendorPolicy(timeout_s=20, max_attempts=5),
     "tts": VendorPolicy(timeout_s=30, max_attempts=2),  # the interviewer's voice
+    "broll": VendorPolicy(timeout_s=300, max_attempts=2),  # optional AI-generated product shots
 }
 
 
@@ -31,6 +32,9 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     anthropic_api_key: str = ""
     heygen_api_key: str = ""
+    # Which AI B-roll provider to use. No real provider is implemented yet, so outside mock mode this stays empty and
+    # AI B-roll reports itself unavailable instead of pretending.
+    broll_provider: str = ""
     # Optional. When set, POST /v1/webhooks/heygen is live: the signature is an HMAC-SHA256 of the raw body, read from the
     # header below. The event only wakes the pipeline up (it never supplies results), so a forged event cannot inject media.
     heygen_webhook_secret: str = ""

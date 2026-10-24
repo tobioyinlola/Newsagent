@@ -49,6 +49,45 @@ class ProjectOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class BrollItemIn(BaseModel):
+    key: str
+    caption: str = Field(default="", max_length=80)
+    seconds: float = Field(ge=2, le=8)
+
+
+class BrollPutIn(BaseModel):
+    items: list[BrollItemIn] = Field(max_length=5)
+
+
+class BrollCandidate(BaseModel):
+    key: str
+    kind: str  # image | video
+    source: str  # upload | generated
+    synthetic: bool
+    duration_s: float | None = None
+    url: str | None = None
+
+
+class BrollItemOut(BaseModel):
+    key: str
+    kind: str
+    caption: str
+    seconds: float
+    synthetic: bool
+
+
+class BrollOut(BaseModel):
+    items: list[BrollItemOut]
+    candidates: list[BrollCandidate]
+    ai_available: bool
+    note: str | None = None
+
+
+class BrollGenerateIn(BaseModel):
+    prompt: str = Field(min_length=10, max_length=300)
+    seconds: float = Field(default=5, ge=3, le=8)
+
+
 class ProgressStage(BaseModel):
     key: str
     label: str
@@ -245,7 +284,7 @@ class VendorBudgetOut(BaseModel):
 
 # ---------- brand asset uploads ----------
 class UploadIn(BaseModel):
-    kind: str = Field(pattern="^(logo_light|logo_dark|guide_pdf|product_image)$")
+    kind: str = Field(pattern="^(logo_light|logo_dark|guide_pdf|product_image|product_video)$")
     content_type: str
     size_bytes: int = Field(gt=0)
 
@@ -266,6 +305,7 @@ class BrandAssetOut(BaseModel):
     content_type: str
     size_bytes: int
     url: str | None = None
+    duration_s: float | None = None  # product videos
 
 
 # ---------- founder interview ----------

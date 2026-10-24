@@ -173,9 +173,26 @@ async def confirm_upload(
         raise HTTPException(503, "We couldn't check that file right now. Please try again shortly.") from None
     if not result.clean:
         raise await reject("That file was blocked by our security scan.")
+    if asset.kind == "product_video":  # a real, short, landscape-or-portrait video of usable size: read by the renderer
+        try:
+            a = await registry.get_renderer().analyze(storage.presign_get(asset.key, 600))
+        except Exception:
+            raise HTTPException(503, "We couldn't read that video right now. Please try again shortly.") from None
+        dur = a.video_duration_s or a.duration_s
+        if not a.width or not a.height or a.height < 480 and a.width < 480:
+            raise await reject("That file has no usable video, or it is too small (at least 480 pixels).")
+        if not 2 <= dur <= 120:
+            raise await reject(f"Product videos must last 2 to 120 seconds (this one is {dur:.0f}).")
+        asset.duration_s, asset.width, asset.height = dur, a.width, a.height
     asset.status, asset.size_bytes = "clean", len(data)
     await session.commit()
-    return BrandAssetOut(key=asset.key, kind=asset.kind, content_type=asset.content_type, size_bytes=asset.size_bytes)
+    return BrandAssetOut(
+        key=asset.key,
+        kind=asset.kind,
+        content_type=asset.content_type,
+        size_bytes=asset.size_bytes,
+        duration_s=asset.duration_s,
+    )
 
 
 @router.get("/brand-kit/assets", response_model=list[BrandAssetOut])
@@ -201,6 +218,7 @@ async def list_assets(
             content_type=a.content_type,
             size_bytes=a.size_bytes,
             url=storage.presign_get(a.key, 900),
+            duration_s=a.duration_s,
         )
         for a in rows
     ]

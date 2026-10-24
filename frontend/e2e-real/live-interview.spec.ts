@@ -44,6 +44,15 @@ test("AI interview, recorded for real, merged with the answers column", async ({
     ticker_lines: script.ticker_lines, lower_thirds: script.lower_thirds, interview_questions: QUESTIONS } }));
   await ok(await request.post(`${API}/v1/projects/${p.id}/script/approve`, { headers: OWNER, data: { with_interview: true, interview_mode: "live" } }));
 
+  // product footage: a real image uploaded to the brand kit and chosen for this video
+  const png = path.join(os.tmpdir(), `product-${Date.now()}.png`);
+  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=s=1280x800", "-frames:v", "1", png]);
+  const img = fs.readFileSync(png);
+  const slotP = await ok<{ upload_url: string; key: string }>(await request.post(`${API}/v1/brand-kit/uploads`, { headers: OWNER, data: { kind: "product_image", content_type: "image/png", size_bytes: img.length } }));
+  await ok(await request.put(slotP.upload_url, { data: img, headers: { "content-type": "image/png" } }));
+  await ok(await request.post(`${API}/v1/brand-kit/uploads/confirm`, { headers: OWNER, data: { key: slotP.key } }));
+  await ok(await request.put(`${API}/v1/projects/${p.id}/broll`, { headers: OWNER, data: { items: [{ key: slotP.key, caption: "The Acme app", seconds: 4 }] } }));
+
   const ctx = await browser.newContext({ permissions: ["camera", "microphone"], viewport: { width: 1280, height: 800 } });
   await ctx.addInitScript((t) => localStorage.setItem("newsagent.token", t), `dev:${OWNER_EMAIL}`);
   const page = await ctx.newPage();
@@ -86,7 +95,7 @@ test("AI interview, recorded for real, merged with the answers column", async ({
   // frames around the clock: the opening shot (SMPTE bars, light grey at the left) plays first, and the founder's answer
   // is beside the brand column (Pastel Green border, dark panel) at some point after the AI presenter
   const duration = Number(info.format.duration);
-  expect(duration, "intro 4 s + cutaway 3 s + sign-off 4 s are on top of the presenter and the answers").toBeGreaterThan(30);
+  expect(duration, "intro 4 s + cutaway 3 s + sign-off 4 s + 4 s of product footage are on top of the presenter and the answers").toBeGreaterThan(34);
   const opening = pixel(1, 200, 300);
   expect(Math.min(...opening), `opening shot pixel ${opening}`).toBeGreaterThan(150);
   let column = false;

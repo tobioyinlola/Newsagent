@@ -89,6 +89,20 @@ async def avatar_chain(session) -> list[AvatarProvider]:
     return chain
 
 
+def get_broll():  # -> BrollProvider
+    """AI-generated B-roll. In mock mode a placeholder maker; otherwise a provider only if one is configured, and none is
+    implemented yet, so this says so rather than fabricating a result."""
+
+    def make():
+        if get_settings().use_mocks:
+            from app.integrations.broll.mock import MockBrollProvider
+
+            return MockBrollProvider()
+        return None
+
+    return _get("broll", make)
+
+
 def get_llm() -> ScriptLLM:
     def make() -> ScriptLLM:
         if get_settings().use_mocks:

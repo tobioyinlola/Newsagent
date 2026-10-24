@@ -104,6 +104,8 @@ class Project(Base, TimestampMixin):
     scene_plan: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     scene_plan_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     state_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # product footage the owner chose to show: [{key, caption, seconds, synthetic}] (brand assets or generated clips)
+    broll: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
     brief: Mapped["Brief | None"] = relationship(uselist=False, lazy="selectin")
 
@@ -248,6 +250,9 @@ class BrandAsset(Base, TimestampMixin):
     content_type: Mapped[str] = mapped_column(String(100))
     size_bytes: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | clean | rejected
+    duration_s: Mapped[float | None] = mapped_column(Float, nullable=True)  # product videos only
+    width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    height: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class PresenterClip(Base, TimestampMixin):

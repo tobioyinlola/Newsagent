@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { Delivery } from "../components/Delivery";
+import { BrollPanel } from "../components/BrollPanel";
 import { ProgressPanel } from "../components/ProgressPanel";
 import { ScriptEditor } from "../components/ScriptEditor";
 import { Button, Card, ErrorBox, Notice } from "../components/ui";
@@ -84,6 +85,7 @@ export function ProjectDetail() {
         <Notice tone="warn">Our team couldn't approve this content.{moderation.data[0].note ? ` ${moderation.data[0].note}` : ""} Please edit it and try again.</Notice>
       )}
       {p.state === "script_ready" && script.data && <ScriptEditor projectId={id} script={script.data} />}
+      {p.interview_enabled && ["interviewing", "awaiting_founder", "processing_founder"].includes(p.state) && <BrollPanel projectId={id} />}
       {p.state === "interviewing" && <LiveInterviewPanel projectId={id} founderName={p.founder_name} founderTitle={p.founder_title} />}
       {["script_approved", "rendering_anchor", "anchor_ready"].includes(p.state) && (
         <Card title={live ? "Creating your AI presenter" : p.interview_enabled ? "Preparing your interview" : "Making your video"}>

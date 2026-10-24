@@ -53,10 +53,27 @@ def test_invalid_plans_are_refused(build):
         build()
 
 
-def test_scenes_the_renderer_cannot_draw_yet_are_refused_not_approximated():
-    s = sp.Scene(id="s", order=0, type="product_broll", duration_s=3)
-    with pytest.raises(ValidationError, match="cannot draw"):
-        plan([s])
+def test_product_footage_needs_its_media_and_synthetic_shots_are_marked():
+    with pytest.raises(ValidationError):
+        sp.Scene(id="s", order=0, type="product_broll", duration_s=3)  # nothing to show
+    ok = sp.Scene(
+        id="s",
+        order=0,
+        type="product_broll",
+        duration_s=4,
+        asset=sp.AssetRef(kind="broll_image", key="p.png"),
+        headline="Our app",
+        provenance="synthetic",
+    )
+    out = sp.to_render_scenes(plan([ok]), lambda k: f"https://signed/{k}")[0]
+    assert out == {
+        "type": "broll",
+        "src": "https://signed/p.png",
+        "seconds": 4,
+        "kind": "image",
+        "caption": "Our app",
+        "synthetic": True,
+    }
 
 
 async def test_missing_media_is_found_before_rendering(client, workspace):

@@ -25,7 +25,7 @@ SceneType = Literal[
     "news_closing",  # the AI presenter closes the bulletin
 ]
 # What the Remotion compositions can draw today. A plan using anything else is refused, not silently approximated.
-RENDERABLE: set[str] = set(SceneType.__args__) - {"product_broll"}  # type: ignore[attr-defined]
+RENDERABLE: set[str] = set(SceneType.__args__)  # type: ignore[attr-defined]
 ANCHOR_TYPES = {"anchor_intro", "anchor_explanation", "anchor_analysis", "news_closing"}
 FOUNDER_LAYOUT = {
     "founder_picture_in_picture": "pip",
@@ -35,11 +35,23 @@ FOUNDER_LAYOUT = {
 }
 LAYOUT_SCENE = {v: k for k, v in FOUNDER_LAYOUT.items()}
 # Where each statement in a scene comes from, so unverified claims are never presented as established fact
-Provenance = Literal["owner_script", "founder_statement", "editorial", "presenter_footage"]
+Provenance = Literal[
+    "owner_script", "founder_statement", "editorial", "presenter_footage", "owner_media", "synthetic"
+]  # synthetic = AI-generated, labelled on screen
 
 
 class AssetRef(BaseModel):
-    kind: Literal["anchor", "question_clip", "take_video", "take_audio", "presenter_clip", "snapshot", "photo"]
+    kind: Literal[
+        "anchor",
+        "question_clip",
+        "take_video",
+        "take_audio",
+        "presenter_clip",
+        "snapshot",
+        "photo",
+        "broll_image",
+        "broll_video",
+    ]
     key: str = Field(min_length=1, max_length=500)
 
 
@@ -78,7 +90,7 @@ class Scene(BaseModel):
 
     @model_validator(mode="after")
     def _needs(self) -> "Scene":
-        if self.type != "product_broll" and self.asset is None:
+        if self.asset is None:
             raise ValueError(f"scene {self.id} ({self.type}) needs a media asset")
         if self.type in FOUNDER_LAYOUT and (self.question_asset is None or self.founder is None):
             raise ValueError(f"scene {self.id} ({self.type}) needs the question clip and the founder's name")
@@ -165,6 +177,18 @@ def to_render_scenes(plan: ScenePlan, url: Callable[[str], str]) -> list[dict]:
         if s.type == "presenter_clip":
             assert s.asset
             out.append({"type": "clip", "src": url(s.asset.key), "seconds": s.duration_s})
+        elif s.type == "product_broll":
+            assert s.asset
+            out.append(
+                {
+                    "type": "broll",
+                    "src": url(s.asset.key),
+                    "seconds": s.duration_s,
+                    "kind": "image" if s.asset.kind == "broll_image" else "video",
+                    "caption": s.headline or "",
+                    "synthetic": s.provenance == "synthetic",  # AI-generated shots are labelled on screen
+                }
+            )
         elif s.type == "anchor_question":
             assert s.asset
             out.append({"type": "question", "src": url(s.asset.key), "seconds": s.duration_s})

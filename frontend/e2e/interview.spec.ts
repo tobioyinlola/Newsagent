@@ -38,9 +38,26 @@ async function toInterview(page: import("@playwright/test").Page, token: string)
   await expect(page.getByRole("heading", { name: "Your AI interview" })).toBeVisible();
 }
 
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+
 test("AI interview: understands the announcement, interviews on camera, then makes the video", async ({ page, request }) => {
   test.setTimeout(150_000);
-  await toInterview(page, await owner(request));
+  const token = await owner(request);
+  const auth = { Authorization: `Bearer ${token}` };
+  // the owner has uploaded a product image to their brand kit
+  const slot = await ok<{ upload_url: string; key: string }>(await request.post(`${API}/v1/brand-kit/uploads`, { headers: auth, data: { kind: "product_image", content_type: "image/png", size_bytes: PNG.length } }));
+  await ok(await request.put(slot.upload_url, { data: PNG, headers: { "content-type": "image/png" } }));
+  await ok(await request.post(`${API}/v1/brand-kit/uploads/confirm`, { headers: auth, data: { key: slot.key } }));
+  await toInterview(page, token);
+
+  // they choose it as product footage, with a caption
+  const footage = page.getByRole("heading", { name: "Product footage (optional)" });
+  await expect(footage).toBeVisible();
+  await page.getByLabel("Show this image").check();
+  await page.getByLabel("Caption (optional)").fill("The Acme app");
+  await page.getByRole("button", { name: "Save product footage" }).click();
+  await expect(page.getByText("Saved. 1 shot will be used.")).toBeVisible();
+  await expect(page.getByText("AI-generated shots aren't set up")).toHaveCount(0); // demo mode has a stand-in maker
 
   // nothing paid has run yet, and the system shows what it understood
   await expect(page.getByText("What we understood from your announcement")).toBeVisible();
