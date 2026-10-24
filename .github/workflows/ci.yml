@@ -78,6 +78,7 @@ jobs:
     defaults: { run: { working-directory: admin } }
     steps:
       - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg  # the clip-upload test makes a real video
       - uses: pnpm/action-setup@v4
         with: { version: 10 }
       - uses: actions/setup-node@v4
