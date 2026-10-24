@@ -1,11 +1,14 @@
 import React from "react";
-import { AbsoluteFill, Easing, OffthreadVideo, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Easing, OffthreadVideo, Series, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AnchorFigure } from "./AnchorFigure";
 import { Backdrop, Chrome } from "./Chrome";
+import { ClipScene } from "./ClipScene";
 import { CF, Fonts, MONO, SANS } from "./theme";
 import { NewsProps } from "./types";
 
 // Channel identity: Cover Founder (our own brand). Do not use any other real network's name, marks, music or trade dress.
-export const NewsStudio: React.FC<NewsProps> = (p) => {
+// The studio over the AI presenter: backdrop, presenter, banner and lower third (the channel graphics are added by the caller).
+const StudioBody: React.FC<NewsProps> = (p) => {
   const frame = useCurrentFrame();
   const { width, height, fps, durationInFrames } = useVideoConfig();
   const portrait = height > width;
@@ -27,14 +30,9 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
         {p.anchorSrc ? (
           <OffthreadVideo src={p.anchorSrc.startsWith("http") ? p.anchorSrc : staticFile(p.anchorSrc)} transparent style={{ height: portrait ? "58%" : "88%", objectFit: "contain" }} />
         ) : (
-          <svg viewBox="0 0 200 260" style={{ height: portrait ? "50%" : "78%" }}>
-            <circle cx="100" cy="70" r="42" fill="#d9c2a7" />
-            <path d="M20 260 C20 160 60 130 100 130 C140 130 180 160 180 260Z" fill="#1c2b4a" />
-          </svg>
+          <AnchorFigure height={portrait ? "68%" : "86%"} />
         )}
       </AbsoluteFill>
-
-      <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} />
 
       {/* breaking-news style banner */}
       <div style={{ position: "absolute", left: 0, bottom: (portrait ? 31 : 24.5) + "%", transform: `translateX(${(1 - slide(5)) * -100}%)` }}>
@@ -52,6 +50,23 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
           </div>
         </div>
       )}
+    </AbsoluteFill>
+  );
+};
+
+// Optional presenter footage before and after the AI presenter. The channel bug, "Featured" tag, "AI-generated anchor"
+// label and ticker stay on screen for the whole video, clips included (hard rule 2).
+export const NewsStudio: React.FC<NewsProps> = (p) => {
+  const { fps } = useVideoConfig();
+  const frames = (s: number) => Math.max(1, Math.round(s * fps));
+  return (
+    <AbsoluteFill style={{ background: CF.ink, fontFamily: SANS }}>
+      <Series>
+        {p.introClip && <Series.Sequence durationInFrames={frames(p.introClip.seconds)}><ClipScene src={p.introClip.src} /></Series.Sequence>}
+        <Series.Sequence durationInFrames={frames(p.anchorDurationSeconds)}><StudioBody {...p} /></Series.Sequence>
+        {p.outroClip && <Series.Sequence durationInFrames={frames(p.outroClip.seconds)}><ClipScene src={p.outroClip.src} /></Series.Sequence>}
+      </Series>
+      <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} />
     </AbsoluteFill>
   );
 };

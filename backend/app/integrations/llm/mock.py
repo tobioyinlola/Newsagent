@@ -8,7 +8,21 @@ class MockScriptLLM(ScriptLLM):
 
     async def parse_brief(self, brief_text: str, website_url: str | None) -> dict:
         first = brief_text.strip().split(".")[0][:120]
-        return {"company": "Acme", "problem": first, "usp": first, "key_facts": [brief_text[:200]]}
+        words = first.split()
+        name: list[str] = []
+        for w in words:  # the opening run of capitalised words is usually the company
+            if w[:1].isupper() and w.isalpha():
+                name.append(w)
+            elif name:
+                break
+        sentences = [x.strip() for x in brief_text.replace("\n", " ").split(".") if x.strip()]
+        return {
+            "company": " ".join(name[:3]) or "Acme",
+            "announcement": first,
+            "problem": first,
+            "usp": first,
+            "key_facts": sentences[:5] or [brief_text[:200]],
+        }
 
     async def moderate(self, text: str) -> dict:
         return {"level": "allow", "reasons": []}
@@ -24,7 +38,12 @@ class MockScriptLLM(ScriptLLM):
             segments=segs,
             ticker_lines=[f"FEATURED: {company}"],
             lower_thirds=[{"title": company, "subtitle": "Featured startup"}],
-            interview_questions=["What problem are you solving?", "Why now?"],
+            interview_questions=[
+                "What problem are you solving, and who feels it most?",
+                "What made you start this company?",
+                "What has surprised you most since you launched?",
+                "Where do you want this to be in a year?",
+            ],
         )
         draft.claim_flags = detect_claims(" ".join(s.text for s in segs) + " " + " ".join(facts.get("key_facts", [])))
         return draft

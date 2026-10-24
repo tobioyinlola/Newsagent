@@ -6,6 +6,9 @@ from app.config import get_settings
 
 celery_app = Celery("newsagent", broker=get_settings().redis_url, backend=get_settings().redis_url)
 celery_app.conf.update(task_acks_late=True, worker_prefetch_multiplier=1, timezone="UTC")
+# With acks_late, a message a dead worker never acknowledged is redelivered after the visibility timeout. It must be LONGER
+# than the slowest step (the avatar vendor's timeout is 15 min x 3 attempts), or a healthy long step is run twice.
+celery_app.conf.broker_transport_options = {"visibility_timeout": 3 * 3600}
 celery_app.conf.beat_schedule = {
     "hourly": {"task": "jobs.hourly", "schedule": 3600.0},
     "daily": {"task": "jobs.daily", "schedule": 86400.0},

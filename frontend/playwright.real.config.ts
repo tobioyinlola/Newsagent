@@ -24,6 +24,6 @@ export default defineConfig({
     { command: "./e2e-real/start-renderer.sh", url: "http://localhost:4000/health", reuseExistingServer: false, timeout: 180_000, stdout: "pipe", stderr: "pipe" },
     { command: "./e2e-real/start-stack.sh", url: "http://localhost:8000/health", reuseExistingServer: false, timeout: 180_000, stdout: "pipe", stderr: "pipe" },
     // the production build, so the "bytes before the camera starts" check measures what a phone really downloads
-    { command: "pnpm build && pnpm preview --port 5173 --strictPort", url: "http://localhost:5173", reuseExistingServer: false, timeout: 120_000 },
+    { command: "VITE_INTERVIEW_FAST=1 pnpm build && pnpm preview --port 5173 --strictPort", url: "http://localhost:5173", reuseExistingServer: false, timeout: 120_000 },
   ],
 });

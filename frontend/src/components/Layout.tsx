@@ -23,9 +23,16 @@ const ICONS = {
   credits: <Icon><circle cx="12" cy="12" r="9" /><path d="M12 7v10M9 10h6M9 14h6" /></Icon>,
   data: <Icon><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /></Icon>,
   security: <Icon><rect x="5" y="11" width="14" height="10" /><path d="M8 11V7a4 4 0 018 0v4" /></Icon>,
-  admin: <Icon><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="9" cy="6" r="2" fill="currentColor" /><circle cx="15" cy="12" r="2" fill="currentColor" /><circle cx="8" cy="18" r="2" fill="currentColor" /></Icon>,
   out: <Icon><path d="M9 4H4v16h5M16 8l4 4-4 4M20 12H9" /></Icon>,
 };
+
+// With mock providers the presenter, voices and transcripts are stand-ins. Say so, so a demo is never mistaken for output.
+function DemoBanner() {
+  const caps = useQuery({ queryKey: ["capabilities"], queryFn: () => unwrap(api.GET("/v1/capabilities")), staleTime: 600000, retry: false });
+  const c = caps.data as { demo_mode?: boolean; message?: string | null } | undefined;
+  if (!c?.demo_mode) return null;
+  return <div role="note" className="rounded-sm border-2 border-brand-peach bg-peach-tint p-3 text-sm text-ink"><strong>Demo mode.</strong> {c.message ?? "The presenter and voices are stand-ins."}</div>;
+}
 
 // Collapsible sidebar: full width with labels, or a narrow icon rail (remembered between visits).
 // On phones it becomes a slide-over opened from a top bar.
@@ -100,7 +107,6 @@ export function Layout() {
           {item("/billing", "Credits", ICONS.credits)}
           {item("/account", "Your data", ICONS.data)}
           {item("/security", "Security", ICONS.security)}
-          {me.data?.is_operator && item("/admin", "Admin", ICONS.admin)}
 
           <div className="mt-auto space-y-2 border-t-2 border-stripe pt-3">
             {me.data && !rail && (
@@ -136,6 +142,7 @@ export function Layout() {
 
       <main className="min-w-0 flex-1">
         <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
+          <DemoBanner />
           <Outlet />
         </div>
       </main>

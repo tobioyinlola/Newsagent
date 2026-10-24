@@ -4,7 +4,6 @@ import { Layout } from "./components/Layout";
 import { RequireAuth } from "./components/RequireAuth";
 import { Account } from "./pages/Account";
 import { Security } from "./pages/Security";
-import { Admin } from "./pages/Admin";
 import { Billing, MockPay } from "./pages/Billing";
 import { Brand } from "./pages/Brand";
 import { Forgot, Login, OtpChallenge, Signup } from "./pages/Login";
@@ -35,7 +34,6 @@ export function App() {
           <Route path="/billing" element={<Billing />} />
           <Route path="/account" element={<Account />} />
           <Route path="/security" element={<Security />} />
-          <Route path="/admin" element={<Admin />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/projects" replace />} />

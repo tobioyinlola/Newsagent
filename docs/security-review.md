@@ -173,3 +173,16 @@ OpenAI-compatible transcription vendor (undecided), Resend (email), Railway (hos
 - [ ] Vendor budgets set low in staging; operator email list set; pause switch tested
 - [ ] Pen test by a third party against staging; fix highs before inviting customers
 - [ ] Legal items in section 8 resolved; privacy policy and terms published and linked from the consent screen
+
+## Back office separation and live interview (added)
+- Admin UI moved to its own origin; API blocks `/v1/admin*` from the customer origin (`tests/test_backoffice.py`). Dev tokens
+  (`dev:<email>`) still only exist when `ENVIRONMENT=local`; `ADMIN_BASE_URL` is validated at startup outside local.
+- New customer endpoints (`/v1/interview/{token}/voice`, live start/skip/proceed) are rate limited, owner-scoped, and
+  capped; the voice endpoint spends from the `tts` vendor budget and caps text at 600 characters.
+- Camera takes are video-only and size-capped; snapshots go through the same image checks as uploads.
+- Residual: the TTS provider receives the interview question text (not the founder's answers).
+
+## Presenter clips (added)
+- Operator-only endpoints (`/v1/admin/presenter-clips`), rate limited, every action audited, rights attestation recorded.
+- Uploaded video is verified by magic bytes, malware-scanned (fails closed) and measured by the renderer before it can be used;
+  cap 150 MB; the renderer downloads it through the same allow-listed host rules as other media.

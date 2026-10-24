@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import random
 import time
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -8,15 +9,29 @@ from sqlalchemy import select
 
 from app.config import VENDOR_POLICIES
 from app.db import session_maker
+from app.integrations.errors import classify
 from app.models import Job, Project
 from app.models.base import new_id
 from app.pipeline import steps
+from app.services import provider_requests
 from app.services import state_machine as sm
-from app.services.notifications import low_balance_alert, notify_owners, vendor_budget_alert
+from app.services.notifications import low_balance_alert, notify_operators, notify_owners, vendor_budget_alert
 from app.services.spend_guard import LimitReached, SpendGuard
 
 log = logging.getLogger("pipeline")
 BACKOFF_SCALE = 1.0  # tests set to 0
+USER_MESSAGES = {
+    "invalid_input": "A provider refused part of this video. Check the script and brand details, then retry.",
+    "auth": "Video creation is temporarily unavailable. Our team has been notified; please retry shortly.",
+}
+DEFAULT_MESSAGE = "We couldn't finish this step. Please retry."
+
+
+def backoff_s(base: float, attempt: int, retry_after: float | None) -> float:
+    """Bounded exponential backoff with jitter; never sooner than the vendor asked."""
+    delay = base * 2 ** (attempt - 1) * random.uniform(0.5, 1.5)  # noqa: S311 (jitter, not security)
+    return max(delay, retry_after or 0.0) * BACKOFF_SCALE
+
 
 STEPS = {
     "question_clips": ("avatar", steps.question_clips, None),
@@ -47,7 +62,7 @@ async def run_step(step: str, payload: dict) -> None:
 
     async with session_maker()() as session:
         project = await session.get(Project, pid)
-        if project is None:
+        if project is None or project.state == "cancelled":
             return
         inputs = await steps.anchor_inputs(session, project)
         if step == "merge_render":
@@ -83,6 +98,8 @@ async def _attempt_loop(step, fn, pid, ih, policy) -> bool:
         async with session_maker()() as session:
             project = await session.get(Project, pid)
             assert project is not None
+            if project.state == "cancelled":
+                return False
             job = (
                 await session.execute(select(Job).where(Job.project_id == pid, Job.stage == step, Job.input_hash == ih))
             ).scalar_one()
@@ -96,31 +113,71 @@ async def _attempt_loop(step, fn, pid, ih, policy) -> bool:
                 await session.commit()
                 await notify_owners(pid, "limit_reached")
                 return False  # refused: no retries, nothing was charged
+            except provider_requests.Cancelled:
+                await session.rollback()
+                async with session_maker()() as s2:  # the owner stopped it: leave the job to be picked up on resume
+                    j2 = (
+                        await s2.execute(
+                            select(Job).where(Job.project_id == pid, Job.stage == step, Job.input_hash == ih)
+                        )
+                    ).scalar_one()
+                    j2.status = "pending"
+                    await s2.commit()
+                log.info("step cancelled", extra={"project_id": pid, "stage": step})
+                return False
             except Exception as e:  # vendor failure
                 await session.rollback()
+                c = classify(e)
+                log.warning(
+                    "step attempt failed",
+                    extra={"project_id": pid, "stage": step, "attempt": attempt, "category": c.category},
+                )
                 async with session_maker()() as s2:
                     j2 = (
                         await s2.execute(
                             select(Job).where(Job.project_id == pid, Job.stage == step, Job.input_hash == ih)
                         )
                     ).scalar_one()
-                    j2.attempts, j2.error = attempt, str(e)[:1000]
-                    if attempt >= policy.max_attempts:
+                    j2.attempts, j2.error, j2.failure_category = (
+                        attempt,
+                        f"[{c.category}] {c.message}"[:1000],
+                        c.category,
+                    )
+                    if not c.retryable or attempt >= policy.max_attempts:
                         p2 = await s2.get(Project, pid)
                         assert p2 is not None
                         j2.status = "failed"
-                        sm.fail(p2, "We couldn't finish this step. Please retry.", retryable=True)
+                        sm.fail(
+                            p2,
+                            getattr(e, "user_message", None) or USER_MESSAGES.get(c.category, DEFAULT_MESSAGE),
+                            retryable=True,
+                        )
                         await s2.commit()
                         await notify_owners(pid, "failed")
+                        if c.category == "auth":
+                            await notify_operators(
+                                "Provider rejected our credentials",
+                                f"{step} for project {pid} failed with an authentication error. Check the vendor key.",
+                            )
                         return False
                     await s2.commit()
-                await asyncio.sleep(policy.backoff_base_s * 2 ** (attempt - 1) * BACKOFF_SCALE)
+                await asyncio.sleep(backoff_s(policy.backoff_base_s, attempt, c.retry_after))
                 continue
             project.cost_total += out.cost
             job.status, job.cost, job.result, job.error = "succeeded", out.cost + out.recorded_cost, out.result, None
             job.duration_s = Decimal(str(round(time.monotonic() - started, 2)))
             job.vendor = STEPS[step][0]
             await session.commit()
+            log.info(
+                "step succeeded",
+                extra={
+                    "project_id": pid,
+                    "job_id": job.id,
+                    "stage": step,
+                    "attempt": attempt,
+                    "duration_s": str(job.duration_s),
+                },
+            )
             return True
     return False
 

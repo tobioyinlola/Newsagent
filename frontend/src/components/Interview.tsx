@@ -121,6 +121,7 @@ export function ReviewPanel({ projectId, keepRaw }: { projectId: string; keepRaw
             <select id={id} className={inputCls} value={plan.layout} onChange={(e) => setPlan({ ...plan, layout: e.target.value })}>
               <option value="pip">Founder large, anchor in a small window</option>
               <option value="split">Split screen</option>
+              <option value="full">Founder full screen</option>
             </select>
           )}
         </Field>

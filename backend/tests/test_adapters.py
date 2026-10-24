@@ -132,3 +132,32 @@ async def test_http_renderer_gives_up_if_busy_for_too_long(monkeypatch):
     )
     with pytest.raises(httpx.HTTPStatusError):
         await r._post("/renders", {}, max_wait_s=120)
+
+
+async def test_openai_tts_request_shape_and_cost():
+    import json
+
+    from app.integrations.tts.openai import USD_PER_CHAR, OpenAITTS
+
+    seen = {}
+
+    def api(req: httpx.Request) -> httpx.Response:
+        seen["url"], seen["body"] = str(req.url), json.loads(req.read())
+        return httpx.Response(200, content=b"mp3-bytes")
+
+    client = httpx.AsyncClient(base_url="https://api.example.com/v1", transport=httpx.MockTransport(api))
+    tts = OpenAITTS(client)
+    assert await tts.synthesize("Hi Tobi, welcome.") == b"mp3-bytes"
+    assert seen["url"] == "https://api.example.com/v1/audio/speech"
+    assert seen["body"]["input"] == "Hi Tobi, welcome." and seen["body"]["response_format"] == "mp3"
+    assert seen["body"]["model"] and seen["body"]["voice"]
+    assert tts.estimate_cost("x" * 100) == pytest.approx(100 * USD_PER_CHAR)
+    assert tts.estimate_cost("x" * 5000) == pytest.approx(600 * USD_PER_CHAR)  # capped like the request itself
+
+
+async def test_openai_tts_vendor_error_is_raised_not_swallowed():
+    from app.integrations.tts.openai import OpenAITTS
+
+    client = httpx.AsyncClient(base_url="https://x/v1", transport=httpx.MockTransport(lambda r: httpx.Response(429)))
+    with pytest.raises(httpx.HTTPStatusError):
+        await OpenAITTS(client).synthesize("hello")

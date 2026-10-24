@@ -19,3 +19,5 @@ playwright-report/
 e2e-real/.media/
 backend/e2e-real.db
 frontend/Caddyfile
+admin/Caddyfile
+backend/e2e-real.db*

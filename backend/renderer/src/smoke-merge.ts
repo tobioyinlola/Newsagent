@@ -10,14 +10,20 @@ if (!fs.existsSync("public/bench-anchor.webm")) throw new Error("run scripts/mak
 // A "founder" answer: portrait phone video with speech-like tone.
 execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=s=720x1280:r=30:d=4", "-f", "lavfi", "-i", "sine=frequency=300:d=4", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "public/founder-answer.mp4"]);
 
+// Presenter footage from the library: landscape, with sound.
+execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "smptebars=s=1920x1080:r=30:d=3", "-f", "lavfi", "-i", "sine=frequency=500:d=3", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "public/presenter-clip.mp4"]);
+
 const props = {
   channel: { name: "Cover Founder" }, disclosures: { tag: "Featured", anchor: "AI-generated anchor" },
-  brand: { primary: "#0B3D91", accent: "#F5A623" }, tickerLines: ["FEATURED: Acme interview"], layout: "pip", totalSeconds: 11,
+  brand: { primary: "#0B3D91", accent: "#F5A623" }, tickerLines: ["FEATURED: Acme interview"], layout: "pip", totalSeconds: 17,
   scenes: [
+    { type: "clip", src: "presenter-clip.mp4", seconds: 3 },
     { type: "anchor", src: "bench-anchor.webm", seconds: 2 },
     { type: "question", src: "bench-anchor.webm", seconds: 2 },
     { type: "answer", src: "founder-answer.mp4", seconds: 4, pipSrc: "bench-anchor.webm", founder: { name: "Ada Obi", title: "CEO, Acme" } },
+    { type: "clip", src: "presenter-clip.mp4", seconds: 3 },
     { type: "anchor", src: "bench-anchor.webm", seconds: 2 },
+    { type: "clip", src: "presenter-clip.mp4", seconds: 3 },
   ],
 };
 const jobs: [string, "16x9" | "9x16", string][] = [["pip", "16x9", "pip"], ["split", "9x16", "split"]];
@@ -26,7 +32,8 @@ for (const [name, format, layout] of jobs) {
   await renderOne({ composition: "InterviewMerge", format, props: { ...props, layout }, outFile: `out/merge-${name}.mp4` });
   console.log(name, format, `${((Date.now() - t) / 1000).toFixed(0)}s`);
   // grab a frame from inside the answer scene (t=5s) to eyeball the layout
-  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-ss", "5", "-i", `out/merge-${name}.mp4`, "-frames:v", "1", `out/merge-${name}.png`]);
+  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-ss", "8", "-i", `out/merge-${name}.mp4`, "-frames:v", "1", `out/merge-${name}.png`]);
+  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-ss", "1", "-i", `out/merge-${name}.mp4`, "-frames:v", "1", `out/merge-${name}-clip.png`]);
 }
 console.log(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", "out/merge-pip.mp4"]).toString().trim(), "s");
 process.exit(0);

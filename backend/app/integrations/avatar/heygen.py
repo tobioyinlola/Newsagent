@@ -10,7 +10,7 @@ import asyncio
 import httpx
 
 from app.config import VENDOR_POLICIES, get_settings
-from app.integrations.avatar.base import AvatarProvider, AvatarRequest, AvatarResult, VoiceOption
+from app.integrations.avatar.base import AvatarPoll, AvatarProvider, AvatarRequest, AvatarResult, VoiceOption
 
 BASE = "https://api.heygen.com"
 # Placeholder pricing, replace with the measured per-minute cost from the spike.
@@ -33,35 +33,56 @@ class HeyGenProvider(AvatarProvider):
             r = await c.get("/v3/voices")  # verified live: paginated ({data, has_more, next_token})
             r.raise_for_status()
             items = r.json().get("data", [])
-        return [VoiceOption(id=v["voice_id"], accent=v.get("accent") or v.get("language", ""), preview_url=v.get("preview_audio_url") or v.get("preview")) for v in items]
+        return [
+            VoiceOption(
+                id=v["voice_id"],
+                accent=v.get("accent") or v.get("language", ""),
+                preview_url=v.get("preview_audio_url") or v.get("preview"),
+            )
+            for v in items
+        ]
 
-    async def generate(self, req: AvatarRequest) -> AvatarResult:
-        body: dict = {
-            "type": "avatar",
-            "avatar_id": req.avatar_id,
-            "script": req.script_text,
-        }
+    supports_async = True
+
+    async def submit(self, req: AvatarRequest) -> str:
+        body: dict = {"type": "avatar", "avatar_id": req.avatar_id, "script": req.script_text}
         if req.transparent:
             body["output_format"] = "webm"  # never send "background" with webm
         async with httpx.AsyncClient(base_url=BASE, headers=self._headers, timeout=30) as c:
             r = await c.post("/v3/videos", json=body)
             r.raise_for_status()
-            video_id = r.json()["data"]["video_id"]
-            elapsed = 0.0
-            while elapsed < self._policy.timeout_s:
-                s = await c.get(f"/v3/videos/{video_id}")
-                s.raise_for_status()
-                data = s.json()["data"]
-                if data["status"] == "completed":
-                    dur = float(data.get("duration", 0))
-                    return AvatarResult(
-                        video_url=data["video_url"],
-                        duration_s=dur,
-                        cost=round(dur / 60 * ASSUMED_COST_PER_MINUTE, 4),
-                        vendor_video_id=video_id,
-                    )
-                if data["status"] == "failed":
-                    raise RuntimeError(f"HeyGen failed: {data.get('error')}")
-                await asyncio.sleep(5)
-                elapsed += 5
+            return r.json()["data"]["video_id"]
+
+    async def poll(self, vendor_id: str, req: AvatarRequest) -> AvatarPoll:
+        async with httpx.AsyncClient(base_url=BASE, headers=self._headers, timeout=30) as c:
+            s = await c.get(f"/v3/videos/{vendor_id}")
+            s.raise_for_status()
+            data = s.json()["data"]
+        if data["status"] == "completed":
+            dur = float(data.get("duration", 0))
+            return AvatarPoll(
+                "completed",
+                AvatarResult(
+                    video_url=data["video_url"],
+                    duration_s=dur,
+                    cost=round(dur / 60 * ASSUMED_COST_PER_MINUTE, 4),
+                    vendor_video_id=vendor_id,
+                ),
+            )
+        if data["status"] == "failed":
+            return AvatarPoll("failed", error=str(data.get("error"))[:300])
+        return AvatarPoll("pending")
+
+    async def generate(self, req: AvatarRequest) -> AvatarResult:
+        """Submit and wait, for callers that don't track the vendor id themselves (the pipeline uses submit/poll)."""
+        vid = await self.submit(req)
+        elapsed = 0.0
+        while elapsed < self._policy.timeout_s:
+            p = await self.poll(vid, req)
+            if p.status == "completed" and p.result:
+                return p.result
+            if p.status == "failed":
+                raise RuntimeError(f"HeyGen failed: {p.error}")
+            await asyncio.sleep(5)
+            elapsed += 5
         raise TimeoutError("HeyGen render timed out")

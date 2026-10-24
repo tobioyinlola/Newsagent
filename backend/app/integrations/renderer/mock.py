@@ -50,18 +50,25 @@ class MockRenderer(RendererClient):
         )
 
     async def analyze(self, url: str) -> Analysis:
+        d = self.duration_s or 6.0  # before anything was rendered, a short stand-in clip
         return self.analysis_override or Analysis(
-            duration_s=self.duration_s,
+            duration_s=d,
             has_audio=True,
-            video_duration_s=self.duration_s,
-            audio_duration_s=self.duration_s,
+            video_duration_s=d,
+            audio_duration_s=d,
             loudness_lufs=-16.0,
             true_peak_db=-1.5,
+            width=1920,
+            height=1080,
         )
 
     async def submit(self, req: RenderRequest) -> str:
         self.requests.append(req)
-        self.duration_s = float(req.props.get("anchorDurationSeconds", 0))
+        self.duration_s = (
+            float(req.props.get("anchorDurationSeconds", 0))
+            + float((req.props.get("introClip") or {}).get("seconds", 0))  # presenter footage before and after
+            + float((req.props.get("outroClip") or {}).get("seconds", 0))
+        )
         rid = f"mock-{len(self._done) + 1}"
         keys = []
         for o in req.outputs:
