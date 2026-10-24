@@ -100,6 +100,10 @@ class Project(Base, TimestampMixin):
     keep_raw_takes: Mapped[bool] = mapped_column(Boolean, default=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     merge_plan: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # owner's layout/order/trim/drop choices
+    # the validated scene plan the last render was built from (asset keys, never signed URLs), and its content hash
+    scene_plan: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    scene_plan_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    state_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     brief: Mapped["Brief | None"] = relationship(uselist=False, lazy="selectin")
 
@@ -178,6 +182,40 @@ class Job(Base, TimestampMixin):
     duration_s: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    failure_category: Mapped[str | None] = mapped_column(String(20), nullable=True)  # see integrations/errors.py
+
+
+class ProviderRequest(Base, TimestampMixin):
+    """One paid generation at a vendor, written the moment it is submitted. A crash, retry or duplicate delivery finds
+    this row and resumes polling the same vendor id instead of paying for a second video."""
+
+    __tablename__ = "provider_requests"
+    __table_args__ = (UniqueConstraint("project_id", "provider", "slot", "request_hash"),)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    provider: Mapped[str] = mapped_column(String(50))
+    slot: Mapped[str] = mapped_column(String(500))  # which clip this is for (its storage key)
+    request_hash: Mapped[str] = mapped_column(String(64))
+    vendor_video_id: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(20), default="new")  # new | submitted | completed | failed
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # video_url, duration_s, cost
+    hold: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # the credit hold made for this job, until settled
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_webhook_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class WebhookEvent(Base):
+    """Every provider callback we acted on, so a duplicate delivery is recognised and ignored."""
+
+    __tablename__ = "webhook_events"
+    __table_args__ = (UniqueConstraint("provider", "event_id"),)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    provider: Mapped[str] = mapped_column(String(50))
+    event_id: Mapped[str] = mapped_column(String(200))
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class VendorBudget(Base):

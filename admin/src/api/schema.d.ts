@@ -21,6 +21,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/health/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ready
+         * @description Is this instance fit to serve? The database is required; the others are reported so an operator can see them.
+         */
+        get: operations["ready_health_ready_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/account": {
         parameters: {
             query?: never;
@@ -269,6 +289,23 @@ export interface paths {
         };
         /** Payments */
         get: operations["payments_v1_admin_payments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/pipeline-metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pipeline Metrics */
+        get: operations["pipeline_metrics_v1_admin_pipeline_metrics_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -898,6 +935,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Capabilities
+         * @description What is real in this environment. With USE_MOCKS the presenter, voices and transcripts are stand-ins and the
+         *     app says so, rather than presenting them as genuine results.
+         */
+        get: operations["capabilities_v1_capabilities_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/dev-storage/{key}": {
         parameters: {
             query?: never;
@@ -1259,6 +1317,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{project_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel
+         * @description Stop a video that is being made. Work already paid for is kept and reused if the owner retries; a vendor job
+         *     that is already running cannot be recalled, so its cost may still be incurred and its result is kept.
+         */
+        post: operations["cancel_v1_projects__project_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{project_id}/captions": {
         parameters: {
             query?: never;
@@ -1477,6 +1556,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{project_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Progress */
+        get: operations["progress_v1_projects__project_id__progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{project_id}/retry": {
         parameters: {
             query?: never;
@@ -1488,6 +1584,26 @@ export interface paths {
         put?: never;
         /** Retry */
         post: operations["retry_v1_projects__project_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/scene-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Scene Plan
+         * @description The validated plan the latest interview video was built from (asset keys only, no signed links).
+         */
+        get: operations["scene_plan_v1_projects__project_id__scene_plan_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1632,6 +1748,31 @@ export interface paths {
         put?: never;
         /** Billing Webhook */
         post: operations["billing_webhook_v1_webhooks_billing_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/webhooks/heygen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Heygen Webhook
+         * @description HeyGen tells us a video changed. It only wakes the pipeline: results are always read back from HeyGen's own API
+         *     by the step that owns the job, so nothing in this payload can put media into a video.
+         *
+         *     UNVERIFIED against HeyGen's live contract (the developer docs could not be read here): the HMAC-SHA256 signature
+         *     scheme, the header name (HEYGEN_WEBHOOK_SIGNATURE_HEADER) and the payload keys are assumptions. Until
+         *     HEYGEN_WEBHOOK_SECRET is set the endpoint is disabled; polling remains the source of truth either way.
+         */
+        post: operations["heygen_webhook_v1_webhooks_heygen_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2754,6 +2895,37 @@ export interface components {
             /** Upload Url */
             upload_url: string;
         };
+        /** ProgressOut */
+        ProgressOut: {
+            /** Cancellable */
+            cancellable: boolean;
+            /** Failure Category */
+            failure_category?: string | null;
+            /** Percent */
+            percent: number;
+            /** Retryable */
+            retryable: boolean;
+            /** Stages */
+            stages: components["schemas"]["ProgressStage"][];
+            /** State */
+            state: string;
+            /**
+             * Vendor Jobs In Flight
+             * @default 0
+             */
+            vendor_jobs_in_flight: number;
+        };
+        /** ProgressStage */
+        ProgressStage: {
+            /** Detail */
+            detail?: string | null;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Status */
+            status: string;
+        };
         /** ProjectCreate */
         ProjectCreate: {
             /** Accent Override */
@@ -3271,6 +3443,28 @@ export interface components {
 export type $defs = Record<string, never>;
 export interface operations {
     health_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    ready_health_ready_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -3828,6 +4022,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Payments"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pipeline_metrics_v1_admin_pipeline_metrics_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -5185,6 +5412,39 @@ export interface operations {
             };
         };
     };
+    capabilities_v1_capabilities_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_object_v1_dev_storage__key__get: {
         parameters: {
             query?: never;
@@ -5986,6 +6246,39 @@ export interface operations {
             };
         };
     };
+    cancel_v1_projects__project_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     captions_v1_projects__project_id__captions_get: {
         parameters: {
             query?: never;
@@ -6476,6 +6769,39 @@ export interface operations {
             };
         };
     };
+    progress_v1_projects__project_id__progress_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     retry_v1_projects__project_id__retry_post: {
         parameters: {
             query?: never;
@@ -6496,6 +6822,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scene_plan_v1_projects__project_id__scene_plan_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -6813,6 +7174,28 @@ export interface operations {
         };
     };
     billing_webhook_v1_webhooks_billing_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    heygen_webhook_v1_webhooks_heygen_post: {
         parameters: {
             query?: never;
             header?: never;

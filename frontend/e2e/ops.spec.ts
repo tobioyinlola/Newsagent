@@ -93,3 +93,15 @@ test("owner can download their data and delete the workspace", async ({ browser,
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   expect((await request.get(`${API}/v1/me`, { headers: OWNER })).status()).toBe(403);
 });
+
+test("demo mode is declared on the dashboard, and a finished video's progress is complete", async ({ page, request }) => {
+  const { email, OWNER } = await setup(request);
+  const p = await ok<{ id: string }>(await request.post(`${API}/v1/projects`, { headers: OWNER, data: { brief_text: "Acme Farms helps farmers sell produce online across Ghana." } }));
+  await page.addInitScript((t) => localStorage.setItem("newsagent.token", t), `dev:${email}`);
+  await page.goto("/projects");
+  await expect(page.getByRole("note").filter({ hasText: "Demo mode." })).toBeVisible();
+  const prog = await ok<{ percent: number; stages: { key: string; status: string }[]; cancellable: boolean }>(await request.get(`${API}/v1/projects/${p.id}/progress`, { headers: OWNER }));
+  expect(prog.stages[0].key).toBe("script");
+  expect(prog.cancellable).toBe(false); // a draft is not being made yet
+  expect((await request.post(`${API}/v1/projects/${p.id}/cancel`, { headers: OWNER })).status()).toBe(409);
+});

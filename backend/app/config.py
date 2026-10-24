@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     anthropic_api_key: str = ""
     heygen_api_key: str = ""
+    # Optional. When set, POST /v1/webhooks/heygen is live: the signature is an HMAC-SHA256 of the raw body, read from the
+    # header below. The event only wakes the pipeline up (it never supplies results), so a forged event cannot inject media.
+    heygen_webhook_secret: str = ""
+    heygen_webhook_signature_header: str = "signature"
     synthesia_api_key: str = ""
     transcription_api_key: str = ""
     email_api_key: str = ""

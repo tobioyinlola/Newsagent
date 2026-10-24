@@ -42,6 +42,7 @@ const LABELS: Record<string, string> = {
   final_ready: "Ready",
   failed: "Needs attention",
   limit_reached: "Paused: limit reached",
+  cancelled: "Cancelled",
 };
 
 export const stateLabel = (s: string) => LABELS[s] ?? s;

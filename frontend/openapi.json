@@ -2922,6 +2922,92 @@
         "title": "PresenterClipUploadOut",
         "type": "object"
       },
+      "ProgressOut": {
+        "properties": {
+          "cancellable": {
+            "title": "Cancellable",
+            "type": "boolean"
+          },
+          "failure_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Category"
+          },
+          "percent": {
+            "title": "Percent",
+            "type": "integer"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressStage"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "vendor_jobs_in_flight": {
+            "default": 0,
+            "title": "Vendor Jobs In Flight",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "percent",
+          "stages",
+          "retryable",
+          "cancellable"
+        ],
+        "title": "ProgressOut",
+        "type": "object"
+      },
+      "ProgressStage": {
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "status"
+        ],
+        "title": "ProgressStage",
+        "type": "object"
+      },
       "ProjectCreate": {
         "properties": {
           "accent_override": {
@@ -4292,6 +4378,30 @@
         "summary": "Health"
       }
     },
+    "/health/ready": {
+      "get": {
+        "description": "Is this instance fit to serve? The database is required; the others are reported so an operator can see them.",
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ready Health Ready Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ready",
+        "tags": [
+          "system"
+        ]
+      }
+    },
     "/v1/account": {
       "delete": {
         "operationId": "delete_account_v1_account_delete",
@@ -5314,6 +5424,57 @@
         "summary": "Payments",
         "tags": [
           "backoffice"
+        ]
+      }
+    },
+    "/v1/admin/pipeline-metrics": {
+      "get": {
+        "operationId": "pipeline_metrics_v1_admin_pipeline_metrics_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Pipeline Metrics V1 Admin Pipeline Metrics Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pipeline Metrics",
+        "tags": [
+          "system"
         ]
       }
     },
@@ -7512,6 +7673,58 @@
         ]
       }
     },
+    "/v1/capabilities": {
+      "get": {
+        "description": "What is real in this environment. With USE_MOCKS the presenter, voices and transcripts are stand-ins and the\napp says so, rather than presenting them as genuine results.",
+        "operationId": "capabilities_v1_capabilities_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Capabilities V1 Capabilities Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Capabilities",
+        "tags": [
+          "system"
+        ]
+      }
+    },
     "/v1/dev-storage/{key}": {
       "get": {
         "operationId": "get_object_v1_dev_storage__key__get",
@@ -8723,6 +8936,65 @@
         ]
       }
     },
+    "/v1/projects/{project_id}/cancel": {
+      "post": {
+        "description": "Stop a video that is being made. Work already paid for is kept and reused if the owner retries; a vendor job\nthat is already running cannot be recalled, so its cost may still be incurred and its result is kept.",
+        "operationId": "cancel_v1_projects__project_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
     "/v1/projects/{project_id}/captions": {
       "get": {
         "operationId": "captions_v1_projects__project_id__captions_get",
@@ -9595,6 +9867,64 @@
         ]
       }
     },
+    "/v1/projects/{project_id}/progress": {
+      "get": {
+        "operationId": "progress_v1_projects__project_id__progress_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Progress",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
     "/v1/projects/{project_id}/retry": {
       "post": {
         "operationId": "retry_v1_projects__project_id__retry_post",
@@ -9648,6 +9978,67 @@
           }
         },
         "summary": "Retry",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/scene-plan": {
+      "get": {
+        "description": "The validated plan the latest interview video was built from (asset keys only, no signed links).",
+        "operationId": "scene_plan_v1_projects__project_id__scene_plan_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Scene Plan V1 Projects  Project Id  Scene Plan Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Scene Plan",
         "tags": [
           "projects"
         ]
@@ -10201,6 +10592,30 @@
         "summary": "Billing Webhook",
         "tags": [
           "billing"
+        ]
+      }
+    },
+    "/v1/webhooks/heygen": {
+      "post": {
+        "description": "HeyGen tells us a video changed. It only wakes the pipeline: results are always read back from HeyGen's own API\nby the step that owns the job, so nothing in this payload can put media into a video.\n\nUNVERIFIED against HeyGen's live contract (the developer docs could not be read here): the HMAC-SHA256 signature\nscheme, the header name (HEYGEN_WEBHOOK_SIGNATURE_HEADER) and the payload keys are assumptions. Until\nHEYGEN_WEBHOOK_SECRET is set the endpoint is disabled; polling remains the source of truth either way.",
+        "operationId": "heygen_webhook_v1_webhooks_heygen_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Heygen Webhook V1 Webhooks Heygen Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Heygen Webhook",
+        "tags": [
+          "system"
         ]
       }
     }

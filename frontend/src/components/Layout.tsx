@@ -26,6 +26,14 @@ const ICONS = {
   out: <Icon><path d="M9 4H4v16h5M16 8l4 4-4 4M20 12H9" /></Icon>,
 };
 
+// With mock providers the presenter, voices and transcripts are stand-ins. Say so, so a demo is never mistaken for output.
+function DemoBanner() {
+  const caps = useQuery({ queryKey: ["capabilities"], queryFn: () => unwrap(api.GET("/v1/capabilities")), staleTime: 600000, retry: false });
+  const c = caps.data as { demo_mode?: boolean; message?: string | null } | undefined;
+  if (!c?.demo_mode) return null;
+  return <div role="note" className="rounded-sm border-2 border-brand-peach bg-peach-tint p-3 text-sm text-ink"><strong>Demo mode.</strong> {c.message ?? "The presenter and voices are stand-ins."}</div>;
+}
+
 // Collapsible sidebar: full width with labels, or a narrow icon rail (remembered between visits).
 // On phones it becomes a slide-over opened from a top bar.
 export function Layout() {
@@ -134,6 +142,7 @@ export function Layout() {
 
       <main className="min-w-0 flex-1">
         <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
+          <DemoBanner />
           <Outlet />
         </div>
       </main>

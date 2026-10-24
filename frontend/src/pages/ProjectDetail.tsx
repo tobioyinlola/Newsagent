@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { Delivery } from "../components/Delivery";
+import { ProgressPanel } from "../components/ProgressPanel";
 import { ScriptEditor } from "../components/ScriptEditor";
 import { Button, Card, ErrorBox, Notice } from "../components/ui";
 import { streamProjectEvents } from "../lib/sse";
@@ -62,6 +63,10 @@ export function ProjectDetail() {
         ))}
       </ol>
 
+      {["script_approved", "rendering_anchor", "anchor_ready", "merging", "failed", "limit_reached", "cancelled"].includes(p.state) && <ProgressPanel projectId={id} state={p.state} />}
+      {p.state === "cancelled" && (
+        <Notice tone="info">You cancelled this video. Clips that were already made are kept; retry continues from where it stopped.</Notice>
+      )}
       {(p.state === "failed" || p.state === "limit_reached") && (
         <Card>
           <Notice tone="warn">

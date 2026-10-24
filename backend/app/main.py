@@ -22,6 +22,7 @@ from app.routes import (
     ops,
     presenter,
     projects,
+    system,
 )
 from app.runtime_checks import assert_runtime_ok
 
@@ -51,9 +52,26 @@ def _scrub_sentry(event, _hint):
     return event
 
 
+CORRELATION_FIELDS = (
+    "project_id",
+    "job_id",
+    "stage",
+    "provider",
+    "vendor_id",
+    "slot",
+    "attempt",
+    "category",
+    "duration_s",
+)
+
+
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
-        return json.dumps({"level": record.levelname, "logger": record.name, "msg": record.getMessage()})
+        doc = {"level": record.levelname, "logger": record.name, "msg": record.getMessage()}
+        for k in CORRELATION_FIELDS:  # who/what a line is about, for tracing one video through the pipeline
+            if hasattr(record, k):
+                doc[k] = getattr(record, k)
+        return json.dumps(doc, default=str)
 
 
 def create_app() -> FastAPI:
@@ -113,6 +131,7 @@ def create_app() -> FastAPI:
         admin.router,
         backoffice.router,
         presenter.router,
+        system.router,
         account.router,
         ops.router,
     ):

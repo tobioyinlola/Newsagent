@@ -10,9 +10,18 @@ from app.db import get_session
 from app.integrations import registry
 from app.models import Asset, Brief, Project, ScriptVersion
 from app.pipeline.advance import advance
-from app.schemas.api import ApproveIn, BriefUnderstandingOut, ProjectCreate, ProjectOut, ScriptOut, ScriptUpdate
+from app.schemas.api import (
+    ApproveIn,
+    BriefUnderstandingOut,
+    ProgressOut,
+    ProjectCreate,
+    ProjectOut,
+    ScriptOut,
+    ScriptUpdate,
+)
 from app.services import interview as iv
 from app.services import moderation_flow, privacy
+from app.services import progress as progress_svc
 from app.services import state_machine as sm
 from app.services.audit import audit
 from app.services.brand import ALLOWED_VOICE_ACCENTS
@@ -294,6 +303,44 @@ async def retry(
     await session.commit()
     await advance(session, project_id)
     await session.refresh(project)
+    return await _out(session, project)
+
+
+@router.get("/{project_id}/progress", response_model=ProgressOut)
+async def progress(
+    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> ProgressOut:
+    project = await _owned(session, project_id, p)
+    return ProgressOut(**await progress_svc.build(session, project))
+
+
+@router.get("/{project_id}/scene-plan")
+async def scene_plan(
+    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> dict:
+    """The validated plan the latest interview video was built from (asset keys only, no signed links)."""
+    project = await _owned(session, project_id, p)
+    if not project.scene_plan:
+        raise HTTPException(404, "No scene plan has been made for this video yet")
+    return {"hash": project.scene_plan_hash, "plan": project.scene_plan}
+
+
+@router.post("/{project_id}/cancel", response_model=ProjectOut)
+async def cancel(
+    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> ProjectOut:
+    """Stop a video that is being made. Work already paid for is kept and reused if the owner retries; a vendor job
+    that is already running cannot be recalled, so its cost may still be incurred and its result is kept."""
+    project = await _owned(session, project_id, p)
+    try:
+        sm.transition(project, "cancelled")
+    except sm.IllegalTransition:
+        raise HTTPException(409, "Only a video that is being made can be cancelled") from None
+    project.failure_reason = (
+        "You cancelled this video. Retry to continue; clips already made are kept and not paid for again."
+    )
+    project.failure_retryable = True
+    await session.commit()
     return await _out(session, project)
 
 

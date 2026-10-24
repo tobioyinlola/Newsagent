@@ -5,14 +5,15 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
-from app.config import get_settings
+from app.config import VENDOR_POLICIES, get_settings
 from app.db import session_maker
 from app.integrations import registry
-from app.models import InterviewSession, Project, Take
+from app.models import InterviewSession, Job, Project, Take
 from app.pipeline.steps import approved_script
 from app.pipeline.takes import chunk_key, requeue_stuck
 from app.services import crypto
 from app.services import interview as iv
+from app.services import state_machine as sm
 from app.services.notifications import email_founder_invite
 
 log = logging.getLogger("jobs")
@@ -108,8 +109,38 @@ async def purge_old_raw_takes(now: datetime | None = None) -> int:
     return purged
 
 
+STUCK_AFTER = timedelta(minutes=20)
+
+
+async def reconcile_projects(now: datetime | None = None) -> int:
+    """Re-drive projects the pipeline should be moving but isn't (a worker crashed, a queue message was lost, the
+    process restarted). Safe to run any time: steps are idempotent and a fresh running job is left alone."""
+    from app.pipeline.advance import advance
+
+    now = now or datetime.now(UTC)
+    cutoff = now - STUCK_AFTER
+    owned = timedelta(seconds=VENDOR_POLICIES["avatar"].timeout_s * 1.5)
+    fixed: list[str] = []
+    async with session_maker()() as s:
+        projects = (await s.execute(select(Project).where(Project.state.in_(sm.ACTIVE)))).scalars().all()
+        for p in projects:
+            since = p.state_changed_at or p.created_at
+            if (since if since.tzinfo else since.replace(tzinfo=UTC)) > cutoff:
+                continue
+            running = (await s.execute(select(Job).where(Job.project_id == p.id, Job.status == "running"))).scalars()
+            if any(j.started_at and now - j.started_at.replace(tzinfo=UTC) < owned for j in running):
+                continue  # a worker still owns it
+            fixed.append(p.id)
+    for pid in fixed:
+        async with session_maker()() as s:
+            log.warning("re-driving a stuck project", extra={"project_id": pid})
+            await advance(s, pid)
+    return len(fixed)
+
+
 async def run_hourly() -> dict:
     return {
+        "stuck_projects": await reconcile_projects(),
         "reminders": await send_due_reminders(),
         "expired": await expire_sessions(),
         "requeued": await requeue_stuck(),

@@ -32,7 +32,7 @@ Operators also set budgets: `PUT /v1/admin/vendor-budgets` (the spend guard refu
 
 ## Test
 ```bash
-cd backend && uv run ruff check . && uv run mypy app && uv run pytest      # 300 tests; add TEST_DATABASE_URL=postgresql+asyncpg://... to run on Postgres
+cd backend && uv run ruff check . && uv run mypy app && uv run pytest      # 350+ tests; add TEST_DATABASE_URL=postgresql+asyncpg://... to run on Postgres
 cd frontend && pnpm lint && pnpm build && pnpm test      # unit
 cd frontend && pnpm e2e                                    # browser journey; needs CHROMIUM_PATH locally, uses mocked vendors
 cd backend/renderer && pnpm build && pnpm test
@@ -95,6 +95,15 @@ Local real-stack run (real ffmpeg + Remotion, mocked HeyGen/Whisper/email):
 - Backups: `python scripts/backup.py --upload`; prove one restores: `python scripts/restore_test.py <file.dump>`.
 - Renderer load test: `cd backend/renderer && pnpm loadtest 6 5 2`.
 - In staging/production the API **refuses to start** with an insecure configuration and lists every problem.
+
+## Reliability and operations
+Paid presenter clips are crash-safe (`provider_requests`: the vendor's job id is stored before waiting, so a retry polls the same job instead of
+buying another). Failures are classified (auth / invalid input fail fast; rate limits and outages back off with jitter). Owners can cancel
+and retry (`/projects/{id}/cancel`, `/retry`), see per-piece progress (`/projects/{id}/progress`) and the saved scene plan
+(`/projects/{id}/scene-plan`). Operators get `/health/ready`, `/v1/admin/pipeline-metrics` and an hourly reconciliation of stuck projects.
+Full detail: `docs/video-generation-pipeline.md`, `docs/target-architecture.md`, `docs/architecture-audit.md`.
+
+Real HeyGen check (spends credit, off by default): `HEYGEN_LIVE=1 HEYGEN_API_KEY=... HEYGEN_TEST_AVATAR_ID=... pytest backend/tests/live -q -s`.
 
 ## Pipeline
 Order: anchor render, then a half-resolution preview, then the final 16:9 + 9:16 renders, thumbnail and SRT.

@@ -211,6 +211,7 @@ function Review({ projectId, status, onRedo, busy, error }: { projectId: string;
               <option value="column">Your video with a column showing your question and your words</option>
               <option value="pip">Your video large, the presenter in a small window</option>
               <option value="split">Split screen</option>
+              <option value="full">Your video full screen</option>
             </select>
           )}
         </Field>

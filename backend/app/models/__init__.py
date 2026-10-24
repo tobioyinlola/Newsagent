@@ -15,6 +15,7 @@ from app.models.entities import (
     ModerationCase,
     PresenterClip,
     Project,
+    ProviderRequest,
     ScriptVersion,
     ShareLink,
     SystemSetting,
@@ -22,6 +23,7 @@ from app.models.entities import (
     User,
     UserSession,
     VendorBudget,
+    WebhookEvent,
     Workspace,
 )
 
@@ -41,6 +43,7 @@ __all__ = [
     "Job",
     "ModerationCase",
     "PresenterClip",
+    "ProviderRequest",
     "Project",
     "ScriptVersion",
     "ShareLink",
@@ -49,5 +52,6 @@ __all__ = [
     "User",
     "UserSession",
     "VendorBudget",
+    "WebhookEvent",
     "Workspace",
 ]

@@ -49,6 +49,23 @@ class ProjectOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ProgressStage(BaseModel):
+    key: str
+    label: str
+    status: str  # done | working | waiting | pending | failed | paused | cancelled
+    detail: str | None = None
+
+
+class ProgressOut(BaseModel):
+    state: str
+    percent: int
+    stages: list[ProgressStage]
+    retryable: bool
+    cancellable: bool
+    failure_category: str | None = None  # why the last step failed, in plain categories (auth, rate_limited, ...)
+    vendor_jobs_in_flight: int = 0
+
+
 class ScriptOut(BaseModel):
     id: str
     version: int

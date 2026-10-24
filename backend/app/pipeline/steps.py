@@ -6,16 +6,23 @@ import logging
 from dataclasses import asdict, dataclass
 from decimal import Decimal
 
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import VENDOR_POLICIES
+from app.db import session_maker
 from app.integrations import registry
 from app.integrations.avatar.base import AvatarRequest
+from app.integrations.errors import ProviderPending, classify
 from app.integrations.renderer.base import RenderRequest
 from app.models import Asset, BrandKit, InterviewSession, Job, Project, ScriptVersion, Take
 from app.services import presenter as clip_lib
+from app.services import provider_requests
+from app.services import scene_plan as sp
 from app.services import state_machine as sm
 from app.services.captions import build_srt
+from app.services.claims import detect_claims
 from app.services.interview import answer_cues, merge_srt, parse_srt, shifted_cues
 from app.services.notifications import notify_operators
 from app.services.safety import find_banned
@@ -153,6 +160,12 @@ async def persist_avatar_video(key: str, out) -> None:
 _failover_notified: dict[str, float] = {}
 
 
+async def _is_cancelled(project_id: str) -> bool:
+    async with session_maker()() as s:
+        p = await s.get(Project, project_id)
+        return p is None or p.state == "cancelled"
+
+
 async def generate_anchor(
     session: AsyncSession, project: Project, guard: SpendGuard, req: AvatarRequest, key: str, stage: str
 ):
@@ -165,23 +178,63 @@ async def generate_anchor(
     last: Exception | None = None
     for i, avatar in enumerate(chain):
         more = i < len(chain) - 1
+        pr_id: str | None = None
         try:
-            res = await guard.reserve(
-                project.workspace_id, avatar.name, avatar.estimate_cost(req), project_id=project.id, stage=stage
-            )
+            if avatar.supports_async:
+                # the hold and the request row are committed together BEFORE the vendor is called; the vendor's id is
+                # recorded the moment it is issued. A crash, retry or duplicate run resumes that job and that hold
+                # instead of buying a second video.
+                rh = input_hash(
+                    {
+                        "text": req.script_text,
+                        "accent": req.voice_accent,
+                        "avatar": req.avatar_id,
+                        "glossary": req.pronunciation,
+                        "transparent": req.transparent,
+                    }
+                )
+                pr_id, res = await provider_requests.begin(
+                    session, guard, avatar, req, project=project, slot=key, request_hash=rh, stage=stage
+                )
+            else:
+                res = await guard.reserve(
+                    project.workspace_id, avatar.name, avatar.estimate_cost(req), project_id=project.id, stage=stage
+                )
         except LimitReached as e:
             if e.code == "vendor_budget" and more:  # this provider's monthly budget is spent: use the next one
                 last = e
                 continue
             raise
         try:
-            out = await avatar.generate(req)
+            if pr_id:
+                out = await provider_requests.generate(
+                    avatar,
+                    req,
+                    project_id=project.id,
+                    slot=key,
+                    request_hash=rh,
+                    policy=VENDOR_POLICIES["avatar"],
+                    is_cancelled=lambda: _is_cancelled(project.id),
+                )
+            else:
+                out = await avatar.generate(req)
             await persist_avatar_video(key, out)
+        except (provider_requests.Cancelled, ProviderPending):
+            # nothing failed: the vendor is still working (or the owner stopped the project). The hold stays with the
+            # request row and is reused when the work resumes.
+            if not pr_id:
+                await guard.release(res)
+            raise
         except Exception as e:  # noqa: BLE001
+            if pr_id and await provider_requests.in_flight(pr_id):
+                raise  # the vendor job is still running (e.g. a network blip while waiting): keep the hold, retry resumes
             await guard.release(res)
+            if pr_id:
+                await provider_requests.clear_hold(session, pr_id)
+                await session.commit()  # the hold was committed in begin(), so its release must be too
             last = e
             log.warning("avatar provider %s failed for %s: %s", avatar.name, stage, e)
-            if more:
+            if more and classify(e).category != "busy":
                 k = f"{avatar.name}->{chain[i + 1].name}"
                 if time.time() - _failover_notified.get(k, 0) > 3600:  # one email an hour, not one per clip
                     _failover_notified[k] = time.time()
@@ -191,7 +244,10 @@ async def generate_anchor(
                     )
                 continue
             raise
-        return out, await guard.settle(res, out.cost), avatar.name
+        cost = await guard.settle(res, out.cost)
+        if pr_id:
+            await provider_requests.clear_hold(session, pr_id)  # settled: committed with the clip that it paid for
+        return out, cost, avatar.name
     assert last is not None
     raise last
 
@@ -430,6 +486,15 @@ async def latest_takes(session: AsyncSession, project_id: str) -> dict[int, Take
 
 
 async def merge_render(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
+    try:
+        return await _merge_render(session, project, guard)
+    except ValidationError as e:  # the plan itself is invalid: say which scene and why, not a stack trace
+        raise sp.ScenePlanError(
+            [f"{'.'.join(str(x) for x in err['loc'])}: {err['msg']}" for err in e.errors()[:3]]
+        ) from None
+
+
+async def _merge_render(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
     """Stage 10: anchor intro, then per question [anchor asks -> founder answers (PiP/split)], then outro."""
     storage = registry.get_storage()
     script = await approved_script(session, project.id)
@@ -462,20 +527,6 @@ async def merge_render(session: AsyncSession, project: Project, guard: SpendGuar
     # real presenter footage from the library frames the AI presenter: an opening shot, cutaways between answers, a sign-off
     clips = await clip_lib.select_clips(session, project.id)
 
-    def clip_scene(c) -> dict:
-        return {"type": "clip", "src": storage.presign_get(c.key), "seconds": float(c.duration_s or 0)}
-
-    scenes: list[dict] = []
-    t_cursor = 0.0
-    if clips.intro:
-        scenes.append(clip_scene(clips.intro))
-        t_cursor += float(clips.intro.duration_s or 0)
-    scenes.append(
-        {"type": "anchor", "src": storage.presign_get(main.storage_key), "seconds": float(main.duration or 0)}
-    )
-    cues = [(a + t_cursor, b + t_cursor, t) for a, b, t in parse_srt(main_srt)]
-    t_cursor += float(main.duration or 0)
-
     def usable(q: int) -> bool:
         take, ans = takes.get(q), answers.get(q, {})
         qclip = assets.get(("question_clip", f"q{q}"))
@@ -489,65 +540,130 @@ async def merge_render(session: AsyncSession, project: Project, guard: SpendGuar
         return float(take.duration_s or 0) - ans.get("trim_start_s", 0) - ans.get("trim_end_s", 0) >= 1.0
 
     shown = [q for q in plan["order"] if usable(q)]
+    layout = plan["layout"] if plan["layout"] in sp.LAYOUT_SCENE else "pip"
+    scenes: list[sp.Scene] = []
+    cues: list[tuple[float, float, str]] = []
+    founder_claims: list[str] = []
+    cursor = 0.0
+
+    def add(**kw) -> sp.Scene:
+        nonlocal cursor
+        sc = sp.Scene(id=f"s{len(scenes) + 1}", order=len(scenes), **kw)
+        scenes.append(sc)
+        cursor += sc.duration_s
+        return sc
+
+    def clip_scene(c, role: str) -> None:
+        add(
+            type="presenter_clip",
+            duration_s=float(c.duration_s or 0),
+            asset=sp.AssetRef(kind="presenter_clip", key=c.key),
+            headline=role,
+            provenance="presenter_footage",
+            transition="fade" if role == "opening shot" else "cut",
+        )
+
+    if clips.intro:
+        clip_scene(clips.intro, "opening shot")
+    start = cursor
+    add(
+        type="anchor_intro",
+        duration_s=float(main.duration or 0),
+        narration=main_text or anchor_text(script),
+        asset=sp.AssetRef(kind="anchor", key=main.storage_key),
+    )
+    cues += [(a + start, b + start, t) for a, b, t in parse_srt(main_srt)]
     for q in shown:
         take, ans, qclip = takes[q], answers.get(q, {}), assets[("question_clip", f"q{q}")]
-        window = float(take.duration_s or 0) - ans.get("trim_start_s", 0) - ans.get("trim_end_s", 0)
-        qsec = float(qclip.duration or 0)
-        qsrc = storage.presign_get(qclip.storage_key)
-        scenes.append({"type": "question", "src": qsrc, "seconds": qsec})
-        cues.append((t_cursor, t_cursor + qsec, script.interview_questions[q]))
-        t_cursor += qsec
         trim = float(ans.get("trim_start_s", 0))
-        scene: dict = {
-            "type": "answer",
-            "seconds": window,
-            "startFromSeconds": trim,
-            "pipSrc": qsrc,
-            "founder": founder,
-            "src": None,
-            # the "answers column": the question, which one it is, and the founder's words timed to the answer
-            "question": script.interview_questions[q],
-            "questionNumber": shown.index(q) + 1,
-            "totalQuestions": len(shown),
-            "cues": answer_cues(take.srt or "", take.transcript or "", trim, window),
-        }
+        window = float(take.duration_s or 0) - trim - ans.get("trim_end_s", 0)
+        qsec = float(qclip.duration or 0)
+        qref = sp.AssetRef(kind="question_clip", key=qclip.storage_key)
+        add(
+            type="anchor_question",
+            duration_s=qsec,
+            narration=script.interview_questions[q],
+            asset=qref,
+            question_index=q,
+            question=script.interview_questions[q],
+        )
+        cues.append((cursor - qsec, cursor, script.interview_questions[q]))
+        answer_start = cursor
         if take.kind == "video" and take.processed_video_key:
-            scene["src"] = storage.presign_get(take.processed_video_key)
+            main_ref = sp.AssetRef(kind="take_video", key=take.processed_video_key)
         else:
-            scene["audioSrc"] = storage.presign_get(take.processed_audio_key or "")
-            if isession and isession.photo_key:
-                scene["photoSrc"] = storage.presign_get(isession.photo_key)
-        if take.snapshot_key:
-            scene["posterSrc"] = storage.presign_get(take.snapshot_key)
-        scenes.append(scene)
-        cues += shifted_cues(take.srt or "", t_cursor, ans.get("trim_start_s", 0), window)
-        t_cursor += window
+            main_ref = sp.AssetRef(kind="take_audio", key=take.processed_audio_key or "")
+        poster = (
+            sp.AssetRef(kind="snapshot", key=take.snapshot_key)
+            if take.snapshot_key
+            else (
+                sp.AssetRef(kind="photo", key=isession.photo_key)
+                if isession and isession.photo_key and take.kind != "video"
+                else None
+            )
+        )
+        words = answer_cues(take.srt or "", take.transcript or "", trim, window)
+        add(
+            type=sp.LAYOUT_SCENE[layout],
+            duration_s=window,
+            asset=main_ref,
+            question_asset=qref,
+            poster=poster,
+            question_index=q,
+            question=script.interview_questions[q],
+            question_number=shown.index(q) + 1,
+            total_questions=len(shown),
+            founder=sp.Founder(**founder),
+            trim_start_s=trim,
+            cues=[sp.Cue(**c) for c in words],
+            provenance="founder_statement",  # the founder's own recorded words, never rewritten
+        )
+        cues += shifted_cues(take.srt or "", answer_start, trim, window)
+        founder_claims += [
+            f"Founder said (question {shown.index(q) + 1}): {f.text}" for f in detect_claims(take.transcript or "")
+        ]
         if clips.cutaways and q != shown[-1]:  # a cutaway to the presenter between answers, never after the last one
-            cut = clips.cutaways[shown.index(q) % len(clips.cutaways)]
-            scenes.append(clip_scene(cut))
-            t_cursor += float(cut.duration_s or 0)
+            clip_scene(clips.cutaways[shown.index(q) % len(clips.cutaways)], "cutaway")
     if outro:
-        scenes.append(
-            {"type": "anchor", "src": storage.presign_get(outro.storage_key), "seconds": float(outro.duration or 0)}
+        start = cursor
+        add(
+            type="news_closing",
+            duration_s=float(outro.duration or 0),
+            narration=outro_text,
+            asset=sp.AssetRef(kind="anchor", key=outro.storage_key),
         )
         cues += [
-            (t_cursor + a, t_cursor + b, t)
+            (start + a, start + b, t)
             for a, b, t in parse_srt(build_srt([{"text": outro_text}], float(outro.duration or 1)))
         ]
-        t_cursor += float(outro.duration or 0)
     if clips.outro:
-        scenes.append(clip_scene(clips.outro))
-        t_cursor += float(clips.outro.duration_s or 0)
+        clip_scene(clips.outro, "sign-off")
 
+    scene_plan = sp.ScenePlan(
+        project_id=project.id,
+        script_version_id=script.id,
+        layout=layout,
+        scenes=scenes,
+        captions=[sp.Caption(start=a, end=b, text=t) for a, b, t in cues if b > a],
+        total_s=round(sum(sc.duration_s for sc in scenes), 3),
+        unconfirmed_claims=founder_claims,
+    )
+    await sp.validate_assets(
+        scene_plan, storage
+    )  # missing media fails now, with a message, before any render time is spent
+    project.scene_plan, project.scene_plan_hash = scene_plan.model_dump(mode="json"), scene_plan.hash()
+    t_cursor = scene_plan.total_s
+    scenes_out = sp.to_render_scenes(scene_plan, storage.presign_get)
     base = await build_overlay_props(session, project, script, t_cursor)
-    props = {**base, "layout": plan["layout"], "scenes": scenes, "totalSeconds": t_cursor}
+    props = {**base, "layout": layout, "scenes": scenes_out, "totalSeconds": t_cursor}
     status, cost = await _submit_render(
         guard, project, composition="InterviewMerge", props=props, outputs=FORMATS, prefix="final", input_urls={}
     )
     analyses = await _record_outputs(session, project, status)
     srt_key = await _store_srt(session, project, merge_srt(cues))
     safe_props = {k: v for k, v in props.items() if k != "scenes"} | {
-        "sceneCount": len(scenes)
+        "sceneCount": len(scenes),
+        "scenePlanHash": project.scene_plan_hash,
     }  # no signed URLs in the DB
     return StepOutcome(
         {"props": safe_props, "output_keys": status.output_keys, "srt_key": srt_key, "analyses": analyses}, cost

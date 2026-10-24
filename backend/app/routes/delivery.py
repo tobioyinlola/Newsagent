@@ -29,7 +29,7 @@ from app.services.ratelimit import limit
 
 router = APIRouter(tags=["delivery"])
 SIGNED_URL_TTL_S = 900
-TERMINAL = {"final_ready", "failed", "limit_reached"}
+TERMINAL = {"final_ready", "failed", "limit_reached", "cancelled"}
 SSE_POLL_S = 1.0  # tests shorten this
 SSE_MAX_S = 600
 

@@ -35,6 +35,21 @@ class Reservation:
     project_id: str | None = None
     stage: str | None = None
 
+    def to_json(self) -> dict:
+        return {
+            "workspace_id": self.workspace_id,
+            "vendor": self.vendor,
+            "period": self.period,
+            "amount": str(self.amount),
+            "charge": str(self.charge),
+            "project_id": self.project_id,
+            "stage": self.stage,
+        }
+
+    @classmethod
+    def from_json(cls, d: dict) -> "Reservation":
+        return cls(**{**d, "amount": Decimal(d["amount"]), "charge": Decimal(d["charge"])})
+
 
 def _period(now: datetime | None = None) -> str:
     return (now or datetime.now(UTC)).strftime("%Y-%m")

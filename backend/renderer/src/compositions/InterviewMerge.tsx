@@ -22,6 +22,7 @@ export type Scene =
       totalQuestions?: number;
       cues?: { start: number; end: number; text: string }[];
       posterSrc?: string | null;
+      layout?: "pip" | "split" | "column" | "full"; // per-scene choice; falls back to the video's layout
     };
 
 export type MergeProps = {
@@ -29,7 +30,7 @@ export type MergeProps = {
   disclosures: { tag: string; anchor: string };
   brand: { primary: string; accent: string };
   tickerLines: string[];
-  layout: "pip" | "split" | "column";
+  layout: "pip" | "split" | "column" | "full";
   scenes: Scene[];
   totalSeconds: number;
 };
@@ -167,6 +168,15 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
     </div>
   );
 
+  if (layout === "full") {
+    // founder_fullscreen: the founder's own video fills the frame under the channel graphics
+    return (
+      <AbsoluteFill>
+        <div style={{ position: "absolute", left: 0, right: 0, top: 100 * u, bottom: 72 * u, background: "#000" }}>{founder}</div>
+        {lowerThird}
+      </AbsoluteFill>
+    );
+  }
   if (layout === "column") {
     return <ColumnAnswer scene={scene} founder={founder} />;
   }
@@ -199,7 +209,7 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
       <Series>
         {p.scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={Math.max(1, Math.round(s.seconds * fps))}>
-            {s.type === "answer" ? <AnswerScene scene={s} layout={p.layout} brand={p.brand} /> : s.type === "clip" ? <ClipScene src={s.src} /> : <AnchorScene src={s.src} portrait={portrait} />}
+            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} /> : s.type === "clip" ? <ClipScene src={s.src} /> : <AnchorScene src={s.src} portrait={portrait} />}
           </Series.Sequence>
         ))}
       </Series>
