@@ -3,6 +3,7 @@ import { AbsoluteFill, Easing, OffthreadVideo, Series, interpolate, staticFile, 
 import { AnchorFigure } from "./AnchorFigure";
 import { Backdrop, Chrome } from "./Chrome";
 import { ClipScene } from "./ClipScene";
+import { FullFrameAnchor } from "./FullFrameAnchor";
 import { NewsDesk, SOFT_TOP, StudioProvider } from "./NewsSet";
 import { CF, Fonts, MONO, SANS } from "./theme";
 import { NewsProps } from "./types";
@@ -24,17 +25,17 @@ const StudioBody: React.FC<NewsProps> = (p) => {
   return (
     <AbsoluteFill style={{ background: CF.ink, fontFamily: SANS }}>
       <Fonts />
-      <Backdrop />
+      {p.anchorFullFrame && p.anchorSrc ? <FullFrameAnchor src={p.anchorSrc} /> : <Backdrop />}
 
       {/* anchor */}
-      <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "16%" : "11%" }}>
+      {!(p.anchorFullFrame && p.anchorSrc) && <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "16%" : "11%" }}>
         {p.anchorSrc ? (
           <OffthreadVideo src={p.anchorSrc.startsWith("http") ? p.anchorSrc : staticFile(p.anchorSrc)} transparent style={{ height: portrait ? "66%" : "80%", objectFit: "contain", ...SOFT_TOP }} />
         ) : (
           <AnchorFigure height={portrait ? "68%" : "86%"} />
         )}
-      </AbsoluteFill>
-      <NewsDesk />
+      </AbsoluteFill>}
+      {!(p.anchorFullFrame && p.anchorSrc) && <NewsDesk />}
 
       {/* breaking-news style banner */}
       <div style={{ position: "absolute", left: 0, bottom: (portrait ? 31 : 24.5) + "%", transform: `translateX(${(1 - slide(5)) * -100}%)` }}>

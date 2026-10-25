@@ -74,6 +74,18 @@ def anchor_text(script: ScriptVersion) -> str:
     return " ".join(s["text"] for s in script.segments)
 
 
+def is_fullframe(project: Project) -> bool:
+    """Does this project's presenter video already contain its own studio (so it is shown full frame, not cut out)?"""
+    ids = {i.strip() for i in get_settings().heygen_fullframe_avatar_ids.split(",") if i.strip()}
+    return bool(avatar_for(project) in ids)
+
+
+def clip_ext(project: Project) -> str:
+    return (
+        "mp4" if is_fullframe(project) else "webm"
+    )  # a studio-in-picture look is plain video; a cut-out keeps its alpha
+
+
 def avatar_for(project: Project) -> str | None:
     """The presenter look to ask the vendor for: the project's choice, else the configured default."""
     return project.anchor_id or get_settings().heygen_default_avatar_id or None
@@ -125,6 +137,7 @@ async def build_overlay_props(
             "accent": project.accent_override or (kit.accent_color if kit else "#F5A623"),
         },
         "studio": project.studio_id,  # which studio set to draw; "default" is the bright blue news studio
+        "anchorFullFrame": is_fullframe(project),  # the presenter video brings its own studio
         "anchorDurationSeconds": anchor_duration_s,
         "tickerLines": script.ticker_lines,
         "lowerThirds": script.lower_thirds,
@@ -140,13 +153,14 @@ async def persist_avatar_video(key: str, out) -> None:
     storage = registry.get_storage()
     url = out.video_url
     raw_key = f"{key}.src.mp4" if out.needs_chroma_key else key
+    ctype = "video/mp4" if key.endswith(".mp4") else "video/webm"
     if url.startswith("mock://"):
         from pathlib import Path
 
         from app.config import get_settings
 
         f = get_settings().mock_anchor_file
-        await storage.put(raw_key, Path(f).read_bytes() if f else b"mock-anchor-video", "video/webm")
+        await storage.put(raw_key, Path(f).read_bytes() if f else b"mock-anchor-video", ctype)
     else:
         import httpx
 
@@ -155,7 +169,7 @@ async def persist_avatar_video(key: str, out) -> None:
             r.raise_for_status()
             if len(r.content) > MAX_VIDEO_DOWNLOAD_BYTES:
                 raise RuntimeError("anchor video too large")
-            await storage.put(raw_key, r.content, "video/webm")
+            await storage.put(raw_key, r.content, ctype)
     if out.needs_chroma_key:
         try:
             await registry.get_renderer().chroma_key(storage.presign_get(raw_key, 1800), key)
@@ -280,7 +294,7 @@ async def _paid_avatar_asset(
         pronunciation=glossary,
         voice_accent=project.voice_accent,
         avatar_id=avatar_for(project),
-        transparent=True,
+        transparent=not is_fullframe(project),
     )
     out, cost, _vendor = await generate_anchor(session, project, guard, req, key, atype)
     # an older clip for the same slot (e.g. the owner edited a question) is replaced
@@ -344,7 +358,7 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
             atype="anchor",
             fmt="main",
             text=main or anchor_text(script),
-            key=f"projects/{project.id}/anchor.webm",
+            key=f"projects/{project.id}/anchor.{clip_ext(project)}",
         )
         for part in EXTRA_KINDS:  # separate presenter clips only when the script has those parts
             if t[part]:
@@ -355,7 +369,7 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
                     atype="anchor",
                     fmt=part,
                     text=t[part],
-                    key=f"projects/{project.id}/anchor-{part}.webm",
+                    key=f"projects/{project.id}/anchor-{part}.{clip_ext(project)}",
                 )
         if outro:
             total += await _paid_avatar_asset(
@@ -365,7 +379,7 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
                 atype="anchor_outro",
                 fmt="outro",
                 text=outro,
-                key=f"projects/{project.id}/anchor-outro.webm",
+                key=f"projects/{project.id}/anchor-outro.{clip_ext(project)}",
             )
         return StepOutcome({"split": True}, recorded_cost=total)
     kit = await current_kit(session, project.workspace_id)
@@ -374,9 +388,9 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
         pronunciation=(kit.pronunciation_glossary if kit else None) or None,
         voice_accent=project.voice_accent,
         avatar_id=avatar_for(project),
-        transparent=True,
+        transparent=not is_fullframe(project),
     )
-    key = f"projects/{project.id}/anchor.webm"
+    key = f"projects/{project.id}/anchor.{clip_ext(project)}"
     out, cost, vendor = await generate_anchor(session, project, guard, req, key, "anchor")
     for old in (
         await session.execute(select(Asset).where(Asset.project_id == project.id, Asset.type == "anchor"))
@@ -398,7 +412,7 @@ async def question_clips(session: AsyncSession, project: Project, guard: SpendGu
             atype="question_clip",
             fmt=f"q{i}",
             text=q,
-            key=f"projects/{project.id}/question-{i}.webm",
+            key=f"projects/{project.id}/question-{i}.{clip_ext(project)}",
         )
     return StepOutcome({"questions": len(script.interview_questions)}, recorded_cost=total)
 

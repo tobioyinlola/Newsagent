@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     # header below. The event only wakes the pipeline up (it never supplies results), so a forged event cannot inject media.
     # The look used when a project doesn't choose a presenter. Required for real runs: HeyGen needs an avatar id.
     heygen_default_avatar_id: str = ""
+    # Looks whose video already contains the whole studio (a photo of a news set that the vendor animates). Those are
+    # requested as ordinary MP4 and shown full frame; every other look is requested as a transparent cut-out.
+    heygen_fullframe_avatar_ids: str = ""
     heygen_webhook_secret: str = ""
     heygen_webhook_signature_header: str = "signature"
     synthesia_api_key: str = ""

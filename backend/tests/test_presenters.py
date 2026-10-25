@@ -112,3 +112,40 @@ async def test_the_chosen_presenter_is_what_the_vendor_is_asked_for(client, work
     await client.post(f"/v1/projects/{pid}/script/approve", headers=OWNER)
     await get_queue().drain()
     assert spy.avatars and set(spy.avatars) == {"stand-in-woman"}
+
+
+async def test_a_look_that_brings_its_own_studio_is_shown_full_frame(client, workspace, monkeypatch):
+    from app.integrations import registry
+    from app.integrations.avatar.mock import MockAvatarProvider
+    from app.pipeline.queue import get_queue
+
+    class Spy(MockAvatarProvider):
+        def __init__(self):
+            super().__init__()
+            self.transparent: list[bool] = []
+
+        async def generate(self, req):
+            self.transparent.append(req.transparent)
+            return await super().generate(req)
+
+    monkeypatch.setattr(get_settings(), "heygen_fullframe_avatar_ids", "stand-in-woman, other-look")
+    spy = Spy()
+    registry.override(avatar=spy)
+
+    async def make(anchor):
+        pid = (await client.post("/v1/projects", json={**BRIEF, "anchor_id": anchor}, headers=OWNER)).json()["id"]
+        script = (await client.post(f"/v1/projects/{pid}/script/generate", headers=OWNER)).json()
+        body = {k: script[k] for k in ("segments", "ticker_lines", "lower_thirds", "interview_questions")}
+        await client.put(f"/v1/projects/{pid}/script", json=body, headers=OWNER)
+        await client.post(f"/v1/projects/{pid}/script/approve", headers=OWNER)
+        await get_queue().drain()
+        req = [r for r in registry.get_renderer().requests if r.output_prefix.startswith(f"projects/{pid}/")][-1]
+        return pid, req
+
+    _pid, req = await make("stand-in-woman")
+    assert spy.transparent == [False] and req.props["anchorFullFrame"] is True
+    assert req.input_urls["anchor"].split("?")[0].endswith("anchor.mp4")
+    spy.transparent.clear()
+    _pid, req = await make("stand-in-man")
+    assert spy.transparent == [True] and req.props["anchorFullFrame"] is False
+    assert req.input_urls["anchor"].split("?")[0].endswith("anchor.webm")
