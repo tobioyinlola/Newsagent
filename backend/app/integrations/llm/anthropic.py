@@ -3,10 +3,11 @@ import json
 from anthropic import AsyncAnthropic
 
 from app.config import get_settings
-from app.integrations.llm.base import ScriptDraft, ScriptLLM
+from app.integrations.llm.base import ScriptDraft, ScriptLLM, StoryDraft
 from app.services.claims import detect_claims
 
-MODEL = "claude-sonnet-5-5"
+# The smallest current model: these are short structured-writing jobs, and the bill is the point. Override with LLM_MODEL.
+DEFAULT_MODEL = "claude-haiku-5-5"
 
 SYSTEM = (
     "You write scripts for a short news-style video on the Cover Founder channel, which features a startup. "
@@ -25,7 +26,7 @@ class AnthropicScriptLLM(ScriptLLM):
 
     async def _json(self, prompt: str) -> dict:
         msg = await self._client.messages.create(
-            model=MODEL,
+            model=get_settings().llm_model or DEFAULT_MODEL,
             max_tokens=4000,
             system=SYSTEM,
             messages=[{"role": "user", "content": prompt}],
@@ -67,3 +68,20 @@ class AnthropicScriptLLM(ScriptLLM):
         text = " ".join(s.text for s in draft.segments)
         draft.claim_flags = detect_claims(text)  # deterministic check, not left to the LLM
         return draft
+
+    async def write_story(self, facts: dict, announcement_type: str, answers: list[dict]) -> StoryDraft:
+        said = "\n".join(f"Q: {a['question']}\nA: {a['answer']}" for a in answers)[:5000]
+        raw = await self._json(
+            "Write the Cover Founder news story for this announcement, as JSON with keys: headline (under 100 chars), "
+            "dek (one sentence, under 200 chars), sections [{heading, paragraphs [str]}] (4 or 5 sections of 1-2 short "
+            "paragraphs: the news itself, the problem and why it matters, the founders and how the product works, "
+            'and a last section titled "What the company hasn\'t said" listing what was NOT disclosed, such as revenue, '
+            "customers or valuation, when it was not), social {hook (under 90 chars, makes people stop scrolling), "
+            'post (under 270 chars, plain, no hype), hashtags (at most 4)}, segments [{kind: "intro"|"body", text}] '
+            "(what the presenter says aloud: 35 to 45 words in total, then hands over to the founder), ticker_lines "
+            "(2 or 3 short strings), lower_thirds [{title, subtitle}] (one, short), unverified [str] (claims the "
+            "founder made that the facts do not support; the story must hedge them with 'says' or 'the company "
+            "reports'). Use only the facts and the founder's own words below; never invent numbers, names or quotes. "
+            f"Announcement type: {announcement_type}. Facts: {json.dumps(facts)}\nInterview:\n{said}"
+        )
+        return StoryDraft.model_validate(raw)

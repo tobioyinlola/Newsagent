@@ -1,4 +1,11 @@
-from app.integrations.llm.base import ScriptDraft, ScriptLLM, ScriptSegment
+from app.integrations.llm.base import (
+    ScriptDraft,
+    ScriptLLM,
+    ScriptSegment,
+    SocialPost,
+    StoryDraft,
+    StorySection,
+)
 from app.services.claims import detect_claims
 
 
@@ -47,3 +54,33 @@ class MockScriptLLM(ScriptLLM):
         )
         draft.claim_flags = detect_claims(" ".join(s.text for s in segs) + " " + " ".join(facts.get("key_facts", [])))
         return draft
+
+    async def write_story(self, facts: dict, announcement_type: str, answers: list[dict]) -> StoryDraft:
+        company = facts.get("company", "this startup")
+        kind = announcement_type.replace("_", " ")
+        said = [a["answer"].strip() for a in answers if a.get("answer", "").strip()]
+        first = said[0] if said else str(facts.get("announcement", ""))
+        return StoryDraft(
+            headline=f"{company}: {facts.get('announcement', kind)}"[:110],
+            dek=f"{company} shares its {kind} with Cover Founder.",
+            sections=[
+                StorySection(heading="The announcement", paragraphs=[str(facts.get("announcement", "")), first]),
+                StorySection(heading="The problem", paragraphs=[str(facts.get("problem", ""))]),
+                StorySection(
+                    heading="What the company hasn't said",
+                    paragraphs=["Revenue, customer numbers and valuation were not disclosed."],
+                ),
+            ],
+            social=SocialPost(
+                hook=f"{company} just made a move.",
+                post=f"{company}: {facts.get('announcement', kind)}. Watch the full story on Cover Founder.",
+                hashtags=["#startups", "#CoverFounder"],
+            ),
+            segments=[
+                ScriptSegment(kind="intro", text=f"Tonight's featured startup: {company}."),
+                ScriptSegment(kind="body", text=f"{facts.get('announcement', '')} Let's hear from the founder."),
+            ],
+            ticker_lines=[f"FEATURED: {company}"],
+            lower_thirds=[{"title": company, "subtitle": kind.title()}],
+            unverified=[],
+        )

@@ -25,7 +25,7 @@ from app.schemas.api import (
     RetakeIn,
     TakeOut,
 )
-from app.services import crypto, moderation_flow
+from app.services import crypto, guided, moderation_flow
 from app.services import interview as iv
 from app.services import state_machine as sm
 from app.services.moderation import fingerprint
@@ -261,6 +261,18 @@ async def _proceed_live(session: AsyncSession, project: Project, p: Principal) -
     )
     if s:
         s.revoked_at, s.token_enc = datetime.now(UTC), None
+    if project.flow == "guided":
+        # guided: the interview is done; write the story from what was said and let the owner review it before anything is paid
+        plan_now = guided.featured_plan(project.merge_plan, sorted(takes), n)
+        answers = [
+            {"question": script.interview_questions[q], "answer": takes[q].transcript or ""} for q in sorted(takes)
+        ]
+        project.merge_plan, project.layout = plan_now, plan_now["layout"]
+        await guided.write_story(session, project, script, answers)
+        sm.transition(project, "script_ready")
+        await session.commit()
+        await session.refresh(project)
+        return await _out(session, project)
     project.merge_plan = plan_now
     project.layout = plan_now["layout"]
     sm.transition(project, "rendering_anchor")

@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://newsagent:newsagent@localhost:5432/newsagent"
     redis_url: str = "redis://localhost:6379/0"
     anthropic_api_key: str = ""
+    llm_model: str = ""  # empty = the small default in integrations/llm/anthropic.py
     heygen_api_key: str = ""
     # Which AI B-roll provider to use. No real provider is implemented yet, so outside mock mode this stays empty and
     # AI B-roll reports itself unavailable instead of pretending.

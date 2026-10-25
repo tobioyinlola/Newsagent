@@ -28,7 +28,8 @@ ALLOWED: dict[str, set[str]] = {
     "script_ready": {"script_ready", "script_approved"},
     "script_approved": {"rendering_anchor", "interviewing"},
     # live interview: the owner is interviewed first; proceeding starts the paid pipeline
-    "interviewing": {"rendering_anchor"},
+    # guided flow: answering the interview leads to the written story (script_ready), which the owner reviews
+    "interviewing": {"rendering_anchor", "script_ready"},
     "rendering_anchor": {"anchor_ready"},
     "anchor_ready": {"awaiting_founder", "final_ready", "merging"},  # merging: live interview already recorded
     # awaiting_founder -> merging is the owner choosing to skip the interview (anchor-only cut)

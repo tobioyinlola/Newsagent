@@ -455,32 +455,52 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
     return StepOutcome({"vendor": vendor, "duration_s": out.duration_s, "key": key}, cost)
 
 
+def needed_questions(project: Project, count: int) -> list[int]:
+    """Questions that need a presenter clip, in the order they play: only the answers the owner features. Every clip is
+    paid for by the second, so an answer that is left out of the video never gets one."""
+    plan = project.merge_plan
+    if not plan:
+        return list(range(count))
+    include = {a["question_index"] for a in plan["answers"] if a.get("include", True)}
+    return [q for q in plan.get("order", range(count)) if q in include and q < count]
+
+
+def question_text(project: Project, script: ScriptVersion, q: int, needed: list[int]) -> str:
+    """What the presenter says for a question. In the guided flow the first one hands the conversation to the founder."""
+    text = script.interview_questions[q]
+    if project.flow == "guided" and needed and q == needed[0]:
+        return f"Let's hear from the founder. {text}"
+    return text
+
+
 async def question_clips(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
-    """One anchor clip per interview question (stage 8). Idempotent per question."""
+    """One anchor clip per featured interview question (stage 8). Idempotent per question."""
     script = await approved_script(session, project.id)
+    needed = needed_questions(project, len(script.interview_questions))
     total = Decimal("0")
-    for i, q in enumerate(script.interview_questions):
+    for i in needed:
         total += await _paid_avatar_asset(
             session,
             project,
             guard,
             atype="question_clip",
             fmt=f"q{i}",
-            text=q,
+            text=question_text(project, script, i, needed),
             key=f"projects/{project.id}/question-{i}.{clip_ext(project)}",
         )
-    return StepOutcome({"questions": len(script.interview_questions)}, recorded_cost=total)
+    return StepOutcome({"questions": len(needed)}, recorded_cost=total)
 
 
 async def question_clips_complete(session: AsyncSession, project: Project) -> bool:
     script = await approved_script(session, project.id)
+    needed = needed_questions(project, len(script.interview_questions))
     have = {
         a.format
         for a in (
             await session.execute(select(Asset).where(Asset.project_id == project.id, Asset.type == "question_clip"))
         ).scalars()
     }
-    return all(f"q{i}" in have for i in range(len(script.interview_questions)))
+    return all(f"q{i}" in have for i in needed)
 
 
 async def _submit_render(
