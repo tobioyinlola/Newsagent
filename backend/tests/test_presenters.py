@@ -46,14 +46,18 @@ async def test_the_heygen_catalogue_is_read_across_pages(monkeypatch):
         monkeypatch,
         [
             [look("a", "Dante Office 1")],
-            [look("b", "Aya Studio 2", "female"), look("c", "Broken", status="processing")],
+            [look("b", "Aya Studio 2", "Woman"), look("c", "Broken", status="processing")],
         ],
     )
     hg = HeyGenProvider.__new__(HeyGenProvider)
     hg._headers = {"x-api-key": "test"}
     found = await hg.list_presenters()
     assert [p.id for p in found] == ["a", "b"]  # a look still being made is not offered
-    assert found[1].gender == "female" and found[1].preview_image_url == "https://cdn.test/b.jpg"
+    assert (
+        found[0].gender == "male"
+        and found[1].gender == "female"
+        and found[1].preview_image_url == "https://cdn.test/b.jpg"
+    )
     assert seen[0] == {"limit": "50"} and seen[1] == {"limit": "50", "token": "t1"}  # the API allows 50 per page
 
 

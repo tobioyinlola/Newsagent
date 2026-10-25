@@ -25,6 +25,12 @@ BASE = "https://api.heygen.com"
 ASSUMED_COST_PER_MINUTE = 2.4
 
 
+def _gender(v: str | None) -> str:
+    """HeyGen labels looks "Woman" / "female" / "Man" / "male" / "Unspecified" inconsistently; offer female | male | ''."""
+    v = (v or "").strip().lower()
+    return {"woman": "female", "female": "female", "man": "male", "male": "male"}.get(v, "")
+
+
 class HeyGenProvider(AvatarProvider):
     name = "heygen"
 
@@ -69,7 +75,7 @@ class HeyGenProvider(AvatarProvider):
                         Presenter(
                             id=it["id"],
                             name=it.get("name") or it["id"],
-                            gender=it.get("gender") or "",
+                            gender=_gender(it.get("gender")),
                             preview_image_url=it.get("preview_image_url"),
                             orientation=it.get("preferred_orientation"),
                         )
