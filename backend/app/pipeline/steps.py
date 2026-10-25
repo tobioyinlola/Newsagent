@@ -152,7 +152,9 @@ async def build_overlay_props(
         },
         "studio": project.studio_id,  # which studio set to draw; "default" is the bright blue news studio
         "anchorFullFrame": is_fullframe(project),  # the presenter video brings its own studio
-        "anchorCovers": fullframe_covers(project),  # draw our boards over that picture's screens (false for a plain newsroom)
+        "anchorCovers": fullframe_covers(
+            project
+        ),  # draw our boards over that picture's screens (false for a plain newsroom)
         "anchorDurationSeconds": anchor_duration_s,
         "tickerLines": script.ticker_lines,
         "lowerThirds": script.lower_thirds,
@@ -287,6 +289,42 @@ async def generate_anchor(
     raise last
 
 
+async def _reuse_clip(session: AsyncSession, project: Project, *, atype: str, fmt: str, h: str, key: str) -> bool:
+    """Copy an identical clip (same words, presenter, voice and pronunciation) made for an earlier project, so a fixed
+    line such as the sign-off is bought from the vendor once, not once per video. Returns False if there is none."""
+    storage = registry.get_storage()
+    ext = key.rsplit(".", 1)[-1]
+    sources = (
+        await session.execute(
+            select(Asset)
+            .where(Asset.type == atype, Asset.hash == h, Asset.project_id != project.id, Asset.duration.is_not(None))
+            .order_by(Asset.created_at.desc())
+            .limit(5)
+        )
+    ).scalars()
+    for src in sources:
+        if src.storage_key.rsplit(".", 1)[-1] != ext:
+            continue
+        try:
+            data = await storage.get(src.storage_key, MAX_VIDEO_DOWNLOAD_BYTES)
+        except Exception:  # noqa: BLE001  the earlier copy was deleted (e.g. its owner erased the project)
+            continue
+        await storage.put(key, data, "video/mp4" if ext == "mp4" else "video/webm")
+        for old in (
+            await session.execute(
+                select(Asset).where(Asset.project_id == project.id, Asset.type == atype, Asset.format == fmt)
+            )
+        ).scalars():
+            await session.delete(old)
+        session.add(
+            Asset(project_id=project.id, type=atype, format=fmt, storage_key=key, hash=h, duration=src.duration)
+        )
+        await session.commit()
+        log.info("reused presenter clip %s/%s from an earlier project (no vendor cost)", atype, fmt)
+        return True
+    return False
+
+
 async def _paid_avatar_asset(
     session: AsyncSession, project: Project, guard: SpendGuard, *, atype: str, fmt: str, text: str, key: str
 ) -> Decimal:
@@ -304,6 +342,8 @@ async def _paid_avatar_asset(
     ).first()
     if existing:
         return Decimal("0")
+    if await _reuse_clip(session, project, atype=atype, fmt=fmt, h=h, key=key):
+        return Decimal("0")  # the same words by the same presenter were already paid for (e.g. the standard sign-off)
     req = AvatarRequest(
         script_text=text,
         pronunciation=glossary,

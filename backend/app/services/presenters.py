@@ -47,3 +47,8 @@ async def resolve(requested: str | None) -> str | None:
     if get_settings().use_mocks:
         return None
     raise HTTPException(422, {"error": "presenter_required", "message": "Choose a presenter for your video."})
+
+
+# The sign-off every video ends with. It is the same words each time on purpose: the presenter clip for it is made once per
+# presenter and voice, then reused by every later video at no vendor cost. (An owner who edits it pays for the new words.)
+STANDARD_OUTRO = "That was Cover Founder News. Thank you for watching."

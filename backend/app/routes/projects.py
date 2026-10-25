@@ -131,6 +131,9 @@ async def generate_script(
     brief.structured_facts = await llm.parse_brief(brief.raw_text, brief.website_url)
     facts = {**brief.structured_facts, "founder_name": project.founder_name, "founder_title": project.founder_title}
     draft = await llm.write_script(facts, "confident")
+    for seg in draft.segments:
+        if seg.kind == "outro":
+            seg.text = presenters.STANDARD_OUTRO  # same words every time, so its presenter clip is paid for once
     prev = await _latest_script(session, project_id)
     sv = ScriptVersion(
         project_id=project_id,

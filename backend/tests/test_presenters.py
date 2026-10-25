@@ -164,3 +164,43 @@ def test_plain_fullframe_look_skips_the_screen_covers(monkeypatch):
     assert steps.is_fullframe(P()) and steps.fullframe_covers(P()) is True
     P.anchor_id = "other"
     assert not steps.is_fullframe(P())
+
+
+async def test_the_standard_sign_off_is_paid_for_once_and_reused(client, workspace):
+    """The closing line is the same words every time, so its presenter clip is bought once and copied to later videos."""
+    from app.integrations import registry
+    from app.integrations.avatar.mock import MockAvatarProvider
+    from app.pipeline.queue import get_queue
+
+    class Spy(MockAvatarProvider):
+        def __init__(self):
+            super().__init__()
+            self.texts: list[str] = []
+
+        async def generate(self, req):
+            self.texts.append(req.script_text)
+            return await super().generate(req)
+
+    spy = Spy()
+    registry.override(avatar=spy)
+
+    async def make(company):
+        pid = (await client.post("/v1/projects", json=BRIEF, headers=OWNER)).json()["id"]
+        script = (await client.post(f"/v1/projects/{pid}/script/generate", headers=OWNER)).json()
+        outro = [s for s in script["segments"] if s["kind"] == "outro"]
+        assert outro and outro[0]["text"] == presenters.STANDARD_OUTRO  # generated scripts end the standard way
+        body = {k: script[k] for k in ("segments", "ticker_lines", "lower_thirds", "interview_questions")}
+        body["segments"] = [
+            {"kind": "intro", "text": f"Tonight we feature {company}."},
+            {"kind": "body", "text": f"{company} sells things."},
+            outro[0],
+        ]
+        await client.put(f"/v1/projects/{pid}/script", json=body, headers=OWNER)
+        r = await client.post(f"/v1/projects/{pid}/script/approve", json={"with_interview": True}, headers=OWNER)
+        assert r.status_code == 200, r.text
+        await get_queue().drain()
+        return pid
+
+    await make("Acme")
+    await make("Beta")
+    assert spy.texts.count(presenters.STANDARD_OUTRO) == 1  # bought once, copied for the second video
