@@ -3,7 +3,7 @@ import { AbsoluteFill, Easing, OffthreadVideo, Series, interpolate, staticFile, 
 import { AnchorFigure } from "./AnchorFigure";
 import { Backdrop, Chrome } from "./Chrome";
 import { ClipScene } from "./ClipScene";
-import { NewsDesk, SOFT_TOP } from "./NewsSet";
+import { NewsDesk, SOFT_TOP, StudioProvider } from "./NewsSet";
 import { CF, Fonts, MONO, SANS } from "./theme";
 import { NewsProps } from "./types";
 
@@ -27,9 +27,9 @@ const StudioBody: React.FC<NewsProps> = (p) => {
       <Backdrop />
 
       {/* anchor */}
-      <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "16%" : "3%" }}>
+      <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "16%" : "11%" }}>
         {p.anchorSrc ? (
-          <OffthreadVideo src={p.anchorSrc.startsWith("http") ? p.anchorSrc : staticFile(p.anchorSrc)} transparent style={{ height: portrait ? "66%" : "93%", objectFit: "contain", ...SOFT_TOP }} />
+          <OffthreadVideo src={p.anchorSrc.startsWith("http") ? p.anchorSrc : staticFile(p.anchorSrc)} transparent style={{ height: portrait ? "66%" : "80%", objectFit: "contain", ...SOFT_TOP }} />
         ) : (
           <AnchorFigure height={portrait ? "68%" : "86%"} />
         )}
@@ -62,6 +62,7 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
   const { fps } = useVideoConfig();
   const frames = (s: number) => Math.max(1, Math.round(s * fps));
   return (
+    <StudioProvider studio={p.studio}>
     <AbsoluteFill style={{ background: CF.ink, fontFamily: SANS }}>
       <Series>
         {p.introClip && <Series.Sequence durationInFrames={frames(p.introClip.seconds)}><ClipScene src={p.introClip.src} /></Series.Sequence>}
@@ -70,5 +71,6 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
       </Series>
       <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} />
     </AbsoluteFill>
+    </StudioProvider>
   );
 };

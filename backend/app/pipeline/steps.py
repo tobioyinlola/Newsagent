@@ -124,6 +124,7 @@ async def build_overlay_props(
             "primary": kit.primary_color if kit else "#0B3D91",
             "accent": project.accent_override or (kit.accent_color if kit else "#F5A623"),
         },
+        "studio": project.studio_id,  # which studio set to draw; "default" is the bright blue news studio
         "anchorDurationSeconds": anchor_duration_s,
         "tickerLines": script.ticker_lines,
         "lowerThirds": script.lower_thirds,

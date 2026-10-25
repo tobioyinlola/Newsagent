@@ -3,7 +3,7 @@ import { AbsoluteFill, Audio, Freeze, Img, OffthreadVideo, Series, interpolate, 
 import { Backdrop, Chrome } from "./Chrome";
 import { BrollScene } from "./BrollScene";
 import { ClipScene } from "./ClipScene";
-import { NewsDesk, SOFT_TOP } from "./NewsSet";
+import { NewsDesk, SOFT_TOP, StudioProvider } from "./NewsSet";
 import { CF, Fonts, MONO, SANS } from "./theme";
 
 export type Scene =
@@ -36,6 +36,7 @@ export type MergeProps = {
   brand: { primary: string; accent: string };
   tickerLines: string[];
   layout: "pip" | "split" | "column" | "full";
+  studio?: string;
   scenes: Scene[];
   totalSeconds: number;
 };
@@ -57,8 +58,8 @@ const AnchorShot: React.FC<{ src: string; muted?: boolean; height: string }> = (
 );
 
 const AnchorScene: React.FC<{ src: string; portrait: boolean }> = ({ src, portrait }) => (
-  <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "16%" : "3%" }}>
-    <AnchorShot src={src} height={portrait ? "66%" : "93%"} />
+  <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "16%" : "11%" }}>
+    <AnchorShot src={src} height={portrait ? "66%" : "80%"} />
     <NewsDesk />
   </AbsoluteFill>
 );
@@ -202,6 +203,7 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
   const { fps, height, width } = useVideoConfig();
   const portrait = height > width;
   return (
+    <StudioProvider studio={p.studio}>
     <AbsoluteFill style={{ fontFamily: SANS, background: CF.ink }}>
       <Fonts />
       <Backdrop />
@@ -214,5 +216,6 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
       </Series>
       <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} />
     </AbsoluteFill>
+    </StudioProvider>
   );
 };
