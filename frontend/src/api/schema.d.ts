@@ -1468,6 +1468,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{project_id}/guided/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start
+         * @description Details are in: work out the story and open the AI interview (free; nothing is rendered).
+         */
+        post: operations["start_v1_projects__project_id__guided_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{project_id}/interview": {
         parameters: {
             query?: never;
@@ -1789,6 +1809,26 @@ export interface paths {
         post: operations["create_share_v1_projects__project_id__share_post"];
         /** Revoke Share */
         delete: operations["revoke_share_v1_projects__project_id__share_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/story": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Story
+         * @description The news story and the social post written after the interview.
+         */
+        get: operations["story_v1_projects__project_id__story_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3129,8 +3169,15 @@ export interface components {
             accent_override?: string | null;
             /** Anchor Id */
             anchor_id?: string | null;
+            /** Announcement Type */
+            announcement_type?: string | null;
             /** Brief Text */
             brief_text: string;
+            /**
+             * Flow
+             * @default classic
+             */
+            flow: string;
             /**
              * Founder Name
              * @default
@@ -3172,6 +3219,8 @@ export interface components {
         ProjectOut: {
             /** Anchor Id */
             anchor_id?: string | null;
+            /** Announcement Type */
+            announcement_type?: string | null;
             /**
              * Assets
              * @default []
@@ -3188,6 +3237,11 @@ export interface components {
             failure_reason: string | null;
             /** Failure Retryable */
             failure_retryable: boolean;
+            /**
+             * Flow
+             * @default classic
+             */
+            flow: string;
             /**
              * Founder Name
              * @default
@@ -3362,6 +3416,10 @@ export interface components {
             segments: {
                 [key: string]: unknown;
             }[];
+            /** Story */
+            story?: {
+                [key: string]: unknown;
+            } | null;
             /** Ticker Lines */
             ticker_lines: string[];
             /** Version */
@@ -6833,6 +6891,39 @@ export interface operations {
             };
         };
     };
+    start_v1_projects__project_id__guided_start_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     interview_status_v1_projects__project_id__interview_get: {
         parameters: {
             query?: never;
@@ -7570,6 +7661,41 @@ export interface operations {
         };
     };
     revoke_share_v1_projects__project_id__share_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    story_v1_projects__project_id__story_get: {
         parameters: {
             query?: never;
             header?: {

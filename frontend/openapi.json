@@ -3289,10 +3289,28 @@
             ],
             "title": "Anchor Id"
           },
+          "announcement_type": {
+            "anyOf": [
+              {
+                "pattern": "^(product_launch|funding_round|partnership|hiring|milestone|other)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Announcement Type"
+          },
           "brief_text": {
             "maxLength": 8000,
             "minLength": 20,
             "title": "Brief Text",
+            "type": "string"
+          },
+          "flow": {
+            "default": "classic",
+            "pattern": "^(classic|guided)$",
+            "title": "Flow",
             "type": "string"
           },
           "founder_name": {
@@ -3383,6 +3401,17 @@
             ],
             "title": "Anchor Id"
           },
+          "announcement_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Announcement Type"
+          },
           "assets": {
             "default": [],
             "items": {
@@ -3414,6 +3443,11 @@
           "failure_retryable": {
             "title": "Failure Retryable",
             "type": "boolean"
+          },
+          "flow": {
+            "default": "classic",
+            "title": "Flow",
+            "type": "string"
           },
           "founder_name": {
             "default": "",
@@ -3877,6 +3911,18 @@
             },
             "title": "Segments",
             "type": "array"
+          },
+          "story": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Story"
           },
           "ticker_lines": {
             "items": {
@@ -10058,6 +10104,65 @@
         ]
       }
     },
+    "/v1/projects/{project_id}/guided/start": {
+      "post": {
+        "description": "Details are in: work out the story and open the AI interview (free; nothing is rendered).",
+        "operationId": "start_v1_projects__project_id__guided_start_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start",
+        "tags": [
+          "guided"
+        ]
+      }
+    },
     "/v1/projects/{project_id}/interview": {
       "delete": {
         "operationId": "revoke_invite_v1_projects__project_id__interview_delete",
@@ -11440,6 +11545,67 @@
         "summary": "Create Share",
         "tags": [
           "delivery"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/story": {
+      "get": {
+        "description": "The news story and the social post written after the interview.",
+        "operationId": "story_v1_projects__project_id__story_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Story V1 Projects  Project Id  Story Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Story",
+        "tags": [
+          "guided"
         ]
       }
     },

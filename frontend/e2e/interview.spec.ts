@@ -25,8 +25,8 @@ const BRIEF = "Acme Farms helps smallholder farmers sell their produce to verifi
 
 async function toInterview(page: import("@playwright/test").Page, token: string) {
   await page.addInitScript((t) => { if (!sessionStorage.getItem("seeded")) { sessionStorage.setItem("seeded", "1"); localStorage.setItem("newsagent.token", t); } }, token);
-  await page.goto("/projects/new");
-  await expect(page.getByRole("group", { name: "Choose your presenter" })).toBeVisible();
+  await page.goto("/projects/new-classic");
+  await expect(page.getByRole("group", { name: "Your presenter" })).toBeVisible();
   await page.getByRole("radio", { name: /Stand-in presenter \(woman\)/ }).click();
   await expect(page.getByRole("radio", { name: /Stand-in presenter \(woman\)/ })).toHaveAttribute("aria-checked", "true");
   await page.getByLabel("Your name").fill("Ada Obi");

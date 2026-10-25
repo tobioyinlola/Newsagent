@@ -27,18 +27,36 @@ async def catalogue() -> list[Presenter]:
     return looks
 
 
+def featured() -> list[Presenter]:
+    """The house presenters, offered first. Configured, so a new one is an environment change, not a deploy."""
+    out = []
+    for item in get_settings().heygen_featured_presenters.split(";"):
+        parts = [x.strip() for x in item.split("|")]
+        if len(parts) >= 2 and parts[0]:
+            out.append(
+                Presenter(
+                    parts[0], parts[1], parts[2] if len(parts) > 2 else "", f"/presenters/{parts[0]}.jpg", "landscape"
+                )
+            )
+    return out
+
+
 async def search(q: str = "", gender: str = "", limit: int = 48) -> list[Presenter]:
     q, gender = q.strip().lower(), gender.strip().lower()
-    return [
-        p for p in await catalogue() if (not q or q in p.name.lower()) and (not gender or p.gender.lower() == gender)
-    ][:limit]
+
+    def ok(p: Presenter) -> bool:
+        return (not q or q in p.name.lower()) and (not gender or p.gender.lower() == gender)
+
+    house = [p for p in featured() if ok(p)]
+    seen = {p.id for p in house}
+    return (house + [p for p in await catalogue() if ok(p) and p.id not in seen])[:limit]
 
 
 async def resolve(requested: str | None) -> str | None:
     """The presenter look to store on a new project. A chosen one must really exist; with none chosen the configured
     default is used; a real (non-demo) run with neither is refused rather than sent to the vendor without an avatar."""
     if requested:
-        if requested not in {p.id for p in await catalogue()}:
+        if requested not in {p.id for p in featured()} | {p.id for p in await catalogue()}:
             raise HTTPException(422, {"error": "unknown_presenter", "message": "That presenter isn't available."})
         return requested
     default = get_settings().heygen_default_avatar_id

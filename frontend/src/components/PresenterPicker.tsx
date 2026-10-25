@@ -3,7 +3,7 @@ import { useState } from "react";
 import { api, unwrap } from "../api/client";
 import { inputCls } from "./ui";
 
-// Choose which AI presenter reads the news. Searchable, because a real catalogue has hundreds of looks.
+// Choose which AI presenter reads the news. The house presenters come first (the first is the default); search finds others.
 export function PresenterPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
   const [q, setQ] = useState("");
   const [gender, setGender] = useState("");
@@ -16,7 +16,8 @@ export function PresenterPicker({ value, onChange }: { value: string; onChange: 
   if (list.isSuccess && items.length === 0 && !q && !gender) return null; // this provider has no catalogue to choose from
   return (
     <fieldset className="space-y-2 rounded-md border-2 border-ink p-3">
-      <legend className="px-1 text-sm font-semibold">Choose your presenter</legend>
+      <legend className="px-1 text-sm font-semibold">Your presenter</legend>
+      <p className="text-sm text-muted">Our news-desk presenter is selected for you. Pick another if you prefer.</p>
       <div className="flex flex-wrap gap-2">
         <input aria-label="Search presenters" className={inputCls + " max-w-xs"} placeholder="Search by name" value={q} onChange={(e) => setQ(e.target.value)} />
         <select aria-label="Presenter gender" className={inputCls + " max-w-[10rem]"} value={gender} onChange={(e) => setGender(e.target.value)}>
@@ -25,13 +26,16 @@ export function PresenterPicker({ value, onChange }: { value: string; onChange: 
       </div>
       {list.isError && <p className="text-sm text-muted">The presenter list isn't available right now. The default presenter will be used.</p>}
       <div role="radiogroup" aria-label="Presenters" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {items.map((p) => (
-          <button key={p.id} type="button" role="radio" aria-checked={value === p.id} onClick={() => onChange(value === p.id ? "" : p.id)}
-            className={`overflow-hidden rounded-sm border-2 text-left text-sm ${value === p.id ? "border-brand-purple bg-lilac" : "border-ink bg-white"}`}>
+        {items.map((p, i) => {
+          const picked = value === p.id || (!value && i === 0 && !q && !gender); // nothing chosen = the default (listed first)
+          return (
+          <button key={p.id} type="button" role="radio" aria-checked={picked} onClick={() => onChange(i === 0 && !q && !gender ? "" : p.id)}
+            className={`overflow-hidden rounded-sm border-2 text-left text-sm ${picked ? "border-brand-purple bg-lilac" : "border-ink bg-white"}`}>
             {p.preview_image_url ? <img src={p.preview_image_url} alt="" className="aspect-video w-full object-cover" loading="lazy" /> : <div className="aspect-video w-full bg-paper" aria-hidden />}
-            <span className="block p-1 font-medium">{p.name}</span>
+            <span className="block p-1 font-medium">{p.name}{i === 0 && !q && !gender ? " (default)" : ""}</span>
           </button>
-        ))}
+          );
+        })}
       </div>
       {items.length === 12 && <p className="text-xs text-muted">Showing the first 12. Search to narrow the list.</p>}
     </fieldset>

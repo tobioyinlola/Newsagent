@@ -204,3 +204,18 @@ async def test_the_standard_sign_off_is_paid_for_once_and_reused(client, workspa
     await make("Acme")
     await make("Beta")
     assert spy.texts.count(presenters.STANDARD_OUTRO) == 1  # bought once, copied for the second video
+
+
+async def test_house_presenters_come_first_and_are_always_valid(client, workspace, monkeypatch):
+    monkeypatch.setattr(
+        get_settings(), "heygen_featured_presenters", "house-man|Marcus, news desk|male;house-woman|Elena|female"
+    )
+    got = (await client.get("/v1/presenters", headers=OWNER)).json()
+    assert [p["id"] for p in got[:2]] == ["house-man", "house-woman"]
+    assert got[0]["preview_image_url"] == "/presenters/house-man.jpg" and got[0]["gender"] == "male"
+    assert [p["id"] for p in (await client.get("/v1/presenters?gender=female", headers=OWNER)).json()][
+        0
+    ] == "house-woman"
+    # a house presenter need not be in the vendor's (huge) catalogue to be chosen
+    r = await client.post("/v1/projects", json={**BRIEF, "anchor_id": "house-man"}, headers=OWNER)
+    assert r.status_code == 200 and r.json()["anchor_id"] == "house-man"

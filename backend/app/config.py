@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     # Looks whose video already contains the whole studio (a photo of a news set that the vendor animates). Those are
     # requested as ordinary MP4 and shown full frame; every other look is requested as a transparent cut-out.
     heygen_fullframe_avatar_ids: str = ""
+    # presenters offered first and always valid: "id|Name|gender;id|Name|gender". Their pictures are the frontend's /presenters/<id>.jpg
+    heygen_featured_presenters: str = ""
     heygen_webhook_secret: str = ""
     heygen_webhook_signature_header: str = "signature"
     synthesia_api_key: str = ""
