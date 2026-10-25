@@ -25,7 +25,7 @@ const StudioBody: React.FC<NewsProps> = (p) => {
   return (
     <AbsoluteFill style={{ background: CF.ink, fontFamily: SANS }}>
       <Fonts />
-      {p.anchorFullFrame && p.anchorSrc ? <FullFrameAnchor src={p.anchorSrc} /> : <Backdrop />}
+      {p.anchorFullFrame && p.anchorSrc ? <FullFrameAnchor src={p.anchorSrc} covers={p.anchorCovers ?? true} /> : <Backdrop />}
 
       {/* anchor */}
       {!(p.anchorFullFrame && p.anchorSrc) && <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "16%" : "11%" }}>

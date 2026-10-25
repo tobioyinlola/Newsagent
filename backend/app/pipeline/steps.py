@@ -74,10 +74,24 @@ def anchor_text(script: ScriptVersion) -> str:
     return " ".join(s["text"] for s in script.segments)
 
 
+def _fullframe_entries() -> dict[str, bool]:
+    """Configured studio-in-picture looks, as {look id: needs our boards over its picture}. Write `id:plain` for a picture that has no
+    screens or reflections to cover (a plain newsroom behind the presenter)."""
+    out: dict[str, bool] = {}
+    for item in get_settings().heygen_fullframe_avatar_ids.split(","):
+        look, _, flag = item.strip().partition(":")
+        if look:
+            out[look] = flag.strip() != "plain"
+    return out
+
+
 def is_fullframe(project: Project) -> bool:
     """Does this project's presenter video already contain its own studio (so it is shown full frame, not cut out)?"""
-    ids = {i.strip() for i in get_settings().heygen_fullframe_avatar_ids.split(",") if i.strip()}
-    return bool(avatar_for(project) in ids)
+    return avatar_for(project) in _fullframe_entries()
+
+
+def fullframe_covers(project: Project) -> bool:
+    return _fullframe_entries().get(avatar_for(project) or "", True)
 
 
 def clip_ext(project: Project) -> str:
@@ -138,6 +152,7 @@ async def build_overlay_props(
         },
         "studio": project.studio_id,  # which studio set to draw; "default" is the bright blue news studio
         "anchorFullFrame": is_fullframe(project),  # the presenter video brings its own studio
+        "anchorCovers": fullframe_covers(project),  # draw our boards over that picture's screens (false for a plain newsroom)
         "anchorDurationSeconds": anchor_duration_s,
         "tickerLines": script.ticker_lines,
         "lowerThirds": script.lower_thirds,

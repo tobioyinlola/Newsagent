@@ -39,6 +39,7 @@ export type MergeProps = {
   layout: "pip" | "split" | "column" | "full";
   studio?: string;
   anchorFullFrame?: boolean;
+  anchorCovers?: boolean;
   scenes: Scene[];
   totalSeconds: number;
 };
@@ -62,9 +63,9 @@ const AnchorShot: React.FC<{ src: string; muted?: boolean; height: string; fullF
     <OffthreadVideo src={url(src)} transparent muted={muted} style={{ height, objectFit: "contain", ...SOFT_TOP }} />
   );
 
-const AnchorScene: React.FC<{ src: string; portrait: boolean; fullFrame?: boolean }> = ({ src, portrait, fullFrame }) =>
+const AnchorScene: React.FC<{ src: string; portrait: boolean; fullFrame?: boolean; covers?: boolean }> = ({ src, portrait, fullFrame, covers }) =>
   fullFrame ? (
-    <FullFrameAnchor src={src} />
+    <FullFrameAnchor src={src} covers={covers ?? true} />
   ) : (
   <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "16%" : "11%" }}>
     <AnchorShot src={src} height={portrait ? "66%" : "80%"} />
@@ -218,7 +219,7 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
       <Series>
         {p.scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={Math.max(1, Math.round(s.seconds * fps))}>
-            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} fullFrame={p.anchorFullFrame} /> : s.type === "clip" ? <ClipScene src={s.src} /> : s.type === "broll" ? <BrollScene scene={s} /> : <AnchorScene src={s.src} portrait={portrait} fullFrame={p.anchorFullFrame} />}
+            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} fullFrame={p.anchorFullFrame} /> : s.type === "clip" ? <ClipScene src={s.src} /> : s.type === "broll" ? <BrollScene scene={s} /> : <AnchorScene src={s.src} portrait={portrait} fullFrame={p.anchorFullFrame} covers={p.anchorCovers} />}
           </Series.Sequence>
         ))}
       </Series>

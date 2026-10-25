@@ -149,3 +149,18 @@ async def test_a_look_that_brings_its_own_studio_is_shown_full_frame(client, wor
     _pid, req = await make("stand-in-man")
     assert spy.transparent == [True] and req.props["anchorFullFrame"] is False
     assert req.input_urls["anchor"].split("?")[0].endswith("anchor.webm")
+
+
+def test_plain_fullframe_look_skips_the_screen_covers(monkeypatch):
+    from app.pipeline import steps
+
+    monkeypatch.setattr(get_settings(), "heygen_fullframe_avatar_ids", "lady, man:plain")
+
+    class P:
+        anchor_id = "man"
+
+    assert steps.is_fullframe(P()) and steps.fullframe_covers(P()) is False
+    P.anchor_id = "lady"
+    assert steps.is_fullframe(P()) and steps.fullframe_covers(P()) is True
+    P.anchor_id = "other"
+    assert not steps.is_fullframe(P())
