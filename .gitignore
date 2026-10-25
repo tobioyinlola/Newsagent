@@ -24,3 +24,4 @@ backend/e2e-real.db*
 backend/renderer/public/news-anchor.webm
 backend/renderer/public/studio-lady.mp4
 backend/renderer/public/studio-man.mp4
+backend/renderer/public/studio-woman.mp4
