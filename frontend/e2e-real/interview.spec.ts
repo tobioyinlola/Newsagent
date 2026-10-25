@@ -135,7 +135,7 @@ test("founder records on a throttled 4G phone, survives a dropped connection, an
   await owner.getByLabel("Layout").selectOption("split");
   await owner.getByLabel("Cut from start (s)").first().fill("0.5");
   await owner.getByRole("button", { name: "Make the final video" }).click();
-  await expect(owner.getByRole("heading", { name: "Your video" })).toBeVisible({ timeout: 300_000 });
+  await expect(owner.getByRole("heading", { name: "Your video", exact: true })).toBeVisible({ timeout: 300_000 });
 
   expect(violations, "CSP violations on the founder page").toEqual([]);
 

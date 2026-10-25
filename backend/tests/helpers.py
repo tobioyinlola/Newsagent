@@ -28,8 +28,7 @@ async def make_awaiting_founder(client, questions=None):
         {"kind": "body", "text": "Acme connects farmers to buyers."},
         {"kind": "outro", "text": "That was Acme. Back to you."},
     ]
-    if questions:
-        body["interview_questions"] = questions
+    body["interview_questions"] = questions or ["What problem are you solving?", "Why now?"]
     await client.put(f"/v1/projects/{pid}/script", json=body, headers=OWNER)
     r = await client.post(f"/v1/projects/{pid}/script/approve", json={"with_interview": True}, headers=OWNER)
     assert r.status_code == 200, r.text

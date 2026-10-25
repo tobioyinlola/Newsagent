@@ -8,6 +8,7 @@ from app.integrations.malware.base import MalwareScanner
 from app.integrations.renderer.base import RendererClient
 from app.integrations.storage.base import StorageProvider
 from app.integrations.transcription.base import TranscriptionProvider
+from app.integrations.tts.base import TTSProvider
 
 _cache: dict[str, object] = {}
 
@@ -88,6 +89,20 @@ async def avatar_chain(session) -> list[AvatarProvider]:
     return chain
 
 
+def get_broll():  # -> BrollProvider
+    """AI-generated B-roll. In mock mode a placeholder maker; otherwise a provider only if one is configured, and none is
+    implemented yet, so this says so rather than fabricating a result."""
+
+    def make():
+        if get_settings().use_mocks:
+            from app.integrations.broll.mock import MockBrollProvider
+
+            return MockBrollProvider()
+        return None
+
+    return _get("broll", make)
+
+
 def get_llm() -> ScriptLLM:
     def make() -> ScriptLLM:
         if get_settings().use_mocks:
@@ -138,6 +153,19 @@ def get_transcription() -> TranscriptionProvider:
         return WhisperApiTranscription()
 
     return _get("transcription", make)  # type: ignore[return-value]
+
+
+def get_tts() -> TTSProvider:
+    def make() -> TTSProvider:
+        if get_settings().use_mocks:
+            from app.integrations.tts.mock import MockTTS
+
+            return MockTTS()
+        from app.integrations.tts.openai import OpenAITTS
+
+        return OpenAITTS()
+
+    return _get("tts", make)  # type: ignore[return-value]
 
 
 def get_scanner() -> MalwareScanner:

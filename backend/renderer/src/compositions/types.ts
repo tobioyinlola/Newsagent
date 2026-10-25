@@ -6,6 +6,9 @@ export type NewsProps = {
   lowerThirds: { title: string; subtitle: string }[];
   anchorSrc: string | null; // transparent WebM (Option B) or full anchor clip; null renders a placeholder
   anchorDurationSeconds: number;
+  // real presenter footage before and after the AI presenter (the operator's library); the studio graphics run only over the anchor
+  introClip?: { src: string; seconds: number } | null;
+  outroClip?: { src: string; seconds: number } | null;
 };
 
 export const defaultProps: NewsProps = {

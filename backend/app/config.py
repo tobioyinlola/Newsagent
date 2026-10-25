@@ -20,6 +20,8 @@ VENDOR_POLICIES: dict[str, VendorPolicy] = {
     "renderer": VendorPolicy(timeout_s=1200, max_attempts=2, max_concurrency=2),
     "transcription": VendorPolicy(timeout_s=300, max_attempts=3),
     "email": VendorPolicy(timeout_s=20, max_attempts=5),
+    "tts": VendorPolicy(timeout_s=30, max_attempts=2),  # the interviewer's voice
+    "broll": VendorPolicy(timeout_s=300, max_attempts=2),  # optional AI-generated product shots
 }
 
 
@@ -30,6 +32,13 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     anthropic_api_key: str = ""
     heygen_api_key: str = ""
+    # Which AI B-roll provider to use. No real provider is implemented yet, so outside mock mode this stays empty and
+    # AI B-roll reports itself unavailable instead of pretending.
+    broll_provider: str = ""
+    # Optional. When set, POST /v1/webhooks/heygen is live: the signature is an HMAC-SHA256 of the raw body, read from the
+    # header below. The event only wakes the pipeline up (it never supplies results), so a forged event cannot inject media.
+    heygen_webhook_secret: str = ""
+    heygen_webhook_signature_header: str = "signature"
     synthesia_api_key: str = ""
     transcription_api_key: str = ""
     email_api_key: str = ""
@@ -46,6 +55,7 @@ class Settings(BaseSettings):
     operator_session_hours: int = 8
     sentry_dsn: str = ""
     app_base_url: str = "http://localhost:5173"
+    admin_base_url: str = "http://localhost:5174"  # the back-office app, a separate site from the customer app
     environment: str = "local"  # local, staging, production
     use_mocks: bool = True
     operator_emails: str = ""  # comma separated; may call /admin
@@ -58,6 +68,10 @@ class Settings(BaseSettings):
     raw_take_retention_days: int = 90
     transcription_api_url: str = "https://api.openai.com/v1"  # any OpenAI-compatible /audio/transcriptions endpoint
     transcription_model: str = "whisper-1"
+    tts_api_key: str = ""  # an OpenAI key; falls back to TRANSCRIPTION_API_KEY (same account)
+    tts_api_url: str = "https://api.openai.com/v1"  # any OpenAI-compatible /audio/speech endpoint
+    tts_model: str = "tts-1"
+    tts_voice: str = "nova"
     renderer_backend: str = (
         ""  # "http" uses the real renderer service even when USE_MOCKS=true (local full-stack tests)
     )

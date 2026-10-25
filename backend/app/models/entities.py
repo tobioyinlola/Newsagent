@@ -5,6 +5,7 @@ from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     Numeric,
@@ -91,9 +92,22 @@ class Project(Base, TimestampMixin):
     failure_retryable: Mapped[bool] = mapped_column(Boolean, default=False)
     failed_from: Mapped[str | None] = mapped_column(String(32), nullable=True)
     interview_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    # "invite": a founder records from a private link after the anchor is made. "live": the owner is interviewed by the
+    # AI interviewer on the dashboard BEFORE anything paid runs, then the anchor and the merge follow.
+    interview_mode: Mapped[str] = mapped_column(String(10), default="invite")
+    founder_name: Mapped[str] = mapped_column(String(200), default="")  # who the AI interviewer greets by name
+    founder_title: Mapped[str] = mapped_column(String(200), default="")
     keep_raw_takes: Mapped[bool] = mapped_column(Boolean, default=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     merge_plan: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # owner's layout/order/trim/drop choices
+    # the validated scene plan the last render was built from (asset keys, never signed URLs), and its content hash
+    scene_plan: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    scene_plan_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    state_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # product footage the owner chose to show: [{key, caption, seconds, synthetic}] (brand assets or generated clips)
+    broll: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # edits made to a finished video that the next re-render will apply
+    revision_pending: Mapped[bool] = mapped_column(Boolean, default=False)
 
     brief: Mapped["Brief | None"] = relationship(uselist=False, lazy="selectin")
 
@@ -154,6 +168,7 @@ class InterviewSession(Base, TimestampMixin):
     # session is submitted, revoked or expired. Lookups always use token_hash.
     token_enc: Mapped[str | None] = mapped_column(Text, nullable=True)
     photo_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    mode: Mapped[str] = mapped_column(String(10), default="invite")  # invite | live (AI interviewer on the dashboard)
 
 
 class Job(Base, TimestampMixin):
@@ -171,6 +186,40 @@ class Job(Base, TimestampMixin):
     duration_s: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    failure_category: Mapped[str | None] = mapped_column(String(20), nullable=True)  # see integrations/errors.py
+
+
+class ProviderRequest(Base, TimestampMixin):
+    """One paid generation at a vendor, written the moment it is submitted. A crash, retry or duplicate delivery finds
+    this row and resumes polling the same vendor id instead of paying for a second video."""
+
+    __tablename__ = "provider_requests"
+    __table_args__ = (UniqueConstraint("project_id", "provider", "slot", "request_hash"),)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    provider: Mapped[str] = mapped_column(String(50))
+    slot: Mapped[str] = mapped_column(String(500))  # which clip this is for (its storage key)
+    request_hash: Mapped[str] = mapped_column(String(64))
+    vendor_video_id: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(20), default="new")  # new | submitted | completed | failed
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # video_url, duration_s, cost
+    hold: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # the credit hold made for this job, until settled
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_webhook_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class WebhookEvent(Base):
+    """Every provider callback we acted on, so a duplicate delivery is recognised and ignored."""
+
+    __tablename__ = "webhook_events"
+    __table_args__ = (UniqueConstraint("provider", "event_id"),)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    provider: Mapped[str] = mapped_column(String(50))
+    event_id: Mapped[str] = mapped_column(String(200))
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class VendorBudget(Base):
@@ -203,6 +252,29 @@ class BrandAsset(Base, TimestampMixin):
     content_type: Mapped[str] = mapped_column(String(100))
     size_bytes: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | clean | rejected
+    duration_s: Mapped[float | None] = mapped_column(Float, nullable=True)  # product videos only
+    width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    height: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class PresenterClip(Base, TimestampMixin):
+    """A clip of a TV-style presenter the operator uploaded. Merged videos mix these in around the AI presenter."""
+
+    __tablename__ = "presenter_clips"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    title: Mapped[str] = mapped_column(String(200))
+    role: Mapped[str] = mapped_column(String(20))  # intro | cutaway | outro
+    key: Mapped[str] = mapped_column(String(500), unique=True)
+    content_type: Mapped[str] = mapped_column(String(100))
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | clean | rejected
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    duration_s: Mapped[float | None] = mapped_column(Float, nullable=True)
+    width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    height: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    has_audio: Mapped[bool] = mapped_column(Boolean, default=False)
+    rights_confirmed_by: Mapped[str] = mapped_column(String(320))  # the operator who confirmed the rights
+    rights_confirmed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class Take(Base, TimestampMixin):
@@ -227,6 +299,7 @@ class Take(Base, TimestampMixin):
     stats: Mapped[dict] = mapped_column(JSON, default=dict)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     raw_deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    snapshot_key: Mapped[str | None] = mapped_column(String(500), nullable=True)  # camera still taken mid-answer
 
 
 class SystemSetting(Base):

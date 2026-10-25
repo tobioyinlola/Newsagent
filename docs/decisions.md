@@ -76,3 +76,30 @@
   as Remotion props, and are asserted by the quality gate. Banned real-network names are checked in overlays.
 - The in-memory rate limiter is fine for one API instance; move it to Redis before running several.
 - `docs/BUILD_SPEC.md` is not committed. Please add the spec file there.
+
+## Live AI interview and the separate back office
+- The interview happens **before** any paid render. Script approval with `interview_mode=live` moves the project to
+  `interviewing`; the owner records at the dashboard; "Make my video" validates every answer, runs moderation, then
+  starts the anchor and merge. A founder who abandons costs nothing but the voice lines.
+- Questions are pre-generated with the script (exactly 4 by default), not adaptive. Adaptive follow-ups would need an LLM
+  call between answers plus the transcription delay inside a 5-minute window; revisit once real timings exist.
+- Voice is a provider (`integrations/tts`) with its own spend budget; lines are cached by text hash. Voice failure never
+  blocks the interview (the browser voice is the fallback). Audio is not recorded from the speaker, the camera take is video-only.
+- Camera is required. Each answer stores a snapshot (`Take.snapshot_key`), used as the answer thumbnail, the column's avatar
+  and a fallback when a clip is unusable. The full clip, not the snapshot, is the footage in the video.
+- Interview time: 300 s total, answer window 15 to 75 s computed from the question count (9 s speaking overhead, 14 s closing).
+- The column layout is a Remotion composition: per-answer cues (relative to the trimmed start) reveal transcript lines in sync.
+- Back office is a separate app (`admin/`) on its own origin. Defence in depth: the API rejects `/v1/admin*` requests whose
+  Origin is the customer app, CORS lists both origins, CSP is per site. The admin app copies a few UI files from `frontend/`
+  rather than sharing a package (cheap now; extract a package if they drift).
+- Revenue figures count card checkouts only; offline/manual payments show up as credits granted, not revenue.
+
+## Presenter clips
+- Real presenter footage is a platform-wide library managed by operators in the back office, not per customer. It frames the AI
+  presenter (opening shot, cutaways between answers, sign-off); it does not replace the avatar's lip-synced reading of the script,
+  which pre-recorded clips cannot do.
+- Rights are an explicit, audited attestation on upload (who confirmed, when). We cannot verify rights ourselves.
+- A clip's length must suit its role so cutaways cannot bury the founder; clips are not transcribed, so captions are shifted around them.
+- Selection is deterministic per project (project id picks among active clips), so re-rendering a project does not change its shots;
+  changing the library changes the merge input hash and re-renders.
+- Not yet used in the presenter-only (no interview) video.

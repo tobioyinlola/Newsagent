@@ -48,6 +48,12 @@ def problems(s: Settings) -> list[str]:
         out.append("REDIS_URL points at localhost")
     if not s.app_base_url.startswith("https://"):
         out.append("APP_BASE_URL must be https:// (magic links and share links are credentials)")
+    if not s.admin_base_url.startswith("https://"):
+        out.append("ADMIN_BASE_URL must be https:// (the back office is a separate site from the customer app)")
+    elif s.admin_base_url.rstrip("/") == s.app_base_url.rstrip("/"):
+        out.append(
+            "ADMIN_BASE_URL must be a different site from APP_BASE_URL: the back office is not part of the customer app"
+        )
     if s.queue_backend != "celery":
         out.append("QUEUE_BACKEND must be celery (the inline queue runs work inside web requests)")
     if not s.trust_proxy_headers:

@@ -21,6 +21,13 @@ class AvatarResult:
 
 
 @dataclass
+class AvatarPoll:
+    status: str  # pending | completed | failed
+    result: "AvatarResult | None" = None
+    error: str | None = None
+
+
+@dataclass
 class VoiceOption:
     id: str
     accent: str
@@ -29,6 +36,15 @@ class VoiceOption:
 
 class AvatarProvider(ABC):
     name: str
+    # True when the vendor job can be submitted and polled separately. The pipeline then records the vendor's id the
+    # moment it is issued, so a crash or retry resumes the same paid video instead of buying another.
+    supports_async: bool = False
+
+    async def submit(self, req: AvatarRequest) -> str:
+        raise NotImplementedError
+
+    async def poll(self, vendor_id: str, req: AvatarRequest) -> AvatarPoll:
+        raise NotImplementedError
 
     @abstractmethod
     def estimate_cost(self, req: AvatarRequest) -> float: ...

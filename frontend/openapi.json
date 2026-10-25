@@ -3,6 +3,12 @@
     "schemas": {
       "ApproveIn": {
         "properties": {
+          "interview_mode": {
+            "default": "invite",
+            "pattern": "^(invite|live)$",
+            "title": "Interview Mode",
+            "type": "string"
+          },
           "with_interview": {
             "default": false,
             "title": "With Interview",
@@ -45,6 +51,34 @@
           "storage_key"
         ],
         "title": "AssetOut",
+        "type": "object"
+      },
+      "Attention": {
+        "properties": {
+          "failed_videos": {
+            "title": "Failed Videos",
+            "type": "integer"
+          },
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "pending_reviews": {
+            "title": "Pending Reviews",
+            "type": "integer"
+          },
+          "suspended_workspaces": {
+            "title": "Suspended Workspaces",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pending_reviews",
+          "failed_videos",
+          "suspended_workspaces",
+          "paused"
+        ],
+        "title": "Attention",
         "type": "object"
       },
       "AuditOut": {
@@ -144,6 +178,17 @@
           "content_type": {
             "title": "Content Type",
             "type": "string"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
           },
           "key": {
             "title": "Key",
@@ -448,6 +493,233 @@
           "source_url"
         ],
         "title": "BrandKitOut",
+        "type": "object"
+      },
+      "BriefUnderstandingOut": {
+        "properties": {
+          "announcement": {
+            "default": "",
+            "title": "Announcement",
+            "type": "string"
+          },
+          "company": {
+            "default": "",
+            "title": "Company",
+            "type": "string"
+          },
+          "founder_name": {
+            "default": "",
+            "title": "Founder Name",
+            "type": "string"
+          },
+          "founder_title": {
+            "default": "",
+            "title": "Founder Title",
+            "type": "string"
+          },
+          "key_facts": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Key Facts",
+            "type": "array"
+          },
+          "problem": {
+            "default": "",
+            "title": "Problem",
+            "type": "string"
+          }
+        },
+        "title": "BriefUnderstandingOut",
+        "type": "object"
+      },
+      "BrollCandidate": {
+        "properties": {
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "synthetic": {
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "key",
+          "kind",
+          "source",
+          "synthetic"
+        ],
+        "title": "BrollCandidate",
+        "type": "object"
+      },
+      "BrollGenerateIn": {
+        "properties": {
+          "prompt": {
+            "maxLength": 300,
+            "minLength": 10,
+            "title": "Prompt",
+            "type": "string"
+          },
+          "seconds": {
+            "default": 5,
+            "maximum": 8.0,
+            "minimum": 3.0,
+            "title": "Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "title": "BrollGenerateIn",
+        "type": "object"
+      },
+      "BrollItemIn": {
+        "properties": {
+          "caption": {
+            "default": "",
+            "maxLength": 80,
+            "title": "Caption",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "seconds": {
+            "maximum": 8.0,
+            "minimum": 2.0,
+            "title": "Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "seconds"
+        ],
+        "title": "BrollItemIn",
+        "type": "object"
+      },
+      "BrollItemOut": {
+        "properties": {
+          "caption": {
+            "title": "Caption",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "seconds": {
+            "title": "Seconds",
+            "type": "number"
+          },
+          "synthetic": {
+            "title": "Synthetic",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "kind",
+          "caption",
+          "seconds",
+          "synthetic"
+        ],
+        "title": "BrollItemOut",
+        "type": "object"
+      },
+      "BrollOut": {
+        "properties": {
+          "ai_available": {
+            "title": "Ai Available",
+            "type": "boolean"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/BrollCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BrollItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "items",
+          "candidates",
+          "ai_available"
+        ],
+        "title": "BrollOut",
+        "type": "object"
+      },
+      "BrollPutIn": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BrollItemIn"
+            },
+            "maxItems": 5,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "BrollPutIn",
         "type": "object"
       },
       "CaptionsOut": {
@@ -835,6 +1107,287 @@
         "title": "CostsOut",
         "type": "object"
       },
+      "CustomerDetail": {
+        "properties": {
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "string"
+          },
+          "payments": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentRow"
+            },
+            "title": "Payments",
+            "type": "array"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          },
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerProject"
+            },
+            "title": "Projects",
+            "type": "array"
+          },
+          "signed_up_at": {
+            "format": "date-time",
+            "title": "Signed Up At",
+            "type": "string"
+          },
+          "spend_cap": {
+            "title": "Spend Cap",
+            "type": "string"
+          },
+          "spent_credits": {
+            "title": "Spent Credits",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "users": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerUser"
+            },
+            "title": "Users",
+            "type": "array"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "company",
+          "plan",
+          "status",
+          "signed_up_at",
+          "credits",
+          "spent_credits",
+          "spend_cap",
+          "users",
+          "projects",
+          "payments"
+        ],
+        "title": "CustomerDetail",
+        "type": "object"
+      },
+      "CustomerList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "CustomerList",
+        "type": "object"
+      },
+      "CustomerProject": {
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "interview": {
+            "title": "Interview",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "created_at",
+          "completed_at",
+          "cost_usd",
+          "interview"
+        ],
+        "title": "CustomerProject",
+        "type": "object"
+      },
+      "CustomerRow": {
+        "properties": {
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "string"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "last_video_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Video At"
+          },
+          "owner_email": {
+            "title": "Owner Email",
+            "type": "string"
+          },
+          "paid_usd": {
+            "title": "Paid Usd",
+            "type": "string"
+          },
+          "purchases": {
+            "title": "Purchases",
+            "type": "integer"
+          },
+          "signed_up_at": {
+            "format": "date-time",
+            "title": "Signed Up At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "videos": {
+            "title": "Videos",
+            "type": "integer"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "company",
+          "owner_email",
+          "signed_up_at",
+          "last_login_at",
+          "status",
+          "credits",
+          "paid_usd",
+          "purchases",
+          "videos",
+          "last_video_at"
+        ],
+        "title": "CustomerRow",
+        "type": "object"
+      },
+      "CustomerUser": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "role",
+          "created_at",
+          "last_login_at"
+        ],
+        "title": "CustomerUser",
+        "type": "object"
+      },
+      "DayCount": {
+        "properties": {
+          "count": {
+            "default": 0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "usd": {
+            "default": "0",
+            "title": "Usd",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date"
+        ],
+        "title": "DayCount",
+        "type": "object"
+      },
       "DeleteAccountIn": {
         "properties": {
           "confirm": {
@@ -921,6 +1474,34 @@
           "email"
         ],
         "title": "ForgotIn",
+        "type": "object"
+      },
+      "Funnel": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "integer"
+          },
+          "expired": {
+            "title": "Expired",
+            "type": "integer"
+          },
+          "invites_sent": {
+            "title": "Invites Sent",
+            "type": "integer"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "invites_sent",
+          "accepted",
+          "pending",
+          "expired"
+        ],
+        "title": "Funnel",
         "type": "object"
       },
       "GuestQuestion": {
@@ -1091,6 +1672,11 @@
             "title": "Max Chunks",
             "type": "integer"
           },
+          "mode": {
+            "default": "invite",
+            "title": "Mode",
+            "type": "string"
+          },
           "questions": {
             "items": {
               "$ref": "#/components/schemas/GuestQuestion"
@@ -1195,6 +1781,17 @@
             "title": "Active",
             "type": "boolean"
           },
+          "consent_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Text"
+          },
           "consented": {
             "default": false,
             "title": "Consented",
@@ -1244,6 +1841,11 @@
               }
             ],
             "title": "Founder Title"
+          },
+          "mode": {
+            "default": "invite",
+            "title": "Mode",
+            "type": "string"
           },
           "photo_url": {
             "anyOf": [
@@ -1495,6 +2097,74 @@
         "title": "KeepRawIn",
         "type": "object"
       },
+      "Kpis": {
+        "properties": {
+          "active_30d": {
+            "title": "Active 30D",
+            "type": "integer"
+          },
+          "credits_outstanding": {
+            "title": "Credits Outstanding",
+            "type": "string"
+          },
+          "customers": {
+            "title": "Customers",
+            "type": "integer"
+          },
+          "paying_companies": {
+            "title": "Paying Companies",
+            "type": "integer"
+          },
+          "revenue_usd_30d": {
+            "title": "Revenue Usd 30D",
+            "type": "string"
+          },
+          "revenue_usd_total": {
+            "title": "Revenue Usd Total",
+            "type": "string"
+          },
+          "signups_30d": {
+            "title": "Signups 30D",
+            "type": "integer"
+          },
+          "signups_7d": {
+            "title": "Signups 7D",
+            "type": "integer"
+          },
+          "vendor_cost_usd_30d": {
+            "title": "Vendor Cost Usd 30D",
+            "type": "string"
+          },
+          "videos_30d": {
+            "title": "Videos 30D",
+            "type": "integer"
+          },
+          "videos_ready": {
+            "title": "Videos Ready",
+            "type": "integer"
+          },
+          "videos_total": {
+            "title": "Videos Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "customers",
+          "signups_7d",
+          "signups_30d",
+          "paying_companies",
+          "revenue_usd_total",
+          "revenue_usd_30d",
+          "vendor_cost_usd_30d",
+          "videos_total",
+          "videos_30d",
+          "videos_ready",
+          "active_30d",
+          "credits_outstanding"
+        ],
+        "title": "Kpis",
+        "type": "object"
+      },
       "LedgerEntry": {
         "properties": {
           "amount": {
@@ -1563,6 +2233,89 @@
           "description"
         ],
         "title": "LedgerEntry",
+        "type": "object"
+      },
+      "LiveStartIn": {
+        "properties": {
+          "consent": {
+            "title": "Consent",
+            "type": "boolean"
+          },
+          "founder_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Founder Name",
+            "type": "string"
+          },
+          "founder_title": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Founder Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "founder_name",
+          "consent"
+        ],
+        "title": "LiveStartIn",
+        "type": "object"
+      },
+      "LiveStartOut": {
+        "properties": {
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "consent_text": {
+            "title": "Consent Text",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "founder_name": {
+            "title": "Founder Name",
+            "type": "string"
+          },
+          "max_answer_s": {
+            "title": "Max Answer S",
+            "type": "integer"
+          },
+          "max_total_s": {
+            "title": "Max Total S",
+            "type": "integer"
+          },
+          "min_answer_s": {
+            "title": "Min Answer S",
+            "type": "integer"
+          },
+          "questions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "company",
+          "founder_name",
+          "expires_at",
+          "consent_text",
+          "questions",
+          "max_total_s",
+          "max_answer_s",
+          "min_answer_s"
+        ],
+        "title": "LiveStartOut",
         "type": "object"
       },
       "LoginIn": {
@@ -1808,6 +2561,66 @@
         "title": "OtpIn",
         "type": "object"
       },
+      "Overview": {
+        "properties": {
+          "attention": {
+            "$ref": "#/components/schemas/Attention"
+          },
+          "funnel": {
+            "$ref": "#/components/schemas/Funnel"
+          },
+          "kpis": {
+            "$ref": "#/components/schemas/Kpis"
+          },
+          "recent_signups": {
+            "items": {
+              "$ref": "#/components/schemas/SignupRow"
+            },
+            "title": "Recent Signups",
+            "type": "array"
+          },
+          "revenue_by_day": {
+            "items": {
+              "$ref": "#/components/schemas/DayCount"
+            },
+            "title": "Revenue By Day",
+            "type": "array"
+          },
+          "signups_by_day": {
+            "items": {
+              "$ref": "#/components/schemas/DayCount"
+            },
+            "title": "Signups By Day",
+            "type": "array"
+          },
+          "top_customers": {
+            "items": {
+              "$ref": "#/components/schemas/TopCustomer"
+            },
+            "title": "Top Customers",
+            "type": "array"
+          },
+          "videos_by_state": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Videos By State",
+            "type": "object"
+          }
+        },
+        "required": [
+          "kpis",
+          "funnel",
+          "attention",
+          "signups_by_day",
+          "revenue_by_day",
+          "videos_by_state",
+          "recent_signups",
+          "top_customers"
+        ],
+        "title": "Overview",
+        "type": "object"
+      },
       "PackIn": {
         "properties": {
           "credits": {
@@ -1890,11 +2703,164 @@
         "title": "PackPatch",
         "type": "object"
       },
+      "PayingCompany": {
+        "properties": {
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "last_paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Paid At"
+          },
+          "payments": {
+            "title": "Payments",
+            "type": "integer"
+          },
+          "usd": {
+            "title": "Usd",
+            "type": "string"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "company",
+          "payments",
+          "usd",
+          "last_paid_at"
+        ],
+        "title": "PayingCompany",
+        "type": "object"
+      },
+      "PaymentRow": {
+        "properties": {
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "status": {
+            "default": "paid",
+            "title": "Status",
+            "type": "string"
+          },
+          "usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usd"
+          },
+          "when": {
+            "format": "date-time",
+            "title": "When",
+            "type": "string"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "when",
+          "workspace_id",
+          "company",
+          "kind",
+          "usd",
+          "credits"
+        ],
+        "title": "PaymentRow",
+        "type": "object"
+      },
+      "Payments": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "offline_credits": {
+            "title": "Offline Credits",
+            "type": "string"
+          },
+          "paying_companies": {
+            "items": {
+              "$ref": "#/components/schemas/PayingCompany"
+            },
+            "title": "Paying Companies",
+            "type": "array"
+          },
+          "total_usd": {
+            "title": "Total Usd",
+            "type": "string"
+          },
+          "total_usd_30d": {
+            "title": "Total Usd 30D",
+            "type": "string"
+          }
+        },
+        "required": [
+          "total_usd",
+          "total_usd_30d",
+          "offline_credits",
+          "paying_companies",
+          "items"
+        ],
+        "title": "Payments",
+        "type": "object"
+      },
       "PhotoConfirmIn": {
         "properties": {
           "key": {
             "title": "Key",
             "type": "string"
+          },
+          "take_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Take Id"
           }
         },
         "required": [
@@ -1923,6 +2889,17 @@
             "title": "Include",
             "type": "boolean"
           },
+          "layout": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layout"
+          },
           "question_index": {
             "title": "Question Index",
             "type": "integer"
@@ -1944,6 +2921,303 @@
         "title": "PlanAnswer",
         "type": "object"
       },
+      "PresenterClipOut": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "has_audio": {
+            "title": "Has Audio",
+            "type": "boolean"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "rights_confirmed_by": {
+            "title": "Rights Confirmed By",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "role",
+          "active",
+          "status",
+          "duration_s",
+          "width",
+          "height",
+          "has_audio",
+          "size_bytes",
+          "rights_confirmed_by",
+          "created_at"
+        ],
+        "title": "PresenterClipOut",
+        "type": "object"
+      },
+      "PresenterClipPatch": {
+        "properties": {
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "intro",
+                  "cutaway",
+                  "outro"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "PresenterClipPatch",
+        "type": "object"
+      },
+      "PresenterClipUploadIn": {
+        "properties": {
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "rights_confirmed": {
+            "title": "Rights Confirmed",
+            "type": "boolean"
+          },
+          "role": {
+            "enum": [
+              "intro",
+              "cutaway",
+              "outro"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "size_bytes": {
+            "exclusiveMinimum": 0.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "role",
+          "content_type",
+          "size_bytes",
+          "rights_confirmed"
+        ],
+        "title": "PresenterClipUploadIn",
+        "type": "object"
+      },
+      "PresenterClipUploadOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "max_bytes": {
+            "title": "Max Bytes",
+            "type": "integer"
+          },
+          "upload_url": {
+            "title": "Upload Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "upload_url",
+          "max_bytes"
+        ],
+        "title": "PresenterClipUploadOut",
+        "type": "object"
+      },
+      "ProgressOut": {
+        "properties": {
+          "cancellable": {
+            "title": "Cancellable",
+            "type": "boolean"
+          },
+          "failure_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Category"
+          },
+          "percent": {
+            "title": "Percent",
+            "type": "integer"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressStage"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "vendor_jobs_in_flight": {
+            "default": 0,
+            "title": "Vendor Jobs In Flight",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "percent",
+          "stages",
+          "retryable",
+          "cancellable"
+        ],
+        "title": "ProgressOut",
+        "type": "object"
+      },
+      "ProgressStage": {
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "status"
+        ],
+        "title": "ProgressStage",
+        "type": "object"
+      },
       "ProjectCreate": {
         "properties": {
           "accent_override": {
@@ -1962,6 +3236,18 @@
             "maxLength": 8000,
             "minLength": 20,
             "title": "Brief Text",
+            "type": "string"
+          },
+          "founder_name": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Founder Name",
+            "type": "string"
+          },
+          "founder_title": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Founder Title",
             "type": "string"
           },
           "region": {
@@ -2061,6 +3347,16 @@
             "title": "Failure Retryable",
             "type": "boolean"
           },
+          "founder_name": {
+            "default": "",
+            "title": "Founder Name",
+            "type": "string"
+          },
+          "founder_title": {
+            "default": "",
+            "title": "Founder Title",
+            "type": "string"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -2069,6 +3365,11 @@
             "default": false,
             "title": "Interview Enabled",
             "type": "boolean"
+          },
+          "interview_mode": {
+            "default": "invite",
+            "title": "Interview Mode",
+            "type": "string"
           },
           "keep_raw_takes": {
             "default": false,
@@ -2189,6 +3490,283 @@
           "question_index"
         ],
         "title": "RetakeIn",
+        "type": "object"
+      },
+      "SceneOut": {
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "duration_s": {
+            "title": "Duration S",
+            "type": "number"
+          },
+          "editable": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Editable",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "layout": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layout"
+          },
+          "narration": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narration"
+          },
+          "order": {
+            "title": "Order",
+            "type": "integer"
+          },
+          "question_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question Index"
+          },
+          "synthetic": {
+            "default": false,
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "trim_end_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trim End S"
+          },
+          "trim_start_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trim Start S"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "order",
+          "type",
+          "label",
+          "duration_s",
+          "editable"
+        ],
+        "title": "SceneOut",
+        "type": "object"
+      },
+      "ScenePatch": {
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "confirmed_claims": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Confirmed Claims",
+            "type": "array"
+          },
+          "include": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include"
+          },
+          "layout": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layout"
+          },
+          "narration": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narration"
+          },
+          "seconds": {
+            "anyOf": [
+              {
+                "maximum": 8.0,
+                "minimum": 2.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seconds"
+          },
+          "trim_end_s": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trim End S"
+          },
+          "trim_start_s": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trim Start S"
+          }
+        },
+        "title": "ScenePatch",
+        "type": "object"
+      },
+      "ScenePatchOut": {
+        "properties": {
+          "regenerates": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Regenerates",
+            "type": "array"
+          },
+          "revision_pending": {
+            "title": "Revision Pending",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "regenerates",
+          "revision_pending"
+        ],
+        "title": "ScenePatchOut",
+        "type": "object"
+      },
+      "ScenesOut": {
+        "properties": {
+          "can_revise": {
+            "title": "Can Revise",
+            "type": "boolean"
+          },
+          "excluded_answers": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Excluded Answers",
+            "type": "array"
+          },
+          "plan_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Hash"
+          },
+          "revision_pending": {
+            "title": "Revision Pending",
+            "type": "boolean"
+          },
+          "scenes": {
+            "items": {
+              "$ref": "#/components/schemas/SceneOut"
+            },
+            "title": "Scenes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "plan_hash",
+          "revision_pending",
+          "scenes",
+          "can_revise"
+        ],
+        "title": "ScenesOut",
         "type": "object"
       },
       "ScriptOut": {
@@ -2572,6 +4150,63 @@
         "title": "SharePublic",
         "type": "object"
       },
+      "SignupRow": {
+        "properties": {
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "paid": {
+            "title": "Paid",
+            "type": "boolean"
+          },
+          "signed_up_at": {
+            "format": "date-time",
+            "title": "Signed Up At",
+            "type": "string"
+          },
+          "videos": {
+            "title": "Videos",
+            "type": "integer"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "company",
+          "email",
+          "signed_up_at",
+          "last_login_at",
+          "credits",
+          "videos",
+          "paid"
+        ],
+        "title": "SignupRow",
+        "type": "object"
+      },
       "SignupStartIn": {
         "properties": {
           "invite_code": {
@@ -2673,6 +4308,17 @@
             "title": "Question Index",
             "type": "integer"
           },
+          "snapshot_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Url"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -2710,6 +4356,47 @@
         "title": "TakeOut",
         "type": "object"
       },
+      "TopCustomer": {
+        "properties": {
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "last_video_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Video At"
+          },
+          "revenue_usd": {
+            "title": "Revenue Usd",
+            "type": "string"
+          },
+          "videos": {
+            "title": "Videos",
+            "type": "integer"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "company",
+          "revenue_usd",
+          "videos",
+          "last_video_at"
+        ],
+        "title": "TopCustomer",
+        "type": "object"
+      },
       "UploadConfirmIn": {
         "properties": {
           "key": {
@@ -2730,7 +4417,7 @@
             "type": "string"
           },
           "kind": {
-            "pattern": "^(logo_light|logo_dark|guide_pdf|product_image)$",
+            "pattern": "^(logo_light|logo_dark|guide_pdf|product_image|product_video)$",
             "title": "Kind",
             "type": "string"
           },
@@ -2945,6 +4632,35 @@
         "title": "VendorBudgetSet",
         "type": "object"
       },
+      "VoiceLine": {
+        "properties": {
+          "audio_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Url"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "text"
+        ],
+        "title": "VoiceLine",
+        "type": "object"
+      },
       "VoiceOut": {
         "properties": {
           "accent": {
@@ -2972,6 +4688,22 @@
           "accent"
         ],
         "title": "VoiceOut",
+        "type": "object"
+      },
+      "VoicePrepareOut": {
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/VoiceLine"
+            },
+            "title": "Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "lines"
+        ],
+        "title": "VoicePrepareOut",
         "type": "object"
       },
       "WorkspaceAdminOut": {
@@ -3131,6 +4863,30 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "description": "Is this instance fit to serve? The database is required; the others are reported so an operator can see them.",
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ready Health Ready Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ready",
+        "tags": [
+          "system"
+        ]
       }
     },
     "/v1/account": {
@@ -3440,6 +5196,147 @@
         ]
       }
     },
+    "/v1/admin/customers": {
+      "get": {
+        "operationId": "customers_v1_admin_customers_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Customers",
+        "tags": [
+          "backoffice"
+        ]
+      }
+    },
+    "/v1/admin/customers/{workspace_id}": {
+      "get": {
+        "operationId": "customer_v1_admin_customers__workspace_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Customer",
+        "tags": [
+          "backoffice"
+        ]
+      }
+    },
     "/v1/admin/invites": {
       "post": {
         "operationId": "create_invite_v1_admin_invites_post",
@@ -3727,6 +5624,67 @@
         ]
       }
     },
+    "/v1/admin/overview": {
+      "get": {
+        "operationId": "overview_v1_admin_overview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 90,
+              "minimum": 7,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Overview",
+        "tags": [
+          "backoffice"
+        ]
+      }
+    },
     "/v1/admin/packs": {
       "get": {
         "operationId": "admin_packs_v1_admin_packs_get",
@@ -3904,6 +5862,392 @@
         "summary": "Patch Pack",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/v1/admin/payments": {
+      "get": {
+        "operationId": "payments_v1_admin_payments_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payments"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Payments",
+        "tags": [
+          "backoffice"
+        ]
+      }
+    },
+    "/v1/admin/pipeline-metrics": {
+      "get": {
+        "operationId": "pipeline_metrics_v1_admin_pipeline_metrics_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Pipeline Metrics V1 Admin Pipeline Metrics Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pipeline Metrics",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/v1/admin/presenter-clips": {
+      "get": {
+        "operationId": "list_clips_v1_admin_presenter_clips_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PresenterClipOut"
+                  },
+                  "title": "Response List Clips V1 Admin Presenter Clips Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Clips",
+        "tags": [
+          "backoffice"
+        ]
+      },
+      "post": {
+        "operationId": "start_upload_v1_admin_presenter_clips_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresenterClipUploadIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresenterClipUploadOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Upload",
+        "tags": [
+          "backoffice"
+        ]
+      }
+    },
+    "/v1/admin/presenter-clips/{clip_id}": {
+      "delete": {
+        "operationId": "delete_clip_v1_admin_presenter_clips__clip_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clip_id",
+            "required": true,
+            "schema": {
+              "title": "Clip Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Clip",
+        "tags": [
+          "backoffice"
+        ]
+      },
+      "patch": {
+        "operationId": "update_clip_v1_admin_presenter_clips__clip_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clip_id",
+            "required": true,
+            "schema": {
+              "title": "Clip Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresenterClipPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresenterClipOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Clip",
+        "tags": [
+          "backoffice"
+        ]
+      }
+    },
+    "/v1/admin/presenter-clips/{clip_id}/confirm": {
+      "post": {
+        "description": "Read what was really uploaded: right file type, malware-free, real video of a usable length and size.",
+        "operationId": "confirm_upload_v1_admin_presenter_clips__clip_id__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clip_id",
+            "required": true,
+            "schema": {
+              "title": "Clip Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresenterClipOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Upload",
+        "tags": [
+          "backoffice"
         ]
       }
     },
@@ -5816,6 +8160,58 @@
         ]
       }
     },
+    "/v1/capabilities": {
+      "get": {
+        "description": "What is real in this environment. With USE_MOCKS the presenter, voices and transcripts are stand-ins and the\napp says so, rather than presenting them as genuine results.",
+        "operationId": "capabilities_v1_capabilities_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Capabilities V1 Capabilities Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Capabilities",
+        "tags": [
+          "system"
+        ]
+      }
+    },
     "/v1/dev-storage/{key}": {
       "get": {
         "operationId": "get_object_v1_dev_storage__key__get",
@@ -6373,6 +8769,58 @@
       }
     },
     "/v1/interview/{token}/takes/{take_id}": {
+      "delete": {
+        "description": "Drop a recording that will never be finished (the camera went off, or the person left), so it can't block\nsubmitting. A finished take is never touched: re-recording replaces it instead.",
+        "operationId": "abandon_take_v1_interview__token__takes__take_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "take_id",
+            "required": true,
+            "schema": {
+              "title": "Take Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Abandon Take V1 Interview  Token  Takes  Take Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abandon Take",
+        "tags": [
+          "founder"
+        ]
+      },
       "get": {
         "operationId": "take_status_v1_interview__token__takes__take_id__get",
         "parameters": [
@@ -6656,6 +9104,49 @@
         ]
       }
     },
+    "/v1/interview/{token}/voice": {
+      "post": {
+        "description": "What the AI interviewer says, with audio for each line when a voice provider is configured. The greeting\nuses the founder's name. Called while the device check runs, so the interview itself never waits.",
+        "operationId": "prepare_voice_v1_interview__token__voice_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoicePrepareOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prepare Voice",
+        "tags": [
+          "founder"
+        ]
+      }
+    },
     "/v1/me": {
       "get": {
         "operationId": "me_v1_me_get",
@@ -6927,6 +9418,258 @@
           }
         },
         "summary": "Get Project",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/broll": {
+      "get": {
+        "operationId": "get_broll_v1_projects__project_id__broll_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrollOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Broll",
+        "tags": [
+          "broll"
+        ]
+      },
+      "put": {
+        "operationId": "put_broll_v1_projects__project_id__broll_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrollPutIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrollOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Broll",
+        "tags": [
+          "broll"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/broll/generate": {
+      "post": {
+        "description": "Make one SYNTHETIC shot. It is stored as a candidate, labelled as AI-generated wherever it is used, and only\nappears in the video if the owner picks it. UNAVAILABLE until a real provider is configured: no fake result.",
+        "operationId": "generate_broll_v1_projects__project_id__broll_generate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrollGenerateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrollOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate Broll",
+        "tags": [
+          "broll"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/cancel": {
+      "post": {
+        "description": "Stop a video that is being made. Work already paid for is kept and reused if the owner retries; a vendor job\nthat is already running cannot be recalled, so its cost may still be incurred and its result is kept.",
+        "operationId": "cancel_v1_projects__project_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel",
         "tags": [
           "projects"
         ]
@@ -7345,6 +10088,134 @@
         ]
       }
     },
+    "/v1/projects/{project_id}/interview/live": {
+      "post": {
+        "description": "Open the AI interviewer's room for the owner. Returns the credential the browser recorder uses.",
+        "operationId": "start_live_v1_projects__project_id__interview_live_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveStartIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveStartOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Live",
+        "tags": [
+          "interview"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/interview/live/skip": {
+      "post": {
+        "description": "Not doing the interview after all: make the anchor-only video.",
+        "operationId": "skip_live_v1_projects__project_id__interview_live_skip_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Skip Live",
+        "tags": [
+          "interview"
+        ]
+      }
+    },
     "/v1/projects/{project_id}/interview/merge": {
       "post": {
         "description": "Start the merge. From awaiting_founder this is the anchor-only fallback (skip the interview).",
@@ -7676,6 +10547,64 @@
         ]
       }
     },
+    "/v1/projects/{project_id}/progress": {
+      "get": {
+        "operationId": "progress_v1_projects__project_id__progress_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Progress",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
     "/v1/projects/{project_id}/retry": {
       "post": {
         "operationId": "retry_v1_projects__project_id__retry_post",
@@ -7731,6 +10660,261 @@
         "summary": "Retry",
         "tags": [
           "projects"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/revise": {
+      "post": {
+        "description": "Apply the edits: presenter clips whose words changed are made again (and paid for), everything else is reused,\nand the video is rendered again. While this runs the previous video stays where it is.",
+        "operationId": "revise_v1_projects__project_id__revise_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revise",
+        "tags": [
+          "scenes"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/scene-plan": {
+      "get": {
+        "description": "The validated plan the latest interview video was built from (asset keys only, no signed links).",
+        "operationId": "scene_plan_v1_projects__project_id__scene_plan_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Scene Plan V1 Projects  Project Id  Scene Plan Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Scene Plan",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/scenes": {
+      "get": {
+        "operationId": "scenes_v1_projects__project_id__scenes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Scenes",
+        "tags": [
+          "scenes"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/scenes/{scene_id}": {
+      "patch": {
+        "operationId": "patch_scene_v1_projects__project_id__scenes__scene_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "scene_id",
+            "required": true,
+            "schema": {
+              "title": "Scene Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenePatchOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Scene",
+        "tags": [
+          "scenes"
         ]
       }
     },
@@ -8107,6 +11291,65 @@
         ]
       }
     },
+    "/v1/projects/{project_id}/understanding": {
+      "get": {
+        "description": "What the system understood from the pasted announcement, so the owner can check it before approving.",
+        "operationId": "understanding_v1_projects__project_id__understanding_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BriefUnderstandingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Understanding",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
     "/v1/share/{token}": {
       "get": {
         "operationId": "view_share_v1_share__token__get",
@@ -8223,6 +11466,30 @@
         "summary": "Billing Webhook",
         "tags": [
           "billing"
+        ]
+      }
+    },
+    "/v1/webhooks/heygen": {
+      "post": {
+        "description": "HeyGen tells us a video changed. It only wakes the pipeline: results are always read back from HeyGen's own API\nby the step that owns the job, so nothing in this payload can put media into a video.\n\nUNVERIFIED against HeyGen's live contract (the developer docs could not be read here): the HMAC-SHA256 signature\nscheme, the header name (HEYGEN_WEBHOOK_SIGNATURE_HEADER) and the payload keys are assumptions. Until\nHEYGEN_WEBHOOK_SECRET is set the endpoint is disabled; polling remains the source of truth either way.",
+        "operationId": "heygen_webhook_v1_webhooks_heygen_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Heygen Webhook V1 Webhooks Heygen Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Heygen Webhook",
+        "tags": [
+          "system"
         ]
       }
     }

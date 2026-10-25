@@ -36,3 +36,11 @@ brand-kit editor, which is the *startup's* look.
   marker bar beside the lower third (and not the ground), so every video reads as a Cover Founder video.
 - Fonts (Space Mono Bold, Roboto Regular/Bold) are bundled in `backend/renderer/public/fonts` and loaded before any frame is
   captured, so a render never falls back to another font and needs no network.
+
+## Answers column and back office (added)
+Live-interview answers use the `column` layout: the founder's video on the left, a dark panel on the right with the question
+label in Pastel Green, the question, the founder's name and title, then their words revealed line by line in sync. The back
+office (`admin/`) uses the same tokens in a denser, operator-oriented layout.
+
+## Presenter footage (added)
+Presenter clips play full frame under the same channel bug, "Featured" tag, "AI-generated anchor" label and ticker as every other scene.

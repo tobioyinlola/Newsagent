@@ -19,6 +19,8 @@ class ProjectCreate(BaseModel):
     region: str = "NG"
     voice_accent: str = "british"
     accent_override: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    founder_name: str = Field(default="", max_length=200)  # the AI interviewer greets this person by name
+    founder_title: str = Field(default="", max_length=200)
 
 
 class AssetOut(BaseModel):
@@ -38,10 +40,69 @@ class ProjectOut(BaseModel):
     failure_reason: str | None
     failure_retryable: bool
     interview_enabled: bool = False
+    interview_mode: str = "invite"
+    founder_name: str = ""
+    founder_title: str = ""
     keep_raw_takes: bool = False
     created_at: datetime
     assets: list[AssetOut] = []
     model_config = {"from_attributes": True}
+
+
+class BrollItemIn(BaseModel):
+    key: str
+    caption: str = Field(default="", max_length=80)
+    seconds: float = Field(ge=2, le=8)
+
+
+class BrollPutIn(BaseModel):
+    items: list[BrollItemIn] = Field(max_length=5)
+
+
+class BrollCandidate(BaseModel):
+    key: str
+    kind: str  # image | video
+    source: str  # upload | generated
+    synthetic: bool
+    duration_s: float | None = None
+    url: str | None = None
+
+
+class BrollItemOut(BaseModel):
+    key: str
+    kind: str
+    caption: str
+    seconds: float
+    synthetic: bool
+
+
+class BrollOut(BaseModel):
+    items: list[BrollItemOut]
+    candidates: list[BrollCandidate]
+    ai_available: bool
+    note: str | None = None
+
+
+class BrollGenerateIn(BaseModel):
+    prompt: str = Field(min_length=10, max_length=300)
+    seconds: float = Field(default=5, ge=3, le=8)
+
+
+class ProgressStage(BaseModel):
+    key: str
+    label: str
+    status: str  # done | working | waiting | pending | failed | paused | cancelled
+    detail: str | None = None
+
+
+class ProgressOut(BaseModel):
+    state: str
+    percent: int
+    stages: list[ProgressStage]
+    retryable: bool
+    cancellable: bool
+    failure_category: str | None = None  # why the last step failed, in plain categories (auth, rate_limited, ...)
+    vendor_jobs_in_flight: int = 0
 
 
 class ScriptOut(BaseModel):
@@ -223,7 +284,7 @@ class VendorBudgetOut(BaseModel):
 
 # ---------- brand asset uploads ----------
 class UploadIn(BaseModel):
-    kind: str = Field(pattern="^(logo_light|logo_dark|guide_pdf|product_image)$")
+    kind: str = Field(pattern="^(logo_light|logo_dark|guide_pdf|product_image|product_video)$")
     content_type: str
     size_bytes: int = Field(gt=0)
 
@@ -244,6 +305,7 @@ class BrandAssetOut(BaseModel):
     content_type: str
     size_bytes: int
     url: str | None = None
+    duration_s: float | None = None  # product videos
 
 
 # ---------- founder interview ----------
@@ -270,11 +332,14 @@ class TakeOut(BaseModel):
     transcript: str | None = None
     video_url: str | None = None
     audio_url: str | None = None
+    snapshot_url: str | None = None
     attempts: int = 1
 
 
 class InterviewStatusOut(BaseModel):
     active: bool
+    mode: str = "invite"
+    consent_text: str | None = None  # shown before a live interview starts
     founder_name: str | None = None
     founder_title: str | None = None
     founder_email: str | None = None
@@ -293,6 +358,7 @@ class PlanAnswer(BaseModel):
     include: bool = True
     trim_start_s: float = 0
     trim_end_s: float = 0
+    layout: str | None = None  # this answer's own layout; otherwise the video's
 
 
 class MergePlanIn(BaseModel):
@@ -312,6 +378,7 @@ class KeepRawIn(BaseModel):
 
 class ApproveIn(BaseModel):
     with_interview: bool = False
+    interview_mode: str = Field(default="invite", pattern="^(invite|live)$")  # live = the AI interviewer, now
 
 
 # ---------- founder (guest) ----------
@@ -334,6 +401,7 @@ class GuestQuestion(BaseModel):
 
 
 class GuestView(BaseModel):
+    mode: str = "invite"
     company: str
     founder_name: str
     expires_at: datetime
@@ -376,6 +444,7 @@ class PhotoIn(BaseModel):
 
 class PhotoConfirmIn(BaseModel):
     key: str
+    take_id: str | None = None  # a snapshot of this answer rather than the founder's profile photo
 
 
 # ---------- billing ----------
@@ -613,3 +682,82 @@ class SessionInfo(BaseModel):
     user_agent: str | None
     ip: str | None
     current: bool
+
+
+# ---------- live AI interview (dashboard) ----------
+class LiveStartIn(BaseModel):
+    founder_name: str = Field(min_length=1, max_length=200)
+    founder_title: str = Field(default="", max_length=200)
+    consent: bool  # the owner ticked "I understand and agree" for their own recording
+
+
+class LiveStartOut(BaseModel):
+    token: str  # scopes the recorder to this one interview (the same credential a founder link carries)
+    company: str
+    founder_name: str
+    expires_at: datetime
+    consent_text: str
+    questions: list[str]
+    max_total_s: int
+    max_answer_s: int
+    min_answer_s: int
+
+
+class VoiceLine(BaseModel):
+    key: str  # greeting | q0.. | thanks | closing
+    text: str
+    audio_url: str | None = None  # None: the browser speaks it with its own voice
+
+
+class VoicePrepareOut(BaseModel):
+    lines: list[VoiceLine]
+
+
+class BriefUnderstandingOut(BaseModel):
+    company: str = ""
+    announcement: str = ""
+    problem: str = ""
+    key_facts: list[str] = []
+    founder_name: str = ""
+    founder_title: str = ""
+
+
+# ---------- scene editor ----------
+class SceneOut(BaseModel):
+    id: str
+    order: int
+    type: str
+    label: str
+    duration_s: float
+    narration: str | None = None
+    caption: str | None = None
+    layout: str | None = None
+    question_index: int | None = None
+    trim_start_s: float | None = None
+    trim_end_s: float | None = None
+    synthetic: bool = False
+    editable: list[str]  # which of narration, layout, include, trim, caption, seconds this scene allows
+
+
+class ScenesOut(BaseModel):
+    plan_hash: str | None
+    revision_pending: bool
+    scenes: list[SceneOut]
+    excluded_answers: list[dict] = []  # answers left out of the video, which can be put back
+    can_revise: bool
+
+
+class ScenePatch(BaseModel):
+    narration: str | None = Field(default=None, max_length=2000)
+    layout: str | None = None
+    include: bool | None = None
+    trim_start_s: float | None = Field(default=None, ge=0)
+    trim_end_s: float | None = Field(default=None, ge=0)
+    caption: str | None = Field(default=None, max_length=80)
+    seconds: float | None = Field(default=None, ge=2, le=8)
+    confirmed_claims: list[str] = []
+
+
+class ScenePatchOut(BaseModel):
+    regenerates: list[str]  # what the next re-render will make again
+    revision_pending: bool

@@ -10,6 +10,7 @@ const UPLOADS: { kind: UploadKind; label: string; accept: string; types: string[
   { kind: "logo_dark", label: "Logo for light backgrounds", accept: ".svg,.png", types: ["image/svg+xml", "image/png"] },
   { kind: "guide_pdf", label: "Brand guide (PDF, optional)", accept: ".pdf", types: ["application/pdf"] },
   { kind: "product_image", label: "Product image (PNG or JPEG, optional)", accept: ".png,.jpg,.jpeg", types: ["image/png", "image/jpeg"] },
+  { kind: "product_video", label: "Product video (MP4, MOV or WebM, 2 to 120 seconds, optional)", accept: ".mp4,.mov,.webm", types: ["video/mp4", "video/quicktime", "video/webm"] },
 ];
 
 // 1) ask for an upload slot, 2) send the file straight to storage, 3) have the server verify and scan it.
@@ -128,7 +129,8 @@ export function Brand() {
             {assets.data.map((a) => (
               <li key={a.key} className="flex items-center gap-3 py-2">
                 {a.content_type.startsWith("image/") && a.url && <img src={a.url} alt="" className="h-8 w-8 rounded border object-contain" />}
-                <span>{a.kind.replace("_", " ")}</span>
+                {a.content_type.startsWith("video/") && a.url && <video src={a.url} className="h-8 w-14 rounded border bg-ink" muted preload="metadata" aria-label="Video preview" />}
+                <span>{a.kind.replace("_", " ")}{a.duration_s ? ` (${Math.round(a.duration_s)} s)` : ""}</span>
                 <span className="text-muted">{Math.max(1, Math.round(a.size_bytes / 1024))} KB</span>
                 {(a.key === form.logo_light_key || a.key === form.logo_dark_key) && <span className="rounded bg-lime-tint px-2 py-0.5 text-xs text-ink">in use</span>}
               </li>

@@ -3,10 +3,14 @@ import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { Delivery } from "../components/Delivery";
+import { BrollPanel } from "../components/BrollPanel";
+import { ProgressPanel } from "../components/ProgressPanel";
+import { SceneEditor } from "../components/SceneEditor";
 import { ScriptEditor } from "../components/ScriptEditor";
 import { Button, Card, ErrorBox, Notice } from "../components/ui";
 import { streamProjectEvents } from "../lib/sse";
 import { InterviewPanel, ReviewPanel } from "../components/Interview";
+import { LiveInterviewPanel } from "../interview/LiveInterview";
 import { stateLabel, stepIndex, stepsFor } from "../lib/states";
 
 export function ProjectDetail() {
@@ -29,7 +33,7 @@ export function ProjectDetail() {
   const moderation = useQuery({
     queryKey: ["moderation", id],
     queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/moderation", path)),
-    enabled: !!state && ["script_ready", "processing_founder"].includes(state),
+    enabled: !!state && ["script_ready", "processing_founder", "interviewing"].includes(state),
     refetchInterval: 15000,
   });
   const retry = useMutation({ mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/retry", path)), onSuccess: () => qc.invalidateQueries({ queryKey: ["project", id] }) });
@@ -45,7 +49,8 @@ export function ProjectDetail() {
   if (project.isLoading) return <p aria-busy="true">Loading…</p>;
   if (project.error || !project.data) return <ErrorBox error={project.error ?? new Error("Not found")} />;
   const p = project.data;
-  const steps = stepsFor(p.interview_enabled);
+  const live = p.interview_enabled && p.interview_mode === "live";
+  const steps = stepsFor(p.interview_enabled, p.interview_mode);
   const cur = stepIndex(steps, p.state, p.failure_reason ? (p.interview_enabled ? "merging" : "rendering_anchor") : undefined);
 
   return (
@@ -60,6 +65,10 @@ export function ProjectDetail() {
         ))}
       </ol>
 
+      {["script_approved", "rendering_anchor", "anchor_ready", "merging", "failed", "limit_reached", "cancelled"].includes(p.state) && <ProgressPanel projectId={id} state={p.state} />}
+      {p.state === "cancelled" && (
+        <Notice tone="info">You cancelled this video. Clips that were already made are kept; retry continues from where it stopped.</Notice>
+      )}
       {(p.state === "failed" || p.state === "limit_reached") && (
         <Card>
           <Notice tone="warn">
@@ -77,13 +86,18 @@ export function ProjectDetail() {
         <Notice tone="warn">Our team couldn't approve this content.{moderation.data[0].note ? ` ${moderation.data[0].note}` : ""} Please edit it and try again.</Notice>
       )}
       {p.state === "script_ready" && script.data && <ScriptEditor projectId={id} script={script.data} />}
+      {p.interview_enabled && ["interviewing", "awaiting_founder", "processing_founder"].includes(p.state) && <BrollPanel projectId={id} />}
+      {p.state === "interviewing" && <LiveInterviewPanel projectId={id} founderName={p.founder_name} founderTitle={p.founder_title} />}
       {["script_approved", "rendering_anchor", "anchor_ready"].includes(p.state) && (
-        <Card title={p.interview_enabled ? "Preparing your interview" : "Making your video"}><p aria-busy="true">This usually takes a few minutes. You can leave this page; we'll email you when it is ready.</p></Card>
+        <Card title={live ? "Creating your AI presenter" : p.interview_enabled ? "Preparing your interview" : "Making your video"}>
+          <p aria-busy="true">{live ? "Your interview is saved. We're creating the AI presenter and will weave your answers into the video. " : ""}This usually takes a few minutes. You can leave this page; we'll email you when it is ready.</p>
+        </Card>
       )}
       {p.state === "awaiting_founder" && <InterviewPanel projectId={id} />}
       {p.state === "processing_founder" && <ReviewPanel projectId={id} keepRaw={p.keep_raw_takes} />}
       {p.state === "merging" && <Card title="Making your final video"><p aria-busy="true">We're putting the interview together. You'll get an email when it is ready.</p></Card>}
       {p.state === "final_ready" && <Delivery projectId={id} />}
+      {p.state === "final_ready" && p.interview_enabled && <SceneEditor projectId={id} state={p.state} />}
 
       {!["script_approved", "rendering_anchor", "anchor_ready", "merging"].includes(p.state) && (
         <div className="flex items-center gap-3">

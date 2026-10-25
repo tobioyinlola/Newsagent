@@ -28,6 +28,8 @@ from app.schemas.api import (
     PhotoConfirmIn,
     PhotoIn,
     UploadSlot,
+    VoiceLine,
+    VoicePrepareOut,
 )
 from app.services import interview as iv
 from app.services import privacy, ratelimit, uploads
@@ -54,7 +56,10 @@ async def load(
     if s is None or s.revoked_at is not None or iv.is_expired(s.expiry):
         raise GONE
     project = await session.get(Project, s.project_id)
-    if project is None or project.state not in (states or {"awaiting_founder", "processing_founder"}):
+    allowed = states or {"awaiting_founder", "processing_founder"}
+    if s.mode == "live" and "awaiting_founder" in allowed:
+        allowed = allowed | {"interviewing"}  # the AI interview happens before the anchor exists
+    if project is None or project.state not in allowed:
         raise GONE
     return s, project
 
@@ -108,15 +113,16 @@ async def view(token: str, session: AsyncSession = Depends(get_session)) -> Gues
     storage = registry.get_storage()
     company = await _company(session, project)
     return GuestView(
+        mode=s.mode,
         company=company,
         founder_name=s.founder_name,
         expires_at=s.expiry,
         consent_text=iv.consent_text(company),
         consented=s.consent_at is not None,
-        can_record=project.state == "awaiting_founder" and s.submitted_at is None,
+        can_record=project.state in {"awaiting_founder", "interviewing"} and s.submitted_at is None,
         submitted=s.submitted_at is not None,
         has_photo=bool(s.photo_key),
-        max_chunks=iv.MAX_CHUNKS,
+        max_chunks=iv.LIVE_MAX_CHUNKS if s.mode == "live" else iv.MAX_CHUNKS,
         max_chunk_bytes=iv.MAX_CHUNK_BYTES,
         questions=[
             GuestQuestion(
@@ -147,6 +153,8 @@ async def start_take(token: str, body: GuestTakeIn, session: AsyncSession = Depe
     script = await approved_script(session, project.id)
     if body.question_index >= len(script.interview_questions):
         raise HTTPException(422, "No such question")
+    if s.mode == "live" and body.kind != "video":
+        raise HTTPException(422, "Your camera needs to be on for this interview.")
     mime = body.mime.split(";")[0].strip().lower()
     table = iv.ALLOWED_VIDEO_MIME if body.kind == "video" else iv.ALLOWED_AUDIO_MIME
     if mime not in table:
@@ -176,7 +184,7 @@ async def chunk_urls(
     t = await _owned_take(session, s, take_id)
     if t.status != "recording":
         raise HTTPException(409, "This recording is already finished.")
-    if any(i < 0 or i >= iv.MAX_CHUNKS for i in body.indexes):
+    if any(i < 0 or i >= (iv.LIVE_MAX_CHUNKS if s.mode == "live" else iv.MAX_CHUNKS) for i in body.indexes):
         raise HTTPException(422, "Recording is too long")
     storage = registry.get_storage()
     return ChunkUrlsOut(
@@ -188,7 +196,7 @@ async def chunk_urls(
 async def confirm_chunk(token: str, take_id: str, idx: int, session: AsyncSession = Depends(get_session)) -> GuestTake:
     s, project = await load(token, session, states={"awaiting_founder"})
     t = await _owned_take(session, s, take_id)
-    if t.status != "recording" or not (0 <= idx < iv.MAX_CHUNKS):
+    if t.status != "recording" or not (0 <= idx < (iv.LIVE_MAX_CHUNKS if s.mode == "live" else iv.MAX_CHUNKS)):
         raise HTTPException(409, "This recording is already finished.")
     storage = registry.get_storage()
     key = chunk_key(project.id, t.id, idx)
@@ -207,6 +215,21 @@ async def confirm_chunk(token: str, take_id: str, idx: int, session: AsyncSessio
     return _take(t)
 
 
+@router.delete("/takes/{take_id}", dependencies=[Depends(guest_limit)])
+async def abandon_take(token: str, take_id: str, session: AsyncSession = Depends(get_session)) -> dict:
+    """Drop a recording that will never be finished (the camera went off, or the person left), so it can't block
+    submitting. A finished take is never touched: re-recording replaces it instead."""
+    s, project = await load(token, session, states={"awaiting_founder"})
+    t = await _owned_take(session, s, take_id)
+    if t.status == "recording":
+        storage = registry.get_storage()
+        for idx in list(t.chunks or {}):
+            await storage.delete(chunk_key(project.id, t.id, int(idx)))
+        t.status, t.chunks = "superseded", {}
+        await session.commit()
+    return {"ok": True}
+
+
 @router.get("/takes/{take_id}", response_model=GuestTake, dependencies=[Depends(guest_limit)])
 async def take_status(token: str, take_id: str, session: AsyncSession = Depends(get_session)) -> GuestTake:
     s, _ = await load(token, session)
@@ -223,6 +246,8 @@ async def complete_take(
         return _take(t)  # idempotent: a retried request after a dropped response is fine
     if t.status != "recording":
         raise HTTPException(409, "This recording can't be completed.")
+    if s.mode == "live" and body.chunk_count > iv.LIVE_MAX_CHUNKS:
+        raise HTTPException(422, "That answer was longer than the interview allows.")
     have = {int(i) for i in (t.chunks or {})}
     missing = [i for i in range(body.chunk_count) if i not in have]
     if missing:
@@ -298,7 +323,13 @@ async def photo_confirm(token: str, body: PhotoConfirmIn, session: AsyncSession 
         raise HTTPException(503, "We couldn't check that photo right now. Please try again shortly.") from None
     if not result.clean:
         raise await reject("That file was blocked by our security scan.")
-    s.photo_key = body.key
+    if body.take_id:  # a still taken while answering: kept with that answer
+        t = await _owned_take(session, s, body.take_id)
+        if t.snapshot_key:
+            await storage.delete(t.snapshot_key)
+        t.snapshot_key = body.key
+    else:
+        s.photo_key = body.key
     await session.commit()
     return {"ok": True}
 
@@ -319,12 +350,17 @@ async def submit(token: str, session: AsyncSession = Depends(get_session)) -> di
             problems.append(f"Answer {i + 1} is still being processed.")
         elif t.status == "failed":
             problems.append(f"Answer {i + 1} couldn't be processed. Please try uploading it again.")
-        elif t.kind == "audio" and not s.photo_key:
+        elif t.kind == "audio" and s.mode != "live" and not s.photo_key:
             problems.append("Please add a photo of yourself for audio-only answers.")
     if problems:
         raise HTTPException(
             422, {"error": "incomplete", "message": " ".join(dict.fromkeys(problems)), "problems": problems}
         )
+    if s.mode == "live":
+        # The owner is right here: the interview is complete, and they review it and press "make my video".
+        s.submitted_at = datetime.now(UTC)
+        await session.commit()
+        return {"ok": True}
     s.submitted_at, s.token_enc = datetime.now(UTC), None
     sm.transition(project, "processing_founder")
     await session.commit()
@@ -346,6 +382,58 @@ async def speedtest_done(token: str, body: PhotoConfirmIn, session: AsyncSession
     if body.key.startswith(f"projects/{project.id}/takes/speedtest-"):
         await registry.get_storage().delete(body.key)
     return {"ok": True}
+
+
+async def _speak(session: AsyncSession, project: Project, text: str) -> str | None:
+    """Audio URL for one interviewer line (cached by text), or None so the browser speaks it itself.
+    Never blocks the interview: a missing budget, a vendor error or a mock provider all just mean "no audio"."""
+    import hashlib
+
+    from app.config import get_settings
+    from app.services.spend_guard import LimitReached, SpendGuard
+
+    storage, tts = registry.get_storage(), registry.get_tts()
+    st = get_settings()
+    h = hashlib.sha256(f"{st.tts_model}|{st.tts_voice}|{text}".encode()).hexdigest()[:24]
+    key = f"projects/{project.id}/interview/voice/{h}.mp3"
+    if await storage.size(key):
+        return storage.presign_get(key, URL_TTL)
+    guard = SpendGuard(session)
+    try:
+        res = await guard.reserve(
+            project.workspace_id, "tts", tts.estimate_cost(text), project_id=project.id, stage="interview_voice"
+        )
+    except LimitReached:
+        return None
+    try:
+        audio = await tts.synthesize(text)
+    except Exception:  # noqa: BLE001
+        await guard.release(res)
+        await session.commit()
+        return None
+    if not audio:
+        await guard.release(res)
+        await session.commit()
+        return None
+    await storage.put(key, audio, "audio/mpeg")
+    await guard.settle(res, tts.estimate_cost(text))
+    await session.commit()
+    return storage.presign_get(key, URL_TTL)
+
+
+@router.post("/voice", response_model=VoicePrepareOut, dependencies=[Depends(guest_limit)])
+async def prepare_voice(token: str, session: AsyncSession = Depends(get_session)) -> VoicePrepareOut:
+    """What the AI interviewer says, with audio for each line when a voice provider is configured. The greeting
+    uses the founder's name. Called while the device check runs, so the interview itself never waits."""
+    s, project = await load(token, session)
+    script = await approved_script(session, project.id)
+    lines = iv.interviewer_lines(s.founder_name, await _company(session, project), list(script.interview_questions))
+    items = [("greeting", lines["greeting"])]
+    items += [(f"q{i}", q) for i, q in enumerate(lines["questions"])]
+    items += [("thanks", lines["thanks"]), ("closing", lines["closing"])]
+    return VoicePrepareOut(
+        lines=[VoiceLine(key=k, text=t, audio_url=await _speak(session, project, t)) for k, t in items]
+    )
 
 
 @router.delete("/data", dependencies=[Depends(guest_limit)])

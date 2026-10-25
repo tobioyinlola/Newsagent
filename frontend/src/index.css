@@ -41,3 +41,12 @@ h1, h2, h3, h4 { font-family: var(--font-mono); font-weight: 700; color: var(--c
   background-position: right bottom;
   background-size: cover;
 }
+
+/* AI interviewer's voice: bars pulse while it speaks, rest while it listens */
+.voice-wave { display: flex; align-items: center; justify-content: center; gap: 5px; height: 72px; padding: 0 4px; }
+.voice-wave span { width: 6px; height: 6px; border-radius: 3px; background: var(--color-brand-green, #c0fe73); transition: height 0.2s ease; }
+.voice-wave[data-speaking="true"] span { animation: voice-bar 700ms ease-in-out infinite alternate; }
+@keyframes voice-bar { from { height: 8px; } to { height: 64px; } }
+@media (prefers-reduced-motion: reduce) {
+  .voice-wave[data-speaking="true"] span { animation: none; height: 36px; }
+}

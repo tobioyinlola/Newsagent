@@ -27,6 +27,8 @@ class Analysis:
     audio_duration_s: float | None = None
     loudness_lufs: float | None = None
     true_peak_db: float | None = None
+    width: int | None = None
+    height: int | None = None
 
 
 @dataclass
