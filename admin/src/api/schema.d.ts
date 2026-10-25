@@ -1278,6 +1278,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/presenters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Presenters
+         * @description The AI presenter looks a customer can choose from (search by name, filter by gender).
+         */
+        get: operations["list_presenters_v1_presenters_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects": {
         parameters: {
             query?: never;
@@ -3059,6 +3079,19 @@ export interface components {
             /** Upload Url */
             upload_url: string;
         };
+        /** PresenterOut */
+        PresenterOut: {
+            /** Gender */
+            gender: string;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Orientation */
+            orientation?: string | null;
+            /** Preview Image Url */
+            preview_image_url?: string | null;
+        };
         /** ProgressOut */
         ProgressOut: {
             /** Cancellable */
@@ -3094,6 +3127,8 @@ export interface components {
         ProjectCreate: {
             /** Accent Override */
             accent_override?: string | null;
+            /** Anchor Id */
+            anchor_id?: string | null;
             /** Brief Text */
             brief_text: string;
             /**
@@ -3135,6 +3170,8 @@ export interface components {
         };
         /** ProjectOut */
         ProjectOut: {
+            /** Anchor Id */
+            anchor_id?: string | null;
             /**
              * Assets
              * @default []
@@ -6342,6 +6379,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_presenters_v1_presenters_get: {
+        parameters: {
+            query?: {
+                q?: string;
+                gender?: string;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresenterOut"][];
                 };
             };
             /** @description Validation Error */

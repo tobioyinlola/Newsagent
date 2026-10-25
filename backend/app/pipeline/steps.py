@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import VENDOR_POLICIES
+from app.config import VENDOR_POLICIES, get_settings
 from app.db import session_maker
 from app.integrations import registry
 from app.integrations.avatar.base import AvatarRequest
@@ -74,6 +74,11 @@ def anchor_text(script: ScriptVersion) -> str:
     return " ".join(s["text"] for s in script.segments)
 
 
+def avatar_for(project: Project) -> str | None:
+    """The presenter look to ask the vendor for: the project's choice, else the configured default."""
+    return project.anchor_id or get_settings().heygen_default_avatar_id or None
+
+
 async def current_kit(session: AsyncSession, workspace_id: str) -> BrandKit | None:
     return (
         (
@@ -95,7 +100,7 @@ async def anchor_inputs(session: AsyncSession, project: Project) -> dict:
         "script_id": script.id,
         "text": anchor_text(script),
         "accent": project.voice_accent,
-        "anchor": project.anchor_id,
+        "anchor": avatar_for(project),
         "accent_override": project.accent_override,
     }
 
@@ -259,7 +264,7 @@ async def _paid_avatar_asset(
     never makes a retry pay for this clip again. Returns the cost it recorded on the project."""
     kit = await current_kit(session, project.workspace_id)
     glossary = (kit.pronunciation_glossary if kit else None) or None
-    h = input_hash({"text": text, "accent": project.voice_accent, "avatar": project.anchor_id, "glossary": glossary})
+    h = input_hash({"text": text, "accent": project.voice_accent, "avatar": avatar_for(project), "glossary": glossary})
     existing = (
         await session.execute(
             select(Asset.id).where(
@@ -273,7 +278,7 @@ async def _paid_avatar_asset(
         script_text=text,
         pronunciation=glossary,
         voice_accent=project.voice_accent,
-        avatar_id=project.anchor_id,
+        avatar_id=avatar_for(project),
         transparent=True,
     )
     out, cost, _vendor = await generate_anchor(session, project, guard, req, key, atype)
@@ -367,7 +372,7 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
         script_text=anchor_text(script),
         pronunciation=(kit.pronunciation_glossary if kit else None) or None,
         voice_accent=project.voice_accent,
-        avatar_id=project.anchor_id,
+        avatar_id=avatar_for(project),
         transparent=True,
     )
     key = f"projects/{project.id}/anchor.webm"

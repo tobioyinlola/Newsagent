@@ -21,6 +21,15 @@ class ProjectCreate(BaseModel):
     accent_override: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
     founder_name: str = Field(default="", max_length=200)  # the AI interviewer greets this person by name
     founder_title: str = Field(default="", max_length=200)
+    anchor_id: str | None = Field(default=None, max_length=100)  # the chosen presenter look (from GET /v1/presenters)
+
+
+class PresenterOut(BaseModel):
+    id: str
+    name: str
+    gender: str
+    preview_image_url: str | None = None
+    orientation: str | None = None
 
 
 class AssetOut(BaseModel):
@@ -43,6 +52,7 @@ class ProjectOut(BaseModel):
     interview_mode: str = "invite"
     founder_name: str = ""
     founder_title: str = ""
+    anchor_id: str | None = None
     keep_raw_takes: bool = False
     created_at: datetime
     assets: list[AssetOut] = []

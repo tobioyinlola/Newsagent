@@ -20,7 +20,7 @@ from app.schemas.api import (
     ScriptUpdate,
 )
 from app.services import interview as iv
-from app.services import moderation_flow, privacy
+from app.services import moderation_flow, presenters, privacy
 from app.services import progress as progress_svc
 from app.services import state_machine as sm
 from app.services.audit import audit
@@ -98,6 +98,7 @@ async def create_project(
         accent_override=body.accent_override,
         founder_name=body.founder_name.strip(),
         founder_title=body.founder_title.strip(),
+        anchor_id=await presenters.resolve(body.anchor_id),
     )
     session.add(project)
     await session.flush()

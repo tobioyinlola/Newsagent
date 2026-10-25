@@ -17,6 +17,8 @@ from app.db import get_session
 from app.integrations import registry
 from app.models import Job, Project, ProviderRequest, WebhookEvent
 from app.pipeline.advance import advance
+from app.schemas.api import PresenterOut
+from app.services import presenters
 from app.services import state_machine as sm
 from app.services.ratelimit import limit
 
@@ -71,6 +73,15 @@ async def capabilities(_: Principal = Depends(current_principal)) -> dict:
         if demo
         else None,
     }
+
+
+@router.get("/v1/presenters", response_model=list[PresenterOut])
+async def list_presenters(q: str = "", gender: str = "", limit: int = 48, _: Principal = Depends(current_principal)):
+    """The AI presenter looks a customer can choose from (search by name, filter by gender)."""
+    try:
+        return [PresenterOut(**p.__dict__) for p in await presenters.search(q, gender, max(1, min(limit, 100)))]
+    except Exception:  # noqa: BLE001
+        raise HTTPException(503, "The presenter list isn't available right now. Please try again shortly.") from None
 
 
 @router.get("/v1/admin/pipeline-metrics")

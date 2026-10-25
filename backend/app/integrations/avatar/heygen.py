@@ -10,7 +10,14 @@ import asyncio
 import httpx
 
 from app.config import VENDOR_POLICIES, get_settings
-from app.integrations.avatar.base import AvatarPoll, AvatarProvider, AvatarRequest, AvatarResult, VoiceOption
+from app.integrations.avatar.base import (
+    AvatarPoll,
+    AvatarProvider,
+    AvatarRequest,
+    AvatarResult,
+    Presenter,
+    VoiceOption,
+)
 
 BASE = "https://api.heygen.com"
 # Measured once on 2026-10-25: a 3.0 s webm clip took the wallet from $15.00 to $14.88, i.e. about $0.04 per second.
@@ -44,6 +51,33 @@ class HeyGenProvider(AvatarProvider):
         ]
 
     supports_async = True
+    MAX_LOOKS = 1200  # the account's catalogue is paged 50 at a time; stop somewhere sensible
+
+    async def list_presenters(self) -> list[Presenter]:
+        """The account's avatar looks (live API: `GET /v3/avatars/looks`, 50 per page, `next_token` to continue)."""
+        out: list[Presenter] = []
+        token: str | None = None
+        async with httpx.AsyncClient(base_url=BASE, headers=self._headers, timeout=30) as c:
+            while len(out) < self.MAX_LOOKS:
+                r = await c.get("/v3/avatars/looks", params={"limit": 50, **({"token": token} if token else {})})
+                r.raise_for_status()
+                body = r.json()
+                for it in body.get("data", []):
+                    if it.get("status", "completed") != "completed":
+                        continue
+                    out.append(
+                        Presenter(
+                            id=it["id"],
+                            name=it.get("name") or it["id"],
+                            gender=it.get("gender") or "",
+                            preview_image_url=it.get("preview_image_url"),
+                            orientation=it.get("preferred_orientation"),
+                        )
+                    )
+                token = body.get("next_token")
+                if not body.get("has_more") or not token:
+                    break
+        return out
 
     async def submit(self, req: AvatarRequest) -> str:
         body: dict = {"type": "avatar", "avatar_id": req.avatar_id, "script": req.script_text}
