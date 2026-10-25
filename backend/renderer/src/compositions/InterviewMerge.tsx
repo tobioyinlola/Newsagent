@@ -3,6 +3,7 @@ import { AbsoluteFill, Audio, Freeze, Img, OffthreadVideo, Series, interpolate, 
 import { Backdrop, Chrome } from "./Chrome";
 import { BrollScene } from "./BrollScene";
 import { ClipScene } from "./ClipScene";
+import { NewsDesk, SOFT_TOP } from "./NewsSet";
 import { CF, Fonts, MONO, SANS } from "./theme";
 
 export type Scene =
@@ -52,12 +53,13 @@ export const defaultMergeProps: MergeProps = {
 const url = (s: string) => (s.startsWith("http") ? s : staticFile(s));
 
 const AnchorShot: React.FC<{ src: string; muted?: boolean; height: string }> = ({ src, muted, height }) => (
-  <OffthreadVideo src={url(src)} transparent muted={muted} style={{ height, objectFit: "contain" }} />
+  <OffthreadVideo src={url(src)} transparent muted={muted} style={{ height, objectFit: "contain", ...SOFT_TOP }} />
 );
 
 const AnchorScene: React.FC<{ src: string; portrait: boolean }> = ({ src, portrait }) => (
-  <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "18%" : "9%" }}>
-    <AnchorShot src={src} height={portrait ? "58%" : "88%"} />
+  <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "16%" : "3%" }}>
+    <AnchorShot src={src} height={portrait ? "66%" : "93%"} />
+    <NewsDesk />
   </AbsoluteFill>
 );
 

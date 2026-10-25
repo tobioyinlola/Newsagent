@@ -9,7 +9,11 @@ video host is blocked from this environment. The Option A / B decision is still 
 - Status moves `waiting → processing → completed`. A 3.0 s clip took **56 s** (latency is mostly fixed overhead, not length).
 - The completed record has `video_url, thumbnail_url, gif_url, duration, video_page_url`; **no cost field and no alpha flag**.
 - Cost: the wallet went from $15.00 to $14.88 for 3.0 s of video, about **$0.04 per second (~$2.40 per minute)**. One sample.
-- **Not verified**: whether the WebM really has an alpha channel. The file is served from `resource2.heygen.ai`, which this environment's
+- **Verified (second clip, "Anchor of the Breaking News Desk 1", 2026-10-25)**: the WebM is VP9 1280x720 with a real alpha channel
+  (`ALPHA_MODE=1`; 70% of pixels fully transparent, 27% opaque, 3% soft edge) and an Opus audio track. The cut-out is clean over a dark
+  backdrop, with a slight dark fringe on some hair strands. The presenter is framed to the waist and her hair is cropped by the top of the
+  frame, so the renderer fades that edge. Cost $0.11 for 3.4 s; render time 123 s. So Option B (transparent presenter over our own set) works.
+- (Older note, now resolved) whether the WebM really has an alpha channel. The file is served from `resource2.heygen.ai`, which this environment's
   network policy blocks (`connect_rejected`), so it could not be downloaded or probed. Allow `*.heygen.ai` (or that host) and re-run.
 - The looks on this account are photo avatars in office, kitchen and living-room settings (Dante, Brody, ...), not news-desk presenters.
 

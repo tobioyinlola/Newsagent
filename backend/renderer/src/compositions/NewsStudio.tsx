@@ -3,6 +3,7 @@ import { AbsoluteFill, Easing, OffthreadVideo, Series, interpolate, staticFile, 
 import { AnchorFigure } from "./AnchorFigure";
 import { Backdrop, Chrome } from "./Chrome";
 import { ClipScene } from "./ClipScene";
+import { NewsDesk, SOFT_TOP } from "./NewsSet";
 import { CF, Fonts, MONO, SANS } from "./theme";
 import { NewsProps } from "./types";
 
@@ -26,13 +27,14 @@ const StudioBody: React.FC<NewsProps> = (p) => {
       <Backdrop />
 
       {/* anchor */}
-      <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "18%" : "9%" }}>
+      <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "16%" : "3%" }}>
         {p.anchorSrc ? (
-          <OffthreadVideo src={p.anchorSrc.startsWith("http") ? p.anchorSrc : staticFile(p.anchorSrc)} transparent style={{ height: portrait ? "58%" : "88%", objectFit: "contain" }} />
+          <OffthreadVideo src={p.anchorSrc.startsWith("http") ? p.anchorSrc : staticFile(p.anchorSrc)} transparent style={{ height: portrait ? "66%" : "93%", objectFit: "contain", ...SOFT_TOP }} />
         ) : (
           <AnchorFigure height={portrait ? "68%" : "86%"} />
         )}
       </AbsoluteFill>
+      <NewsDesk />
 
       {/* breaking-news style banner */}
       <div style={{ position: "absolute", left: 0, bottom: (portrait ? 31 : 24.5) + "%", transform: `translateX(${(1 - slide(5)) * -100}%)` }}>

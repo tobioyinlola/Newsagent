@@ -20,9 +20,9 @@ from app.integrations.avatar.base import (
 )
 
 BASE = "https://api.heygen.com"
-# Measured once on 2026-10-25: a 3.0 s webm clip took the wallet from $15.00 to $14.88, i.e. about $0.04 per second.
-# One sample on the account's default engine; there may be a minimum charge. Re-measure with a longer clip before pricing.
-ASSUMED_COST_PER_MINUTE = 2.4
+# Measured twice on 2026-10-25: 3.0 s cost $0.12 and 3.4 s cost $0.11 (wallet deltas), about $0.03 to $0.04 a second.
+# Two short samples on the account's default engine; there may be a minimum charge. Re-measure with a longer clip before pricing.
+ASSUMED_COST_PER_MINUTE = 2.1
 
 
 def _gender(v: str | None) -> str:

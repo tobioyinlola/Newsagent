@@ -1,6 +1,7 @@
 import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
-import { CF, CFSymbol, MONO, SANS, StripesBackground } from "./theme";
+import { NewsBackdrop } from "./NewsSet";
+import { CF, CFSymbol, MONO, SANS } from "./theme";
 
 type ChromeProps = {
   channel: { name: string };
@@ -39,15 +40,5 @@ export const Chrome: React.FC<ChromeProps> = (p) => {
   );
 };
 
-// The studio set behind the anchor: the brand's dark ground and olive stripes, with a green rule at the anchor's desk line.
-export const Backdrop: React.FC<{ primary?: string; accent?: string }> = () => {
-  const { width, height } = useVideoConfig();
-  const portrait = height > width;
-  const u = Math.min(width, height) / 1080;
-  return (
-    <AbsoluteFill>
-      <StripesBackground />
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: portrait ? "32%" : "20%", height: 6 * u, background: CF.green }} />
-    </AbsoluteFill>
-  );
-};
+// The studio set behind the anchor: an original TV news set (see NewsSet.tsx).
+export const Backdrop: React.FC<{ primary?: string; accent?: string }> = () => <NewsBackdrop />;
