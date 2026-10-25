@@ -13,8 +13,9 @@ from app.config import VENDOR_POLICIES, get_settings
 from app.integrations.avatar.base import AvatarPoll, AvatarProvider, AvatarRequest, AvatarResult, VoiceOption
 
 BASE = "https://api.heygen.com"
-# Placeholder pricing, replace with the measured per-minute cost from the spike.
-ASSUMED_COST_PER_MINUTE = 1.0
+# Measured once on 2026-10-25: a 3.0 s webm clip took the wallet from $15.00 to $14.88, i.e. about $0.04 per second.
+# One sample on the account's default engine; there may be a minimum charge. Re-measure with a longer clip before pricing.
+ASSUMED_COST_PER_MINUTE = 2.4
 
 
 class HeyGenProvider(AvatarProvider):
