@@ -13,6 +13,47 @@ export const SOFT_TOP: React.CSSProperties = {
 const W = 1920;
 const H = 1080;
 
+export type Palette = {
+  wallTop: string; wallMid: string; wallBottom: string; seam: string; panel: string; panelOpacity: number;
+  spot1: string; spot2: string; screenA: string; screenB: string; screenLine: string; floorA: string; floorB: string;
+  deskTop1: string; deskTop2: string; deskTop3: string; deskFront1: string; deskFront2: string; rim: string; edge: string;
+  screenText: string; screenSub: string; beam: string;
+};
+
+// Studio looks the owner can choose between (project.studio_id). Unknown ids fall back to "navy".
+export const PALETTES: Record<string, Palette> = {
+  navy: {
+    wallTop: "#0d1428", wallMid: "#141d3a", wallBottom: "#090c18", seam: "#7f98ff", panel: "#ffffff", panelOpacity: 0.03,
+    spot1: "#c0fe73", spot2: "#4e6bd8", screenA: "#1d2c5a", screenB: "#0c1330", screenLine: "#6f8cff", floorA: "#0b1022", floorB: "#05070f",
+    deskTop1: "#3a4a86", deskTop2: "#1c2547", deskTop3: "#0f1530", deskFront1: "#0a0f22", deskFront2: "#18224a", rim: "#dbe6ff", edge: "#c0fe73",
+    screenText: "#ffffff", screenSub: "#c0fe73", beam: "#c8d6ff",
+  },
+  daylight: {
+    wallTop: "#dfe7f5", wallMid: "#c3cfe6", wallBottom: "#9eacc9", seam: "#ffffff", panel: "#ffffff", panelOpacity: 0.28,
+    spot1: "#ffffff", spot2: "#9ec1ff", screenA: "#ffffff", screenB: "#dbe6fb", screenLine: "#5e82d6", floorA: "#8c9bbb", floorB: "#6b7a9c",
+    deskTop1: "#ffffff", deskTop2: "#e4eaf6", deskTop3: "#c2cde6", deskFront1: "#aab6d2", deskFront2: "#e6ecf8", rim: "#ffffff", edge: "#5fae14",
+    screenText: "#1b2a55", screenSub: "#3d7f0c", beam: "#ffffff",
+  },
+  emerald: {
+    wallTop: "#0c1a14", wallMid: "#12281f", wallBottom: "#07100c", seam: "#c0fe73", panel: "#c0fe73", panelOpacity: 0.035,
+    spot1: "#c0fe73", spot2: "#1f8a5b", screenA: "#143a2b", screenB: "#0a1d16", screenLine: "#7fe0a8", floorA: "#09150f", floorB: "#040a07",
+    deskTop1: "#2f6a4f", deskTop2: "#143a2b", deskTop3: "#0b1f17", deskFront1: "#07140e", deskFront2: "#123325", rim: "#d9ffe9", edge: "#c0fe73",
+    screenText: "#ffffff", screenSub: "#c0fe73", beam: "#c0fe73",
+  },
+  sunrise: {
+    wallTop: "#20314f", wallMid: "#3a4f7a", wallBottom: "#17213a", seam: "#ffd9a0", panel: "#ffe3b8", panelOpacity: 0.05,
+    spot1: "#ffbd59", spot2: "#ff8a5b", screenA: "#2b4170", screenB: "#16223f", screenLine: "#ffc980", floorA: "#1a2440", floorB: "#0d1327",
+    deskTop1: "#6a7fb3", deskTop2: "#33456f", deskTop3: "#1e2b4b", deskFront1: "#141c33", deskFront2: "#2b3c66", rim: "#ffeccf", edge: "#ffbd59",
+    screenText: "#ffffff", screenSub: "#ffbd59", beam: "#ffd9a0",
+  },
+};
+export const STUDIO_LABELS: Record<string, string> = { navy: "Evening navy", daylight: "Daylight", emerald: "Brand green", sunrise: "Sunrise" };
+
+const StudioContext = React.createContext<Palette>(PALETTES.navy);
+export const StudioProvider: React.FC<{ studio?: string; children: React.ReactNode }> = ({ studio, children }) => (
+  <StudioContext.Provider value={PALETTES[studio ?? ""] ?? PALETTES.navy}>{children}</StudioContext.Provider>
+);
+
 export const NewsBackdrop: React.FC = () => {
   const frame = useCurrentFrame();
   const sweep = interpolate(frame % 600, [0, 600], [-0.25, 1.25]); // a slow band of light crossing the wall
