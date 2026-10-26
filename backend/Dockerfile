@@ -2,10 +2,11 @@
 # start.sh. (The renderer can still be split into its own service later: renderer/Dockerfile is kept for that.)
 
 FROM node:22-bookworm-slim AS renderer-build
-RUN corepack enable
+# the same pnpm major as the lockfile and CI (a newer one ignores package.json's pnpm.overrides)
+RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 WORKDIR /renderer
 COPY renderer/package.json renderer/pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile || pnpm install
+RUN pnpm install --frozen-lockfile
 COPY renderer/ .
 RUN node_modules/.bin/remotion browser ensure
 
