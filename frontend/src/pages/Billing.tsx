@@ -13,6 +13,8 @@ export function Billing() {
   const [params] = useSearchParams();
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
   const summary = useQuery({ queryKey: ["billing-summary"], queryFn: () => unwrap(api.GET("/v1/billing/summary")) });
+  const caps = useQuery({ queryKey: ["capabilities"], queryFn: () => unwrap(api.GET("/v1/capabilities")), staleTime: 600000, retry: false });
+  const manual = (caps.data as { payments?: string } | undefined)?.payments === "manual";
   const packs = useQuery({ queryKey: ["packs"], queryFn: () => unwrap(api.GET("/v1/billing/packs")) });
   const usage = useQuery({ queryKey: ["usage", month], queryFn: () => unwrap(api.GET("/v1/billing/usage", { params: { query: { month } } })) });
   const ledger = useQuery({ queryKey: ["ledger"], queryFn: () => unwrap(api.GET("/v1/billing/ledger", { params: { query: { limit_: 50 } } })) });
@@ -34,7 +36,7 @@ export function Billing() {
         {s && <p className="mt-2 text-sm text-muted">Up to {s.max_videos_per_day} videos a day. A typical video uses a few credits; every video shows its cost on the project page.</p>}
       </Card>
       <Card title="Add credits">
-        {packs.data?.length ? (
+        {manual ? <p className="text-muted">Credits are added by our team. Contact us with the amount you need and we'll top up your workspace.</p> : packs.data?.length ? (
           <ul className="grid gap-3 sm:grid-cols-3">
             {packs.data.map((p) => (
               <li key={p.id} className="rounded-md border border-line p-4">

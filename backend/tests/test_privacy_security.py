@@ -191,3 +191,20 @@ async def test_consent_text_tells_the_founder_about_deletion(client, workspace):
     pid = await make_awaiting_founder(client)
     token = await invite(client, pid)
     assert "delete all of your recordings" in (await client.get(f"/v1/interview/{token}")).json()["consent_text"]
+
+
+def test_manual_billing_is_allowed_in_staging_and_needs_no_webhook_secret():
+    assert problems(settings(billing_provider="manual", billing_webhook_secret="")) == []
+    assert any(
+        "BILLING_WEBHOOK_SECRET" in p for p in problems(settings(billing_provider="stripe", billing_webhook_secret=""))
+    )
+    assert any("BILLING_PROVIDER" in p for p in problems(settings(billing_provider="mock")))
+
+
+async def test_with_manual_billing_checkout_says_the_team_adds_credits(client, workspace, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "billing_provider", "manual")
+    r = await client.post("/v1/billing/checkout", json={"pack_id": "anything"}, headers=OWNER)
+    assert r.status_code == 409 and "added by our team" in r.json()["detail"]
+    assert (await client.get("/v1/capabilities", headers=OWNER)).json()["payments"] == "manual"

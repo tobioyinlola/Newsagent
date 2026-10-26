@@ -96,7 +96,7 @@ class Settings(BaseSettings):
     )
     low_balance_threshold: str = "5"
     billing_webhook_secret: str = ""  # HMAC secret for payment webhooks; REQUIRED outside local
-    billing_provider: str = "mock"  # real provider adapter is a decision (Stripe / Paystack / Flutterwave)
+    billing_provider: str = "mock"  # mock (local only) | manual (an operator adds credits; no checkout) | a real adapter, still to be chosen (Stripe / Paystack / Flutterwave)
     clamd_host: str = ""  # ClamAV daemon; required for uploads when USE_MOCKS=false
     clamd_port: int = 3310
     api_public_url: str = "http://localhost:8000"  # used by local dev storage URLs

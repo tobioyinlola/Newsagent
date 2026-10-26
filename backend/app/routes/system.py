@@ -69,6 +69,7 @@ async def capabilities(_: Principal = Depends(current_principal)) -> dict:
         "presenter": "demo" if demo else ("heygen" if s.heygen_api_key else "unavailable"),
         "interviewer_voice": "browser" if (demo or not s.tts_api_key) else "synthetic",
         "interview_room": "livekit" if realtime.enabled() else "browser",
+        "payments": "manual" if s.billing_provider == "manual" else "checkout",
         "transcription": "demo" if demo else ("available" if s.transcription_api_key else "unavailable"),
         "message": "Demo mode: the presenter, voices and transcripts are stand-ins, not real AI output."
         if demo
