@@ -1,0 +1,36 @@
+# The production backend image (API + worker + scheduler + renderer, see backend/start.sh) on your own computer, in demo mode:
+# vendors are stand-ins, the renderer is real. Nothing here costs money or touches a vendor.
+#   docker compose -f infra/docker-compose.backend.yml up --build
+#   curl http://localhost:8000/health        # {"status":"ok"}
+# Then run a front end against it:  cd frontend && VITE_API_URL=http://localhost:8000 pnpm dev   (and admin/ the same, on :5174)
+services:
+  postgres:
+    image: postgres:16
+    environment: { POSTGRES_USER: newsagent, POSTGRES_PASSWORD: newsagent, POSTGRES_DB: newsagent }
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U newsagent"], interval: 3s, timeout: 3s, retries: 20 }
+  redis:
+    image: redis:7
+  backend:
+    build: ../backend
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+    ports: ["8000:8000"]
+    environment:
+      ENVIRONMENT: local
+      USE_MOCKS: "true"
+      RENDERER_BACKEND: http
+      QUEUE_BACKEND: celery
+      DATABASE_URL: postgresql+asyncpg://newsagent:newsagent@postgres:5432/newsagent
+      REDIS_URL: redis://redis:6379/0
+      RENDERER_SHARED_SECRET: dev-secret
+      LOCAL_STORAGE_DIR: /data
+      LOCAL_OUTPUT_DIR: /data
+      OPERATOR_EMAILS: ops@example.com
+      APP_BASE_URL: http://localhost:5173
+      ADMIN_BASE_URL: http://localhost:5174
+      API_PUBLIC_URL: http://localhost:8000
+    volumes: ["media:/data"]
+    command: ["bash", "-c", "alembic upgrade head && python -m app.cli bootstrap-operator ops@example.com 100 && exec bash start.sh"]
+volumes:
+  media:

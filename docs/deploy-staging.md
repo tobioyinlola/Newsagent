@@ -1,4 +1,11 @@
-# Deploying staging (Railway) and the first real run
+# Deploying staging (Railway + Vercel) and the first real run
+
+> **Current design (supersedes the longer service list in section 1 where they differ).** Railway runs **three** things: Postgres,
+> Redis, and **one `backend` service** built from `backend/Dockerfile` (API, worker, scheduler and renderer together, started by
+> `backend/start.sh`; run exactly one replica). The customer app (`frontend/`) and the back office (`admin/`) are two separate
+> **Vercel** projects, each with its own address, which is what keeps them separate sites. Files go to **Cloudflare R2**. There is no
+> malware-scanner service: staging sets `ALLOW_UNSCANNED_UPLOADS=true` (uploads accepted unscanned; the API refuses that setting in
+> production). To try the backend image on your own computer first, free and in demo mode: `docker compose -f infra/docker-compose.backend.yml up --build`.
 
 Written so someone can follow it top to bottom. **Nothing here has been run**: this environment cannot reach Railway, Cloudflare,
 Resend or the other hosts, so every step below is untested against the real services. Where something is a guess, it says so.
