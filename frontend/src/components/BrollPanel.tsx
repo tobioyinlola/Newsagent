@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { Button, Card, ErrorBox, Field, inputCls, Notice } from "./ui";
@@ -13,11 +13,24 @@ export function BrollPanel({ projectId }: { projectId: string }) {
   const data = useQuery({ queryKey: ["broll", projectId], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/broll", path)) });
   const [picks, setPicks] = useState<Pick[]>([]);
   const [prompt, setPrompt] = useState("");
-  useEffect(() => { if (data.data) setPicks(data.data.items.map((i) => ({ key: i.key, caption: i.caption, seconds: i.seconds }))); }, [data.data]);
   const save = useMutation({
-    mutationFn: () => unwrap(api.PUT("/v1/projects/{project_id}/broll", { ...path, body: { items: picks } })),
+    mutationFn: (items?: Pick[]) => unwrap(api.PUT("/v1/projects/{project_id}/broll", { ...path, body: { items: items ?? picks } })),
     onSuccess: (d) => qc.setQueryData(["broll", projectId], d),
   });
+  const autoDone = useRef(false);
+  useEffect(() => {
+    if (!data.data) return;
+    const saved = data.data.items.map((i) => ({ key: i.key, caption: i.caption, seconds: i.seconds }));
+    setPicks(saved);
+    // First visit with uploads on file: use the owner's own product footage by default (up to 5) so there is nothing to set up.
+    const mine = data.data.candidates.filter((c) => !c.synthetic).slice(0, 5);
+    if (!autoDone.current && saved.length === 0 && mine.length > 0) {
+      autoDone.current = true;
+      const auto = mine.map((c) => ({ key: c.key, caption: "", seconds: c.kind === "image" ? 4 : 5 }));
+      setPicks(auto);
+      save.mutate(auto);
+    }
+  }, [data.data]);
   const gen = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/broll/generate", { ...path, body: { prompt, seconds: 5 } })),
     onSuccess: (d) => { qc.setQueryData(["broll", projectId], d); setPrompt(""); },
@@ -30,7 +43,7 @@ export function BrollPanel({ projectId }: { projectId: string }) {
   return (
     <Card title="Product footage (optional)">
       <div className="space-y-3">
-        <p className="text-sm text-muted">Pick up to 5 of your own product images or clips to show right after the presenter introduces your startup. They play silent, with an optional caption.</p>
+        <p className="text-sm text-muted">We use your uploaded product images and clips automatically (up to 5) right after the presenter introduces your startup. Untick any you don't want. They play silent, with an optional caption.</p>
         {candidates.length === 0 && <Notice>You haven't uploaded product images or videos yet. Add them on the <Link className="underline" to="/brand">Brand kit</Link> page.</Notice>}
         <ul className="grid gap-3 sm:grid-cols-2">
           {candidates.map((c) => {
@@ -52,7 +65,7 @@ export function BrollPanel({ projectId }: { projectId: string }) {
             );
           })}
         </ul>
-        <div className="flex flex-wrap gap-2"><Button onClick={() => save.mutate()} disabled={save.isPending}>Save product footage</Button></div>
+        <div className="flex flex-wrap gap-2"><Button onClick={() => save.mutate(undefined)} disabled={save.isPending}>Save product footage</Button></div>
         {save.isSuccess && <Notice tone="ok">Saved. {picks.length ? `${picks.length} shot${picks.length === 1 ? "" : "s"} will be used.` : "No product footage will be used."}</Notice>}
         <div className="space-y-2 border-t-2 border-line pt-3">
           <p className="text-sm font-medium">AI-generated shot</p>

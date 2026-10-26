@@ -51,12 +51,18 @@ test("invite to shared video", async ({ page, browser }) => {
 
   // the owner adds a claim to what the anchor will say; it must be confirmed before anything is rendered
   await fp.getByLabel("Intro").fill("Tonight we feature Acme Farms. They have 5,000 users and are the first in Ghana.");
-  await fp.getByLabel("No interview").check(); // this journey is the presenter-only video; the interview has its own test
-  await fp.getByRole("button", { name: "Approve and make my video" }).click();
+  await fp.getByRole("button", { name: "Approve and start my interview" }).click();
   await expect(fp.getByRole("alert")).toContainText("confirm each flagged claim");
   await expect(fp.getByRole("group", { name: "Confirm these claims are accurate" })).toBeVisible();
   for (const box of await fp.getByRole("group", { name: "Confirm these claims are accurate" }).getByRole("checkbox").all()) await box.check();
-  await fp.getByRole("button", { name: "Approve and make my video" }).click();
+  await fp.getByRole("button", { name: "Save changes" }).click();
+  await expect(fp.getByRole("button", { name: "Save changes" })).toBeEnabled();
+  // The interview is compulsory for customers (interview.spec.ts covers that journey). This journey is about sharing, so
+  // the API under test runs with REQUIRE_INTERVIEW=false and approves the presenter-only video directly.
+  const token = await fp.evaluate(() => localStorage.getItem("newsagent.token"));
+  const projectId = /\/projects\/([0-9a-f]+)/.exec(fp.url())![1];
+  expect((await fp.request.post(`${API}/v1/projects/${projectId}/script/approve`, { headers: { Authorization: `Bearer ${token}` }, data: { with_interview: false } })).ok()).toBeTruthy();
+  await fp.reload();
 
   // --- render completes (mock vendors), live status
   await expect(fp.getByRole("heading", { name: "Your video", exact: true })).toBeVisible({ timeout: 60_000 });

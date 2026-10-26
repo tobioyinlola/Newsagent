@@ -11,8 +11,8 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
   const [segments, setSegments] = useState<Seg[]>(script.segments as Seg[]);
   const [ticker, setTicker] = useState(script.ticker_lines.join("\n"));
   const [questions, setQuestions] = useState<string[]>(script.interview_questions);
-  const [mode, setMode] = useState<"live" | "invite" | "none">("live");
-  const withInterview = mode !== "none";
+  // The AI interview is part of every video: there is no option to skip it or to hand it to someone else.
+  const withInterview = true;
   const [confirmed, setConfirmed] = useState<Set<string>>(new Set(script.claim_flags.filter((c) => c.confirmed).map((c) => String(c.text))));
   useEffect(() => {
     setSegments(script.segments as Seg[]);
@@ -26,9 +26,11 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
     explanation: "Explanation: the presenter explains the startup before your interview",
     analysis: "Analysis: the presenter reflects on your answers after the interview",
   };
+  // AI writes the explanation for you. Without an interview there is nothing for it to lead into, so it is left out.
+  const NEEDS_INTERVIEW = ["explanation", "analysis"];
   const addable = Object.keys(EXTRA).filter((k) => !segments.some((x) => x.kind === k));
   const addPart = (kind: string) => setSegments([...segments, { kind, text: "" }].sort((a, b) => ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind)));
-  const body = () => ({ segments: segments.filter((x) => x.text.trim() || !(x.kind in EXTRA)), ticker_lines: ticker.split("\n").map((s) => s.trim()).filter(Boolean), lower_thirds: script.lower_thirds, interview_questions: questions.map((q) => q.trim()).filter(Boolean), confirmed_claims: [...confirmed] });
+  const body = () => ({ segments: segments.filter((x) => (x.text.trim() || !(x.kind in EXTRA)) && (withInterview || !NEEDS_INTERVIEW.includes(x.kind))), ticker_lines: ticker.split("\n").map((s) => s.trim()).filter(Boolean), lower_thirds: script.lower_thirds, interview_questions: questions.map((q) => q.trim()).filter(Boolean), confirmed_claims: [...confirmed] });
   const refresh = () => { qc.invalidateQueries({ queryKey: ["script", projectId] }); qc.invalidateQueries({ queryKey: ["project", projectId] }); };
   const path = { params: { path: { project_id: projectId } } };
 
@@ -38,7 +40,7 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
     mutationFn: async () => {
       const saved = await unwrap(api.PUT("/v1/projects/{project_id}/script", { ...path, body: body() }));
       if (saved.claim_flags.some((c) => !c.confirmed)) throw new Error("Please confirm each flagged claim before approving.");
-      return unwrap(api.POST("/v1/projects/{project_id}/script/approve", { ...path, body: { with_interview: withInterview, interview_mode: mode === "invite" ? "invite" : "live" } }));
+      return unwrap(api.POST("/v1/projects/{project_id}/script/approve", { ...path, body: { with_interview: true, interview_mode: "live" } }));
     },
     onSettled: refresh, // also on failure: the save above may have produced claims to confirm
   });
@@ -53,7 +55,7 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
   return (
     <Card title={`Script (version ${script.version})`}>
       <div className="space-y-4">
-        <Notice>Review what the anchor will say. Nothing is rendered, and no credits are used, until you approve.</Notice>
+        <Notice>AI wrote this from your announcement, including the interview questions. Read it, change anything you like, then approve. Nothing is rendered, and no credits are used, until you approve.</Notice>
         {segments.map((s, i) => (
           <div key={i} className="space-y-1">
             <label htmlFor={`seg-${i}`} className="text-sm font-medium capitalize">{s.kind}</label>
@@ -75,16 +77,10 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
         </div>
         <fieldset className="space-y-3 rounded-md border-2 border-ink p-3">
           <legend className="px-1 text-sm font-semibold">Interview</legend>
-          {([
-            ["live", "Interview me now with the AI interviewer (recommended)", "The AI interviewer greets you by name, asks these questions out loud, and records your answers on camera. About 4 minutes, never more than 5. Your camera must be on. Your answers appear in the video beside the AI presenter."],
-            ["invite", "Send an interview link to a founder", "The presenter asks the questions in the video and your founder answers from their phone, any time in the next 14 days."],
-            ["none", "No interview", "You get the AI presenter video only."],
-          ] as const).map(([value, label, hint]) => (
-            <label key={value} className="flex items-start gap-2 text-sm">
-              <input type="radio" name="interview-mode" className="mt-1" checked={mode === value} onChange={() => setMode(value)} />
-              <span><span className="font-bold">{label}</span><br /><span className="text-muted">{hint}</span></span>
-            </label>
-          ))}
+          <p className="text-sm">
+            <span className="font-bold">Every video includes a live interview with our AI interviewer.</span>{" "}
+            <span className="text-muted">It greets you by name, asks these questions out loud and records your answers on camera. About 4 minutes, never more than 5. Your camera must be on. Your answers appear in the video beside the AI presenter.</span>
+          </p>
           {withInterview && (
             <div className="space-y-2">
               <p className="text-sm font-medium">Interview questions</p>
@@ -115,7 +111,7 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => save.mutate()} disabled={save.isPending}>Save changes</Button>
           <Button variant="secondary" onClick={() => regenerate.mutate()} disabled={regenerate.isPending}>Regenerate</Button>
-          <Button onClick={() => approve.mutate()} disabled={approve.isPending}>Approve and make my video</Button>
+          <Button onClick={() => approve.mutate()} disabled={approve.isPending}>Approve and start my interview</Button>
         </div>
       </div>
     </Card>

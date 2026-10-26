@@ -19,7 +19,7 @@ export function Projects() {
             {q.data.map((p) => (
               <li key={p.id}>
                 <Link to={`/projects/${p.id}`} className="flex flex-wrap items-center justify-between gap-2 py-3 hover:bg-paper">
-                  <span className="font-medium">Video {p.id.slice(0, 6)} <span className="text-sm font-normal text-muted">· {new Date(p.created_at).toLocaleDateString()}</span></span>
+                  <span className="font-medium">{p.title || `Video ${p.id.slice(0, 6)}`} <span className="text-sm font-normal text-muted">· {new Date(p.created_at).toLocaleDateString()}</span></span>
                   <span className="rounded-full bg-paper px-3 py-1 text-sm">{stateLabel(p.state)}</span>
                 </Link>
               </li>

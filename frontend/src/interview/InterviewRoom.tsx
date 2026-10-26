@@ -164,7 +164,7 @@ export function InterviewRoom(p: RoomProps) {
         const t = await must(guest.GET("/v1/interview/{token}/takes/{take_id}", { params: { path: { token: p.token, take_id: takeId } } }));
         if (t.status === "ready") { await up.clearLocal(); setTake(q, { takeId, status: "ready", messages: [] }); return; }
         if (t.status === "needs_retake") { await up.clearLocal(); setTake(q, { takeId, status: "needs_retake", messages: t.messages }); return; }
-        if (t.status === "failed") { setTake(q, { takeId, status: "failed", messages: ["We couldn't process that recording."] }); return; }
+        if (t.status === "failed") { setTake(q, { takeId, status: "failed", messages: t.messages.length ? t.messages : ["We couldn't process that recording."] }); return; }
         await sleep(1200);
       }
       setTake(q, { takeId, status: "failed", messages: ["That took too long to process."] });

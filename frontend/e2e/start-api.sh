@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../../backend"
 rm -f e2e.db
 export DATABASE_URL="sqlite+aiosqlite:///./e2e.db" ENVIRONMENT=local USE_MOCKS=true QUEUE_BACKEND=inline \
-  OPERATOR_EMAILS=ops@example.com APP_BASE_URL=http://localhost:5173
+  OPERATOR_EMAILS=ops@example.com APP_BASE_URL=http://localhost:5173 REQUIRE_INTERVIEW=false
 uv run alembic upgrade head
 uv run python -m app.cli bootstrap-operator ops@example.com 100
 exec uv run uvicorn app.main:app --port 8000

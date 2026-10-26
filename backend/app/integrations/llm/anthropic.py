@@ -56,7 +56,9 @@ class AnthropicScriptLLM(ScriptLLM):
 
     async def write_script(self, facts: dict, tone: str) -> ScriptDraft:
         raw = await self._json(
-            "Write a 60-90 second anchor script as JSON with keys segments [{kind,text}], "
+            "Write a 60-90 second anchor script as JSON with keys segments [{kind,text}] "
+            "(kinds in order: intro, body, explanation, outro; explanation is 2-3 sentences the presenter says "
+            "before the founder interview, explaining what the startup does and who it is for, using only the facts), "
             "ticker_lines [str], lower_thirds [{title,subtitle}], interview_questions [str]. "
             "interview_questions: exactly 4 short, open questions (each under 25 words, never yes/no) that a "
             "presenter would ask the founder about THIS announcement, each answerable in about 40 seconds, "

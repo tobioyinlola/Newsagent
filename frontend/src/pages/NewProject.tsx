@@ -7,13 +7,15 @@ import { Button, Card, ErrorBox, Field, inputCls } from "../components/ui";
 export function NewProject() {
   const nav = useNavigate();
   const [brief, setBrief] = useState("");
-  const [founder, setFounder] = useState("");
-  const [role, setRole] = useState("");
+  const remembered = (k: string) => { try { return localStorage.getItem(`newsagent.founder.${k}`) ?? ""; } catch { return ""; } };
+  const [founder, setFounder] = useState(() => remembered("name"));
+  const [role, setRole] = useState(() => remembered("role"));
   const [site, setSite] = useState("");
   const [accent, setAccent] = useState("british");
   const voices = useQuery({ queryKey: ["voices"], queryFn: () => unwrap(api.GET("/v1/voices")) });
   const m = useMutation({
     mutationFn: async () => {
+      try { localStorage.setItem("newsagent.founder.name", founder.trim()); localStorage.setItem("newsagent.founder.role", role.trim()); } catch { /* optional convenience */ }
       const p = await unwrap(api.POST("/v1/projects", { body: { brief_text: brief, website_url: site || null, region: "NG", voice_accent: accent, founder_name: founder.trim(), founder_title: role.trim() } }));
       await unwrap(api.POST("/v1/projects/{project_id}/script/generate", { params: { path: { project_id: p.id } } }));
       return p;
@@ -39,7 +41,7 @@ export function NewProject() {
             </select>
           )}
         </Field>
-        <p className="text-sm text-muted">Writing the script is free. Nothing is rendered until you approve it.</p>
+        <p className="text-sm text-muted">AI writes your script and interview questions in a few seconds, and it's free. Nothing is rendered until you approve it.</p>
         <ErrorBox error={m.error} />
         <Button type="submit" disabled={m.isPending}>{m.isPending ? "Reading your announcement…" : "Read it and write my script"}</Button>
       </form>

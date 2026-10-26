@@ -33,6 +33,7 @@ class AssetOut(BaseModel):
 
 class ProjectOut(BaseModel):
     id: str
+    title: str = ""
     state: str
     region: str
     voice_accent: str
@@ -45,6 +46,7 @@ class ProjectOut(BaseModel):
     founder_title: str = ""
     keep_raw_takes: bool = False
     created_at: datetime
+    completed_at: datetime | None = None
     assets: list[AssetOut] = []
     model_config = {"from_attributes": True}
 

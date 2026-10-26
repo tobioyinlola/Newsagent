@@ -3140,6 +3140,8 @@ export interface components {
              * @default []
              */
             assets: components["schemas"]["AssetOut"][];
+            /** Completed At */
+            completed_at?: string | null;
             /** Cost Total */
             cost_total: string;
             /**
@@ -3182,6 +3184,11 @@ export interface components {
             region: string;
             /** State */
             state: string;
+            /**
+             * Title
+             * @default
+             */
+            title: string;
             /** Voice Accent */
             voice_accent: string;
         };

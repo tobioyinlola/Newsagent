@@ -56,7 +56,7 @@ export function ProjectDetail() {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Video {p.id.slice(0, 6)}</h1>
+        <h1 className="text-2xl font-bold">{p.title || `Video ${p.id.slice(0, 6)}`}</h1>
         <span className="rounded-full bg-paper px-3 py-1 text-sm" aria-live="polite">{stateLabel(p.state)}</span>
       </div>
       <ol className="flex flex-wrap gap-2" aria-label="Progress">

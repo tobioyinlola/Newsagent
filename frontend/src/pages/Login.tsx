@@ -56,7 +56,7 @@ export function Login() {
     onSuccess: finish,
   });
   if (invite) return <Navigate to={`/signup?code=${encodeURIComponent(invite)}`} replace />;
-  if (getToken()) return <Navigate to="/projects" replace />;
+  if (getToken()) return <Navigate to="/dashboard" replace />;
   return (
     <Shell>
       <Card title="Sign in">
@@ -136,7 +136,7 @@ export function OtpChallenge() {
   const qc = useQueryClient();
   const verify = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/auth/login/otp", { body: { code: code.trim() } })),
-    onSuccess: () => { qc.clear(); nav("/projects", { replace: true }); },
+    onSuccess: () => { qc.clear(); nav("/dashboard", { replace: true }); },
   });
   const resend = useMutation({ mutationFn: () => unwrap(api.POST("/v1/auth/login/otp/resend")) });
   if (!getToken()) return <Navigate to="/login" replace />;

@@ -53,3 +53,21 @@ export function stepIndex(steps: Step[], state: string, failedFrom?: string): nu
   if (i >= 0) return i;
   return failedFrom ? stepIndex(steps, failedFrom) : 0;
 }
+
+// What the owner should do next on a project, for the dashboard.
+export function nextAction(state: string): { status: string; cta: string; urgent: boolean } {
+  switch (state) {
+    case "draft": return { status: "Waiting for a script", cta: "Continue", urgent: true };
+    case "script_ready": return { status: "Script ready for your review", cta: "Review script", urgent: true };
+    case "script_approved":
+    case "interviewing": return { status: "Your AI interview is waiting", cta: "Start interview", urgent: true };
+    case "awaiting_founder": return { status: "Waiting for your founder to record", cta: "Open", urgent: false };
+    case "processing_founder": return { status: "Answers ready to review", cta: "Review and make video", urgent: true };
+    case "rendering_anchor":
+    case "anchor_ready":
+    case "merging": return { status: "We're making your video", cta: "See progress", urgent: false };
+    case "failed": return { status: "Something went wrong", cta: "Fix and retry", urgent: true };
+    case "limit_reached": return { status: "Paused: a usage limit was reached", cta: "See why", urgent: true };
+    default: return { status: stateLabel(state), cta: "Open", urgent: false };
+  }
+}

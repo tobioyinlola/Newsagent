@@ -1,6 +1,6 @@
 import os
 
-os.environ.update(ENVIRONMENT="local", USE_MOCKS="true", OPERATOR_EMAILS="ops@example.com")
+os.environ.update(ENVIRONMENT="local", USE_MOCKS="true", OPERATOR_EMAILS="ops@example.com", REQUIRE_INTERVIEW="false")
 
 from decimal import Decimal  # noqa: E402
 

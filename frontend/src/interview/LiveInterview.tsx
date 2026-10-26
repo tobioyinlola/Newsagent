@@ -129,24 +129,9 @@ export function LiveInterviewPanel({ projectId, founderName, founderTitle }: { p
           <Button disabled={!agree || !name.trim() || !!busy || !s} onClick={() => void prepare(resuming ? unanswered : (s?.questions ?? []).map((_, i) => i), !resuming)}>
             {busy ?? (resuming ? "Continue the interview" : "Get ready for the interview")}
           </Button>
-          <SkipButton projectId={projectId} />
         </div>
       </div>
     </Card>
-  );
-}
-
-function SkipButton({ projectId }: { projectId: string }) {
-  const qc = useQueryClient();
-  const skip = useMutation({
-    mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/interview/live/skip", { params: { path: { project_id: projectId } } })),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["project", projectId] }); },
-  });
-  return (
-    <>
-      <Button variant="secondary" disabled={skip.isPending} onClick={() => { if (confirm("Skip the interview and make the presenter-only video?")) skip.mutate(); }}>Skip the interview</Button>
-      <ErrorBox error={skip.error} />
-    </>
   );
 }
 
@@ -240,7 +225,6 @@ function Review({ projectId, status, onRedo, busy, error }: { projectId: string;
         <ErrorBox error={make.error ?? (error ? new Error(error) : null)} />
         <div className="flex flex-wrap gap-3">
           <Button onClick={() => make.mutate()} disabled={make.isPending || !plan.answers.some((a) => a.include)}>{make.isPending ? "Starting…" : "Make my video"}</Button>
-          <SkipButton projectId={projectId} />
         </div>
       </div>
     </Card>

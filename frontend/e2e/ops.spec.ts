@@ -42,8 +42,7 @@ test("moderation holds risky content; once an operator approves it the owner con
   await ownerCtx.addInitScript((t) => localStorage.setItem("newsagent.token", t), `dev:${OWNER_EMAIL}`);
   const owner = await ownerCtx.newPage();
   await owner.goto(`/projects/${p.id}`);
-  await owner.getByLabel("No interview").check();
-  await owner.getByRole("button", { name: "Approve and make my video" }).click();
+  await owner.getByRole("button", { name: "Approve and start my interview" }).click();
   await expect(owner.getByRole("alert")).toContainText("member of our team is checking");
   await owner.reload();
   await expect(owner.getByText("A member of our team is checking your script")).toBeVisible();
@@ -53,8 +52,9 @@ test("moderation holds risky content; once an operator approves it the owner con
   await ok(await request.post(`${API}/v1/admin/moderation/${cases[0].id}/decision`, { headers: OPS, data: { decision: "approve", note: "Fine, but avoid return promises next time." } }));
 
   // owner carries on
-  await owner.getByLabel("No interview").check();
-  await owner.getByRole("button", { name: "Approve and make my video" }).click();
+  // approved by the operator: continue (presenter-only through the API, which this suite runs with REQUIRE_INTERVIEW=false)
+  await ok(await request.post(`${API}/v1/projects/${p.id}/script/approve`, { headers: OWNER, data: { with_interview: false } }));
+  await owner.reload();
   await expect(owner.getByRole("heading", { name: "Your video" })).toBeVisible({ timeout: 60_000 });
 });
 

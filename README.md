@@ -51,6 +51,8 @@ Delivery `GET /projects/{id}/{downloads,captions,costs,events}` (events is SSE; 
 First operator: `cd backend && uv run python -m app.cli bootstrap-operator you@example.com 100`. Full contract: `/docs`.
 
 ## AI interview on the dashboard (live)
+The AI interview is **compulsory**: every video includes it, with no skip button and no presenter-only option for customers (`REQUIRE_INTERVIEW=true`, the default; the API forces `interview_enabled` and live mode on approval and refuses `/interview/live/skip`). AI is used for what surrounds it: reading the announcement, the script, the presenter explanation and the interview questions.
+
 When a founder pastes their news, the system reads it and shows what it understood (company, announcement, who it is for).
 The dashboard then offers **an AI interview** (default) or the invite-link interview below. In the live interview the AI
 greets the founder by first name, asks 4 questions (the script's questions; 4 by default) with a synthetic voice, and the

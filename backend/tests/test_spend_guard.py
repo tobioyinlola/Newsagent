@@ -68,3 +68,16 @@ async def test_alert_at_80_percent_once(maker, workspace):
         await g.reserve(workspace, "heygen", 2)  # 81 > 80
         await g.reserve(workspace, "heygen", 1)
     assert len(alerts) == 1
+
+
+async def test_unlimited_mode_skips_credit_cap_and_budget_checks(maker, monkeypatch):
+    from app.config import get_settings
+    from app.services.spend_guard import SpendGuard
+
+    monkeypatch.setattr(get_settings(), "unlimited", True)
+    async with maker() as s:
+        ws = Workspace(name="Broke Co", credit_balance=Decimal("0"), spend_cap=Decimal("1"))
+        s.add(ws)
+        await s.flush()
+        res = await SpendGuard(s).reserve(ws.id, "renderer", Decimal("50"))  # no credits, over the cap, no budget row
+        assert res.amount == Decimal("50")

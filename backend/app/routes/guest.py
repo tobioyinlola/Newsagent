@@ -71,7 +71,12 @@ def _take(t: Take) -> GuestTake:
         status=t.status,
         kind=t.kind,
         flags=flags,
-        messages=iv.flag_messages(flags),
+        messages=iv.flag_messages(flags)
+        or (
+            ["We couldn't process this answer on our side, and you weren't charged. Please record it again."]
+            if t.status == "failed"
+            else []
+        ),
         chunks_received=sorted(int(i) for i in (t.chunks or {})),
         duration_s=t.duration_s,
     )

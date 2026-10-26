@@ -18,6 +18,7 @@ const Icon = ({ children }: { children: ReactNode }) => (
   <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter" aria-hidden className="shrink-0">{children}</svg>
 );
 const ICONS = {
+  home: <Icon><path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" /></Icon>,
   videos: <Icon><rect x="3" y="5" width="18" height="14" /><path d="M10 9v6l5-3z" /></Icon>,
   brand: <Icon><rect x="3" y="3" width="18" height="18" /><path d="M12 3v18M3 15h9" /></Icon>,
   credits: <Icon><circle cx="12" cy="12" r="9" /><path d="M12 7v10M9 10h6M9 14h6" /></Icon>,
@@ -75,7 +76,7 @@ export function Layout() {
     <div className="min-h-screen bg-paper text-ink md:flex">
       {/* phone top bar */}
       <div className="flex items-center justify-between bg-ink px-4 py-2 md:hidden">
-        <Link to="/projects" className="flex items-center gap-2 text-brand-green" aria-label="Cover Founder home">
+        <Link to="/dashboard" className="flex items-center gap-2 text-brand-green" aria-label="Cover Founder home">
           <CFSymbol className="h-8 w-auto" />
           <span className="font-mono text-lg font-bold text-white">Cover Founder</span>
         </Link>
@@ -97,11 +98,12 @@ export function Layout() {
             <span className="font-mono text-lg font-bold text-white">Menu</span>
             <button type="button" className="rounded-sm border-2 border-brand-green px-3 py-1.5 text-sm font-bold text-brand-green" onClick={() => setOpen(false)}>Close</button>
           </div>
-          <Link to="/projects" className={`mb-4 hidden items-center gap-2 px-1 py-1 text-brand-green md:flex ${rail ? "justify-center" : ""}`} aria-label="Cover Founder home">
+          <Link to="/dashboard" className={`mb-4 hidden items-center gap-2 px-1 py-1 text-brand-green md:flex ${rail ? "justify-center" : ""}`} aria-label="Cover Founder home">
             <CFSymbol className={rail ? "h-8 w-auto" : "h-9 w-auto"} />
             {!rail && <span className="font-mono text-lg font-bold text-white">Cover Founder</span>}
           </Link>
 
+          {item("/dashboard", "Dashboard", ICONS.home)}
           {item("/projects", "Videos", ICONS.videos)}
           {item("/brand", "Brand kit", ICONS.brand)}
           {item("/billing", "Credits", ICONS.credits)}

@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 
 class ScriptSegment(BaseModel):
-    kind: str  # intro | body | question_lead | outro
+    kind: str  # intro | body | explanation | question_lead | outro
     text: str
 
 

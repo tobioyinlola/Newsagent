@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import Principal, current_principal
+from app.config import get_settings
 from app.db import get_session
 from app.integrations import registry
 from app.models import Asset, Brief, Project, ScriptVersion
@@ -29,6 +30,7 @@ from app.services.claims import detect_claims
 from app.services.moderation import fingerprint, script_text
 from app.services.ratelimit import limit
 from app.services.safety import find_banned, text_overflow
+from app.services.spend_guard import limits_off
 
 router = APIRouter(prefix="/v1/projects", tags=["projects"])
 
@@ -251,7 +253,7 @@ async def approve_script(
         raise HTTPException(422, {"error": "text_too_long", "message": too_long})
     ws = p.workspace
     words = sum(len(s["text"].split()) for s in sv.segments)
-    if words / WORDS_PER_SECOND > ws.max_video_seconds:
+    if not limits_off() and words / WORDS_PER_SECOND > ws.max_video_seconds:
         raise HTTPException(422, "Script is longer than your plan allows")
     since = datetime.now(UTC) - timedelta(days=1)
     today = (
@@ -262,9 +264,10 @@ async def approve_script(
             .where(Project.workspace_id == ws.id, ScriptVersion.approved_at >= since)
         )
     ).scalar_one()
-    if today >= ws.max_videos_per_day:
+    if not limits_off() and today >= ws.max_videos_per_day:
         raise HTTPException(429, "Daily video limit reached")
-    with_interview = bool(body and body.with_interview)
+    required = get_settings().require_interview  # the AI interview is part of every video
+    with_interview = True if required else bool(body and body.with_interview)
     if with_interview and not (1 <= len(sv.interview_questions) <= iv.MAX_QUESTIONS):
         raise HTTPException(
             422,
@@ -282,7 +285,7 @@ async def approve_script(
             },
         )
     project.interview_enabled = with_interview
-    project.interview_mode = body.interview_mode if (with_interview and body) else "invite"
+    project.interview_mode = "live" if required else (body.interview_mode if (with_interview and body) else "invite")
     sv.approved, sv.approved_by, sv.approved_at = True, p.user.email, datetime.now(UTC)
     sm.transition(project, "script_approved")
     await session.commit()

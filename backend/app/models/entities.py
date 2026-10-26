@@ -13,6 +13,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, new_id, utcnow
@@ -110,6 +111,17 @@ class Project(Base, TimestampMixin):
     revision_pending: Mapped[bool] = mapped_column(Boolean, default=False)
 
     brief: Mapped["Brief | None"] = relationship(uselist=False, lazy="selectin")
+
+    @property
+    def title(self) -> str:
+        """A readable name for lists: the company we understood from the brief, else the brief's opening words."""
+        if "brief" in sa_inspect(self).unloaded or self.brief is None:  # never lazy-load from a property
+            return ""
+        company = str((self.brief.structured_facts or {}).get("company") or "").strip()
+        if company:
+            return company[:80]
+        first = " ".join((self.brief.raw_text or "").split())
+        return (first[:60] + "…") if len(first) > 60 else first
 
 
 class Brief(Base):

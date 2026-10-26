@@ -75,6 +75,9 @@ class Settings(BaseSettings):
     renderer_backend: str = (
         ""  # "http" uses the real renderer service even when USE_MOCKS=true (local full-stack tests)
     )
+    unlimited: bool = False  # local only: no credit, spend-cap, vendor-budget, video-length or daily-video limits
+    require_interview: bool = True  # every video includes the AI interview: it cannot be skipped or swapped
+    auto_vendor_budgets: bool = False  # local only: create a 1000 USD monthly budget for any vendor without one
     local_storage_dir: str = ""  # shared folder for LocalStorage so a local renderer can read/write the same files
     mock_anchor_file: str = ""  # a real .webm the mock avatar copies as its output, for local end-to-end renders
     usd_per_credit: str = "1"  # what one credit is worth in revenue, for margin reporting

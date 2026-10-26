@@ -32,9 +32,10 @@ async function toInterview(page: import("@playwright/test").Page, token: string)
   await page.getByRole("button", { name: "Read it and write my script" }).click();
   await expect(page.getByRole("heading", { name: /Script \(version 1\)/ })).toBeVisible();
   // the interview is the default, with 4 questions written from the announcement
-  await expect(page.getByLabel(/Interview me now/)).toBeChecked();
+  await expect(page.getByText("Every video includes a live interview with our AI interviewer.")).toBeVisible();
+  await expect(page.getByLabel("No interview")).toHaveCount(0); // there is no way to skip it
   await expect(page.getByLabel(/Interview question/)).toHaveCount(4);
-  await page.getByRole("button", { name: "Approve and make my video" }).click();
+  await page.getByRole("button", { name: "Approve and start my interview" }).click();
   await expect(page.getByRole("heading", { name: "Your AI interview" })).toBeVisible();
 }
 
@@ -53,7 +54,7 @@ test("AI interview: understands the announcement, interviews on camera, then mak
   // they choose it as product footage, with a caption
   const footage = page.getByRole("heading", { name: "Product footage (optional)" });
   await expect(footage).toBeVisible();
-  await page.getByLabel("Show this image").check();
+  await expect(page.getByLabel("Show this image")).toBeChecked(); // the owner's own footage is used automatically
   await page.getByLabel("Caption (optional)").fill("The Acme app");
   await page.getByRole("button", { name: "Save product footage" }).click();
   await expect(page.getByText("Saved. 1 shot will be used.")).toBeVisible();
@@ -125,10 +126,7 @@ test("AI interview: the camera is required", async ({ page, request }) => {
   await expect(page.getByRole("button", { name: "Get ready for the interview" })).toBeEnabled();
 });
 
-test("AI interview: skipping makes the presenter-only video", async ({ page, request }) => {
-  test.setTimeout(90_000);
+test("AI interview: there is no skip button", async ({ page, request }) => {
   await toInterview(page, await owner(request));
-  page.once("dialog", (d) => d.accept());
-  await page.getByRole("button", { name: "Skip the interview" }).click();
-  await expect(page.getByRole("heading", { name: "Your video", exact: true })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole("button", { name: "Skip the interview" })).toHaveCount(0);
 });

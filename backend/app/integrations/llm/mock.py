@@ -32,6 +32,10 @@ class MockScriptLLM(ScriptLLM):
         segs = [
             ScriptSegment(kind="intro", text=f"Tonight's featured startup: {company}."),
             ScriptSegment(kind="body", text=f"{facts.get('problem', '')} Here is how they solve it."),
+            ScriptSegment(
+                kind="explanation",
+                text=f"Before we hear from the founder, here is what {company} does and who it is for.",
+            ),
             ScriptSegment(kind="outro", text="That was our featured startup. Back to you."),
         ]
         draft = ScriptDraft(

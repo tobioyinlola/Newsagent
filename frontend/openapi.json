@@ -3323,6 +3323,18 @@
             "title": "Assets",
             "type": "array"
           },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
           "cost_total": {
             "title": "Cost Total",
             "type": "string"
@@ -3382,6 +3394,11 @@
           },
           "state": {
             "title": "State",
+            "type": "string"
+          },
+          "title": {
+            "default": "",
+            "title": "Title",
             "type": "string"
           },
           "voice_accent": {

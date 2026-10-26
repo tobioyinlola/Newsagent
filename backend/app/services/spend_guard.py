@@ -19,6 +19,13 @@ from app.services import ledger
 ALERT_THRESHOLD = Decimal("0.8")
 
 
+def limits_off() -> bool:
+    """UNLIMITED=true (local only): no credit, spend-cap, vendor-budget, video-length or daily-video limits. Usage is
+    still recorded in the ledger. The operator pause switch and suspended workspaces still apply."""
+    s = get_settings()
+    return s.is_local and s.unlimited
+
+
 class LimitReached(Exception):
     def __init__(self, reason: str, code: str) -> None:
         super().__init__(reason)
@@ -88,9 +95,10 @@ class SpendGuard:
         ).scalar_one()
         if ws.suspended:
             raise LimitReached("This workspace is suspended.", "suspended")
-        if ws.credit_balance < charge:
+        unlimited = limits_off()
+        if not unlimited and ws.credit_balance < charge:
             raise LimitReached("Not enough credits for this step.", "credits")
-        if ws.spend_cap and ws.spent_total + charge > ws.spend_cap:
+        if not unlimited and ws.spend_cap and ws.spent_total + charge > ws.spend_cap:
             raise LimitReached("Workspace spend cap reached.", "workspace_cap")
 
         period = _period()
@@ -101,10 +109,15 @@ class SpendGuard:
                 .with_for_update()
             )
         ).scalar_one_or_none()
+        if vb is None and (unlimited or (get_settings().is_local and get_settings().auto_vendor_budgets)):
+            # Opt-in, local only (AUTO_VENDOR_BUDGETS=true): skip budgeting every mock vendor before a first run.
+            vb = VendorBudget(id=new_id(), vendor=vendor, period=period, limit=Decimal("1000"), spent=Decimal("0"))
+            self.session.add(vb)
+            await self.session.flush()
         if vb is None:
             # No budget row means no approved budget: fail closed.
             raise LimitReached(f"No monthly budget configured for {vendor}.", "vendor_budget")
-        if vb.spent + est > vb.limit:
+        if not unlimited and vb.spent + est > vb.limit:
             raise LimitReached(f"Monthly budget for {vendor} reached.", "vendor_budget")
 
         await ledger.apply(

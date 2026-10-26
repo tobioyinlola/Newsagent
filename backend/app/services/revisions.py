@@ -13,6 +13,7 @@ from app.services import moderation_flow
 from app.services.claims import detect_claims
 from app.services.moderation import fingerprint, script_text
 from app.services.safety import find_banned
+from app.services.spend_guard import limits_off
 
 WORDS_PER_SECOND = 2.5
 # which part of the script each presenter scene speaks (question scenes are fixed: the founder answered THAT question)
@@ -88,7 +89,7 @@ async def revise_narration(
     from app.models import Workspace
 
     ws = await session.get(Workspace, project.workspace_id)
-    if ws and words / WORDS_PER_SECOND > ws.max_video_seconds:
+    if ws and not limits_off() and words / WORDS_PER_SECOND > ws.max_video_seconds:
         raise HTTPException(422, "That would make the video longer than your plan allows.")
     sv = ScriptVersion(
         project_id=project.id,

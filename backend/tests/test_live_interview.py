@@ -374,3 +374,22 @@ async def test_an_unfinished_recording_can_be_abandoned_so_it_never_blocks_submi
     assert (await client.post(f"/v1/interview/{token}/submit")).status_code == 200
     done = await client.delete(f"/v1/interview/{token}/takes/{take}")  # a finished or unknown take is left alone
     assert done.status_code == 200
+
+
+async def test_the_ai_interview_is_compulsory_when_required(client, workspace, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "require_interview", True)
+    r = await client.post("/v1/projects", json={**BRIEF, "founder_name": "Ada Obi"}, headers=OWNER)
+    pid = r.json()["id"]
+    await client.post(f"/v1/projects/{pid}/script/generate", headers=OWNER)
+    # asking for a presenter-only video, or for an invite-link interview, still gets the AI interview
+    r = await client.post(f"/v1/projects/{pid}/script/approve", json={"with_interview": False}, headers=OWNER)
+    assert r.status_code == 200, r.text
+    out = r.json()
+    assert out["interview_enabled"] is True and out["interview_mode"] == "live"
+    assert out["state"] == "interviewing"
+    # and it cannot be skipped
+    skip = await client.post(f"/v1/projects/{pid}/interview/live/skip", headers=OWNER)
+    assert skip.status_code == 403
+    assert await state(client, pid) == "interviewing"

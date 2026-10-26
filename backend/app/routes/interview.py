@@ -328,6 +328,8 @@ async def skip_live(
     from app.routes.projects import _out
 
     project = await _owned(session, project_id, p)
+    if get_settings().require_interview:
+        raise HTTPException(403, "The AI interview is part of every video and can't be skipped.")
     if project.state != "interviewing":
         raise HTTPException(409, "There is no interview to skip.")
     s = await active_session(session, project_id)
