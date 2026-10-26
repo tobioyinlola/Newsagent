@@ -65,6 +65,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Generated API client must be up to date
         run: pnpm gen:api && git diff --exit-code openapi.json src/api/schema.d.ts
+      - name: vercel.json must match the app's security headers
+        run: pnpm gen:vercel && git diff --exit-code vercel.json
       - run: pnpm lint && pnpm build && pnpm test
       - run: pnpm audit --prod
   admin:
@@ -82,6 +84,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Generated API client must be up to date
         run: pnpm gen:api && git diff --exit-code openapi.json src/api/schema.d.ts
+      - name: vercel.json must match the app's security headers
+        run: pnpm gen:vercel && git diff --exit-code vercel.json
       - run: pnpm lint && pnpm build && pnpm test
       - run: pnpm audit --prod
   e2e-admin:

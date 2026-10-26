@@ -208,3 +208,27 @@ async def test_with_manual_billing_checkout_says_the_team_adds_credits(client, w
     r = await client.post("/v1/billing/checkout", json={"pack_id": "anything"}, headers=OWNER)
     assert r.status_code == 409 and "added by our team" in r.json()["detail"]
     assert (await client.get("/v1/capabilities", headers=OWNER)).json()["payments"] == "manual"
+
+
+def test_staging_alone_may_run_without_a_malware_scanner_when_it_says_so():
+    assert problems(settings(environment="staging", clamd_host="", allow_unscanned_uploads=True)) == []
+    assert any("CLAMD_HOST" in p for p in problems(settings(environment="staging", clamd_host="")))
+    assert any(
+        "CLAMD_HOST" in p
+        for p in problems(settings(environment="production", clamd_host="", allow_unscanned_uploads=True))
+    )
+
+
+async def test_the_unscanned_mode_accepts_everything_and_the_normal_mode_does_not(monkeypatch):
+    from app.config import get_settings
+    from app.integrations import registry
+    from app.integrations.malware.mock import EICAR, UnscannedUploads
+
+    s = get_settings()
+    monkeypatch.setattr(s, "use_mocks", False)
+    monkeypatch.setattr(s, "clamd_host", "")
+    monkeypatch.setattr(s, "allow_unscanned_uploads", True)
+    registry.reset_providers()
+    scanner = registry.get_scanner()
+    assert isinstance(scanner, UnscannedUploads) and (await scanner.scan(EICAR)).clean
+    registry.reset_providers()  # leave nothing cached for the next test

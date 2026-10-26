@@ -1,6 +1,4 @@
-# Used by the `api` service. `worker` and `scheduler` services override startCommand in Railway:
-#   worker:    celery -A app.pipeline.celery_app worker --concurrency 2 --loglevel INFO
-#   scheduler: celery -A app.pipeline.celery_app beat --loglevel INFO     (exactly ONE instance)
+# The one backend service: API + worker + scheduler + renderer (see start.sh). Run exactly ONE replica.
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
@@ -8,5 +6,6 @@ dockerfilePath = "Dockerfile"
 [deploy]
 preDeployCommand = ["alembic", "upgrade", "head"]
 healthcheckPath = "/health"
-healthcheckTimeout = 30
+healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

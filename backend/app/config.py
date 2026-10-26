@@ -99,6 +99,8 @@ class Settings(BaseSettings):
     billing_provider: str = "mock"  # mock (local only) | manual (an operator adds credits; no checkout) | a real adapter, still to be chosen (Stripe / Paystack / Flutterwave)
     clamd_host: str = ""  # ClamAV daemon; required for uploads when USE_MOCKS=false
     clamd_port: int = 3310
+    # Staging only, and a deliberate trade: with no ClamAV, uploads (founder videos, pictures) are accepted without a virus scan.
+    allow_unscanned_uploads: bool = False
     api_public_url: str = "http://localhost:8000"  # used by local dev storage URLs
 
     @property
