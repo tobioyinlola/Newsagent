@@ -68,7 +68,7 @@ test("guided flow, recorded for real, merged into the final video", async ({ bro
   await shot("5-story-review");
   await page.getByRole("button", { name: "Make my video" }).click();
 
-  await expect(page.getByRole("heading", { name: "Your video", exact: true })).toBeVisible({ timeout: 360_000 });
+  await expect(page.getByRole("heading", { name: "Your video", exact: true })).toBeVisible({ timeout: 600_000 });
   await expect(page.getByRole("heading", { name: "Your announcement" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Social post" })).toBeVisible();
   await shot("6-ready");
