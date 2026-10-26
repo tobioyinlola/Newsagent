@@ -6,13 +6,16 @@ export function securityHeaders(env = process.env) {
   const origins = [...new Set([api, env.STORAGE_ORIGIN || api])].join(" ");
   // the presenter picker shows the avatar vendor's public preview pictures
   const presenterImages = env.PRESENTER_IMG_ORIGINS || "https://resource2.heygen.ai https://files2.heygen.ai";
+  // the optional LiveKit interview room: its signalling is a websocket (and its fallback https) to LIVEKIT_ORIGIN, e.g. wss://x.livekit.cloud
+  const live = (env.LIVEKIT_ORIGIN || "").split(/\s+/).filter(Boolean).flatMap((o) => [o, o.replace(/^wss:/, "https:")]);
+  const connect = [...new Set([...origins.split(" "), ...live])].join(" ");
   const csp = [
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline'", // React inline styles (the app sets colours/widths via style=)
     `img-src 'self' data: blob: ${origins} ${presenterImages}`,
     `media-src 'self' blob: ${origins}`,
-    `connect-src 'self' ${origins}`,
+    `connect-src 'self' ${connect}`,
     "font-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",

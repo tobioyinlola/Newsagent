@@ -18,7 +18,7 @@ from app.integrations import registry
 from app.models import Job, Project, ProviderRequest, WebhookEvent
 from app.pipeline.advance import advance
 from app.schemas.api import PresenterOut
-from app.services import presenters
+from app.services import presenters, realtime
 from app.services import state_machine as sm
 from app.services.ratelimit import limit
 
@@ -68,6 +68,7 @@ async def capabilities(_: Principal = Depends(current_principal)) -> dict:
         "demo_mode": demo,
         "presenter": "demo" if demo else ("heygen" if s.heygen_api_key else "unavailable"),
         "interviewer_voice": "browser" if (demo or not s.tts_api_key) else "synthetic",
+        "interview_room": "livekit" if realtime.enabled() else "browser",
         "transcription": "demo" if demo else ("available" if s.transcription_api_key else "unavailable"),
         "message": "Demo mode: the presenter, voices and transcripts are stand-ins, not real AI output."
         if demo

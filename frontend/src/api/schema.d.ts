@@ -1045,6 +1045,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/interview/{token}/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Interviewer Lines Text
+         * @description The interviewer's lines as plain text, no audio and no spend. The LiveKit interviewer agent reads these so it can only
+         *     ever say what the interview's script says.
+         */
+        get: operations["interviewer_lines_text_v1_interview__token__lines_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/interview/{token}/photo": {
         parameters: {
             query?: never;
@@ -1073,6 +1094,27 @@ export interface paths {
         put?: never;
         /** Photo Confirm */
         post: operations["photo_confirm_v1_interview__token__photo_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interview/{token}/realtime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Join Realtime
+         * @description Permission to join this interview's LiveKit room. 404 when LiveKit isn't set up: the browser then runs the interview on
+         *     its own, which always works.
+         */
+        post: operations["join_realtime_v1_interview__token__realtime_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2796,6 +2838,13 @@ export interface components {
             /** Stage */
             stage: string | null;
         };
+        /** LinesOut */
+        LinesOut: {
+            /** Lines */
+            lines: {
+                [key: string]: string;
+            };
+        };
         /** LiveStartIn */
         LiveStartIn: {
             /** Consent */
@@ -3294,6 +3343,15 @@ export interface components {
             takes: {
                 [key: string]: number;
             };
+        };
+        /** RealtimeOut */
+        RealtimeOut: {
+            /** Room */
+            room: string;
+            /** Token */
+            token: string;
+            /** Url */
+            url: string;
         };
         /** ResetIn */
         ResetIn: {
@@ -5977,6 +6035,37 @@ export interface operations {
             };
         };
     };
+    interviewer_lines_text_v1_interview__token__lines_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     photo_slot_v1_interview__token__photo_post: {
         parameters: {
             query?: never;
@@ -6036,6 +6125,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    join_realtime_v1_interview__token__realtime_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RealtimeOut"];
                 };
             };
             /** @description Validation Error */

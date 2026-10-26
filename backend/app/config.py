@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://newsagent:newsagent@localhost:5432/newsagent"
     redis_url: str = "redis://localhost:6379/0"
     anthropic_api_key: str = ""
+    # LiveKit (optional): the interview room. All three set = the browser joins a LiveKit room and the interviewer agent speaks.
+    livekit_url: str = ""  # wss://<project>.livekit.cloud
+    livekit_api_key: str = ""
+    livekit_api_secret: str = ""
+    livekit_agent_name: str = "cf-interviewer"
     llm_model: str = ""  # empty = the small default in integrations/llm/anthropic.py
     heygen_api_key: str = ""
     # Which AI B-roll provider to use. No real provider is implemented yet, so outside mock mode this stays empty and

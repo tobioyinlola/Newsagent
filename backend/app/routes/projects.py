@@ -194,7 +194,7 @@ async def update_script(
         raise HTTPException(409, "Script is locked")
     prev = await _latest_script(session, project_id)
     guided_flow = project.flow == "guided" and prev is not None
-    if guided_flow:
+    if guided_flow and prev is not None:
         body.interview_questions = list(prev.interview_questions)  # the recorded answers belong to these questions
     text = " ".join(s.get("text", "") for s in body.segments)
     flags = [c.model_dump() for c in detect_claims(text)]
@@ -208,7 +208,7 @@ async def update_script(
         lower_thirds=body.lower_thirds,
         interview_questions=body.interview_questions,
         claim_flags=flags,
-        story=prev.story if guided_flow else None,
+        story=prev.story if (guided_flow and prev is not None) else None,
     )
     session.add(sv)
     await session.commit()

@@ -6,6 +6,7 @@ import { ChunkStore } from "../founder/store";
 import { TakeUploader } from "../founder/uploader";
 import { grabFrame, uploadSnapshot } from "./snapshot";
 import { MAX_TOTAL_S, answerWindow, mmss } from "./timing";
+import type { Realtime } from "./realtime";
 import { type VoiceLine, speak } from "./voice";
 import { VoiceWave } from "./VoiceWave";
 
@@ -22,6 +23,7 @@ export type RoomProps = {
   indices: number[]; // which questions to ask now: all of them, or just the ones being redone
   lines: VoiceLine[]; // greeting, q0.., thanks, closing
   stream: MediaStream;
+  realtime?: Realtime | null; // the LiveKit interviewer's voice, when there is one
   founderName: string;
   limits: { maxAnswer: number; minAnswer: number };
   intro: boolean; // say the greeting (not for a redo)
@@ -71,7 +73,7 @@ export function InterviewRoom(p: RoomProps) {
     const line = lineFor(key);
     if (!line.text) return;
     if (show) setCaption(line.text);
-    const s = speak(line, () => setSpeaking(true));
+    const s = p.realtime ? p.realtime.say(line, () => setSpeaking(true)) : speak(line, () => setSpeaking(true));
     speakingNow.current = s;
     await s.done;
     setSpeaking(false);

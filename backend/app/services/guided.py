@@ -95,7 +95,8 @@ def featured_plan(saved: dict | None, answered: list[int], count: int) -> dict:
 
 
 def _trim_words(segments: list[ScriptSegment], budget: int) -> list[dict]:
-    out, used = [], 0
+    out: list[dict] = []
+    used = 0
     for s in segments:
         if s.kind not in {"intro", "body"}:
             continue

@@ -730,6 +730,16 @@ class VoicePrepareOut(BaseModel):
     lines: list[VoiceLine]
 
 
+class RealtimeOut(BaseModel):
+    url: str  # the LiveKit server to connect to
+    token: str  # join token for this interview's room only
+    room: str
+
+
+class LinesOut(BaseModel):
+    lines: dict[str, str]  # key (greeting, q0.., thanks, closing) -> what the interviewer says
+
+
 class BriefUnderstandingOut(BaseModel):
     company: str = ""
     announcement: str = ""

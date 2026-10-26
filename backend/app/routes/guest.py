@@ -25,8 +25,10 @@ from app.schemas.api import (
     GuestTake,
     GuestTakeIn,
     GuestView,
+    LinesOut,
     PhotoConfirmIn,
     PhotoIn,
+    RealtimeOut,
     UploadSlot,
     VoiceLine,
     VoicePrepareOut,
@@ -421,16 +423,52 @@ async def _speak(session: AsyncSession, project: Project, text: str) -> str | No
     return storage.presign_get(key, URL_TTL)
 
 
-@router.post("/voice", response_model=VoicePrepareOut, dependencies=[Depends(guest_limit)])
-async def prepare_voice(token: str, session: AsyncSession = Depends(get_session)) -> VoicePrepareOut:
-    """What the AI interviewer says, with audio for each line when a voice provider is configured. The greeting
-    uses the founder's name. Called while the device check runs, so the interview itself never waits."""
+async def _line_items(token: str, session: AsyncSession) -> tuple[Project, list[tuple[str, str]]]:
     s, project = await load(token, session)
     script = await approved_script(session, project.id)
     lines = iv.interviewer_lines(s.founder_name, await _company(session, project), list(script.interview_questions))
     items = [("greeting", lines["greeting"])]
     items += [(f"q{i}", q) for i, q in enumerate(lines["questions"])]
     items += [("thanks", lines["thanks"]), ("closing", lines["closing"])]
+    return project, items
+
+
+@router.get("/lines", response_model=LinesOut, dependencies=[Depends(guest_limit)])
+async def interviewer_lines_text(token: str, session: AsyncSession = Depends(get_session)) -> LinesOut:
+    """The interviewer's lines as plain text, no audio and no spend. The LiveKit interviewer agent reads these so it can only
+    ever say what the interview's script says."""
+    _, items = await _line_items(token, session)
+    return LinesOut(lines=dict(items))
+
+
+@router.post("/realtime", response_model=RealtimeOut, dependencies=[Depends(guest_limit)])
+async def join_realtime(token: str, session: AsyncSession = Depends(get_session)) -> RealtimeOut:
+    """Permission to join this interview's LiveKit room. 404 when LiveKit isn't set up: the browser then runs the interview on
+    its own, which always works."""
+    from app.config import get_settings
+    from app.services import realtime
+
+    if not realtime.enabled():
+        raise HTTPException(404, "Live rooms are not set up.")
+    s, project = await load(token, session)
+    return RealtimeOut(
+        url=get_settings().livekit_url,
+        room=realtime.room_name(project.id),
+        token=realtime.mint_token(
+            project_id=project.id,
+            identity=f"founder-{s.id}",
+            name=s.founder_name or "Founder",
+            interview_token=token,
+            api_url=get_settings().api_public_url,
+        ),
+    )
+
+
+@router.post("/voice", response_model=VoicePrepareOut, dependencies=[Depends(guest_limit)])
+async def prepare_voice(token: str, session: AsyncSession = Depends(get_session)) -> VoicePrepareOut:
+    """What the AI interviewer says, with audio for each line when a voice provider is configured. The greeting
+    uses the founder's name. Called while the device check runs, so the interview itself never waits."""
+    project, items = await _line_items(token, session)
     return VoicePrepareOut(
         lines=[VoiceLine(key=k, text=t, audio_url=await _speak(session, project, t)) for k, t in items]
     )

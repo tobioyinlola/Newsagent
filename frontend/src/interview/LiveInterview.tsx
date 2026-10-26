@@ -5,6 +5,7 @@ import { Button, Card, ErrorBox, Field, Notice, inputCls } from "../components/u
 import { guest, must } from "../founder/guestApi";
 import { micLevel, openStream } from "../founder/media";
 import { InterviewRoom } from "./InterviewRoom";
+import { type Realtime, joinRealtime } from "./realtime";
 import { mmss } from "./timing";
 import type { VoiceLine } from "./voice";
 
@@ -15,7 +16,7 @@ type Plan = { layout: string; order: number[]; answers: { question_index: number
 const useStatus = (projectId: string) =>
   useQuery({ queryKey: ["interview", projectId], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/interview", { params: { path: { project_id: projectId } } })) });
 
-type Session = { start: Start; lines: VoiceLine[]; stream: MediaStream; indices: number[]; intro: boolean };
+type Session = { start: Start; lines: VoiceLine[]; stream: MediaStream; indices: number[]; intro: boolean; realtime: Realtime | null };
 
 // Everything about the AI interview on the dashboard (project state: interviewing).
 export function LiveInterviewPanel({ projectId, founderName, founderTitle, guided = false }: { projectId: string; founderName: string; founderTitle: string; guided?: boolean }) {
@@ -53,7 +54,9 @@ export function LiveInterviewPanel({ projectId, founderName, founderTitle, guide
       const start = await unwrap(api.POST("/v1/projects/{project_id}/interview/live", { ...path, body: { founder_name: name.trim(), founder_title: title.trim(), consent: true } }));
       setBusy("Getting your interviewer ready…");
       const voice = await must(guest.POST("/v1/interview/{token}/voice", { params: { path: { token: start.token } } }));
-      setSession({ start, lines: voice.lines, stream, indices, intro });
+      setBusy("Joining the interview room…");
+      const realtime = await joinRealtime(start.token, stream).catch(() => null); // null: the browser runs the interview on its own
+      setSession({ start, lines: voice.lines, stream, indices, intro, realtime });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -61,9 +64,9 @@ export function LiveInterviewPanel({ projectId, founderName, founderTitle, guide
     }
   };
 
-  const closeSession = () => { session?.stream.getTracks().forEach((t) => t.stop()); setSession(null); setInRoom(false); refresh(); };
+  const closeSession = () => { session?.realtime?.close(); session?.stream.getTracks().forEach((t) => t.stop()); setSession(null); setInRoom(false); refresh(); };
 
-  useEffect(() => () => session?.stream.getTracks().forEach((t) => t.stop()), [session]);
+  useEffect(() => () => { session?.realtime?.close(); session?.stream.getTracks().forEach((t) => t.stop()); }, [session]);
 
   if (session && inRoom) {
     return (
@@ -73,6 +76,7 @@ export function LiveInterviewPanel({ projectId, founderName, founderTitle, guide
         indices={session.indices}
         lines={session.lines}
         stream={session.stream}
+        realtime={session.realtime}
         founderName={session.start.founder_name}
         limits={{ maxAnswer: session.start.max_answer_s, minAnswer: session.start.min_answer_s }}
         intro={session.intro}
@@ -92,8 +96,8 @@ export function LiveInterviewPanel({ projectId, founderName, founderTitle, guide
     <Card title="Your AI interview">
       <div className="space-y-4">
         <Notice tone="ok">
-          Your script is approved. Before we make your video, our AI interviewer will talk with you on camera: up to {s?.questions.length ?? 4} questions, about 4 minutes, no more than 5.
-          Your answers are woven into the video next to the AI presenter.
+          {guided ? "Our AI interviewer will talk with you on camera: up to" : "Your script is approved. Before we make your video, our AI interviewer will talk with you on camera: up to"} {s?.questions.length ?? 4} questions, about 4 minutes, no more than 5.
+          {" "}Your answers are woven into the video next to the AI presenter.
         </Notice>
         {facts && (facts.announcement || facts.key_facts.length > 0) && (
           <section className="rounded-md border-2 border-ink p-3 text-sm" aria-labelledby="understood">
