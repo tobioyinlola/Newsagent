@@ -26,7 +26,7 @@ class AnthropicScriptLLM(ScriptLLM):
     async def _json(self, prompt: str) -> dict:
         msg = await self._client.messages.create(
             model=MODEL,
-            max_tokens=4000,
+            max_tokens=6000,
             system=SYSTEM,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -56,10 +56,18 @@ class AnthropicScriptLLM(ScriptLLM):
 
     async def write_script(self, facts: dict, tone: str) -> ScriptDraft:
         raw = await self._json(
-            "Write a 60-90 second anchor script as JSON with keys segments [{kind,text}] "
-            "(kinds in order: intro, body, explanation, outro; explanation is 2-3 sentences the presenter says "
-            "before the founder interview, explaining what the startup does and who it is for, using only the facts), "
-            "ticker_lines [str], lower_thirds [{title,subtitle}], interview_questions [str]. "
+            "Write the anchor script for a news-style feature on this startup as JSON with keys "
+            "segments [{kind,text}], ticker_lines [str], lower_thirds [{title,subtitle}], interview_questions [str]. "
+            "The script is spoken aloud by a presenter, so write full, flowing, detailed paragraphs, never one-liners. "
+            "segments, in this order, with these lengths: "
+            "intro (60-80 words: hook the viewer, name the startup, say what is being announced and why it matters now); "
+            "body (180-240 words in two or three short paragraphs: the problem and who feels it, what the startup "
+            "built and how it works, the concrete facts supplied, and what happens next); "
+            "explanation (90-120 words, spoken before the founder interview: plainly explain what the startup does, "
+            "who it is for and what makes it different, so a newcomer understands the interview that follows); "
+            "outro (50-70 words: sum up the story, say what to watch for next, and hand back to the studio). "
+            "Use only the supplied facts; where a fact is missing, describe the idea in general terms and never invent "
+            "numbers, customers, funding or dates. "
             "interview_questions: exactly 4 short, open questions (each under 25 words, never yes/no) that a "
             "presenter would ask the founder about THIS announcement, each answerable in about 40 seconds, "
             "ordered from the story to the vision; address the founder directly, do not name them in the questions. "

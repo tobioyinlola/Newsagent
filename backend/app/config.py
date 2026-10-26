@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     anthropic_api_key: str = ""
     heygen_api_key: str = ""
+    # The custom presenter used for EVERY presenter clip: the HeyGen avatar (look) id, and optionally its voice id.
+    heygen_avatar_id: str = ""
+    heygen_voice_id: str = ""
     # Which AI B-roll provider to use. No real provider is implemented yet, so outside mock mode this stays empty and
     # AI B-roll reports itself unavailable instead of pretending.
     broll_provider: str = ""

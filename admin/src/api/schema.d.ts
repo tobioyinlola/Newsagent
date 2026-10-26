@@ -1317,6 +1317,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{project_id}/back": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Go Back
+         * @description Step back from the AI interview to the script. Nothing paid has been started at this point (the presenter is
+         *     only made after the interview is submitted), so the interview is closed and its recordings are set aside.
+         */
+        post: operations["go_back_v1_projects__project_id__back_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/brief": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Brief
+         * @description Step back to the announcement and change it. The script is then regenerated from the new text.
+         */
+        patch: operations["update_brief_v1_projects__project_id__brief_patch"];
+        trace?: never;
+    };
     "/v1/projects/{project_id}/broll": {
         parameters: {
             query?: never;
@@ -2093,6 +2134,17 @@ export interface components {
              * @default
              */
             problem: string;
+        };
+        /** BriefUpdate */
+        BriefUpdate: {
+            /** Brief Text */
+            brief_text: string;
+            /** Founder Name */
+            founder_name?: string | null;
+            /** Founder Title */
+            founder_title?: string | null;
+            /** Website Url */
+            website_url?: string | null;
         };
         /** BrollCandidate */
         BrollCandidate: {
@@ -6483,6 +6535,76 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    go_back_v1_projects__project_id__back_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_brief_v1_projects__project_id__brief_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BriefUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"];
                 };
             };
             /** @description Validation Error */

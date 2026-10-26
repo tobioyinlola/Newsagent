@@ -129,9 +129,25 @@ export function LiveInterviewPanel({ projectId, founderName, founderTitle }: { p
           <Button disabled={!agree || !name.trim() || !!busy || !s} onClick={() => void prepare(resuming ? unanswered : (s?.questions ?? []).map((_, i) => i), !resuming)}>
             {busy ?? (resuming ? "Continue the interview" : "Get ready for the interview")}
           </Button>
+          <BackToScript projectId={projectId} hasAnswers={(s?.takes.length ?? 0) > 0} />
         </div>
       </div>
     </Card>
+  );
+}
+
+// Step back to the script. Recordings made so far are set aside, so ask first when there are any.
+function BackToScript({ projectId, hasAnswers }: { projectId: string; hasAnswers: boolean }) {
+  const qc = useQueryClient();
+  const back = useMutation({
+    mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/back", { params: { path: { project_id: projectId } } })),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["project", projectId] }); qc.invalidateQueries({ queryKey: ["script", projectId] }); qc.invalidateQueries({ queryKey: ["interview", projectId] }); },
+  });
+  return (
+    <>
+      <Button variant="secondary" disabled={back.isPending} onClick={() => { if (!hasAnswers || confirm("Go back to your script? The answers you have recorded will be discarded, and you will interview again after approving it.")) back.mutate(); }}>Back to my script</Button>
+      <ErrorBox error={back.error} />
+    </>
   );
 }
 
@@ -224,6 +240,7 @@ function Review({ projectId, status, onRedo, busy, error }: { projectId: string;
         <p className="text-sm text-muted">Next: the AI presenter is created from your script, then your answers are merged in. This takes a few minutes and uses credits.</p>
         <ErrorBox error={make.error ?? (error ? new Error(error) : null)} />
         <div className="flex flex-wrap gap-3">
+          <BackToScript projectId={projectId} hasAnswers />
           <Button onClick={() => make.mutate()} disabled={make.isPending || !plan.answers.some((a) => a.include)}>{make.isPending ? "Starting…" : "Make my video"}</Button>
         </div>
       </div>

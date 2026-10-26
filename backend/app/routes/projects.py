@@ -9,11 +9,12 @@ from app.auth import Principal, current_principal
 from app.config import get_settings
 from app.db import get_session
 from app.integrations import registry
-from app.models import Asset, Brief, Project, ScriptVersion
+from app.models import Asset, Brief, InterviewSession, Project, ScriptVersion, Take
 from app.pipeline.advance import advance
 from app.schemas.api import (
     ApproveIn,
     BriefUnderstandingOut,
+    BriefUpdate,
     ProgressOut,
     ProjectCreate,
     ProjectOut,
@@ -205,6 +206,71 @@ async def update_script(
     session.add(sv)
     await session.commit()
     return sv
+
+
+@router.patch("/{project_id}/brief", response_model=ProjectOut)
+async def update_brief(
+    project_id: str,
+    body: BriefUpdate,
+    p: Principal = Depends(current_principal),
+    session: AsyncSession = Depends(get_session),
+) -> ProjectOut:
+    """Step back to the announcement and change it. The script is then regenerated from the new text."""
+    project = await _owned(session, project_id, p)
+    if project.state not in {"draft", "script_ready"} or project.brief is None:
+        raise HTTPException(409, "The announcement can no longer be changed here.")
+    verdict = await moderation_flow.evaluate(session, body.brief_text)
+    if verdict.level == "block" and await moderation_flow.mode(session) == "enforce":
+        raise HTTPException(
+            422,
+            {
+                "error": "content_blocked",
+                "message": " ".join(verdict.messages) or "This content can't be used.",
+                "categories": verdict.categories,
+            },
+        )
+    project.brief.raw_text = body.brief_text
+    project.brief.website_url = body.website_url
+    if body.founder_name is not None:
+        project.founder_name = body.founder_name.strip()
+    if body.founder_title is not None:
+        project.founder_title = body.founder_title.strip()
+    await session.commit()
+    return await _out(session, project)
+
+
+@router.post("/{project_id}/back", response_model=ProjectOut)
+async def go_back(
+    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> ProjectOut:
+    """Step back from the AI interview to the script. Nothing paid has been started at this point (the presenter is
+    only made after the interview is submitted), so the interview is closed and its recordings are set aside."""
+    project = await _owned(session, project_id, p)
+    if project.state != "interviewing":
+        raise HTTPException(409, "You can't go back from here.")
+    now = datetime.now(UTC)
+    for s in (
+        (
+            await session.execute(
+                select(InterviewSession).where(
+                    InterviewSession.project_id == project_id, InterviewSession.revoked_at.is_(None)
+                )
+            )
+        )
+        .scalars()
+        .all()
+    ):
+        s.revoked_at, s.token_enc = now, None
+    for t in (await session.execute(select(Take).where(Take.project_id == project_id))).scalars().all():
+        if t.status != "superseded":
+            t.status = "superseded"
+    for sv in (await session.execute(select(ScriptVersion).where(ScriptVersion.project_id == project_id))).scalars():
+        sv.approved, sv.approved_by, sv.approved_at = False, None, None
+    project.interview_enabled, project.interview_mode = False, "invite"
+    project.merge_plan = None
+    sm.transition(project, "script_ready")
+    await session.commit()
+    return await _out(session, project)
 
 
 @router.post("/{project_id}/script/approve", response_model=ProjectOut)

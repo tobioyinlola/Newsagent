@@ -393,3 +393,68 @@ async def test_the_ai_interview_is_compulsory_when_required(client, workspace, m
     skip = await client.post(f"/v1/projects/{pid}/interview/live/skip", headers=OWNER)
     assert skip.status_code == 403
     assert await state(client, pid) == "interviewing"
+
+
+async def test_stepping_back_from_the_interview_returns_to_the_script(client, workspace):
+    pid = await live_project(client)
+    assert await state(client, pid) == "interviewing"
+    r = await client.post(f"/v1/projects/{pid}/back", headers=OWNER)
+    assert r.status_code == 200 and r.json()["state"] == "script_ready"
+    assert r.json()["interview_enabled"] is False
+    # the script is editable again and can be approved a second time
+    script = (await client.get(f"/v1/projects/{pid}/script", headers=OWNER)).json()
+    assert script["approved"] is False
+    body = {k: script[k] for k in ("segments", "ticker_lines", "lower_thirds", "interview_questions")}
+    assert (await client.put(f"/v1/projects/{pid}/script", json=body, headers=OWNER)).status_code == 200
+    ok = await client.post(
+        f"/v1/projects/{pid}/script/approve", json={"with_interview": True, "interview_mode": "live"}, headers=OWNER
+    )
+    assert ok.status_code == 200 and ok.json()["state"] == "interviewing"
+
+
+async def test_cannot_step_back_once_the_video_is_being_made(client, workspace):
+    pid = await live_project(client)
+    await client.post(f"/v1/projects/{pid}/interview/live/skip", headers=OWNER)
+    assert (await client.post(f"/v1/projects/{pid}/back", headers=OWNER)).status_code == 409
+
+
+async def test_the_announcement_can_be_changed_before_approval(client, workspace):
+    r = await client.post("/v1/projects", json=BRIEF, headers=OWNER)
+    pid = r.json()["id"]
+    await client.post(f"/v1/projects/{pid}/script/generate", headers=OWNER)
+    new = "Acme Farms now delivers produce to buyers in Tamale as well, with same-day payment for every farmer."
+    assert (await client.patch(f"/v1/projects/{pid}/brief", json={"brief_text": new}, headers=OWNER)).status_code == 200
+    assert (await client.post(f"/v1/projects/{pid}/script/generate", headers=OWNER)).status_code == 200
+    und = (await client.get(f"/v1/projects/{pid}/understanding", headers=OWNER)).json()
+    assert "Tamale" in str(und)
+
+
+async def test_scripts_are_written_in_detail_not_one_liners():
+    from app.integrations.llm.mock import MockScriptLLM
+
+    draft = await MockScriptLLM().write_script(
+        {"company": "Acme Farms", "announcement": "Acme opens in Kumasi"}, "confident"
+    )
+    words = {s.kind: len(s.text.split()) for s in draft.segments}
+    assert [s.kind for s in draft.segments] == ["intro", "body", "explanation", "outro"]
+    assert words["intro"] >= 40 and words["body"] >= 90 and words["explanation"] >= 50 and words["outro"] >= 35
+
+
+def test_every_clip_uses_the_custom_presenter(monkeypatch):
+    from app.config import get_settings
+    from app.models import Project
+    from app.pipeline.steps import presenter_id
+
+    monkeypatch.setattr(get_settings(), "heygen_avatar_id", "my-male-presenter")
+    assert presenter_id(Project(anchor_id=None)) == "my-male-presenter"
+    assert presenter_id(Project(anchor_id="override")) == "override"
+
+
+async def test_a_real_presenter_run_without_a_presenter_id_fails_clearly(monkeypatch):
+    from app.config import get_settings
+    from app.integrations.avatar.base import AvatarRequest
+    from app.integrations.avatar.heygen import HeyGenProvider
+
+    monkeypatch.setattr(get_settings(), "heygen_avatar_id", "")
+    with pytest.raises(RuntimeError, match="HEYGEN_AVATAR_ID"):
+        await HeyGenProvider().submit(AvatarRequest(script_text="Hello", voice_accent="british"))

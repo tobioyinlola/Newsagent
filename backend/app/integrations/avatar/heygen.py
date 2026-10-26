@@ -45,7 +45,13 @@ class HeyGenProvider(AvatarProvider):
     supports_async = True
 
     async def submit(self, req: AvatarRequest) -> str:
-        body: dict = {"type": "avatar", "avatar_id": req.avatar_id, "script": req.script_text}
+        avatar_id = req.avatar_id or get_settings().heygen_avatar_id
+        if not avatar_id:
+            raise RuntimeError("No presenter is set: put your custom presenter's HeyGen id in HEYGEN_AVATAR_ID.")
+        body: dict = {"type": "avatar", "avatar_id": avatar_id, "script": req.script_text}
+        voice_id = req.voice_id or get_settings().heygen_voice_id
+        if voice_id:
+            body["voice_id"] = voice_id  # field name unverified against the live API: confirm on the first real run
         if req.transparent:
             body["output_format"] = "webm"  # never send "background" with webm
         async with httpx.AsyncClient(base_url=BASE, headers=self._headers, timeout=30) as c:

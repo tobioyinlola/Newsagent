@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { Delivery } from "../components/Delivery";
 import { BrollPanel } from "../components/BrollPanel";
+import { BriefEditor } from "../components/BriefEditor";
 import { ProgressPanel } from "../components/ProgressPanel";
 import { SceneEditor } from "../components/SceneEditor";
 import { ScriptEditor } from "../components/ScriptEditor";
@@ -26,6 +27,7 @@ export function ProjectDetail() {
   });
   const costs = useQuery({ queryKey: ["costs", id], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/costs", path)), enabled: !!state && state !== "draft" });
   const nav = useNavigate();
+  const [editingBrief, setEditingBrief] = useState(false);
   const del = useMutation({
     mutationFn: () => unwrap(api.DELETE("/v1/projects/{project_id}", path)),
     onSuccess: () => { qc.removeQueries({ queryKey: ["project", id] }); qc.invalidateQueries({ queryKey: ["projects"] }); nav("/projects"); },
@@ -85,7 +87,8 @@ export function ProjectDetail() {
       {moderation.data?.[0]?.status === "rejected" && (
         <Notice tone="warn">Our team couldn't approve this content.{moderation.data[0].note ? ` ${moderation.data[0].note}` : ""} Please edit it and try again.</Notice>
       )}
-      {p.state === "script_ready" && script.data && <ScriptEditor projectId={id} script={script.data} />}
+      {p.state === "script_ready" && editingBrief && <BriefEditor projectId={id} founderName={p.founder_name} founderTitle={p.founder_title} onDone={() => setEditingBrief(false)} />}
+      {p.state === "script_ready" && script.data && !editingBrief && <ScriptEditor projectId={id} script={script.data} onBack={() => setEditingBrief(true)} />}
       {p.interview_enabled && ["interviewing", "awaiting_founder", "processing_founder"].includes(p.state) && <BrollPanel projectId={id} />}
       {p.state === "interviewing" && <LiveInterviewPanel projectId={id} founderName={p.founder_name} founderTitle={p.founder_title} />}
       {["script_approved", "rendering_anchor", "anchor_ready"].includes(p.state) && (

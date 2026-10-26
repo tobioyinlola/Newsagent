@@ -6,7 +6,16 @@ import { Button, Card, ErrorBox, Notice, inputCls } from "./ui";
 type Script = Schemas["ScriptOut"];
 type Seg = { kind: string; text: string };
 
-export function ScriptEditor({ projectId, script }: { projectId: string; script: Script }) {
+const PART_HELP: Record<string, string> = {
+  intro: "The opening: hooks the viewer and says what is being announced.",
+  body: "The story: the problem, what was built and the facts.",
+  explanation: "Plays before your interview so a newcomer understands what you do.",
+  analysis: "The presenter's reflection after your answers.",
+  outro: "The close: sums up and hands back to the studio.",
+};
+const rowsFor = (t: string) => Math.min(16, Math.max(4, Math.ceil(t.length / 85) + t.split("\n").length));
+
+export function ScriptEditor({ projectId, script, onBack }: { projectId: string; script: Script; onBack?: () => void }) {
   const qc = useQueryClient();
   const [segments, setSegments] = useState<Seg[]>(script.segments as Seg[]);
   const [ticker, setTicker] = useState(script.ticker_lines.join("\n"));
@@ -58,8 +67,9 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
         <Notice>AI wrote this from your announcement, including the interview questions. Read it, change anything you like, then approve. Nothing is rendered, and no credits are used, until you approve.</Notice>
         {segments.map((s, i) => (
           <div key={i} className="space-y-1">
-            <label htmlFor={`seg-${i}`} className="text-sm font-medium capitalize">{s.kind}</label>
-            <textarea id={`seg-${i}`} rows={3} className={inputCls} value={s.text} onChange={(e) => setSegments(segments.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} />
+            <label htmlFor={`seg-${i}`} className="text-sm font-medium capitalize">{s.kind} <span className="font-normal text-muted">· {s.text.trim() ? s.text.trim().split(/\s+/).length : 0} words</span></label>
+            {PART_HELP[s.kind] && <p className="text-xs text-muted">{PART_HELP[s.kind]}</p>}
+            <textarea id={`seg-${i}`} rows={rowsFor(s.text)} className={inputCls} value={s.text} onChange={(e) => setSegments(segments.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} />
           </div>
         ))}
         {withInterview && addable.length > 0 && (
@@ -109,6 +119,7 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
         )}
         <ErrorBox error={save.error ?? regenerate.error ?? approve.error} />
         <div className="flex flex-wrap gap-2">
+          {onBack && <Button variant="secondary" onClick={onBack}>Back to my announcement</Button>}
           <Button variant="secondary" onClick={() => save.mutate()} disabled={save.isPending}>Save changes</Button>
           <Button variant="secondary" onClick={() => regenerate.mutate()} disabled={regenerate.isPending}>Regenerate</Button>
           <Button onClick={() => approve.mutate()} disabled={approve.isPending}>Approve and start my interview</Button>

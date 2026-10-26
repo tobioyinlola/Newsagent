@@ -7,6 +7,7 @@ class AvatarRequest:
     script_text: str
     voice_accent: str
     avatar_id: str | None = None
+    voice_id: str | None = None  # a fixed voice for the custom presenter; otherwise the vendor picks from voice_accent
     pronunciation: dict[str, str] | None = None
     transparent: bool = False  # Option B: transparent WebM for Remotion compositing
 

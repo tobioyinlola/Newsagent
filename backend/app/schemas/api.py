@@ -23,6 +23,13 @@ class ProjectCreate(BaseModel):
     founder_title: str = Field(default="", max_length=200)
 
 
+class BriefUpdate(BaseModel):
+    brief_text: str = Field(min_length=20, max_length=8000)
+    website_url: str | None = None
+    founder_name: str | None = Field(default=None, max_length=200)
+    founder_title: str | None = Field(default=None, max_length=200)
+
+
 class AssetOut(BaseModel):
     id: str
     type: str
