@@ -75,6 +75,9 @@ class Settings(BaseSettings):
     tts_api_url: str = "https://api.openai.com/v1"  # any OpenAI-compatible /audio/speech endpoint
     tts_model: str = "tts-1"
     tts_voice: str = "nova"
+    avatar_backend: str = (
+        ""  # "heygen" uses the real HeyGen presenter even when USE_MOCKS=true (everything else stays mocked)
+    )
     renderer_backend: str = (
         ""  # "http" uses the real renderer service even when USE_MOCKS=true (local full-stack tests)
     )

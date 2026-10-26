@@ -1,6 +1,15 @@
 import os
 
-os.environ.update(ENVIRONMENT="local", USE_MOCKS="true", OPERATOR_EMAILS="ops@example.com", REQUIRE_INTERVIEW="false")
+os.environ.update(
+    ENVIRONMENT="local",
+    USE_MOCKS="true",
+    OPERATOR_EMAILS="ops@example.com",
+    REQUIRE_INTERVIEW="false",
+    AVATAR_BACKEND="",
+    HEYGEN_API_KEY="",
+    HEYGEN_AVATAR_ID="",
+    HEYGEN_VOICE_ID="",
+)
 
 from decimal import Decimal  # noqa: E402
 

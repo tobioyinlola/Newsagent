@@ -46,7 +46,7 @@ def get_avatar_named(name: str) -> AvatarProvider:
     """A specific provider by name, for failover. In mock mode every name resolves to a mock that bills as that vendor."""
 
     def make() -> AvatarProvider:
-        if get_settings().use_mocks:
+        if get_settings().use_mocks and not (name == "heygen" and get_settings().avatar_backend == "heygen"):
             from app.integrations.avatar.mock import MockAvatarProvider
 
             return MockAvatarProvider(name=name, green_screen=name == "synthesia")
@@ -63,7 +63,7 @@ def get_avatar_named(name: str) -> AvatarProvider:
 
 def get_avatar() -> AvatarProvider:
     def make() -> AvatarProvider:
-        if get_settings().use_mocks:
+        if get_settings().use_mocks and get_settings().avatar_backend != "heygen":
             from app.integrations.avatar.mock import MockAvatarProvider
 
             return MockAvatarProvider()
