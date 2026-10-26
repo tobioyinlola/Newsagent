@@ -1,3 +1,5 @@
+import re
+
 from app.integrations.llm.base import (
     ScriptDraft,
     ScriptLLM,
@@ -14,15 +16,18 @@ class MockScriptLLM(ScriptLLM):
         return 0.01
 
     async def parse_brief(self, brief_text: str, website_url: str | None) -> dict:
-        first = brief_text.strip().split(".")[0][:120]
-        words = first.split()
+        sentences = [x.strip() for x in re.split(r"(?<=[.!?])\s+|\n+", brief_text.strip()) if x.strip()]
+        first = (sentences[0] if sentences else brief_text).rstrip(".!?")[:200]
         name: list[str] = []
-        for w in words:  # the opening run of capitalised words is usually the company
-            if w[:1].isupper() and w.isalpha():
-                name.append(w)
+        for w in first.split():  # the opening run of capitalised words is usually the company
+            bare = w.rstrip(",;:")
+            if bare[:1].isupper() and bare.isalpha():
+                name.append(bare)
+                if bare != w:  # a comma ends the name
+                    break
             elif name:
                 break
-        sentences = [x.strip() for x in brief_text.replace("\n", " ").split(".") if x.strip()]
+        sentences = [x.rstrip(".!?") for x in sentences]
         return {
             "company": " ".join(name[:3]) or "Acme",
             "announcement": first,

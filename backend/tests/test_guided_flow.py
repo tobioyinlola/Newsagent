@@ -120,3 +120,12 @@ async def test_approval_needs_two_or_three_pictures_then_makes_the_video_cheaply
         kinds = {(a.type, a.format) for a in (await s.execute(select(Asset).where(Asset.project_id == pid))).scalars()}
         assert ("question_clip", "q0") in kinds and ("question_clip", "q1") in kinds
         assert ("question_clip", "q2") not in kinds and ("question_clip", "q3") not in kinds
+
+
+def test_a_dollar_amount_with_a_decimal_point_is_one_claim_not_two():
+    from app.services.claims import detect_claims
+
+    flags = detect_claims("Minicor raised a $3.8M seed round led by IA Ventures. We are based in San Francisco.")
+    texts = {f.text for f in flags}
+    assert "Minicor raised a $3.8M seed round led by IA Ventures" in texts
+    assert not any(t in {"Minicor raised a $3", "8M seed round led by IA Ventures"} for t in texts)

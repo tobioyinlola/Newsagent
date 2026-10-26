@@ -132,7 +132,7 @@ async def write_story(
         "social": draft.social.model_dump(),
         "unverified": draft.unverified,
     }
-    text = " ".join(
+    text = "\n".join(  # one line per piece, so a claim is quoted whole and each sentence is checked on its own
         [s["text"] for s in segments]
         + [draft.headline, draft.dek]
         + [p for sec in draft.sections for p in sec.paragraphs]
