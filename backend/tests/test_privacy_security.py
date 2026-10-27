@@ -61,7 +61,7 @@ def test_local_is_exempt():
         ({"database_url": "postgresql+asyncpg://newsagent:newsagent@localhost/x"}, "DATABASE_URL"),
         ({"app_base_url": "http://app.example.com"}, "https"),
         ({"admin_base_url": "http://admin.example.com"}, "ADMIN_BASE_URL"),
-        ({"admin_base_url": "https://app.example.com"}, "different site"),
+        ({"admin_base_url": "https://app.example.com"}, "must differ"),
         ({"queue_backend": "inline"}, "QUEUE_BACKEND"),
         ({"environment": "prod"}, "ENVIRONMENT"),
     ],
@@ -191,6 +191,11 @@ async def test_consent_text_tells_the_founder_about_deletion(client, workspace):
     pid = await make_awaiting_founder(client)
     token = await invite(client, pid)
     assert "delete all of your recordings" in (await client.get(f"/v1/interview/{token}")).json()["consent_text"]
+
+
+def test_the_back_office_may_live_at_a_path_of_the_customer_site_but_not_at_the_same_address():
+    assert problems(settings(admin_base_url="https://app.example.com/admin")) == []
+    assert any("ADMIN_BASE_URL" in p for p in problems(settings(admin_base_url="https://app.example.com/")))
 
 
 def test_manual_billing_is_allowed_in_staging_and_needs_no_webhook_secret():

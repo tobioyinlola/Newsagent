@@ -60,7 +60,12 @@ async def test_only_operators_can_see_the_back_office(client, workspace):
         assert (await client.get(path, headers=OPS)).status_code == 200
 
 
-async def test_the_customer_app_origin_cannot_reach_the_back_office_even_as_an_operator(client, workspace):
+async def test_the_customer_app_origin_cannot_reach_the_back_office_even_as_an_operator(client, workspace, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setattr(
+        get_settings(), "admin_base_url", "http://localhost:5174"
+    )  # the back office hosted as its own site
     r = await client.get("/v1/admin/overview", headers={**OPS, "Origin": "http://localhost:5173"})
     assert r.status_code == 403 and "not available from this app" in r.json()["detail"]
     ok = await client.get("/v1/admin/overview", headers={**OPS, "Origin": "http://localhost:5174"})
@@ -198,3 +203,14 @@ async def test_videos_by_state_reflects_finished_videos(client, workspace, maker
     assert get_queue() is not None
     assert Decimal(o["kpis"]["vendor_cost_usd_30d"]) > 0
     _ = (User, Workspace, CreditTransaction)  # models imported for readers of this file
+
+
+async def test_when_one_site_serves_both_the_back_office_is_reachable_from_it(client, workspace):
+    # the default: the back office lives at <customer site>/admin, so its own requests carry the customer site's origin
+    r = await client.get("/v1/admin/overview", headers={**OPS, "Origin": "http://localhost:5173"})
+    assert r.status_code == 200
+    # ...but being on the site is not enough: it still takes an operator's sign-in
+    assert (
+        await client.get("/v1/admin/overview", headers={**OWNER, "Origin": "http://localhost:5173"})
+    ).status_code == 403
+    assert (await client.get("/v1/admin/overview", headers={"Origin": "http://localhost:5173"})).status_code == 401

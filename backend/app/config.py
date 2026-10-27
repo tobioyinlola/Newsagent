@@ -72,7 +72,7 @@ class Settings(BaseSettings):
     operator_session_hours: int = 8
     sentry_dsn: str = ""
     app_base_url: str = "http://localhost:5173"
-    admin_base_url: str = "http://localhost:5174"  # the back-office app, a separate site from the customer app
+    admin_base_url: str = "http://localhost:5173/admin"  # the back office: the customer app's site under /admin (or, if you host it apart, its own https address)
     environment: str = "local"  # local, staging, production
     use_mocks: bool = True
     operator_emails: str = ""  # comma separated; may call /admin

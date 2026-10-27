@@ -2,8 +2,10 @@
 
 > **Current design (supersedes the longer service list in section 1 where they differ).** Railway runs **three** things: Postgres,
 > Redis, and **one `backend` service** built from `backend/Dockerfile` (API, worker, scheduler and renderer together, started by
-> `backend/start.sh`; run exactly one replica). The customer app (`frontend/`) and the back office (`frontend/admin/`) are two separate
-> **Vercel** projects, each with its own address, which is what keeps them separate sites. Files go to **Cloudflare R2**. There is no
+> `backend/start.sh`; run exactly one replica). The customer app **and the operator back office are one app** (`frontend/`, the back
+> office is `frontend/src/admin/`), deployed as one **Vercel** project. The back office is at `<site>/admin`, loaded only when that
+> address is opened; its sign-in is kept apart from the customers' (its own storage key, per tab). Set `APP_BASE_URL=https://<site>` and
+> `ADMIN_BASE_URL=https://<site>/admin`. Files go to **Cloudflare R2**. There is no
 > malware-scanner service: staging sets `ALLOW_UNSCANNED_UPLOADS=true` (uploads accepted unscanned; the API refuses that setting in
 > production). To try the backend image on your own computer first, free and in demo mode: `docker compose -f infra/docker-compose.backend.yml up --build`.
 
@@ -22,7 +24,7 @@ Staging uses its **own keys, database and bucket, with small spend limits**. Nev
 | Anthropic | writing the interview questions and the story | small model by default (`claude-haiku-5-5`) |
 | OpenAI (or any OpenAI-compatible endpoint) | the interviewer's voice (`tts`) and transcripts (`whisper-1`) | one key can serve both |
 | LiveKit Cloud | the interview room (optional) | see `docs/livekit-interview.md` |
-| Two domains | `app.<yours>` for customers, `admin.<yours>` for the back office | they **must differ**; the API refuses to start otherwise |
+| One domain | `app.<yours>` (or the `*.vercel.app` address) for customers; the back office is at `/admin` on the same address | `ADMIN_BASE_URL` must differ from `APP_BASE_URL`: use `<site>/admin` |
 
 Decide before you start: **payments.** There is no real payment adapter yet. Staging runs with `BILLING_PROVIDER=manual`: the
 Credits page says "added by our team", and an operator tops workspaces up in the back office (Billing → record an offline payment).
@@ -70,7 +72,7 @@ Use Railway's reference variables for the database, Redis and the private render
 | `REDIS_URL` | from the Redis plugin |
 | `SECRET_KEY` | the Fernet key |
 | `OPERATOR_EMAILS` | your email(s), comma separated |
-| `APP_BASE_URL` / `ADMIN_BASE_URL` | `https://app.<yours>` / `https://admin.<yours>` |
+| `APP_BASE_URL` / `ADMIN_BASE_URL` | `https://<site>` / `https://<site>/admin` |
 | `API_PUBLIC_URL` | the API's public `https://` address |
 | `RENDERER_BACKEND` | `http` is local-only: leave it unset; set `RENDERER_URL` to the renderer's private address |
 | `RENDERER_URL`, `RENDERER_SHARED_SECRET` | private URL, e.g. `http://renderer.railway.internal:4000`; the shared secret |
@@ -103,7 +105,7 @@ public URL; `STORAGE_ORIGIN` = the R2 host (`https://<account-id>.r2.cloudflares
 ## 4. R2 bucket
 
 - Private (no public access, no custom public domain). Object versioning off for media.
-- **CORS**: allow origin `https://app.<yours>` (and `https://admin.<yours>`), methods `PUT, GET`, header `Content-Type`. Without this,
+- **CORS**: allow origin `https://<site>` (one origin covers the back office too), methods `PUT, GET`, header `Content-Type`. Without this,
   the browser's upload of interview answers and pictures fails with a CORS error.
 
 ## 5. Order of deployment
@@ -115,7 +117,7 @@ public URL; `STORAGE_ORIGIN` = the R2 host (`https://<account-id>.r2.cloudflares
 4. `worker`, then `scheduler` (one only: two schedulers send reminders twice).
 5. `web` and `admin`; attach the two domains; wait for HTTPS.
 6. Create the first operator: in a Railway shell on `api`: `python -m app.cli bootstrap-operator you@your-domain 20`
-   (20 credits). Sign in at `https://admin.<yours>` with that email (the sign-in code is emailed).
+   (20 credits). Sign in at `https://<site>/admin` with that email (the sign-in code is emailed).
 7. `agent` last, if using LiveKit.
 
 ## 6. Limits before anything real runs (back office → Setup)
