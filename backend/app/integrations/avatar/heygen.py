@@ -137,9 +137,13 @@ class HeyGenProvider(AvatarProvider):
         look = await self._look(c, avatar_id)
         if look.get("default_voice_id"):
             return look["default_voice_id"]
-        if get_settings().heygen_default_voice_id:
-            return get_settings().heygen_default_voice_id
         gender = _gender(look.get("gender"))
+        st = get_settings()
+        chosen = {"male": st.heygen_voice_male, "female": st.heygen_voice_female}.get(
+            gender
+        ) or st.heygen_default_voice_id
+        if chosen:
+            return chosen
         key = (gender, accent)
         if key in _VOICES:
             return _VOICES[key]
