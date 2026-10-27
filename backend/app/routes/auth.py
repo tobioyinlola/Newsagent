@@ -33,6 +33,7 @@ from app.schemas.api import (
     SignupStartIn,
     SignupVerifyIn,
 )
+from app.services import email_templates as templates
 from app.services import passwords, ratelimit
 from app.services import sessions as sess
 from app.services.audit import audit
@@ -42,7 +43,6 @@ router = APIRouter(prefix="/v1", tags=["auth"])
 BAD_CODE = HTTPException(401, "That code is incorrect or has expired. Request a new one and try again.")
 BAD_LOGIN = HTTPException(401, "That email and password don't match. Check them and try again, or reset your password.")
 BAD_INVITE = HTTPException(404, "That invite link isn't valid or has expired.")
-KIND_TEXT = {"signup": "confirm your email", "login": "finish signing in", "reset": "reset your password"}
 
 
 async def _throttle(
@@ -68,14 +68,8 @@ def _check_password(password: str, email: str) -> None:
         raise HTTPException(422, problem)
 
 
-def _email(kind: str, code: str) -> tuple[str, str]:
-    mins = get_settings().otp_ttl_minutes
-    what = KIND_TEXT[kind]
-    return (
-        f"Your Newsagent code: {code}",
-        f"Your code to {what} is:\n\n    {code}\n\nIt works once and expires in {mins} minutes. If you didn't ask for it, "
-        "ignore this email: nobody can get in without it. Never share it with anyone.\n",
-    )
+def _email(kind: str, code: str) -> tuple[str, str, str]:
+    return templates.sign_in_code(kind, code, get_settings().otp_ttl_minutes)
 
 
 # ---------- sign up (invite only) ----------
@@ -105,8 +99,8 @@ async def signup_start(
         ip=ratelimit.client_ip(request),
     )
     await db.commit()
-    subject, text = _email("signup", code)
-    bg.add_task(send_email, inv.email, subject, text)
+    subject, html, text = _email("signup", code)
+    bg.add_task(send_email, inv.email, subject, text, html)
     return CodeSentOut(email_hint=sess.mask_email(inv.email), expires_in_s=get_settings().otp_ttl_minutes * 60)
 
 
@@ -151,8 +145,8 @@ async def login(
     ns = await sess.create_session(db, user, request, otp_verified=not operator)
     if operator:  # second step: operators confirm each sign-in with an emailed code
         code = await sess.issue_code(db, email, "login", ip=ratelimit.client_ip(request))
-        subject, text = _email("login", code)
-        bg.add_task(send_email, email, subject, text)
+        subject, html, text = _email("login", code)
+        bg.add_task(send_email, email, subject, text, html)
         audit(db, email, "auth.login", target_type="user", target_id=user.id, detail={"otp": "sent"}, request=request)
     await db.commit()
     return SessionOut(token=ns.token, expires_at=ns.row.expires_at, otp_required=operator)
@@ -185,8 +179,8 @@ async def login_otp_resend(
     await _throttle(request, "login-resend", ctx.user.id, (5, 3600), (20, 3600))
     code = await sess.issue_code(db, ctx.user.email, "login", ip=ratelimit.client_ip(request))
     await db.commit()
-    subject, text = _email("login", code)
-    bg.add_task(send_email, ctx.user.email, subject, text)
+    subject, html, text = _email("login", code)
+    bg.add_task(send_email, ctx.user.email, subject, text, html)
     return CodeSentOut(email_hint=sess.mask_email(ctx.user.email), expires_in_s=get_settings().otp_ttl_minutes * 60)
 
 
@@ -201,8 +195,8 @@ async def password_forgot(
     if user is not None:  # unknown emails get the identical response and no email
         code = await sess.issue_code(db, email, "reset", ip=ratelimit.client_ip(request))
         await db.commit()
-        subject, text = _email("reset", code)
-        bg.add_task(send_email, email, subject, text)
+        subject, html, text = _email("reset", code)
+        bg.add_task(send_email, email, subject, text, html)
     return CodeSentOut(expires_in_s=get_settings().otp_ttl_minutes * 60)
 
 

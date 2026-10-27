@@ -46,12 +46,18 @@ async def issue_code(
     password_hash: str | None = None,
     ip: str | None = None,
 ) -> str:
-    """Create a fresh code; any earlier unused code for the same email and purpose stops working."""
+    """Create a fresh code. Codes older than a minute stop working; one requested seconds ago (a double click, a quick resend) still does,
+    so the code in the first email the person opens is never the one that was just cancelled."""
     email = email.lower()
     now = datetime.now(UTC)
     await session.execute(
         update(AuthCode)
-        .where(AuthCode.email == email, AuthCode.purpose == purpose, AuthCode.consumed_at.is_(None))
+        .where(
+            AuthCode.email == email,
+            AuthCode.purpose == purpose,
+            AuthCode.consumed_at.is_(None),
+            AuthCode.created_at < now - timedelta(seconds=60),
+        )
         .values(consumed_at=now)
     )
     code = new_code()
@@ -76,31 +82,36 @@ async def check_code(
     """The code's row, once, for the right unexpired code; None otherwise. Five wrong guesses burn the code. Compares in constant time."""
     email = email.lower()
     now = datetime.now(UTC)
-    row = (
+    rows = (
         (
             await session.execute(
                 select(AuthCode)
                 .where(AuthCode.email == email, AuthCode.purpose == purpose, AuthCode.consumed_at.is_(None))
                 .order_by(AuthCode.created_at.desc())
+                .limit(3)
             )
         )
         .scalars()
-        .first()
+        .all()
     )
-    expected = row.code_hash if row else hash_code(email, purpose, "000000")  # same work whether or not a code exists
-    ok = hmac.compare_digest(expected, hash_code(email, purpose, code.strip()))
-    if row is None or _utc(row.expires_at) < now or (invite_id is not None and row.invite_id != invite_id):
+    given = hash_code(email, purpose, code.strip())
+    live = [r for r in rows if _utc(r.expires_at) >= now and (invite_id is None or r.invite_id == invite_id)]
+    live = [r for r in live if r.attempts < MAX_CODE_ATTEMPTS]
+    dummy = hash_code(email, purpose, "000000")
+    hit = None
+    for r in live:
+        if hmac.compare_digest(r.code_hash, given):
+            hit = r
+    if not live:
+        hmac.compare_digest(dummy, given)  # same work whether or not a code exists
+    if hit is None:
+        for r in live:
+            r.attempts += 1
+            if r.attempts >= MAX_CODE_ATTEMPTS:
+                r.consumed_at = now  # burned: the attacker must request a new code (which is rate limited)
         return None
-    if row.attempts >= MAX_CODE_ATTEMPTS:
-        row.consumed_at = now
-        return None
-    if not ok:
-        row.attempts += 1
-        if row.attempts >= MAX_CODE_ATTEMPTS:
-            row.consumed_at = now  # burned: the attacker must request a new code (which is rate limited)
-        return None
-    row.consumed_at = now
-    return row
+    hit.consumed_at = now
+    return hit
 
 
 # ---------- sessions ----------

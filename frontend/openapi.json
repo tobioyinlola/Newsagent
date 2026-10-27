@@ -1952,6 +1952,11 @@
             "title": "Code",
             "type": "string"
           },
+          "emailed": {
+            "default": false,
+            "title": "Emailed",
+            "type": "boolean"
+          },
           "expires_at": {
             "format": "date-time",
             "title": "Expires At",

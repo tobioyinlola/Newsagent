@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { api, type Schemas, unwrap } from "../api/client";
-import { Button, Card, ErrorBox, Field, inputCls, Notice } from "../components/ui";
+import { Button, Card, ErrorBox, Field, inputCls, Notice, Toast } from "../components/ui";
 import { Logo } from "../components/Logo";
 import { getToken, setToken } from "../lib/auth";
 
@@ -35,13 +35,13 @@ function CodeField({ value, onChange }: { value: string; onChange: (v: string) =
   );
 }
 
-function useFinish(first: boolean) {
+function useFinish() {
   const nav = useNavigate();
   const qc = useQueryClient();
   return (s: Session) => {
     setToken(s.token);
     qc.clear();
-    nav(s.otp_required ? "/otp" : first ? "/brand" : "/projects", { replace: true });
+    nav(s.otp_required ? "/otp" : "/dashboard", { replace: true });
   };
 }
 
@@ -50,13 +50,13 @@ export function Login() {
   const invite = params.get("invite");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const finish = useFinish(false);
+  const finish = useFinish();
   const login = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/auth/login", { body: { email, password } })),
     onSuccess: finish,
   });
   if (invite) return <Navigate to={`/signup?code=${encodeURIComponent(invite)}`} replace />;
-  if (getToken()) return <Navigate to="/projects" replace />;
+  if (getToken()) return <Navigate to="/dashboard" replace />;
   return (
     <Shell>
       <Card title="Sign in">
@@ -81,7 +81,7 @@ export function Signup() {
   const [confirm, setConfirm] = useState("");
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState("");
-  const finish = useFinish(true);
+  const finish = useFinish();
   const preview = useQuery({
     queryKey: ["invite", inviteCode],
     queryFn: () => unwrap(api.GET("/v1/auth/invite/{code}", { params: { path: { code: inviteCode } } })),
@@ -94,11 +94,13 @@ export function Signup() {
   });
   const verify = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/auth/signup/verify", { body: { invite_code: inviteCode, code: code.trim() } })),
-    onSuccess: finish,
+    onSuccess: (s) => { setCreated(true); window.setTimeout(() => finish(s), 1800); },
   });
+  const [created, setCreated] = useState(false);
   const mismatch = confirm.length > 0 && confirm !== password;
   return (
     <Shell>
+      {created && <Toast>Account created. Taking you to your dashboard…</Toast>}
       <Card title="Create your workspace">
         {!inviteCode || preview.isError ? (
           <Notice tone="warn">This invite link is not valid or has expired. Ask us for a new one, or <Link className="underline" to="/login">sign in</Link>.</Notice>
@@ -106,7 +108,7 @@ export function Signup() {
           <p aria-busy="true">Loading…</p>
         ) : sent ? (
           <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); verify.mutate(); }}>
-            <Notice tone="ok">We emailed a 6-digit code to {preview.data?.email_hint}. It expires in 10 minutes.</Notice>
+            <Notice tone="ok">We emailed a 6-digit code to {preview.data?.email_hint}. It expires in 10 minutes; if you ask for more than one, use the newest.</Notice>
             <CodeField value={code} onChange={setCode} />
             <ErrorBox error={verify.error} />
             <div className="flex gap-3">
@@ -136,7 +138,7 @@ export function OtpChallenge() {
   const qc = useQueryClient();
   const verify = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/auth/login/otp", { body: { code: code.trim() } })),
-    onSuccess: () => { qc.clear(); nav("/projects", { replace: true }); },
+    onSuccess: () => { qc.clear(); nav("/dashboard", { replace: true }); },
   });
   const resend = useMutation({ mutationFn: () => unwrap(api.POST("/v1/auth/login/otp/resend")) });
   if (!getToken()) return <Navigate to="/login" replace />;
@@ -171,14 +173,16 @@ export function Forgot() {
   });
   const reset = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/auth/password/reset", { body: { email, code: code.trim(), new_password: password } })),
-    onSuccess: () => nav("/login", { replace: true }),
+    onSuccess: () => { setDone(true); window.setTimeout(() => nav("/login", { replace: true }), 2200); },
   });
+  const [done, setDone] = useState(false);
   return (
     <Shell>
+      {done && <Toast>Password updated. Taking you to sign in…</Toast>}
       <Card title="Reset your password">
         {sent ? (
           <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); reset.mutate(); }}>
-            <Notice tone="ok">If {email} has an account, we have emailed a 6-digit code. It expires in 10 minutes.</Notice>
+            <Notice tone="ok">If {email} has an account, we have emailed a 6-digit code. It expires in 10 minutes; if you ask for more than one, use the newest.</Notice>
             <CodeField value={code} onChange={setCode} />
             <PasswordField label="New password" value={password} onChange={setPassword} autoComplete="new-password" hint="At least 10 characters." />
             <ErrorBox error={reset.error} />

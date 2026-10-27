@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import Principal, operator
+from app.config import get_settings
 from app.db import get_session
 from app.models import CreditPack, Invite, VendorBudget, Workspace
 from app.schemas.api import (
@@ -21,8 +22,10 @@ from app.schemas.api import (
     WorkspaceAdminOut,
     WorkspacePatch,
 )
+from app.services import email_templates as templates
 from app.services import ledger
 from app.services.audit import audit
+from app.services.notifications import send_email
 from app.services.spend_guard import ensure_vendor_budget
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
@@ -59,7 +62,14 @@ async def create_invite(
         request=request,
     )
     await session.commit()
-    return InviteOut(code=inv.code, workspace_id=ws.id, expires_at=inv.expires_at)
+    subject, html, text = templates.invite(
+        ws.name,
+        f"{get_settings().app_base_url}/signup?code={inv.code}",
+        14,
+        f"{body.credits}" if body.credits else None,
+    )
+    emailed = await send_email(inv.email, subject, text, html)
+    return InviteOut(code=inv.code, workspace_id=ws.id, expires_at=inv.expires_at, emailed=emailed)
 
 
 @router.patch("/workspaces/{workspace_id}")

@@ -6,6 +6,7 @@ import { Account } from "./pages/Account";
 import { Security } from "./pages/Security";
 import { Billing, MockPay } from "./pages/Billing";
 import { Brand } from "./pages/Brand";
+import { Dashboard } from "./pages/Dashboard";
 import { Forgot, Login, OtpChallenge, Signup } from "./pages/Login";
 import { NewProject } from "./pages/NewProject";
 import { NewProjectClassic } from "./pages/NewProjectClassic";
@@ -28,6 +29,7 @@ export function App() {
       <Route path="/billing/pay/:checkoutId" element={<MockPay />} />
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/new" element={<NewProject />} />
           <Route path="/projects/new-classic" element={<NewProjectClassic />} /> {/* the original script-first flow; not linked */}
@@ -38,7 +40,7 @@ export function App() {
           <Route path="/security" element={<Security />} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/projects" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }

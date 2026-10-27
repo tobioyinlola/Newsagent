@@ -139,7 +139,10 @@ async def billing_webhook(request: Request, session: AsyncSession = Depends(get_
             )
             for to in emails:
                 await send_email(
-                    to, "Credits added", f"We've added {co.credits} credits to your workspace. Thank you!\n"
+                    to,
+                    "Credits added",
+                    f"We've added {co.credits} credits to your workspace. Thank you!",
+                    link=("Make a video", f"{get_settings().app_base_url}/projects/new"),
                 )
     return {"result": result}
 

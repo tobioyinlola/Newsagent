@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     livekit_api_key: str = ""
     livekit_api_secret: str = ""
     livekit_agent_name: str = "cf-interviewer"
+    livekit_agent_enabled: bool = (
+        False  # set true only once the interviewer agent is deployed; otherwise the browser voice is used
+    )
     # Which vendor writes the questions, the story and the content check: "anthropic" or "openai" (any OpenAI-compatible endpoint)
     llm_provider: str = "anthropic"
     llm_api_key: str = ""  # openai only; empty = the same key as TTS_API_KEY / TRANSCRIPTION_API_KEY

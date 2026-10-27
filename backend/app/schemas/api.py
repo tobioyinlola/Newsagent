@@ -153,6 +153,7 @@ class InviteOut(BaseModel):
     code: str
     workspace_id: str
     expires_at: datetime
+    emailed: bool = False  # true once the invitation email was sent to the startup
 
 
 class WorkspacePatch(BaseModel):

@@ -8,6 +8,7 @@ from app.config import get_settings
 from app.db import session_maker
 from app.integrations import registry
 from app.models import Project, User
+from app.services import email_templates as templates
 
 log = logging.getLogger("notifications")
 
@@ -37,10 +38,21 @@ MESSAGES = {
 }
 
 
-async def send_email(to: str, subject: str, text: str) -> bool:
-    """Send one email; never raises (a failed email must not break a pipeline or request)."""
+async def send_email(
+    to: str,
+    subject: str,
+    text: str,
+    html: str | None = None,
+    *,
+    heading: str | None = None,
+    link: tuple[str, str] | None = None,
+) -> bool:
+    """Send one email; never raises (a failed email must not break a pipeline or request).
+    Without `html`, the text is wrapped in the branded template (`heading` defaults to the subject, `link` becomes the button)."""
     try:
-        await registry.get_email().send(to, subject, text)
+        if html is None:
+            html, text = templates.notice(heading or subject, text, link)
+        await registry.get_email().send(to, subject, text, html)
         return True
     except Exception:  # noqa: BLE001
         log.exception("email to a recipient failed: %s", subject)
@@ -60,9 +72,8 @@ async def notify_owners(project_id: str, kind: str) -> None:
                 .all()
             )
         link = f"{get_settings().app_base_url}/projects/{project_id}"
-        text = f"{body}\n\nOpen your project: {link}\n"
         for to in emails:
-            await registry.get_email().send(to, subject, text)
+            await send_email(to, subject, body, link=("Open your project", link))
     except Exception:  # noqa: BLE001
         log.exception("notification %s failed for project %s", kind, project_id)
 
@@ -74,7 +85,7 @@ async def notify_operators(subject: str, text: str) -> None:
     try:
         ops = [e.strip() for e in get_settings().operator_emails.split(",") if e.strip()]
         for to in ops:
-            await registry.get_email().send(to, subject, text)
+            await send_email(to, subject, text)
         if not ops:
             log.warning("operator alert with no OPERATOR_EMAILS configured: %s", subject)
     except Exception:  # noqa: BLE001
@@ -109,19 +120,19 @@ async def email_founder_invite(
         f"Hi {founder_name or 'there'},\n\n"
         f"{company} is being featured in a short news-style video with an AI-generated anchor, and you have been "
         "asked to answer a few questions on camera.\n\n"
-        "It takes about 10 minutes on your phone or computer. You can re-record any answer.\n\n"
-        f"Your private link (no account needed, expires in {days} days):\n{link}\n\n"
-        "If the button or link doesn't open, copy it into your browser. Please don't forward it: it is just for you.\n"
+        "It takes about 10 minutes on your phone or computer, and you can re-record any answer. No account needed: the link below "
+        f"is private and expires in {days} days. Please don't forward it."
     )
-    return await send_email(to, subject, text)
+    return await send_email(
+        to, subject, text, heading=f"Record your interview for {company}", link=("Start your interview", link)
+    )
 
 
 async def email_founder_retake(to: str, founder_name: str, company: str, token: str, note: str) -> bool:
-    text = (
-        f"Hi {founder_name or 'there'},\n\nThe team at {company} would like you to re-record an answer. {note}\n\n"
-        f"Your private link:\n{founder_link(token)}\n"
+    text = f"Hi {founder_name or 'there'},\n\nThe team at {company} would like you to re-record an answer. {note}"
+    return await send_email(
+        to, f"Please re-record an answer for {company}", text, link=("Re-record your answer", founder_link(token))
     )
-    return await send_email(to, f"Please re-record an answer for {company}", text)
 
 
 def low_balance_alert(workspace_id: str, balance) -> None:
@@ -138,8 +149,8 @@ def low_balance_alert(workspace_id: str, balance) -> None:
                 await send_email(
                     to,
                     "You're running low on credits",
-                    f"Your workspace has {float(balance):.2f} credits left. Add credits so your next video isn't paused:\n"
-                    f"{get_settings().app_base_url}/billing\n",
+                    f"Your workspace has {float(balance):.2f} credits left. Add credits so your next video isn't paused.",
+                    link=("Add credits", f"{get_settings().app_base_url}/billing"),
                 )
         except Exception:  # noqa: BLE001
             log.exception("low balance notification failed")

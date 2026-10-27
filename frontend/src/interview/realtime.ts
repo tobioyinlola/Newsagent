@@ -32,7 +32,7 @@ export async function joinRealtime(token: string, stream: MediaStream): Promise<
   room.on(RoomEvent.TrackSubscribed, (track) => {
     if (track.kind === Track.Kind.Audio) { const el = track.attach(); el.style.display = "none"; document.body.appendChild(el); }
   });
-  const close = () => { void room.disconnect(); document.querySelectorAll("audio[data-lk-agent]").forEach((e) => e.remove()); };
+  const close = () => { void room.disconnect(false); /* false: leave the founder's camera running */ document.querySelectorAll("audio[data-lk-agent]").forEach((e) => e.remove()); };
   try {
     await room.connect(data.url, data.token);
     await room.startAudio();
