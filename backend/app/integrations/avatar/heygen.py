@@ -6,6 +6,7 @@ beyond those named in the spec are UNVERIFIED against the live API; confirm in t
 """
 
 import asyncio
+import logging
 
 import httpx
 
@@ -18,7 +19,9 @@ from app.integrations.avatar.base import (
     Presenter,
     VoiceOption,
 )
+from app.integrations.errors import ProviderError
 
+log = logging.getLogger("heygen")
 BASE = "https://api.heygen.com"
 # Measured twice on 2026-10-25: 3.0 s cost $0.12 and 3.4 s cost $0.11 (wallet deltas), about $0.03 to $0.04 a second.
 # Two short samples on the account's default engine; there may be a minimum charge. Re-measure with a longer clip before pricing.
@@ -29,6 +32,20 @@ def _gender(v: str | None) -> str:
     """HeyGen labels looks "Woman" / "female" / "Man" / "male" / "Unspecified" inconsistently; offer female | male | ''."""
     v = (v or "").strip().lower()
     return {"woman": "female", "female": "female", "man": "male", "male": "male"}.get(v, "")
+
+
+def _detail(r: httpx.Response) -> str:
+    """HeyGen's error text from a failed response (shape differs between endpoints), trimmed and without any URLs' tokens."""
+    try:
+        j = r.json()
+    except ValueError:
+        return r.text[:300] or "no details"
+    e = j.get("error") if isinstance(j, dict) else None
+    if isinstance(e, dict):
+        msg = e.get("message") or e.get("detail") or e.get("code")
+    else:
+        msg = e or (j.get("message") if isinstance(j, dict) else None)
+    return str(msg or j)[:300]
 
 
 class HeyGenProvider(AvatarProvider):
@@ -86,11 +103,27 @@ class HeyGenProvider(AvatarProvider):
         return out
 
     async def submit(self, req: AvatarRequest) -> str:
-        body: dict = {"type": "avatar", "avatar_id": req.avatar_id, "script": req.script_text}
+        body: dict = {"type": "avatar", "avatar_id": req.avatar_id, "script": " ".join(req.script_text.split())}
         if req.transparent:
             body["output_format"] = "webm"  # never send "background" with webm
         async with httpx.AsyncClient(base_url=BASE, headers=self._headers, timeout=30) as c:
             r = await c.post("/v3/videos", json=body)
+            if r.status_code in (
+                400,
+                422,
+            ):  # keep HeyGen's own reason: the status line alone says nothing about what to fix
+                detail = _detail(r)
+                log.warning(
+                    "heygen refused a video (%s): %s | avatar=%s transparent=%s words=%s",
+                    r.status_code,
+                    detail,
+                    req.avatar_id,
+                    req.transparent,
+                    len(req.script_text.split()),
+                )
+                err = ProviderError(f"HeyGen refused the request ({r.status_code}): {detail}", "invalid_input")
+                err.user_message = f"The video service refused this request: {detail}"
+                raise err
             r.raise_for_status()
             return r.json()["data"]["video_id"]
 
