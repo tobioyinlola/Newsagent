@@ -9,6 +9,10 @@
   },
   "rewrites": [
     {
+      "source": "/v1/(.*)",
+      "destination": "https://backend-production-73a97.up.railway.app/v1/$1"
+    },
+    {
       "source": "/(.*)",
       "destination": {
         "service": "frontend"
