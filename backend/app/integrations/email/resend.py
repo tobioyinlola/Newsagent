@@ -10,15 +10,18 @@ class ResendEmail(EmailProvider):
     def __init__(self, client: httpx.AsyncClient | None = None) -> None:
         s = get_settings()
         self._from = s.email_from
-        self._client = client or httpx.AsyncClient(
-            base_url="https://api.resend.com",
-            headers={"Authorization": f"Bearer {s.email_api_key}"},
-            timeout=VENDOR_POLICIES["email"].timeout_s,
-        )
+        self._headers = {"Authorization": f"Bearer {s.email_api_key}"}
+        self._injected = client  # tests; in production each send opens its own client (the background worker runs each task in a new event loop, and a client kept from an earlier loop fails with "Event loop is closed")
 
     async def send(self, to: str, subject: str, text: str, html: str | None = None) -> None:
         body: dict = {"from": self._from, "to": [to], "subject": subject, "text": text}
         if html:
             body["html"] = html
-        r = await self._client.post("/emails", json=body)
+        if self._injected is not None:
+            r = await self._injected.post("/emails", json=body)
+        else:
+            async with httpx.AsyncClient(
+                base_url="https://api.resend.com", headers=self._headers, timeout=VENDOR_POLICIES["email"].timeout_s
+            ) as c:
+                r = await c.post("/emails", json=body)
         r.raise_for_status()
