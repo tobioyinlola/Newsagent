@@ -80,8 +80,13 @@ async def hit(key: str, max_calls: int, per_s: int) -> bool:
     return await _memory_hit(key, max_calls, per_s)
 
 
+ALWAYS_LIMITED = {"webhook", "share-view", "share", "export", "account-delete", "checkout"}
+
+
 def limit(name: str, max_calls: int, per_s: int):
     async def dep(request: Request) -> None:
+        if name not in ALWAYS_LIMITED and not get_settings().enforce_limits:
+            return
         for key in (f"{name}:u:{identity(request)}", f"{name}:ip:{client_ip(request)}"):
             if not await hit(key, max_calls, per_s):
                 raise HTTPException(429, "Too many requests. Please slow down.")

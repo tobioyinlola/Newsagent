@@ -81,16 +81,17 @@ class SpendGuard:
     ) -> Reservation:
         est = Decimal(str(estimated_cost))
         charge = est * markup()
-        if await is_paused(self.session):  # operator kill switch
+        enforce = get_settings().enforce_limits
+        if enforce and await is_paused(self.session):  # operator kill switch
             raise LimitReached("Video creation is paused for maintenance. It will resume shortly.", "paused")
         ws = (
             await self.session.execute(select(Workspace).where(Workspace.id == workspace_id).with_for_update())
         ).scalar_one()
         if ws.suspended:
             raise LimitReached("This workspace is suspended.", "suspended")
-        if ws.credit_balance < charge:
+        if enforce and ws.credit_balance < charge:
             raise LimitReached("Not enough credits for this step.", "credits")
-        if ws.spend_cap and ws.spent_total + charge > ws.spend_cap:
+        if enforce and ws.spend_cap and ws.spent_total + charge > ws.spend_cap:
             raise LimitReached("Workspace spend cap reached.", "workspace_cap")
 
         period = _period()
@@ -101,10 +102,14 @@ class SpendGuard:
                 .with_for_update()
             )
         ).scalar_one_or_none()
+        if vb is None and not enforce:
+            vb = await ensure_vendor_budget(
+                self.session, vendor, Decimal("0")
+            )  # spend is still recorded; 0 = no limit set
         if vb is None:
             # No budget row means no approved budget: fail closed.
             raise LimitReached(f"No monthly budget configured for {vendor}.", "vendor_budget")
-        if vb.spent + est > vb.limit:
+        if enforce and vb.spent + est > vb.limit:
             raise LimitReached(f"Monthly budget for {vendor} reached.", "vendor_budget")
 
         await ledger.apply(
