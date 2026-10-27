@@ -20,8 +20,8 @@ const onAdmin = [{ type: "host", value: ADMIN_HOST.replace(/\./g, "\\.") }];
 const config = {
   $schema: "https://openapi.vercel.sh/vercel.json",
   services: {
-    admin: { root: "admin", framework: "vite" },
-    frontend: { root: "frontend", framework: "vite" },
+    admin: { root: "admin", framework: "vite", buildCommand: "pnpm build" },
+    frontend: { root: "frontend", framework: "vite", buildCommand: "pnpm build" },
   },
   rewrites: [
     { source: "/(.*)", has: onAdmin, destination: { service: "admin" } },

@@ -3,11 +3,13 @@
   "services": {
     "admin": {
       "root": "admin",
-      "framework": "vite"
+      "framework": "vite",
+      "buildCommand": "pnpm build"
     },
     "frontend": {
       "root": "frontend",
-      "framework": "vite"
+      "framework": "vite",
+      "buildCommand": "pnpm build"
     }
   },
   "rewrites": [
