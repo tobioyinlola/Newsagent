@@ -15,12 +15,21 @@ celery_app.conf.beat_schedule = {
 }
 
 
+def _fresh_providers() -> None:
+    """Every task runs in its own event loop, and the vendor clients (httpx) are tied to the loop that created them. A client kept
+    from an earlier task fails with "Event loop is closed" (take processing, emails, renders). Build them anew for each task."""
+    from app.integrations import registry
+
+    registry.reset_providers()
+
+
 @celery_app.task(name="pipeline.run_step")
 def run_step_task(step: str, payload: dict) -> None:
     from app.db import reset_engine
     from app.pipeline.runner import run_step
 
     async def _go() -> None:
+        _fresh_providers()
         try:
             await run_step(step, payload)
         finally:
@@ -33,6 +42,7 @@ def _run(coro_fn) -> dict:
     from app.db import reset_engine
 
     async def go() -> dict:
+        _fresh_providers()
         try:
             return await coro_fn()
         finally:
