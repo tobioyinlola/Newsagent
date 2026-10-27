@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     # header below. The event only wakes the pipeline up (it never supplies results), so a forged event cannot inject media.
     # The look used when a project doesn't choose a presenter. Required for real runs: HeyGen needs an avatar id.
     heygen_default_avatar_id: str = ""
+    heygen_voice_male: str = ""  # voice used when a presenter's look has no voice of its own and the presenter is a man
+    heygen_voice_female: str = ""  # ... and a woman
+    heygen_default_voice_id: str = ""  # optional: used for any presenter whose look has no voice of its own
     # Looks whose video already contains the whole studio (a photo of a news set that the vendor animates). Those are
     # requested as ordinary MP4 and shown full frame; every other look is requested as a transparent cut-out.
     heygen_fullframe_avatar_ids: str = ""

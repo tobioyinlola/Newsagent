@@ -28,6 +28,10 @@ export async function renderOne(opts: {
     inputProps: opts.props, browserExecutable, // Do NOT force gl: "swangle". It was measured 2-3x slower than Chrome's default in docs/render-benchmarks.md.
     chromiumOptions: process.env.RENDER_GL ? { gl: process.env.RENDER_GL as "swangle" | "angle" | "egl" } : undefined,
     concurrency: process.env.RENDER_CONCURRENCY ? Number(process.env.RENDER_CONCURRENCY) : undefined,
+    // Remotion defaults to half the host's CPU cores, which on a shared cloud host is far more browser tabs than the container's
+    // memory allows: the video decoder is then killed (SIGKILL) mid-render. Keep the decoder's frame cache and threads small.
+    offthreadVideoCacheSizeInBytes: Number(process.env.RENDER_VIDEO_CACHE_MB ?? 384) * 1024 * 1024,
+    offthreadVideoThreads: Number(process.env.RENDER_VIDEO_THREADS ?? 1),
     jpegQuality: process.env.RENDER_JPEG_QUALITY ? Number(process.env.RENDER_JPEG_QUALITY) : undefined,
     scale: opts.scale,
     onProgress: ({ progress }) => opts.onProgress?.(progress),

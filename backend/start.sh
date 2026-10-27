@@ -13,7 +13,7 @@ if [ -n "${BOOTSTRAP_OPERATOR_EMAIL:-}" ]; then
   python -m app.cli bootstrap-operator "$BOOTSTRAP_OPERATOR_EMAIL" "${BOOTSTRAP_OPERATOR_CREDITS:-20}" || echo "operator bootstrap failed" >&2
 fi
 
-(cd renderer && PORT=4000 RENDER_JOBS_CONCURRENCY="${RENDER_JOBS_CONCURRENCY:-1}" exec node_modules/.bin/tsx src/server/index.ts) &
+(cd renderer && PORT=4000 RENDER_CONCURRENCY="${RENDER_CONCURRENCY:-2}" RENDER_JOBS_CONCURRENCY="${RENDER_JOBS_CONCURRENCY:-1}" exec node_modules/.bin/tsx src/server/index.ts) &
 celery -A app.pipeline.celery_app worker --concurrency "${WORKER_CONCURRENCY:-2}" --loglevel INFO &
 celery -A app.pipeline.celery_app beat --loglevel INFO --schedule /tmp/celerybeat-schedule &
 uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}" &
