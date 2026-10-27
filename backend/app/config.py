@@ -77,6 +77,9 @@ class Settings(BaseSettings):
     app_base_url: str = "http://localhost:5173"
     admin_base_url: str = "http://localhost:5173/admin"  # the back office: the customer app's site under /admin (or, if you host it apart, its own https address)
     environment: str = "local"  # local, staging, production
+    # ENFORCE_LIMITS=false: video creation is never refused for credits, spend caps, vendor budgets, a maintenance pause or request
+    # rate limits. Spend is still recorded. Sign-in throttles, webhook/share limits and the suspended flag always apply.
+    enforce_limits: bool = True
     use_mocks: bool = True
     operator_emails: str = ""  # comma separated; may call /admin
     queue_backend: str = "inline"  # inline | celery

@@ -68,3 +68,20 @@ async def test_alert_at_80_percent_once(maker, workspace):
         await g.reserve(workspace, "heygen", 2)  # 81 > 80
         await g.reserve(workspace, "heygen", 1)
     assert len(alerts) == 1
+
+
+async def test_with_limits_off_nothing_is_refused_but_spend_is_recorded(maker, workspace, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "enforce_limits", False)
+    async with maker() as s:
+        ws = await s.get(Workspace, workspace)
+        ws.credit_balance, ws.spend_cap = Decimal("0"), Decimal("1")
+        await s.commit()
+    async with maker() as s:
+        g = SpendGuard(s)
+        r = await g.reserve(workspace, "never-budgeted", 3)
+        await g.settle(r, 3)
+        await s.commit()
+        vb = (await s.execute(select(VendorBudget).where(VendorBudget.vendor == "never-budgeted"))).scalar_one()
+        assert vb.spent == Decimal("3")
