@@ -117,7 +117,7 @@ public URL; `STORAGE_ORIGIN` = the R2 host (`https://<account-id>.r2.cloudflares
 4. `worker`, then `scheduler` (one only: two schedulers send reminders twice).
 5. `web` and `admin`; attach the two domains; wait for HTTPS.
 6. Create the first operator: in a Railway shell on `api`: `python -m app.cli bootstrap-operator you@your-domain 20`
-   (20 credits). Sign in at `https://<site>/admin` with that email (the sign-in code is emailed).
+   (20 credits). On Railway, set `BOOTSTRAP_OPERATOR_EMAIL` (and optionally `BOOTSTRAP_OPERATOR_CREDITS`) instead: the backend creates that account on start-up. Then open `https://<site>/admin`, choose **Forgot your password?**, enter that email, and set a password with the emailed code. Sign in at `https://<site>/admin` with that email (the sign-in code is emailed).
 7. `agent` last, if using LiveKit.
 
 ## 6. Limits before anything real runs (back office → Setup)
