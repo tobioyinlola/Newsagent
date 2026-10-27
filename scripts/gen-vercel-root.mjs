@@ -11,11 +11,16 @@ const env = {
   STORAGE_ORIGIN: process.env.STORAGE_ORIGIN || "https://*.r2.cloudflarestorage.com",
   LIVEKIT_ORIGIN: process.env.LIVEKIT_ORIGIN || "wss://*.livekit.cloud",
 };
+// The API lives on Railway: Vercel forwards the site's /v1/... calls there (no CORS, no build-time variable needed).
+const API_TARGET = process.env.API_TARGET || "https://backend-production-73a97.up.railway.app";
 const headers = Object.entries(securityHeaders(env)).map(([key, value]) => ({ key, value }));
 const config = {
   $schema: "https://openapi.vercel.sh/vercel.json",
   services: { frontend: { root: "frontend", framework: "vite", buildCommand: "pnpm build" } },
-  rewrites: [{ source: "/(.*)", destination: { service: "frontend" } }],
+  rewrites: [
+    { source: "/v1/(.*)", destination: `${API_TARGET}/v1/$1` },
+    { source: "/(.*)", destination: { service: "frontend" } },
+  ],
   headers: [
     { source: "/(.*)", headers: [...headers, { key: "Cache-Control", value: "no-cache" }] },
     { source: "/assets/(.*)", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },

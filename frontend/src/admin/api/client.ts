@@ -27,7 +27,9 @@ export async function unwrap<T>(p: Promise<{ data?: T; error?: unknown; response
   if (response.ok && data !== undefined) return data;
   if (response.ok) return undefined as T;
   const detail = (error as { detail?: unknown } | undefined)?.detail;
-  let message = response.statusText || "Something went wrong";
+  // an answer with no explanation: say who answered and what, so a wrong address or a proxy error is obvious
+  const where = (() => { try { const u = new URL(response.url); return `${u.host}${u.pathname}`; } catch { return response.url; } })();
+  let message = response.statusText || `Something went wrong (${response.status} from ${where})`;
   if (typeof detail === "string") message = detail;
   else if (detail && typeof detail === "object" && "message" in detail) message = String((detail as { message: unknown }).message);
   else if (detail && typeof detail === "object" && "error" in detail) message = String((detail as { error: unknown }).error);
