@@ -1,11 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "services": {
-    "admin": {
-      "root": "frontend/admin",
-      "framework": "vite",
-      "buildCommand": "pnpm build"
-    },
     "frontend": {
       "root": "frontend",
       "framework": "vite",
@@ -13,18 +8,6 @@
     }
   },
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "cover-founder-admin\\.vercel\\.app"
-        }
-      ],
-      "destination": {
-        "service": "admin"
-      }
-    },
     {
       "source": "/(.*)",
       "destination": {
@@ -35,51 +18,6 @@
   "headers": [
     {
       "source": "/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "cover-founder-admin\\.vercel\\.app"
-        }
-      ],
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.up.railway.app https://*.r2.cloudflarestorage.com; media-src 'self' blob: https://*.up.railway.app https://*.r2.cloudflarestorage.com; connect-src 'self' https://*.up.railway.app https://*.r2.cloudflarestorage.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "no-referrer"
-        },
-        {
-          "key": "Cross-Origin-Opener-Policy",
-          "value": "same-origin"
-        },
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=()"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "no-cache"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "missing": [
-        {
-          "type": "host",
-          "value": "cover-founder-admin\\.vercel\\.app"
-        }
-      ],
       "headers": [
         {
           "key": "Content-Security-Policy",

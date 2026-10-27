@@ -4,11 +4,19 @@ Local development is exempt (it uses mocks and dev tokens on purpose). Everythin
 problems listed, so a deploy is fixed in one go.
 """
 
+from urllib.parse import urlparse
+
 from cryptography.fernet import Fernet
 
 from app.config import Settings
 
 DEFAULT_STORAGE_KEYS = {"minioadmin", ""}
+
+
+def origin_of(url: str) -> str:
+    """scheme://host[:port] of an address, without any path (browsers' Origin and CORS never include one)."""
+    u = urlparse(url)
+    return f"{u.scheme}://{u.netloc}".lower() if u.scheme and u.netloc else url.rstrip("/").lower()
 
 
 def problems(s: Settings) -> list[str]:
@@ -54,10 +62,11 @@ def problems(s: Settings) -> list[str]:
     if not s.app_base_url.startswith("https://"):
         out.append("APP_BASE_URL must be https:// (magic links and share links are credentials)")
     if not s.admin_base_url.startswith("https://"):
-        out.append("ADMIN_BASE_URL must be https:// (the back office is a separate site from the customer app)")
+        out.append("ADMIN_BASE_URL must be https:// (the back office is a sign-in surface)")
     elif s.admin_base_url.rstrip("/") == s.app_base_url.rstrip("/"):
         out.append(
-            "ADMIN_BASE_URL must be a different site from APP_BASE_URL: the back office is not part of the customer app"
+            "ADMIN_BASE_URL must differ from APP_BASE_URL: give the back office its own site, or, when one site serves "
+            "both, its own path (ADMIN_BASE_URL=<APP_BASE_URL>/admin)"
         )
     if s.queue_backend != "celery":
         out.append("QUEUE_BACKEND must be celery (the inline queue runs work inside web requests)")

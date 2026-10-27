@@ -19,7 +19,6 @@ playwright-report/
 e2e-real/.media/
 backend/e2e-real.db
 frontend/Caddyfile
-frontend/admin/Caddyfile
 backend/e2e-real.db*
 backend/renderer/public/news-anchor.webm
 backend/renderer/public/studio-lady.mp4

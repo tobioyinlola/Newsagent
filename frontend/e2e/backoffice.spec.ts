@@ -26,12 +26,12 @@ async function customer(request: APIRequestContext, company: string, credits = "
 
 // `dev:` tokens (local only) stand in for a signed-in operator; the real sign-in is tested separately below
 async function asOperator(page: Page) {
-  await page.addInitScript(() => { if (!sessionStorage.getItem("seeded")) { sessionStorage.setItem("seeded", "1"); localStorage.setItem("newsagent.admin.token", "dev:ops@example.com"); } });
+  await page.addInitScript(() => { if (!sessionStorage.getItem("seeded")) { sessionStorage.setItem("seeded", "1"); sessionStorage.setItem("newsagent.admin.token", "dev:ops@example.com"); } });
 }
 
 test("the overview shows sign-ups, who is paying and how videos are doing", async ({ page, request }) => {
   for (const vendor of ["mock", "renderer"]) await ok(await request.put(`${API}/v1/admin/vendor-budgets`, { headers: OPS, data: { vendor, limit: "1000" } }));
-  const pack = await ok<{ id: string }>(await request.post(`${API}/v1/admin/packs`, { headers: OPS, data: { name: "Starter", credits: "30", price_usd: "29" } }));
+  const pack = await ok<{ id: string }>(await request.post(`${API}/v1/admin/packs`, { headers: OPS, data: { name: "Back office pack", credits: "30", price_usd: "29" } }));
   const a = await customer(request, "Acme Farms");
   await customer(request, "Beta Pay");
   const co = await ok<{ checkout_id: string }>(await request.post(`${API}/v1/billing/checkout`, { headers: a.headers, data: { pack_id: pack.id } }));
@@ -39,7 +39,7 @@ test("the overview shows sign-ups, who is paying and how videos are doing", asyn
   await ok(await request.post(`${API}/v1/projects`, { headers: a.headers, data: { brief_text: "Acme Farms helps farmers sell produce online across Ghana." } }));
 
   await asOperator(page);
-  await page.goto("/");
+  await page.goto("/admin");
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   const figures = page.getByLabel("Key figures");
   await expect(figures.getByText("Paying companies")).toBeVisible();
@@ -57,7 +57,7 @@ test("find a customer and see their people, videos and payments", async ({ page,
   await customer(request, "Zeta Logistics");
   const b = await customer(request, "Yoyo Foods");
   await asOperator(page);
-  await page.goto("/customers");
+  await page.goto("/admin/customers");
   await page.getByLabel("Search customers").fill("yoyo");
   await page.getByRole("button", { name: "Search" }).click();
   const rows = page.getByRole("table", { name: /Customers/ });
@@ -74,7 +74,7 @@ test("revenue lists paying companies and every payment, including offline ones",
   const c = await customer(request, "Gamma Grains");
   await ok(await request.post(`${API}/v1/admin/workspaces/${c.workspace}/credits`, { headers: OPS, data: { credits: "40", ref: `INV-${Date.now()}`, note: "bank transfer" } }));
   await asOperator(page);
-  await page.goto("/revenue");
+  await page.goto("/admin/revenue");
   await expect(page.getByRole("heading", { name: "Revenue" })).toBeVisible();
   await expect(page.getByRole("table", { name: "Paying companies" }).getByRole("link", { name: "Gamma Grains" })).toBeVisible();
   await expect(page.getByRole("table", { name: /Payments, newest first/ }).getByText("not recorded").first()).toBeVisible();
@@ -89,7 +89,7 @@ test("operators review held content, pause and resume paid steps, and see it in 
   expect((await request.post(`${API}/v1/projects/${p.id}/script/approve`, { headers: c.headers, data: {} })).status()).toBe(409); // held for review
 
   await asOperator(page);
-  await page.goto("/");
+  await page.goto("/admin");
   await expect(page.getByLabel("Needs attention").getByText(/waiting for review/)).toBeVisible();
   await page.getByRole("link", { name: "Review now" }).click();
   await expect(page.getByLabel("Content under review")).toContainText("guaranteed returns");
@@ -101,7 +101,7 @@ test("operators review held content, pause and resume paid steps, and see it in 
   await sidebar(page).getByRole("link", { name: "Operations" }).click();
   await page.getByRole("button", { name: "Pause all paid steps" }).click();
   await expect(page.getByText("Paid steps are paused.").first()).toBeVisible();
-  await page.goto("/");
+  await page.goto("/admin");
   await expect(page.getByLabel("Needs attention").getByText("Paid steps are paused.")).toBeVisible();
   await sidebar(page).getByRole("link", { name: "Operations" }).click();
   await page.getByRole("button", { name: "Resume paid steps" }).click();
@@ -116,8 +116,8 @@ test("operators review held content, pause and resume paid steps, and see it in 
 test("a customer cannot use the back office", async ({ page, request }) => {
   const c = await customer(request, "Epsilon Eats");
   const token = c.headers.Authorization.replace("Bearer ", "");
-  await page.addInitScript((t) => localStorage.setItem("newsagent.admin.token", t), token);
-  await page.goto("/");
+  await page.addInitScript((t) => sessionStorage.setItem("newsagent.admin.token", t), token);
+  await page.goto("/admin");
   await expect(page.getByText("isn't a Cover Founder operator")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Overview" })).toHaveCount(0);
   for (const path of ["/v1/admin/overview", "/v1/admin/customers", "/v1/admin/payments"]) expect((await request.get(`${API}${path}`, { headers: c.headers })).status()).toBe(403);
@@ -128,8 +128,8 @@ test("operators sign in with a password and a code emailed to them, and are sign
   await ok(await request.post(`${API}/v1/auth/password/forgot`, { data: { email: "ops@example.com" } }));
   await ok(await request.post(`${API}/v1/auth/password/reset`, { data: { email: "ops@example.com", code: await codeFor(request, "ops@example.com"), new_password: PASSWORD } }));
 
-  await page.goto("/");
-  await expect(page).toHaveURL(/\/login/);
+  await page.goto("/admin");
+  await expect(page).toHaveURL(/\/admin\/login/);
   await page.getByLabel("Email").fill("ops@example.com");
   await page.getByLabel("Password").fill("not the password");
   await page.getByRole("button", { name: "Sign in" }).click();
@@ -144,28 +144,28 @@ test("operators sign in with a password and a code emailed to them, and are sign
   await page.getByRole("button", { name: "Verify" }).click();
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page).toHaveURL(/\/login/);
-  await page.goto("/customers");
-  await expect(page).toHaveURL(/\/login/);
+  await expect(page).toHaveURL(/\/admin\/login/);
+  await page.goto("/admin/customers");
+  await expect(page).toHaveURL(/\/admin\/login/);
 });
 
 test("the sidebar collapses to icons and remembers it", async ({ page }) => {
   await asOperator(page);
-  await page.goto("/");
+  await page.goto("/admin");
   await expect(sidebar(page).getByRole("link", { name: "Customers" })).toBeVisible();
   await page.getByRole("button", { name: "Collapse sidebar" }).click();
   await expect(page.getByRole("button", { name: "Expand sidebar" })).toHaveAttribute("aria-expanded", "false");
   await page.reload();
   await expect(page.getByRole("button", { name: "Expand sidebar" })).toBeVisible();
   await sidebar(page).getByRole("link", { name: "Customers" }).click();
-  await expect(page).toHaveURL(/\/customers/);
+  await expect(page).toHaveURL(/\/admin\/customers/);
 });
 
 test("operators upload presenter clips, see them listed, switch them off and delete them", async ({ page, request }) => {
   const mp4 = path.join(os.tmpdir(), `presenter-${Date.now()}.mp4`);
   execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=s=1280x720:r=30:d=6", "-f", "lavfi", "-i", "sine=frequency=440:d=6", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", mp4]);
   await asOperator(page);
-  await page.goto("/");
+  await page.goto("/admin");
   await sidebar(page).getByRole("link", { name: "Presenter clips" }).click();
   await expect(page.getByRole("heading", { name: "Presenter clips" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Upload clip" })).toBeDisabled(); // nothing chosen, rights not confirmed

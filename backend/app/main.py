@@ -27,7 +27,7 @@ from app.routes import (
     scenes,
     system,
 )
-from app.runtime_checks import assert_runtime_ok
+from app.runtime_checks import assert_runtime_ok, origin_of
 
 # Magic-link and share tokens are credentials. They live in URL paths, so scrub them from every log line.
 _TOKEN_PATH = re.compile(r"(/v1/(?:interview|share)/)[^/\s?\"']+")
@@ -90,7 +90,10 @@ def create_app() -> FastAPI:
         sentry_sdk.init(dsn=s.sentry_dsn, environment=s.environment, before_send=_scrub_sentry, send_default_pii=False)
     app = FastAPI(title="Newsagent API", version="0.1.0")
     app.add_middleware(
-        CORSMiddleware, allow_origins=[s.app_base_url, s.admin_base_url], allow_methods=["*"], allow_headers=["*"]
+        CORSMiddleware,
+        allow_origins=sorted({origin_of(s.app_base_url), origin_of(s.admin_base_url)}),  # origins only, never paths
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
     if s.is_local and s.use_mocks:
         from app.routes import devmail, devstorage
@@ -104,8 +107,9 @@ def create_app() -> FastAPI:
         # with an operator's session: refuse any /v1/admin request that comes from the customer app's origin.
         if (
             request.url.path.startswith("/v1/admin")
-            and request.headers.get("origin") == s.app_base_url
-            and s.app_base_url != s.admin_base_url
+            and request.headers.get("origin") == origin_of(s.app_base_url)
+            and origin_of(s.app_base_url)
+            != origin_of(s.admin_base_url)  # one site serving both (/admin): no such guard
         ):
             return JSONResponse({"detail": "The back office is not available from this app."}, status_code=403)
         resp = await call_next(request)

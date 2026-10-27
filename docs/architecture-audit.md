@@ -11,7 +11,7 @@ Modular monolith in a monorepo.
   transcription, renderer, storage, email, billing, malware).
 - `backend/renderer/` Node/TypeScript service: Remotion 4 compositions (`NewsStudio`, `InterviewMerge`), ffmpeg processing of founder
   takes, loudness normalisation, media analysis. Own bounded queue (`MAX_QUEUE`).
-- `frontend/` React/Vite customer app. `frontend/admin/` separate operator back office. Storage: S3-compatible (R2) or local dev storage.
+- `frontend/` React/Vite customer app. the operator back office lives in it, loaded on demand under `/admin`. Storage: S3-compatible (R2) or local dev storage.
 - CI: GitHub Actions (api, renderer, web, admin, e2e, e2e-admin, e2e-real).
 
 ## 2. What works (verified)
@@ -21,7 +21,7 @@ Modular monolith in a monorepo.
 - Remotion merge with PiP / split / answers-column layouts; presenter-clip library (operator uploaded) mixed into merges.
 - Idempotent steps keyed by `(project, stage, input_hash)` in the `jobs` table; completed paid clips are reused (per-asset hash).
 - Moderation, retention (raw takes deleted after 90 days), privacy export/delete, back office, audit log.
-- 300 backend tests (SQLite and Postgres), 29 renderer tests, frontend/admin Playwright suites, real-stack e2e with real Remotion/ffmpeg.
+- 300 backend tests (SQLite and Postgres), 29 renderer tests, frontend Playwright suites (customer app and back office), real-stack e2e with real Remotion/ffmpeg.
 
 ## 3. Incomplete or not real
 | Area | Reality |

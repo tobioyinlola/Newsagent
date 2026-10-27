@@ -1,6 +1,6 @@
 import createClient, { type Middleware } from "openapi-fetch";
 import { getToken, setToken } from "../lib/auth";
-import type { components, paths } from "./schema";
+import type { components, paths } from "../../api/schema";
 
 const auth: Middleware = {
   onRequest({ request }) {

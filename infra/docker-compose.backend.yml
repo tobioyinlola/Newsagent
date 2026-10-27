@@ -2,7 +2,7 @@
 # vendors are stand-ins, the renderer is real. Nothing here costs money or touches a vendor.
 #   docker compose -f infra/docker-compose.backend.yml up --build
 #   curl http://localhost:8000/health        # {"status":"ok"}
-# Then run a front end against it:  cd frontend && VITE_API_URL=http://localhost:8000 pnpm dev   (and frontend/admin/ the same, on :5174)
+# Then run a front end against it:  cd frontend && VITE_API_URL=http://localhost:8000 pnpm dev   (the back office is the same app, at /admin)
 services:
   postgres:
     image: postgres:16

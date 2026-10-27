@@ -18,7 +18,7 @@ docker compose -f infra/docker-compose.yml up -d          # postgres, redis, min
 cd backend && uv sync && uv run alembic upgrade head
 OPERATOR_EMAILS=you@example.com uv run uvicorn app.main:app --reload    # http://localhost:8000/docs
 cd frontend && pnpm install && pnpm dev                    # customers: http://localhost:5173
-cd admin && pnpm install && pnpm dev                       # operator back office: http://localhost:5174 (separate app)
+# the operator back office is part of the same app: http://localhost:5173/admin
 cd backend/renderer && pnpm install && RENDERER_SHARED_SECRET=dev-secret pnpm dev
 ```
 `USE_MOCKS=true` (default locally) swaps every vendor (avatar, LLM, renderer, storage, email, transcription) for a mock,
@@ -65,7 +65,7 @@ column beside the founder's video that shows the question and what they said, li
 - Real-stack check: `cd frontend && pnpm e2e:real` (invite flow plus `live-interview.spec.ts`).
 
 ### Presenter clips (real presenter footage)
-Operators upload TV-style presenter clips in the back office (**Presenter clips**, `frontend/admin/`): an *opening shot* (3-20 s), *cutaways*
+Operators upload TV-style presenter clips in the back office (**Presenter clips**, `frontend/src/admin/`): an *opening shot* (3-20 s), *cutaways*
 (2-10 s) and a *sign-off* (3-20 s). MP4, MOV or WebM, landscape, 720p or more, up to 150 MB, sound kept. Uploads are checked
 (real file type, malware scan, real length and size read by the renderer) and the operator confirms they own or license the
 footage and the presenter agreed. Interview videos then open with an active opening shot, cut away to the presenter between
@@ -85,7 +85,7 @@ Local real-stack run (real ffmpeg + Remotion, mocked HeyGen/Whisper/email):
 `cd frontend && E2E_QUESTIONS=5 pnpm e2e:real`. Periodic jobs: `celery -A app.pipeline.celery_app beat` (one instance).
 
 ## Operating it (Phase 3)
-- **Back office** (`frontend/admin/`, its own app and site, port 5174, set `ADMIN_BASE_URL`): business overview, customers, payments and
+- **Back office** (`frontend/src/admin/`, served by the customer app's site under `/admin`, set `ADMIN_BASE_URL`): business overview, customers, payments and
   revenue, queue and jobs, review queue, costs and margin, credit packs, failover and an emergency pause, audit log. It is not
   part of the customer app, and the API refuses `/v1/admin*` calls from the customer app's origin. Operators sign in with
   password plus emailed code. **Credits** page for customers: balance, test checkout, usage statements, history. **Your data**: export or delete.
