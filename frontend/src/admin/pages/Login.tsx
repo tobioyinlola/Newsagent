@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { api, type Schemas, unwrap } from "../api/client";
-import { Button, Card, ErrorBox, Field, inputCls, Notice } from "../components/ui";
+import { Button, Card, ErrorBox, Field, inputCls, Notice, Toast } from "../components/ui";
 import { Logo } from "../components/Logo";
 import { getToken, setToken } from "../lib/auth";
 
@@ -112,16 +112,18 @@ export function Forgot() {
     mutationFn: () => unwrap(api.POST("/v1/auth/password/forgot", { body: { email } })),
     onSuccess: () => setSent(true),
   });
+  const [done, setDone] = useState(false);
   const reset = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/auth/password/reset", { body: { email, code: code.trim(), new_password: password } })),
-    onSuccess: () => nav("/login", { replace: true }),
+    onSuccess: () => { setDone(true); window.setTimeout(() => nav("/login", { replace: true }), 2200); },
   });
   return (
     <Shell>
+      {done && <Toast>Password updated. Taking you to sign in…</Toast>}
       <Card title="Reset your password">
         {sent ? (
           <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); reset.mutate(); }}>
-            <Notice tone="ok">If {email} has an account, we have emailed a 6-digit code. It expires in 10 minutes.</Notice>
+            <Notice tone="ok">If {email} has an account, we have emailed a 6-digit code. It expires in 10 minutes; if you ask for more than one, use the newest.</Notice>
             <CodeField value={code} onChange={setCode} />
             <PasswordField label="New password" value={password} onChange={setPassword} autoComplete="new-password" hint="At least 10 characters." />
             <ErrorBox error={reset.error} />

@@ -24,7 +24,7 @@ interview.
 ## Turning it on
 
 1. Create a LiveKit Cloud project (or self-host). Note its `wss://` URL, API key and API secret.
-2. API environment: `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` (set them as environment secrets; never paste them in chat).
+2. API environment: `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, and `LIVEKIT_AGENT_ENABLED=true` once the agent in step 4 is running (until then the interview uses the browser voice) (set them as environment secrets; never paste them in chat).
 3. Web build: `LIVEKIT_ORIGIN=wss://<project>.livekit.cloud` so the Content-Security-Policy allows the connection.
 4. Run the agent where it can reach LiveKit and the API: build `agent/Dockerfile`; it needs `LIVEKIT_URL`, `LIVEKIT_API_KEY`,
    `LIVEKIT_API_SECRET` and `TTS_API_KEY` (an OpenAI key; `TTS_MODEL` / `TTS_VOICE` optional). Its agent name is `cf-interviewer`

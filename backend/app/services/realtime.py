@@ -1,6 +1,6 @@
 """LiveKit for the AI interview: the room the founder joins and the token that lets one browser in.
 
-Optional. Without the three LiveKit settings nothing here runs and the interview works exactly as before, in the browser alone.
+Optional. Without the three LiveKit settings and LIVEKIT_AGENT_ENABLED nothing here runs and the interview works exactly as before, in the browser alone.
 The interviewer's voice is a small agent (agent/interviewer.py) that LiveKit starts when the founder joins; it speaks the same
 scripted lines and costs one text-to-speech call per line. It never calls a language model.
 """
@@ -17,7 +17,7 @@ TOKEN_TTL = timedelta(hours=1)  # an interview is at most 5 minutes; this covers
 
 def enabled() -> bool:
     s = get_settings()
-    return bool(s.livekit_url and s.livekit_api_key and s.livekit_api_secret)
+    return bool(s.livekit_agent_enabled and s.livekit_url and s.livekit_api_key and s.livekit_api_secret)
 
 
 def room_name(project_id: str) -> str:

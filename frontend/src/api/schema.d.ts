@@ -2737,6 +2737,11 @@ export interface components {
             /** Code */
             code: string;
             /**
+             * Emailed
+             * @default false
+             */
+            emailed: boolean;
+            /**
              * Expires At
              * Format: date-time
              */

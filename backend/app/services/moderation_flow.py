@@ -159,4 +159,6 @@ async def decide(session: AsyncSession, case: ModerationCase, decision: str, not
             "Our team couldn't approve this content." + (f" {note}" if note else "") + " Please edit it and try again.",
         )
     for to in emails:
-        await send_email(to, subject, f"{body}\n{get_settings().app_base_url}/projects/{case.project_id}\n")
+        await send_email(
+            to, subject, body, link=("Open your project", f"{get_settings().app_base_url}/projects/{case.project_id}")
+        )

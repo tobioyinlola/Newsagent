@@ -11,6 +11,7 @@ from tests.test_live_interview import live_project, start
 
 def configure(monkeypatch):
     s = get_settings()
+    monkeypatch.setattr(s, "livekit_agent_enabled", True)
     monkeypatch.setattr(s, "livekit_url", "wss://example.livekit.cloud")
     monkeypatch.setattr(s, "livekit_api_key", "APIkeytest")
     monkeypatch.setattr(s, "livekit_api_secret", "s" * 40)

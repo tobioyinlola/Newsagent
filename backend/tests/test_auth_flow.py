@@ -107,7 +107,7 @@ async def test_the_password_is_checked_before_a_code_is_sent_and_never_stored_in
     for bad in ("short", "password123", NEW):
         r = await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": bad})
         assert r.status_code in (422,), (bad, r.text)
-    assert not [m for m in registry.get_email().sent if m["to"] == NEW]
+    assert not [m for m in registry.get_email().sent if m["to"] == NEW and "your Cover Founder code" in m["subject"]]
     await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})
     async with maker() as db:
         row = (await db.execute(select(AuthCode))).scalar_one()
@@ -146,10 +146,26 @@ async def test_five_wrong_guesses_burn_the_code(client, workspace):
     ).status_code == 200
 
 
+async def age_codes(maker, seconds=120):
+    async with maker() as db:
+        for r in (await db.execute(select(AuthCode))).scalars():
+            r.created_at -= timedelta(seconds=seconds)
+        await db.commit()
+
+
+async def test_a_code_requested_moments_ago_still_works_after_a_quick_resend(client, workspace):
+    code = await invite_for(client)
+    await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})
+    first = last_code(NEW)
+    await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})
+    assert (await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": first})).status_code == 200
+
+
 async def test_a_new_code_cancels_the_old_and_expired_codes_fail(client, workspace, maker):
     code = await invite_for(client)
     await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})
     first = last_code(NEW)
+    await age_codes(maker)
     await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW2})
     second = last_code(NEW)
     assert first != second
@@ -383,10 +399,11 @@ async def test_operators_confirm_each_sign_in_with_a_code(client, workspace):
     assert (await client.get("/v1/admin/queue", headers=bearer(again["token"]))).status_code == 401
 
 
-async def test_operator_code_can_be_resent_and_is_throttled(client, workspace):
+async def test_operator_code_can_be_resent_and_is_throttled(client, workspace, maker):
     await set_password(client, OPS_EMAIL, PW)
     h = bearer((await operator_login(client))["token"])
     first = last_code(OPS_EMAIL)
+    await age_codes(maker)
     assert (await client.post("/v1/auth/login/otp/resend", headers=h)).status_code == 200
     second = last_code(OPS_EMAIL)
     assert (
@@ -428,3 +445,15 @@ async def test_dev_mailbox_endpoint_exists_only_for_local_mock_mail(client, work
     r = await client.get("/v1/dev/last-email", params={"to": NEW})
     assert r.status_code == 200 and "123456" in r.json()["text"]
     assert (await client.get("/v1/dev/last-email", params={"to": "none@x.example.com"})).status_code == 404
+
+
+async def test_an_invite_is_emailed_to_the_startup_with_the_signup_link(client, workspace):
+    r = await client.post(
+        "/v1/admin/invites", json={"email": NEW, "workspace_name": "NewCo", "credits": "5"}, headers=OPS
+    )
+    body = r.json()
+    assert body["emailed"] is True
+    mail = [m for m in registry.get_email().sent if m["to"] == NEW and "invited" in m["subject"]]
+    assert len(mail) == 1
+    assert f"/signup?code={body['code']}" in mail[0]["text"] and "How to sign up" in mail[0]["text"]
+    assert "#C0FE73" in mail[0]["html"] and "Create your account" in mail[0]["html"]

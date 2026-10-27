@@ -51,6 +51,15 @@ export function ErrorBox({ error }: { error: unknown }) {
   );
 }
 
+// A short pop-up for a success the person should notice before the page moves on.
+export function Toast({ children }: { children: ReactNode }) {
+  return (
+    <div role="status" aria-live="polite" className="fixed inset-x-0 top-4 z-50 flex justify-center px-4">
+      <div className="max-w-md rounded-sm border-2 border-ink bg-brand-green px-5 py-3 text-sm font-bold text-ink shadow-lg">{children}</div>
+    </div>
+  );
+}
+
 export function Notice({ tone = "info", children }: { tone?: "info" | "warn" | "ok"; children: ReactNode }) {
   const c = { info: "border-brand-purple bg-lilac text-ink", warn: "border-brand-peach bg-peach-tint text-ink", ok: "border-ink bg-lime-tint text-ink" }[tone];
   return <div role="status" className={`rounded-sm border-2 p-3 text-sm ${c}`}>{children}</div>;
