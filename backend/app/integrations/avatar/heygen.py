@@ -10,11 +10,25 @@ import asyncio
 import httpx
 
 from app.config import VENDOR_POLICIES, get_settings
-from app.integrations.avatar.base import AvatarPoll, AvatarProvider, AvatarRequest, AvatarResult, VoiceOption
+from app.integrations.avatar.base import (
+    AvatarPoll,
+    AvatarProvider,
+    AvatarRequest,
+    AvatarResult,
+    Presenter,
+    VoiceOption,
+)
 
 BASE = "https://api.heygen.com"
-# Placeholder pricing, replace with the measured per-minute cost from the spike.
-ASSUMED_COST_PER_MINUTE = 1.0
+# Measured twice on 2026-10-25: 3.0 s cost $0.12 and 3.4 s cost $0.11 (wallet deltas), about $0.03 to $0.04 a second.
+# Two short samples on the account's default engine; there may be a minimum charge. Re-measure with a longer clip before pricing.
+ASSUMED_COST_PER_MINUTE = 2.1
+
+
+def _gender(v: str | None) -> str:
+    """HeyGen labels looks "Woman" / "female" / "Man" / "male" / "Unspecified" inconsistently; offer female | male | ''."""
+    v = (v or "").strip().lower()
+    return {"woman": "female", "female": "female", "man": "male", "male": "male"}.get(v, "")
 
 
 class HeyGenProvider(AvatarProvider):
@@ -43,6 +57,33 @@ class HeyGenProvider(AvatarProvider):
         ]
 
     supports_async = True
+    MAX_LOOKS = 1200  # the account's catalogue is paged 50 at a time; stop somewhere sensible
+
+    async def list_presenters(self) -> list[Presenter]:
+        """The account's avatar looks (live API: `GET /v3/avatars/looks`, 50 per page, `next_token` to continue)."""
+        out: list[Presenter] = []
+        token: str | None = None
+        async with httpx.AsyncClient(base_url=BASE, headers=self._headers, timeout=30) as c:
+            while len(out) < self.MAX_LOOKS:
+                r = await c.get("/v3/avatars/looks", params={"limit": 50, **({"token": token} if token else {})})
+                r.raise_for_status()
+                body = r.json()
+                for it in body.get("data", []):
+                    if it.get("status", "completed") != "completed":
+                        continue
+                    out.append(
+                        Presenter(
+                            id=it["id"],
+                            name=it.get("name") or it["id"],
+                            gender=_gender(it.get("gender")),
+                            preview_image_url=it.get("preview_image_url"),
+                            orientation=it.get("preferred_orientation"),
+                        )
+                    )
+                token = body.get("next_token")
+                if not body.get("has_more") or not token:
+                    break
+        return out
 
     async def submit(self, req: AvatarRequest) -> str:
         body: dict = {"type": "avatar", "avatar_id": req.avatar_id, "script": req.script_text}

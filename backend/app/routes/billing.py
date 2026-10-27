@@ -59,6 +59,8 @@ async def summary(p: Principal = Depends(current_principal)) -> BillingSummary:
 async def checkout(
     body: CheckoutIn, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
 ) -> CheckoutOut:
+    if get_settings().billing_provider == "manual":
+        raise HTTPException(409, "Credits are added by our team. Contact us to top up your workspace.")
     pack = await session.get(CreditPack, body.pack_id)
     if pack is None or not pack.active:
         raise HTTPException(404, "That credit pack isn't available")

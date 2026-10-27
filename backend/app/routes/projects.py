@@ -20,7 +20,7 @@ from app.schemas.api import (
     ScriptUpdate,
 )
 from app.services import interview as iv
-from app.services import moderation_flow, privacy
+from app.services import moderation_flow, presenters, privacy
 from app.services import progress as progress_svc
 from app.services import state_machine as sm
 from app.services.audit import audit
@@ -98,6 +98,9 @@ async def create_project(
         accent_override=body.accent_override,
         founder_name=body.founder_name.strip(),
         founder_title=body.founder_title.strip(),
+        anchor_id=await presenters.resolve(body.anchor_id),
+        flow=body.flow,
+        announcement_type=body.announcement_type,
     )
     session.add(project)
     await session.flush()
@@ -130,6 +133,9 @@ async def generate_script(
     brief.structured_facts = await llm.parse_brief(brief.raw_text, brief.website_url)
     facts = {**brief.structured_facts, "founder_name": project.founder_name, "founder_title": project.founder_title}
     draft = await llm.write_script(facts, "confident")
+    for seg in draft.segments:
+        if seg.kind == "outro":
+            seg.text = presenters.STANDARD_OUTRO  # same words every time, so its presenter clip is paid for once
     prev = await _latest_script(session, project_id)
     sv = ScriptVersion(
         project_id=project_id,
@@ -187,6 +193,9 @@ async def update_script(
     if project.state != "script_ready":
         raise HTTPException(409, "Script is locked")
     prev = await _latest_script(session, project_id)
+    guided_flow = project.flow == "guided" and prev is not None
+    if guided_flow and prev is not None:
+        body.interview_questions = list(prev.interview_questions)  # the recorded answers belong to these questions
     text = " ".join(s.get("text", "") for s in body.segments)
     flags = [c.model_dump() for c in detect_claims(text)]
     for f in flags:  # confirmation carries over only for claim text the owner explicitly confirms
@@ -199,6 +208,7 @@ async def update_script(
         lower_thirds=body.lower_thirds,
         interview_questions=body.interview_questions,
         claim_flags=flags,
+        story=prev.story if (guided_flow and prev is not None) else None,
     )
     session.add(sv)
     await session.commit()
@@ -226,7 +236,14 @@ async def approve_script(
                 "claims": unconfirmed,
             },
         )
-    banned = find_banned(json.dumps([sv.segments, sv.ticker_lines, sv.lower_thirds, sv.interview_questions]))
+    guided_flow = project.flow == "guided"
+    if guided_flow:
+        pictures = len(project.broll or [])
+        if not 2 <= pictures <= 3:
+            raise HTTPException(
+                422, {"error": "pictures_needed", "message": "Add 2 or 3 pictures to show in your video."}
+            )
+    banned = find_banned(json.dumps([sv.segments, sv.ticker_lines, sv.lower_thirds, sv.interview_questions, sv.story]))
     if banned:  # hard rule 1: checked before any paid step runs
         raise HTTPException(
             422,
@@ -238,6 +255,8 @@ async def approve_script(
         )
     brief_text = project.brief.raw_text if project.brief else ""
     text = script_text(brief_text, sv.segments, sv.ticker_lines, sv.lower_thirds, sv.interview_questions)
+    if sv.story:  # the article and the social post are published too
+        text += "\n" + json.dumps(sv.story)
     await moderation_flow.enforce(
         session,
         project_id=project.id,
@@ -264,7 +283,7 @@ async def approve_script(
     ).scalar_one()
     if today >= ws.max_videos_per_day:
         raise HTTPException(429, "Daily video limit reached")
-    with_interview = bool(body and body.with_interview)
+    with_interview = True if guided_flow else bool(body and body.with_interview)
     if with_interview and not (1 <= len(sv.interview_questions) <= iv.MAX_QUESTIONS):
         raise HTTPException(
             422,
@@ -282,7 +301,7 @@ async def approve_script(
             },
         )
     project.interview_enabled = with_interview
-    project.interview_mode = body.interview_mode if (with_interview and body) else "invite"
+    project.interview_mode = "live" if guided_flow else (body.interview_mode if (with_interview and body) else "invite")
     sv.approved, sv.approved_by, sv.approved_at = True, p.user.email, datetime.now(UTC)
     sm.transition(project, "script_approved")
     await session.commit()

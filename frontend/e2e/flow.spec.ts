@@ -44,6 +44,7 @@ test("invite to shared video", async ({ page, browser }) => {
   // --- brief -> script
   await fp.getByRole("link", { name: "Videos" }).click();
   await fp.getByRole("link", { name: "New video" }).click();
+  await fp.goto("/projects/new-classic"); // the original script-first journey; the guided one has its own test
   await fp.getByLabel("Paste your announcement or news script").fill("Acme Farms helps farmers sell produce online. We have 5,000 users and we are the first of our kind in Ghana.");
   await fp.getByLabel("Your name").fill("Ada Obi");
   await fp.getByRole("button", { name: "Read it and write my script" }).click();

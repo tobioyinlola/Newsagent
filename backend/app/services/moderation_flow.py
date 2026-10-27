@@ -25,7 +25,12 @@ async def llm_enabled(session: AsyncSession) -> bool:
     row = await session.get(SystemSetting, "moderation")
     if row and "llm" in row.value:
         return bool(row.value["llm"])
-    return not get_settings().use_mocks and bool(get_settings().anthropic_api_key)
+    st = get_settings()
+    if st.use_mocks:
+        return False
+    if st.llm_provider == "openai":
+        return bool(st.llm_api_key or st.tts_api_key or st.transcription_api_key)
+    return bool(st.anthropic_api_key)
 
 
 async def evaluate(session: AsyncSession, text: str) -> Verdict:

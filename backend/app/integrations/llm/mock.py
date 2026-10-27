@@ -1,4 +1,13 @@
-from app.integrations.llm.base import ScriptDraft, ScriptLLM, ScriptSegment
+import re
+
+from app.integrations.llm.base import (
+    ScriptDraft,
+    ScriptLLM,
+    ScriptSegment,
+    SocialPost,
+    StoryDraft,
+    StorySection,
+)
 from app.services.claims import detect_claims
 
 
@@ -7,15 +16,18 @@ class MockScriptLLM(ScriptLLM):
         return 0.01
 
     async def parse_brief(self, brief_text: str, website_url: str | None) -> dict:
-        first = brief_text.strip().split(".")[0][:120]
-        words = first.split()
+        sentences = [x.strip() for x in re.split(r"(?<=[.!?])\s+|\n+", brief_text.strip()) if x.strip()]
+        first = (sentences[0] if sentences else brief_text).rstrip(".!?")[:200]
         name: list[str] = []
-        for w in words:  # the opening run of capitalised words is usually the company
-            if w[:1].isupper() and w.isalpha():
-                name.append(w)
+        for w in first.split():  # the opening run of capitalised words is usually the company
+            bare = w.rstrip(",;:")
+            if bare[:1].isupper() and bare.isalpha():
+                name.append(bare)
+                if bare != w:  # a comma ends the name
+                    break
             elif name:
                 break
-        sentences = [x.strip() for x in brief_text.replace("\n", " ").split(".") if x.strip()]
+        sentences = [x.rstrip(".!?") for x in sentences]
         return {
             "company": " ".join(name[:3]) or "Acme",
             "announcement": first,
@@ -47,3 +59,33 @@ class MockScriptLLM(ScriptLLM):
         )
         draft.claim_flags = detect_claims(" ".join(s.text for s in segs) + " " + " ".join(facts.get("key_facts", [])))
         return draft
+
+    async def write_story(self, facts: dict, announcement_type: str, answers: list[dict]) -> StoryDraft:
+        company = facts.get("company", "this startup")
+        kind = announcement_type.replace("_", " ")
+        said = [a["answer"].strip() for a in answers if a.get("answer", "").strip()]
+        first = said[0] if said else str(facts.get("announcement", ""))
+        return StoryDraft(
+            headline=f"{company}: {facts.get('announcement', kind)}"[:110],
+            dek=f"{company} shares its {kind} with Cover Founder.",
+            sections=[
+                StorySection(heading="The announcement", paragraphs=[str(facts.get("announcement", "")), first]),
+                StorySection(heading="The problem", paragraphs=[str(facts.get("problem", ""))]),
+                StorySection(
+                    heading="What the company hasn't said",
+                    paragraphs=["Revenue, customer numbers and valuation were not disclosed."],
+                ),
+            ],
+            social=SocialPost(
+                hook=f"{company} just made a move.",
+                post=f"{company}: {facts.get('announcement', kind)}. Watch the full story on Cover Founder.",
+                hashtags=["#startups", "#CoverFounder"],
+            ),
+            segments=[
+                ScriptSegment(kind="intro", text=f"Tonight's featured startup: {company}."),
+                ScriptSegment(kind="body", text=f"{facts.get('announcement', '')} Let's hear from the founder."),
+            ],
+            ticker_lines=[f"FEATURED: {company}"],
+            lower_thirds=[{"title": company, "subtitle": kind.title()}],
+            unverified=[],
+        )

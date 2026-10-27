@@ -7,7 +7,7 @@ const media = path.resolve("e2e-real/.media");
 // Vendors (HeyGen, Whisper, email) stay mocked. Slow (a few minutes): run with `pnpm e2e:real`.
 export default defineConfig({
   testDir: "e2e-real",
-  timeout: 360_000,
+  timeout: 720_000, // the CI runner takes ~5 min to render a 5-question video
   workers: 1,
   use: {
     baseURL: "http://localhost:5173",

@@ -2235,6 +2235,22 @@
         "title": "LedgerEntry",
         "type": "object"
       },
+      "LinesOut": {
+        "properties": {
+          "lines": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Lines",
+            "type": "object"
+          }
+        },
+        "required": [
+          "lines"
+        ],
+        "title": "LinesOut",
+        "type": "object"
+      },
       "LiveStartIn": {
         "properties": {
           "consent": {
@@ -3132,6 +3148,51 @@
         "title": "PresenterClipUploadOut",
         "type": "object"
       },
+      "PresenterOut": {
+        "properties": {
+          "gender": {
+            "title": "Gender",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "orientation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orientation"
+          },
+          "preview_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Image Url"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "gender"
+        ],
+        "title": "PresenterOut",
+        "type": "object"
+      },
       "ProgressOut": {
         "properties": {
           "cancellable": {
@@ -3232,10 +3293,40 @@
             ],
             "title": "Accent Override"
           },
+          "anchor_id": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Id"
+          },
+          "announcement_type": {
+            "anyOf": [
+              {
+                "pattern": "^(product_launch|funding_round|partnership|hiring|milestone|other)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Announcement Type"
+          },
           "brief_text": {
             "maxLength": 8000,
             "minLength": 20,
             "title": "Brief Text",
+            "type": "string"
+          },
+          "flow": {
+            "default": "classic",
+            "pattern": "^(classic|guided)$",
+            "title": "Flow",
             "type": "string"
           },
           "founder_name": {
@@ -3315,6 +3406,28 @@
       },
       "ProjectOut": {
         "properties": {
+          "anchor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Id"
+          },
+          "announcement_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Announcement Type"
+          },
           "assets": {
             "default": [],
             "items": {
@@ -3346,6 +3459,11 @@
           "failure_retryable": {
             "title": "Failure Retryable",
             "type": "boolean"
+          },
+          "flow": {
+            "default": "classic",
+            "title": "Flow",
+            "type": "string"
           },
           "founder_name": {
             "default": "",
@@ -3442,6 +3560,29 @@
           "paused"
         ],
         "title": "QueueOut",
+        "type": "object"
+      },
+      "RealtimeOut": {
+        "properties": {
+          "room": {
+            "title": "Room",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "token",
+          "room"
+        ],
+        "title": "RealtimeOut",
         "type": "object"
       },
       "ResetIn": {
@@ -3809,6 +3950,18 @@
             },
             "title": "Segments",
             "type": "array"
+          },
+          "story": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Story"
           },
           "ticker_lines": {
             "items": {
@@ -8469,6 +8622,49 @@
         ]
       }
     },
+    "/v1/interview/{token}/lines": {
+      "get": {
+        "description": "The interviewer's lines as plain text, no audio and no spend. The LiveKit interviewer agent reads these so it can only\never say what the interview's script says.",
+        "operationId": "interviewer_lines_text_v1_interview__token__lines_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Interviewer Lines Text",
+        "tags": [
+          "founder"
+        ]
+      }
+    },
     "/v1/interview/{token}/photo": {
       "post": {
         "operationId": "photo_slot_v1_interview__token__photo_post",
@@ -8570,6 +8766,49 @@
           }
         },
         "summary": "Photo Confirm",
+        "tags": [
+          "founder"
+        ]
+      }
+    },
+    "/v1/interview/{token}/realtime": {
+      "post": {
+        "description": "Permission to join this interview's LiveKit room. 404 when LiveKit isn't set up: the browser then runs the interview on\nits own, which always works.",
+        "operationId": "join_realtime_v1_interview__token__realtime_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RealtimeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Join Realtime",
         "tags": [
           "founder"
         ]
@@ -9193,6 +9432,90 @@
         "summary": "Me",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/v1/presenters": {
+      "get": {
+        "description": "The AI presenter looks a customer can choose from (search by name, filter by gender).",
+        "operationId": "list_presenters_v1_presenters_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "gender",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Gender",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 48,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PresenterOut"
+                  },
+                  "title": "Response List Presenters V1 Presenters Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Presenters",
+        "tags": [
+          "system"
         ]
       }
     },
@@ -9903,6 +10226,65 @@
         "summary": "Events",
         "tags": [
           "delivery"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/guided/start": {
+      "post": {
+        "description": "Details are in: work out the story and open the AI interview (free; nothing is rendered).",
+        "operationId": "start_v1_projects__project_id__guided_start_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start",
+        "tags": [
+          "guided"
         ]
       }
     },
@@ -11288,6 +11670,67 @@
         "summary": "Create Share",
         "tags": [
           "delivery"
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/story": {
+      "get": {
+        "description": "The news story and the social post written after the interview.",
+        "operationId": "story_v1_projects__project_id__story_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Story V1 Projects  Project Id  Story Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Story",
+        "tags": [
+          "guided"
         ]
       }
     },

@@ -80,7 +80,7 @@ test("AI interview, recorded for real, merged with the answers column", async ({
   await expect(page.locator("video[aria-label^='Your answer to question']")).toHaveCount(QUESTIONS.length);
   await expect(page.getByLabel("How your answers appear in the video")).toHaveValue("column");
   await page.getByRole("button", { name: "Make my video" }).click();
-  await expect(page.getByRole("heading", { name: "Your video", exact: true })).toBeVisible({ timeout: 360_000 });
+  await expect(page.getByRole("heading", { name: "Your video", exact: true })).toBeVisible({ timeout: 600_000 });
   expect(violations, "CSP violations on the interview").toEqual([]);
 
   // the delivered file: right size, has sound, and the answers column is really on screen during an answer

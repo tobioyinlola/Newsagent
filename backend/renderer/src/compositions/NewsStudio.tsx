@@ -3,6 +3,8 @@ import { AbsoluteFill, Easing, OffthreadVideo, Series, interpolate, staticFile, 
 import { AnchorFigure } from "./AnchorFigure";
 import { Backdrop, Chrome } from "./Chrome";
 import { ClipScene } from "./ClipScene";
+import { FullFrameAnchor } from "./FullFrameAnchor";
+import { NewsDesk, SOFT_TOP, StudioProvider } from "./NewsSet";
 import { CF, Fonts, MONO, SANS } from "./theme";
 import { NewsProps } from "./types";
 
@@ -23,16 +25,17 @@ const StudioBody: React.FC<NewsProps> = (p) => {
   return (
     <AbsoluteFill style={{ background: CF.ink, fontFamily: SANS }}>
       <Fonts />
-      <Backdrop />
+      {p.anchorFullFrame && p.anchorSrc ? <FullFrameAnchor src={p.anchorSrc} covers={p.anchorCovers ?? true} /> : <Backdrop />}
 
       {/* anchor */}
-      <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "18%" : "9%" }}>
+      {!(p.anchorFullFrame && p.anchorSrc) && <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "16%" : "11%" }}>
         {p.anchorSrc ? (
-          <OffthreadVideo src={p.anchorSrc.startsWith("http") ? p.anchorSrc : staticFile(p.anchorSrc)} transparent style={{ height: portrait ? "58%" : "88%", objectFit: "contain" }} />
+          <OffthreadVideo src={p.anchorSrc.startsWith("http") ? p.anchorSrc : staticFile(p.anchorSrc)} transparent style={{ height: portrait ? "66%" : "80%", objectFit: "contain", ...SOFT_TOP }} />
         ) : (
           <AnchorFigure height={portrait ? "68%" : "86%"} />
         )}
-      </AbsoluteFill>
+      </AbsoluteFill>}
+      {!(p.anchorFullFrame && p.anchorSrc) && <NewsDesk />}
 
       {/* breaking-news style banner */}
       <div style={{ position: "absolute", left: 0, bottom: (portrait ? 31 : 24.5) + "%", transform: `translateX(${(1 - slide(5)) * -100}%)` }}>
@@ -60,6 +63,7 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
   const { fps } = useVideoConfig();
   const frames = (s: number) => Math.max(1, Math.round(s * fps));
   return (
+    <StudioProvider studio={p.studio}>
     <AbsoluteFill style={{ background: CF.ink, fontFamily: SANS }}>
       <Series>
         {p.introClip && <Series.Sequence durationInFrames={frames(p.introClip.seconds)}><ClipScene src={p.introClip.src} /></Series.Sequence>}
@@ -68,5 +72,6 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
       </Series>
       <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} />
     </AbsoluteFill>
+    </StudioProvider>
   );
 };

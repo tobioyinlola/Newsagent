@@ -104,3 +104,17 @@ passes; a failing gate fails the project (not retryable without a change).
 - `POST /v1/webhooks/heygen`: disabled until `HEYGEN_WEBHOOK_SECRET` is set; verifies an HMAC of the raw body, ignores repeats
   (`webhook_events`) and only **wakes** the pipeline; results are always read back from the vendor API. The signature scheme and payload keys are
   unverified assumptions (see below).
+
+## Keeping the HeyGen bill small
+
+HeyGen bills by seconds of finished video (measured about $0.04 per second; see `docs/anchor-spike.md`). Seconds are the only lever,
+so the pipeline avoids buying any twice:
+
+- **Identical clips are never bought twice.** A presenter clip is keyed by words + presenter + voice + pronunciation glossary.
+  Within a project a retry or revision skips unchanged clips; across projects an identical clip is copied from the earlier one
+  (`_reuse_clip`), at no vendor cost.
+- **The sign-off is a fixed line** (`presenters.STANDARD_OUTRO`), so every generated script ends with the same words and the
+  closing clip is bought once per presenter and voice. An owner who edits it pays for the new words.
+- **The interview itself costs nothing from HeyGen**: the founder's answers are their own recording, and product shots are
+  uploaded images. The presenter speaks only the opening, a short line per question, and the sign-off.
+- Presenters are created once ($1.31 each) and reused; never recreate one.

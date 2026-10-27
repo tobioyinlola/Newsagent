@@ -8,6 +8,7 @@ import { Billing, MockPay } from "./pages/Billing";
 import { Brand } from "./pages/Brand";
 import { Forgot, Login, OtpChallenge, Signup } from "./pages/Login";
 import { NewProject } from "./pages/NewProject";
+import { NewProjectClassic } from "./pages/NewProjectClassic";
 import { ProjectDetail } from "./pages/ProjectDetail";
 import { Projects } from "./pages/Projects";
 import { Share } from "./pages/Share";
@@ -29,6 +30,7 @@ export function App() {
         <Route element={<Layout />}>
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/new" element={<NewProject />} />
+          <Route path="/projects/new-classic" element={<NewProjectClassic />} /> {/* the original script-first flow; not linked */}
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/brand" element={<Brand />} />
           <Route path="/billing" element={<Billing />} />

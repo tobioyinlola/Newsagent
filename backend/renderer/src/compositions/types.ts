@@ -7,6 +7,9 @@ export type NewsProps = {
   anchorSrc: string | null; // transparent WebM (Option B) or full anchor clip; null renders a placeholder
   anchorDurationSeconds: number;
   // real presenter footage before and after the AI presenter (the operator's library); the studio graphics run only over the anchor
+  anchorFullFrame?: boolean; // the presenter video already contains its studio: draw it full frame, not over our set
+  anchorCovers?: boolean; // with anchorFullFrame: cover the picture's own screens and reflections with our boards (default true)
+  studio?: string; // which set to draw (project.studio_id): "blue" (default) or "navy"
   introClip?: { src: string; seconds: number } | null;
   outroClip?: { src: string; seconds: number } | null;
 };

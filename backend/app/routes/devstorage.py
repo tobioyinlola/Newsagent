@@ -9,7 +9,7 @@ from app.integrations import registry
 from app.integrations.storage.local import LocalStorage
 
 router = APIRouter(prefix="/v1/dev-storage", tags=["dev"])
-MAX_BYTES = 25 * 1024 * 1024
+MAX_BYTES = 200 * 1024 * 1024  # local dev store only; a 40 s 1080p render is ~25-30 MB
 
 
 def _store() -> LocalStorage:

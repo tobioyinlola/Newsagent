@@ -19,9 +19,7 @@ def upgrade() -> None:
     op.add_column("brand_assets", sa.Column("width", sa.Integer(), nullable=True))
     op.add_column("brand_assets", sa.Column("height", sa.Integer(), nullable=True))
     op.add_column("projects", sa.Column("broll", sa.JSON(), nullable=True))
-    op.add_column(
-        "projects", sa.Column("revision_pending", sa.Boolean(), nullable=False, server_default=sa.false())
-    )
+    op.add_column("projects", sa.Column("revision_pending", sa.Boolean(), nullable=False, server_default=sa.false()))
 
 
 def downgrade() -> None:

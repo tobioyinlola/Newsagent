@@ -21,6 +21,19 @@ class ProjectCreate(BaseModel):
     accent_override: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
     founder_name: str = Field(default="", max_length=200)  # the AI interviewer greets this person by name
     founder_title: str = Field(default="", max_length=200)
+    anchor_id: str | None = Field(default=None, max_length=100)  # the chosen presenter look (from GET /v1/presenters)
+    flow: str = Field(default="classic", pattern="^(classic|guided)$")
+    announcement_type: str | None = Field(
+        default=None, pattern="^(product_launch|funding_round|partnership|hiring|milestone|other)$"
+    )
+
+
+class PresenterOut(BaseModel):
+    id: str
+    name: str
+    gender: str
+    preview_image_url: str | None = None
+    orientation: str | None = None
 
 
 class AssetOut(BaseModel):
@@ -43,6 +56,9 @@ class ProjectOut(BaseModel):
     interview_mode: str = "invite"
     founder_name: str = ""
     founder_title: str = ""
+    anchor_id: str | None = None
+    flow: str = "classic"
+    announcement_type: str | None = None
     keep_raw_takes: bool = False
     created_at: datetime
     assets: list[AssetOut] = []
@@ -113,6 +129,7 @@ class ScriptOut(BaseModel):
     lower_thirds: list[dict]
     interview_questions: list[str]
     claim_flags: list[dict]
+    story: dict | None = None
     approved: bool
     model_config = {"from_attributes": True}
 
@@ -711,6 +728,16 @@ class VoiceLine(BaseModel):
 
 class VoicePrepareOut(BaseModel):
     lines: list[VoiceLine]
+
+
+class RealtimeOut(BaseModel):
+    url: str  # the LiveKit server to connect to
+    token: str  # join token for this interview's room only
+    room: str
+
+
+class LinesOut(BaseModel):
+    lines: dict[str, str]  # key (greeting, q0.., thanks, closing) -> what the interviewer says
 
 
 class BriefUnderstandingOut(BaseModel):

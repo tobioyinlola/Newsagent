@@ -32,12 +32,17 @@ def problems(s: Settings) -> list[str]:
             out.append("SECRET_KEY must be a valid Fernet key (urlsafe base64, 32 bytes)")
     if len(s.renderer_shared_secret) < 24:
         out.append("RENDERER_SHARED_SECRET must be set to a long random value (24+ characters)")
-    if not s.billing_webhook_secret or len(s.billing_webhook_secret) < 24:
-        out.append("BILLING_WEBHOOK_SECRET must be set to a long random value (24+ characters)")
     if s.billing_provider == "mock":
-        out.append("BILLING_PROVIDER=mock is local-only; configure a real payment provider adapter")
-    if not s.clamd_host:
-        out.append("CLAMD_HOST is required: uploads are refused without a malware scanner")
+        out.append(
+            "BILLING_PROVIDER=mock is local-only; use manual (an operator adds credits) or a real payment adapter"
+        )
+    elif s.billing_provider != "manual" and (not s.billing_webhook_secret or len(s.billing_webhook_secret) < 24):
+        out.append("BILLING_WEBHOOK_SECRET must be set to a long random value (24+ characters)")
+    if not s.clamd_host and not (s.allow_unscanned_uploads and s.environment == "staging"):
+        out.append(
+            "CLAMD_HOST is required: uploads are refused without a malware scanner "
+            "(staging alone may set ALLOW_UNSCANNED_UPLOADS=true to accept uploads unscanned)"
+        )
     if not s.email_api_key:
         out.append("EMAIL_API_KEY is required")
     if s.storage_access_key in DEFAULT_STORAGE_KEYS or s.storage_secret_key in DEFAULT_STORAGE_KEYS:

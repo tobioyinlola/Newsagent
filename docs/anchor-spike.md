@@ -1,7 +1,21 @@
 # Anchor spike (build spec section 9)
 
-**Status: PARTLY RUN. The key works, but no video was generated: the account has a $0.00 wallet and HeyGen returned
-`402 insufficient_credit`. The Option A / B decision is still open.**
+**Status: RUN ONCE with a funded account (2026-10-25). Generation works; transparency of the output is still unverified because the
+video host is blocked from this environment. The Option A / B decision is still open.**
+
+## Result of the first real generation (2026-10-25)
+- `POST /v3/videos` with `{type:"avatar", avatar_id:<a LOOK id from /v3/avatars/looks>, script, output_format:"webm"}` was **accepted** (200,
+  `{video_id, status:"waiting", output_format:"webm"}`). So `avatar_id` takes a look id, and `output_format:"webm"` is accepted.
+- Status moves `waiting → processing → completed`. A 3.0 s clip took **56 s** (latency is mostly fixed overhead, not length).
+- The completed record has `video_url, thumbnail_url, gif_url, duration, video_page_url`; **no cost field and no alpha flag**.
+- Cost: the wallet went from $15.00 to $14.88 for 3.0 s of video, about **$0.04 per second (~$2.40 per minute)**. One sample.
+- **Verified (second clip, "Anchor of the Breaking News Desk 1", 2026-10-25)**: the WebM is VP9 1280x720 with a real alpha channel
+  (`ALPHA_MODE=1`; 70% of pixels fully transparent, 27% opaque, 3% soft edge) and an Opus audio track. The cut-out is clean over a dark
+  backdrop, with a slight dark fringe on some hair strands. The presenter is framed to the waist and her hair is cropped by the top of the
+  frame, so the renderer fades that edge. Cost $0.11 for 3.4 s; render time 123 s. So Option B (transparent presenter over our own set) works.
+- (Older note, now resolved) whether the WebM really has an alpha channel. The file is served from `resource2.heygen.ai`, which this environment's
+  network policy blocks (`connect_rejected`), so it could not be downloaded or probed. Allow `*.heygen.ai` (or that host) and re-run.
+- The looks on this account are photo avatars in office, kitchen and living-room settings (Dante, Brody, ...), not news-desk presenters.
 
 ## What the live API told us (2026-10-22)
 - Auth works with `x-api-key`. `GET /v3/users/me` shows a **wallet billing** account with `remaining_balance: 0.0`.

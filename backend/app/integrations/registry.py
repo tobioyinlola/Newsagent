@@ -109,6 +109,10 @@ def get_llm() -> ScriptLLM:
             from app.integrations.llm.mock import MockScriptLLM
 
             return MockScriptLLM()
+        if get_settings().llm_provider == "openai":
+            from app.integrations.llm.openai import OpenAIScriptLLM
+
+            return OpenAIScriptLLM()
         from app.integrations.llm.anthropic import AnthropicScriptLLM
 
         return AnthropicScriptLLM()
@@ -175,6 +179,10 @@ def get_scanner() -> MalwareScanner:
 
             return MockScanner()
         if not get_settings().clamd_host:
+            if get_settings().allow_unscanned_uploads:
+                from app.integrations.malware.mock import UnscannedUploads
+
+                return UnscannedUploads()
             raise RuntimeError("CLAMD_HOST must be set: uploads are refused without a malware scanner")
         from app.integrations.malware.clamav import ClamAvScanner
 

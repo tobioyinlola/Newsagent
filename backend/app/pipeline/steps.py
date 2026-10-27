@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import VENDOR_POLICIES
+from app.config import VENDOR_POLICIES, get_settings
 from app.db import session_maker
 from app.integrations import registry
 from app.integrations.avatar.base import AvatarRequest
@@ -74,6 +74,37 @@ def anchor_text(script: ScriptVersion) -> str:
     return " ".join(s["text"] for s in script.segments)
 
 
+def _fullframe_entries() -> dict[str, bool]:
+    """Configured studio-in-picture looks, as {look id: needs our boards over its picture}. Write `id:plain` for a picture that has no
+    screens or reflections to cover (a plain newsroom behind the presenter)."""
+    out: dict[str, bool] = {}
+    for item in get_settings().heygen_fullframe_avatar_ids.split(","):
+        look, _, flag = item.strip().partition(":")
+        if look:
+            out[look] = flag.strip() != "plain"
+    return out
+
+
+def is_fullframe(project: Project) -> bool:
+    """Does this project's presenter video already contain its own studio (so it is shown full frame, not cut out)?"""
+    return avatar_for(project) in _fullframe_entries()
+
+
+def fullframe_covers(project: Project) -> bool:
+    return _fullframe_entries().get(avatar_for(project) or "", True)
+
+
+def clip_ext(project: Project) -> str:
+    return (
+        "mp4" if is_fullframe(project) else "webm"
+    )  # a studio-in-picture look is plain video; a cut-out keeps its alpha
+
+
+def avatar_for(project: Project) -> str | None:
+    """The presenter look to ask the vendor for: the project's choice, else the configured default."""
+    return project.anchor_id or get_settings().heygen_default_avatar_id or None
+
+
 async def current_kit(session: AsyncSession, workspace_id: str) -> BrandKit | None:
     return (
         (
@@ -95,7 +126,7 @@ async def anchor_inputs(session: AsyncSession, project: Project) -> dict:
         "script_id": script.id,
         "text": anchor_text(script),
         "accent": project.voice_accent,
-        "anchor": project.anchor_id,
+        "anchor": avatar_for(project),
         "accent_override": project.accent_override,
     }
 
@@ -119,6 +150,11 @@ async def build_overlay_props(
             "primary": kit.primary_color if kit else "#0B3D91",
             "accent": project.accent_override or (kit.accent_color if kit else "#F5A623"),
         },
+        "studio": project.studio_id,  # which studio set to draw; "default" is the bright blue news studio
+        "anchorFullFrame": is_fullframe(project),  # the presenter video brings its own studio
+        "anchorCovers": fullframe_covers(
+            project
+        ),  # draw our boards over that picture's screens (false for a plain newsroom)
         "anchorDurationSeconds": anchor_duration_s,
         "tickerLines": script.ticker_lines,
         "lowerThirds": script.lower_thirds,
@@ -134,13 +170,14 @@ async def persist_avatar_video(key: str, out) -> None:
     storage = registry.get_storage()
     url = out.video_url
     raw_key = f"{key}.src.mp4" if out.needs_chroma_key else key
+    ctype = "video/mp4" if key.endswith(".mp4") else "video/webm"
     if url.startswith("mock://"):
         from pathlib import Path
 
         from app.config import get_settings
 
         f = get_settings().mock_anchor_file
-        await storage.put(raw_key, Path(f).read_bytes() if f else b"mock-anchor-video", "video/webm")
+        await storage.put(raw_key, Path(f).read_bytes() if f else b"mock-anchor-video", ctype)
     else:
         import httpx
 
@@ -149,7 +186,7 @@ async def persist_avatar_video(key: str, out) -> None:
             r.raise_for_status()
             if len(r.content) > MAX_VIDEO_DOWNLOAD_BYTES:
                 raise RuntimeError("anchor video too large")
-            await storage.put(raw_key, r.content, "video/webm")
+            await storage.put(raw_key, r.content, ctype)
     if out.needs_chroma_key:
         try:
             await registry.get_renderer().chroma_key(storage.presign_get(raw_key, 1800), key)
@@ -252,6 +289,42 @@ async def generate_anchor(
     raise last
 
 
+async def _reuse_clip(session: AsyncSession, project: Project, *, atype: str, fmt: str, h: str, key: str) -> bool:
+    """Copy an identical clip (same words, presenter, voice and pronunciation) made for an earlier project, so a fixed
+    line such as the sign-off is bought from the vendor once, not once per video. Returns False if there is none."""
+    storage = registry.get_storage()
+    ext = key.rsplit(".", 1)[-1]
+    sources = (
+        await session.execute(
+            select(Asset)
+            .where(Asset.type == atype, Asset.hash == h, Asset.project_id != project.id, Asset.duration.is_not(None))
+            .order_by(Asset.created_at.desc())
+            .limit(5)
+        )
+    ).scalars()
+    for src in sources:
+        if src.storage_key.rsplit(".", 1)[-1] != ext:
+            continue
+        try:
+            data = await storage.get(src.storage_key, MAX_VIDEO_DOWNLOAD_BYTES)
+        except Exception:  # noqa: BLE001  the earlier copy was deleted (e.g. its owner erased the project)
+            continue
+        await storage.put(key, data, "video/mp4" if ext == "mp4" else "video/webm")
+        for old in (
+            await session.execute(
+                select(Asset).where(Asset.project_id == project.id, Asset.type == atype, Asset.format == fmt)
+            )
+        ).scalars():
+            await session.delete(old)
+        session.add(
+            Asset(project_id=project.id, type=atype, format=fmt, storage_key=key, hash=h, duration=src.duration)
+        )
+        await session.commit()
+        log.info("reused presenter clip %s/%s from an earlier project (no vendor cost)", atype, fmt)
+        return True
+    return False
+
+
 async def _paid_avatar_asset(
     session: AsyncSession, project: Project, guard: SpendGuard, *, atype: str, fmt: str, text: str, key: str
 ) -> Decimal:
@@ -259,7 +332,7 @@ async def _paid_avatar_asset(
     never makes a retry pay for this clip again. Returns the cost it recorded on the project."""
     kit = await current_kit(session, project.workspace_id)
     glossary = (kit.pronunciation_glossary if kit else None) or None
-    h = input_hash({"text": text, "accent": project.voice_accent, "avatar": project.anchor_id, "glossary": glossary})
+    h = input_hash({"text": text, "accent": project.voice_accent, "avatar": avatar_for(project), "glossary": glossary})
     existing = (
         await session.execute(
             select(Asset.id).where(
@@ -269,12 +342,14 @@ async def _paid_avatar_asset(
     ).first()
     if existing:
         return Decimal("0")
+    if await _reuse_clip(session, project, atype=atype, fmt=fmt, h=h, key=key):
+        return Decimal("0")  # the same words by the same presenter were already paid for (e.g. the standard sign-off)
     req = AvatarRequest(
         script_text=text,
         pronunciation=glossary,
         voice_accent=project.voice_accent,
-        avatar_id=project.anchor_id,
-        transparent=True,
+        avatar_id=avatar_for(project),
+        transparent=not is_fullframe(project),
     )
     out, cost, _vendor = await generate_anchor(session, project, guard, req, key, atype)
     # an older clip for the same slot (e.g. the owner edited a question) is replaced
@@ -338,7 +413,7 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
             atype="anchor",
             fmt="main",
             text=main or anchor_text(script),
-            key=f"projects/{project.id}/anchor.webm",
+            key=f"projects/{project.id}/anchor.{clip_ext(project)}",
         )
         for part in EXTRA_KINDS:  # separate presenter clips only when the script has those parts
             if t[part]:
@@ -349,7 +424,7 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
                     atype="anchor",
                     fmt=part,
                     text=t[part],
-                    key=f"projects/{project.id}/anchor-{part}.webm",
+                    key=f"projects/{project.id}/anchor-{part}.{clip_ext(project)}",
                 )
         if outro:
             total += await _paid_avatar_asset(
@@ -359,7 +434,7 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
                 atype="anchor_outro",
                 fmt="outro",
                 text=outro,
-                key=f"projects/{project.id}/anchor-outro.webm",
+                key=f"projects/{project.id}/anchor-outro.{clip_ext(project)}",
             )
         return StepOutcome({"split": True}, recorded_cost=total)
     kit = await current_kit(session, project.workspace_id)
@@ -367,10 +442,10 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
         script_text=anchor_text(script),
         pronunciation=(kit.pronunciation_glossary if kit else None) or None,
         voice_accent=project.voice_accent,
-        avatar_id=project.anchor_id,
-        transparent=True,
+        avatar_id=avatar_for(project),
+        transparent=not is_fullframe(project),
     )
-    key = f"projects/{project.id}/anchor.webm"
+    key = f"projects/{project.id}/anchor.{clip_ext(project)}"
     out, cost, vendor = await generate_anchor(session, project, guard, req, key, "anchor")
     for old in (
         await session.execute(select(Asset).where(Asset.project_id == project.id, Asset.type == "anchor"))
@@ -380,32 +455,52 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
     return StepOutcome({"vendor": vendor, "duration_s": out.duration_s, "key": key}, cost)
 
 
+def needed_questions(project: Project, count: int) -> list[int]:
+    """Questions that need a presenter clip, in the order they play: only the answers the owner features. Every clip is
+    paid for by the second, so an answer that is left out of the video never gets one."""
+    plan = project.merge_plan
+    if not plan:
+        return list(range(count))
+    include = {a["question_index"] for a in plan["answers"] if a.get("include", True)}
+    return [q for q in plan.get("order", range(count)) if q in include and q < count]
+
+
+def question_text(project: Project, script: ScriptVersion, q: int, needed: list[int]) -> str:
+    """What the presenter says for a question. In the guided flow the first one hands the conversation to the founder."""
+    text = script.interview_questions[q]
+    if project.flow == "guided" and needed and q == needed[0]:
+        return f"Let's hear from the founder. {text}"
+    return text
+
+
 async def question_clips(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
-    """One anchor clip per interview question (stage 8). Idempotent per question."""
+    """One anchor clip per featured interview question (stage 8). Idempotent per question."""
     script = await approved_script(session, project.id)
+    needed = needed_questions(project, len(script.interview_questions))
     total = Decimal("0")
-    for i, q in enumerate(script.interview_questions):
+    for i in needed:
         total += await _paid_avatar_asset(
             session,
             project,
             guard,
             atype="question_clip",
             fmt=f"q{i}",
-            text=q,
-            key=f"projects/{project.id}/question-{i}.webm",
+            text=question_text(project, script, i, needed),
+            key=f"projects/{project.id}/question-{i}.{clip_ext(project)}",
         )
-    return StepOutcome({"questions": len(script.interview_questions)}, recorded_cost=total)
+    return StepOutcome({"questions": len(needed)}, recorded_cost=total)
 
 
 async def question_clips_complete(session: AsyncSession, project: Project) -> bool:
     script = await approved_script(session, project.id)
+    needed = needed_questions(project, len(script.interview_questions))
     have = {
         a.format
         for a in (
             await session.execute(select(Asset).where(Asset.project_id == project.id, Asset.type == "question_clip"))
         ).scalars()
     }
-    return all(f"q{i}" in have for i in range(len(script.interview_questions)))
+    return all(f"q{i}" in have for i in needed)
 
 
 async def _submit_render(

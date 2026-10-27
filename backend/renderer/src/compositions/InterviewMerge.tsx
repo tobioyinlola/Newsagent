@@ -3,6 +3,8 @@ import { AbsoluteFill, Audio, Freeze, Img, OffthreadVideo, Series, interpolate, 
 import { Backdrop, Chrome } from "./Chrome";
 import { BrollScene } from "./BrollScene";
 import { ClipScene } from "./ClipScene";
+import { FullFrameAnchor } from "./FullFrameAnchor";
+import { NewsDesk, SOFT_TOP, StudioProvider } from "./NewsSet";
 import { CF, Fonts, MONO, SANS } from "./theme";
 
 export type Scene =
@@ -35,6 +37,9 @@ export type MergeProps = {
   brand: { primary: string; accent: string };
   tickerLines: string[];
   layout: "pip" | "split" | "column" | "full";
+  studio?: string;
+  anchorFullFrame?: boolean;
+  anchorCovers?: boolean;
   scenes: Scene[];
   totalSeconds: number;
 };
@@ -51,15 +56,22 @@ export const defaultMergeProps: MergeProps = {
 
 const url = (s: string) => (s.startsWith("http") ? s : staticFile(s));
 
-const AnchorShot: React.FC<{ src: string; muted?: boolean; height: string }> = ({ src, muted, height }) => (
-  <OffthreadVideo src={url(src)} transparent muted={muted} style={{ height, objectFit: "contain" }} />
-);
+const AnchorShot: React.FC<{ src: string; muted?: boolean; height: string; fullFrame?: boolean }> = ({ src, muted, height, fullFrame }) =>
+  fullFrame ? (
+    <OffthreadVideo src={url(src)} muted={muted} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 22%" }} />
+  ) : (
+    <OffthreadVideo src={url(src)} transparent muted={muted} style={{ height, objectFit: "contain", ...SOFT_TOP }} />
+  );
 
-const AnchorScene: React.FC<{ src: string; portrait: boolean }> = ({ src, portrait }) => (
-  <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "18%" : "9%" }}>
-    <AnchorShot src={src} height={portrait ? "58%" : "88%"} />
+const AnchorScene: React.FC<{ src: string; portrait: boolean; fullFrame?: boolean; covers?: boolean }> = ({ src, portrait, fullFrame, covers }) =>
+  fullFrame ? (
+    <FullFrameAnchor src={src} covers={covers ?? true} />
+  ) : (
+  <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "16%" : "11%" }}>
+    <AnchorShot src={src} height={portrait ? "66%" : "80%"} />
+    <NewsDesk />
   </AbsoluteFill>
-);
+  );
 
 // The founder's answer beside a column that shows the question and the founder's words as they say them.
 // The text is timed from the transcript: a line appears when its cue starts, the current line is highlighted and the
@@ -131,7 +143,7 @@ const ColumnAnswer: React.FC<{ scene: Extract<Scene, { type: "answer" }>; founde
   );
 };
 
-const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout: MergeProps["layout"]; brand: MergeProps["brand"] }> = ({ scene, layout, brand }) => {
+const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout: MergeProps["layout"]; brand: MergeProps["brand"]; fullFrame?: boolean }> = ({ scene, layout, brand, fullFrame }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
   const portrait = height > width;
@@ -151,7 +163,7 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
   const anchorBox = (
     <Freeze frame={0}>
       <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: CF.ink, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-        <AnchorShot src={scene.pipSrc} muted height="100%" />
+        <AnchorShot src={scene.pipSrc} muted height="100%" fullFrame={fullFrame} />
       </div>
     </Freeze>
   );
@@ -200,17 +212,19 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
   const { fps, height, width } = useVideoConfig();
   const portrait = height > width;
   return (
+    <StudioProvider studio={p.studio}>
     <AbsoluteFill style={{ fontFamily: SANS, background: CF.ink }}>
       <Fonts />
       <Backdrop />
       <Series>
         {p.scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={Math.max(1, Math.round(s.seconds * fps))}>
-            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} /> : s.type === "clip" ? <ClipScene src={s.src} /> : s.type === "broll" ? <BrollScene scene={s} /> : <AnchorScene src={s.src} portrait={portrait} />}
+            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} fullFrame={p.anchorFullFrame} /> : s.type === "clip" ? <ClipScene src={s.src} /> : s.type === "broll" ? <BrollScene scene={s} /> : <AnchorScene src={s.src} portrait={portrait} fullFrame={p.anchorFullFrame} covers={p.anchorCovers} />}
           </Series.Sequence>
         ))}
       </Series>
       <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} />
     </AbsoluteFill>
+    </StudioProvider>
   );
 };

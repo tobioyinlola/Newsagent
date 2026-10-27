@@ -108,6 +108,9 @@ class Project(Base, TimestampMixin):
     broll: Mapped[list | None] = mapped_column(JSON, nullable=True)
     # edits made to a finished video that the next re-render will apply
     revision_pending: Mapped[bool] = mapped_column(Boolean, default=False)
+    # "guided": details -> AI interview -> written story -> video. "classic": the original script-first flow.
+    flow: Mapped[str] = mapped_column(String(10), default="classic")
+    announcement_type: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
     brief: Mapped["Brief | None"] = relationship(uselist=False, lazy="selectin")
 
@@ -131,6 +134,8 @@ class ScriptVersion(Base, TimestampMixin):
     lower_thirds: Mapped[list] = mapped_column(JSON, default=list)
     interview_questions: Mapped[list] = mapped_column(JSON, default=list)
     claim_flags: Mapped[list] = mapped_column(JSON, default=list)
+    # the written news story and the social post made after the interview (guided flow): see integrations/llm/base.Story
+    story: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     approved: Mapped[bool] = mapped_column(Boolean, default=False)
     approved_by: Mapped[str | None] = mapped_column(String(320), nullable=True)
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

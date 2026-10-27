@@ -15,7 +15,12 @@ async def advance(session: AsyncSession, project_id: str) -> None:
         return
     payload = {"project_id": project_id}
     state = project.state
-    if state == "script_approved" and project.interview_enabled and project.interview_mode == "live":
+    if (
+        state == "script_approved"
+        and project.interview_enabled
+        and project.interview_mode == "live"
+        and project.flow != "guided"
+    ):
         sm.transition(project, "interviewing")  # nothing paid runs until the owner has been interviewed and proceeds
         await session.commit()
     elif state == "script_approved":

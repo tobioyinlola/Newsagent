@@ -1,4 +1,4 @@
-from app.integrations.avatar.base import AvatarProvider, AvatarRequest, AvatarResult, VoiceOption
+from app.integrations.avatar.base import AvatarProvider, AvatarRequest, AvatarResult, Presenter, VoiceOption
 
 WORDS_PER_SECOND = 2.5
 MOCK_COST_PER_MINUTE = 1.0
@@ -20,6 +20,12 @@ class MockAvatarProvider(AvatarProvider):
     async def list_voices(self) -> list[VoiceOption]:
         accents = ["nigerian", "ghanaian", "kenyan", "south_african", "british", "american"]
         return [VoiceOption(id=f"mock-{a}", accent=a) for a in accents]
+
+    async def list_presenters(self) -> list[Presenter]:
+        return [
+            Presenter("stand-in-woman", "Stand-in presenter (woman)", "female", None, "landscape"),
+            Presenter("stand-in-man", "Stand-in presenter (man)", "male", None, "landscape"),
+        ]
 
     async def generate(self, req: AvatarRequest) -> AvatarResult:
         d = self._duration(req)

@@ -6,13 +6,13 @@ import { Button, Card, ErrorBox, Notice, inputCls } from "./ui";
 type Script = Schemas["ScriptOut"];
 type Seg = { kind: string; text: string };
 
-export function ScriptEditor({ projectId, script }: { projectId: string; script: Script }) {
+export function ScriptEditor({ projectId, script, guided = false, pictures = 99 }: { projectId: string; script: Script; guided?: boolean; pictures?: number }) {
   const qc = useQueryClient();
   const [segments, setSegments] = useState<Seg[]>(script.segments as Seg[]);
   const [ticker, setTicker] = useState(script.ticker_lines.join("\n"));
   const [questions, setQuestions] = useState<string[]>(script.interview_questions);
   const [mode, setMode] = useState<"live" | "invite" | "none">("live");
-  const withInterview = mode !== "none";
+  const withInterview = guided || mode !== "none";
   const [confirmed, setConfirmed] = useState<Set<string>>(new Set(script.claim_flags.filter((c) => c.confirmed).map((c) => String(c.text))));
   useEffect(() => {
     setSegments(script.segments as Seg[]);
@@ -38,7 +38,7 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
     mutationFn: async () => {
       const saved = await unwrap(api.PUT("/v1/projects/{project_id}/script", { ...path, body: body() }));
       if (saved.claim_flags.some((c) => !c.confirmed)) throw new Error("Please confirm each flagged claim before approving.");
-      return unwrap(api.POST("/v1/projects/{project_id}/script/approve", { ...path, body: { with_interview: withInterview, interview_mode: mode === "invite" ? "invite" : "live" } }));
+      return unwrap(api.POST("/v1/projects/{project_id}/script/approve", { ...path, body: { with_interview: withInterview, interview_mode: guided || mode !== "invite" ? "live" : "invite" } }));
     },
     onSettled: refresh, // also on failure: the save above may have produced claims to confirm
   });
@@ -51,16 +51,16 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
   const toggle = (t: string) => setConfirmed((s) => { const n = new Set(s); if (n.has(t)) n.delete(t); else n.add(t); return n; });
 
   return (
-    <Card title={`Script (version ${script.version})`}>
+    <Card title={guided ? "What your presenter says" : `Script (version ${script.version})`}>
       <div className="space-y-4">
-        <Notice>Review what the anchor will say. Nothing is rendered, and no credits are used, until you approve.</Notice>
+        <Notice>{guided ? "Check what the presenter says. It is short on purpose: your story and your own answers do the rest. Nothing is made until you approve." : "Review what the anchor will say. Nothing is rendered, and no credits are used, until you approve."}</Notice>
         {segments.map((s, i) => (
           <div key={i} className="space-y-1">
             <label htmlFor={`seg-${i}`} className="text-sm font-medium capitalize">{s.kind}</label>
             <textarea id={`seg-${i}`} rows={3} className={inputCls} value={s.text} onChange={(e) => setSegments(segments.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} />
           </div>
         ))}
-        {withInterview && addable.length > 0 && (
+        {!guided && withInterview && addable.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             <label htmlFor="add-part" className="text-sm font-medium">Add a presenter part</label>
             <select id="add-part" className={inputCls + " max-w-md"} value="" onChange={(e) => e.target.value && addPart(e.target.value)}>
@@ -73,7 +73,7 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
           <label htmlFor="ticker" className="text-sm font-medium">News ticker (one line each)</label>
           <textarea id="ticker" rows={3} className={inputCls} value={ticker} onChange={(e) => setTicker(e.target.value)} />
         </div>
-        <fieldset className="space-y-3 rounded-md border-2 border-ink p-3">
+        {!guided && <fieldset className="space-y-3 rounded-md border-2 border-ink p-3">
           <legend className="px-1 text-sm font-semibold">Interview</legend>
           {([
             ["live", "Interview me now with the AI interviewer (recommended)", "The AI interviewer greets you by name, asks these questions out loud, and records your answers on camera. About 4 minutes, never more than 5. Your camera must be on. Your answers appear in the video beside the AI presenter."],
@@ -98,7 +98,7 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
               <p className="text-xs text-muted">4 or 5 short, open questions fit the 5 minute interview. The most we allow is 5.</p>
             </div>
           )}
-        </fieldset>
+        </fieldset>}
         {flags.length > 0 && (
           <fieldset className="space-y-2 rounded-md border border-brand-peach bg-peach-tint p-3">
             <legend className="px-1 text-sm font-semibold text-ink">Confirm these claims are accurate</legend>
@@ -114,8 +114,8 @@ export function ScriptEditor({ projectId, script }: { projectId: string; script:
         <ErrorBox error={save.error ?? regenerate.error ?? approve.error} />
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => save.mutate()} disabled={save.isPending}>Save changes</Button>
-          <Button variant="secondary" onClick={() => regenerate.mutate()} disabled={regenerate.isPending}>Regenerate</Button>
-          <Button onClick={() => approve.mutate()} disabled={approve.isPending}>Approve and make my video</Button>
+          {!guided && <Button variant="secondary" onClick={() => regenerate.mutate()} disabled={regenerate.isPending}>Regenerate</Button>}
+          <Button onClick={() => approve.mutate()} disabled={approve.isPending || (guided && pictures < 2)}>{guided ? "Make my video" : "Approve and make my video"}</Button>
         </div>
       </div>
     </Card>

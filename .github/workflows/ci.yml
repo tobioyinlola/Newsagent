@@ -39,6 +39,18 @@ jobs:
       - name: Same suite on Postgres
         run: uv run pytest -q
         env: { TEST_DATABASE_URL: "postgresql+asyncpg://newsagent:newsagent@localhost:5432/newsagent" }
+  agent:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: agent } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt pytest
+      - name: The interviewer agent imports against the pinned LiveKit packages
+        run: python -c "import interviewer"
+      - run: pytest -q tests
+
   web:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: frontend } }
@@ -53,29 +65,33 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Generated API client must be up to date
         run: pnpm gen:api && git diff --exit-code openapi.json src/api/schema.d.ts
+      - name: vercel.json must match the app's security headers
+        run: pnpm gen:vercel && git diff --exit-code vercel.json
       - run: pnpm lint && pnpm build && pnpm test
       - run: pnpm audit --prod
   admin:
     # the back office is its own app: it is built, linted and audited on its own
     runs-on: ubuntu-latest
-    defaults: { run: { working-directory: admin } }
+    defaults: { run: { working-directory: frontend/admin } }
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
         with: { version: 10 }
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm, cache-dependency-path: admin/pnpm-lock.yaml }
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: frontend/admin/pnpm-lock.yaml }
       - uses: astral-sh/setup-uv@v3
-      - run: (cd ../backend && uv sync) && (cd ../backend && uv run python ../scripts/export_openapi.py)
+      - run: (cd ../../backend && uv sync) && (cd ../../backend && uv run python ../scripts/export_openapi.py)
       - run: pnpm install --frozen-lockfile
       - name: Generated API client must be up to date
         run: pnpm gen:api && git diff --exit-code openapi.json src/api/schema.d.ts
+      - name: vercel.json must match the app's security headers
+        run: pnpm gen:vercel && git diff --exit-code vercel.json
       - run: pnpm lint && pnpm build && pnpm test
       - run: pnpm audit --prod
   e2e-admin:
     runs-on: ubuntu-latest
     needs: [api, admin]
-    defaults: { run: { working-directory: admin } }
+    defaults: { run: { working-directory: frontend/admin } }
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg  # the clip-upload test makes a real video
@@ -84,7 +100,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - uses: astral-sh/setup-uv@v3
-      - run: (cd ../backend && uv sync)
+      - run: (cd ../../backend && uv sync)
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e

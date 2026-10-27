@@ -31,12 +31,29 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://newsagent:newsagent@localhost:5432/newsagent"
     redis_url: str = "redis://localhost:6379/0"
     anthropic_api_key: str = ""
+    # LiveKit (optional): the interview room. All three set = the browser joins a LiveKit room and the interviewer agent speaks.
+    livekit_url: str = ""  # wss://<project>.livekit.cloud
+    livekit_api_key: str = ""
+    livekit_api_secret: str = ""
+    livekit_agent_name: str = "cf-interviewer"
+    # Which vendor writes the questions, the story and the content check: "anthropic" or "openai" (any OpenAI-compatible endpoint)
+    llm_provider: str = "anthropic"
+    llm_api_key: str = ""  # openai only; empty = the same key as TTS_API_KEY / TRANSCRIPTION_API_KEY
+    llm_api_url: str = "https://api.openai.com/v1"
+    llm_model: str = ""  # empty = the small default of the chosen vendor
     heygen_api_key: str = ""
     # Which AI B-roll provider to use. No real provider is implemented yet, so outside mock mode this stays empty and
     # AI B-roll reports itself unavailable instead of pretending.
     broll_provider: str = ""
     # Optional. When set, POST /v1/webhooks/heygen is live: the signature is an HMAC-SHA256 of the raw body, read from the
     # header below. The event only wakes the pipeline up (it never supplies results), so a forged event cannot inject media.
+    # The look used when a project doesn't choose a presenter. Required for real runs: HeyGen needs an avatar id.
+    heygen_default_avatar_id: str = ""
+    # Looks whose video already contains the whole studio (a photo of a news set that the vendor animates). Those are
+    # requested as ordinary MP4 and shown full frame; every other look is requested as a transparent cut-out.
+    heygen_fullframe_avatar_ids: str = ""
+    # presenters offered first and always valid: "id|Name|gender;id|Name|gender". Their pictures are the frontend's /presenters/<id>.jpg
+    heygen_featured_presenters: str = ""
     heygen_webhook_secret: str = ""
     heygen_webhook_signature_header: str = "signature"
     synthesia_api_key: str = ""
@@ -83,9 +100,11 @@ class Settings(BaseSettings):
     )
     low_balance_threshold: str = "5"
     billing_webhook_secret: str = ""  # HMAC secret for payment webhooks; REQUIRED outside local
-    billing_provider: str = "mock"  # real provider adapter is a decision (Stripe / Paystack / Flutterwave)
+    billing_provider: str = "mock"  # mock (local only) | manual (an operator adds credits; no checkout) | a real adapter, still to be chosen (Stripe / Paystack / Flutterwave)
     clamd_host: str = ""  # ClamAV daemon; required for uploads when USE_MOCKS=false
     clamd_port: int = 3310
+    # Staging only, and a deliberate trade: with no ClamAV, uploads (founder videos, pictures) are accepted without a virus scan.
+    allow_unscanned_uploads: bool = False
     api_public_url: str = "http://localhost:8000"  # used by local dev storage URLs
 
     @property

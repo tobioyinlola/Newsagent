@@ -28,6 +28,17 @@ class AvatarPoll:
 
 
 @dataclass
+class Presenter:
+    """One selectable look of a presenter (a person in a setting)."""
+
+    id: str  # what the vendor wants as avatar_id
+    name: str
+    gender: str = ""
+    preview_image_url: str | None = None
+    orientation: str | None = None
+
+
+@dataclass
 class VoiceOption:
     id: str
     accent: str
@@ -39,6 +50,10 @@ class AvatarProvider(ABC):
     # True when the vendor job can be submitted and polled separately. The pipeline then records the vendor's id the
     # moment it is issued, so a crash or retry resumes the same paid video instead of buying another.
     supports_async: bool = False
+
+    async def list_presenters(self) -> list[Presenter]:
+        """The looks a customer may pick from. Empty when the vendor has no catalogue to offer."""
+        return []
 
     async def submit(self, req: AvatarRequest) -> str:
         raise NotImplementedError

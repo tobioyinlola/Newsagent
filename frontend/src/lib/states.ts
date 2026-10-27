@@ -1,8 +1,16 @@
 export type Step = { label: string; states: string[] };
 
 // The progress bar differs when a founder interview is included.
-export const stepsFor = (interview: boolean, mode: string = "invite"): Step[] =>
-  interview && mode === "live"
+export const stepsFor = (interview: boolean, mode: string = "invite", flow: string = "classic"): Step[] =>
+  flow === "guided"
+    ? [
+        { label: "Details", states: ["draft"] },
+        { label: "AI interview", states: ["script_approved", "interviewing"] },
+        { label: "Your story", states: ["script_ready"] },
+        { label: "Your video", states: ["rendering_anchor", "anchor_ready", "merging"] },
+        { label: "Ready", states: ["final_ready"] },
+      ]
+    : interview && mode === "live"
     ? [
         { label: "Announcement", states: ["draft"] },
         { label: "Script", states: ["script_ready"] },
@@ -31,7 +39,7 @@ export const stepsFor = (interview: boolean, mode: string = "invite"): Step[] =>
 
 const LABELS: Record<string, string> = {
   draft: "Draft",
-  script_ready: "Script ready for review",
+  script_ready: "Ready for your review",
   script_approved: "Script approved",
   interviewing: "Your AI interview",
   rendering_anchor: "Recording the anchor",
