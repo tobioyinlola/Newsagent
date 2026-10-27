@@ -1,4 +1,4 @@
-// Writes the repo-root vercel.json: ONE Vercel project that serves the customer app (frontend/) and the back office (admin/) as
+// Writes the repo-root vercel.json: ONE Vercel project that serves the customer app (frontend/) and the back office (frontend/admin/) as
 // two separate SITES. Which one a visitor gets depends on the web address they used, not on a path, so the two never share an
 // origin (and so never share a sign-in token). Each site keeps its own Content-Security-Policy.
 //   node scripts/gen-vercel-root.mjs
@@ -6,7 +6,7 @@
 // (or pass them as environment variables), run this again, and commit the result.
 import fs from "node:fs";
 import { securityHeaders as webHeaders } from "../frontend/security-headers.mjs";
-import { securityHeaders as adminHeaders } from "../admin/security-headers.mjs";
+import { securityHeaders as adminHeaders } from "../frontend/admin/security-headers.mjs";
 
 const ADMIN_HOST = process.env.ADMIN_HOST || "cover-founder-admin.vercel.app";
 const env = {
@@ -20,7 +20,7 @@ const onAdmin = [{ type: "host", value: ADMIN_HOST.replace(/\./g, "\\.") }];
 const config = {
   $schema: "https://openapi.vercel.sh/vercel.json",
   services: {
-    admin: { root: "admin", framework: "vite", buildCommand: "pnpm build" },
+    admin: { root: "frontend/admin", framework: "vite", buildCommand: "pnpm build" },
     frontend: { root: "frontend", framework: "vite", buildCommand: "pnpm build" },
   },
   rewrites: [

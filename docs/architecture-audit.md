@@ -11,7 +11,7 @@ Modular monolith in a monorepo.
   transcription, renderer, storage, email, billing, malware).
 - `backend/renderer/` Node/TypeScript service: Remotion 4 compositions (`NewsStudio`, `InterviewMerge`), ffmpeg processing of founder
   takes, loudness normalisation, media analysis. Own bounded queue (`MAX_QUEUE`).
-- `frontend/` React/Vite customer app. `admin/` separate operator back office. Storage: S3-compatible (R2) or local dev storage.
+- `frontend/` React/Vite customer app. `frontend/admin/` separate operator back office. Storage: S3-compatible (R2) or local dev storage.
 - CI: GitHub Actions (api, renderer, web, admin, e2e, e2e-admin, e2e-real).
 
 ## 2. What works (verified)

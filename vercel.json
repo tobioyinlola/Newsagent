@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "services": {
     "admin": {
-      "root": "admin",
+      "root": "frontend/admin",
       "framework": "vite",
       "buildCommand": "pnpm build"
     },

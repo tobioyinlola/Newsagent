@@ -8,7 +8,7 @@
     "preview": "vite preview",
     "build": "tsc --noEmit && vite build",
     "lint": "eslint src",
-    "test": "vitest run --passWithNoTests --exclude e2e --exclude e2e-real",
+    "test": "vitest run --passWithNoTests --exclude e2e --exclude e2e-real --exclude admin",
     "e2e": "playwright test",
     "e2e:real": "bash e2e-real/make-media.sh && playwright test -c playwright.real.config.ts",
     "gen:vercel": "node scripts/gen-vercel-json.mjs",
