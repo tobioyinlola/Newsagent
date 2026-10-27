@@ -83,7 +83,7 @@ Use Railway's reference variables for the database, Redis and the private render
 | `HEYGEN_DEFAULT_AVATAR_ID` | `ca98f45881f1ba5ee6ad7a44d64855e5` (the man) |
 | `HEYGEN_FULLFRAME_AVATAR_IDS` | as in `.env.example` (the three looks, `:plain` for the two news-desk ones) |
 | `HEYGEN_FEATURED_PRESENTERS` | as in `.env.example` |
-| `ANTHROPIC_API_KEY` | staging key. `LLM_MODEL` empty = the small default |
+| `LLM_PROVIDER` | `openai` to write the questions, story and content check with the OpenAI key below (default `anthropic`, which needs `ANTHROPIC_API_KEY`). `LLM_MODEL` empty = a small default (`gpt-4o-mini` / `claude-haiku-5-5`) |
 | `TTS_API_KEY`, `TRANSCRIPTION_API_KEY` | OpenAI key (`TTS_API_URL` / `TRANSCRIPTION_API_URL` default to OpenAI) |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | optional, from LiveKit Cloud |
 | `SENTRY_DSN` | optional but recommended |

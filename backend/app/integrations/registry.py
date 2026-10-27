@@ -109,6 +109,10 @@ def get_llm() -> ScriptLLM:
             from app.integrations.llm.mock import MockScriptLLM
 
             return MockScriptLLM()
+        if get_settings().llm_provider == "openai":
+            from app.integrations.llm.openai import OpenAIScriptLLM
+
+            return OpenAIScriptLLM()
         from app.integrations.llm.anthropic import AnthropicScriptLLM
 
         return AnthropicScriptLLM()

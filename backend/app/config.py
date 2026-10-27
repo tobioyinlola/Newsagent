@@ -36,7 +36,11 @@ class Settings(BaseSettings):
     livekit_api_key: str = ""
     livekit_api_secret: str = ""
     livekit_agent_name: str = "cf-interviewer"
-    llm_model: str = ""  # empty = the small default in integrations/llm/anthropic.py
+    # Which vendor writes the questions, the story and the content check: "anthropic" or "openai" (any OpenAI-compatible endpoint)
+    llm_provider: str = "anthropic"
+    llm_api_key: str = ""  # openai only; empty = the same key as TTS_API_KEY / TRANSCRIPTION_API_KEY
+    llm_api_url: str = "https://api.openai.com/v1"
+    llm_model: str = ""  # empty = the small default of the chosen vendor
     heygen_api_key: str = ""
     # Which AI B-roll provider to use. No real provider is implemented yet, so outside mock mode this stays empty and
     # AI B-roll reports itself unavailable instead of pretending.
