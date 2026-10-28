@@ -31,7 +31,7 @@ export function Setup() {
           <div className="sm:col-span-2"><Button type="submit" disabled={invite.isPending}>Create invite</Button></div>
         </form>
         <ErrorBox error={invite.error} />
-        {link && <div className="mt-3"><Notice tone="ok">{invite.data?.emailed ? `We emailed the invitation to ${inv.email}.` : `We could not email ${inv.email}, so send them this link yourself.`} Link (single use, expires in 14 days):<br /><code className="break-all">{link}</code></Notice></div>}
+        {link && <div className="mt-3"><Notice tone="ok">{invite.data?.emailed ? `We emailed the invitation to ${inv.email}.` : `We could not email ${inv.email}, so send them this link yourself.`} Link (single use, valid until {invite.data ? new Date(invite.data.expires_at).toLocaleString() : ""}):<br /><code className="break-all">{link}</code></Notice></div>}
       </Card>
 
       <Card title="Vendor budgets (this month)">

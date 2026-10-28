@@ -136,3 +136,13 @@ def test_the_product_address_is_shown_the_way_people_type_it():
     assert display_url("https://www.acme.com/") == "acme.com"
     assert display_url("http://shop.acme.com/products") == "shop.acme.com/products"
     assert display_url("acme.com") == "acme.com"
+
+
+def test_the_presenter_always_has_an_opening():
+    from app.integrations.llm.base import ScriptSegment
+    from app.services.guided import _trim_words
+
+    assert _trim_words(
+        [ScriptSegment(kind="intro", text="Tonight, Acme. It matters."), ScriptSegment(kind="body", text="")], 90
+    ) == [{"kind": "intro", "text": "Tonight, Acme. It matters."}]
+    assert _trim_words([ScriptSegment(kind="intro", text=" . "), ScriptSegment(kind="body", text="")], 90) == []

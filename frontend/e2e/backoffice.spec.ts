@@ -144,6 +144,7 @@ test("operators sign in with a password and a code emailed to them, and are sign
   await page.getByRole("button", { name: "Verify" }).click();
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   await page.getByRole("button", { name: "Sign out" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Sign out" }).click(); // the confirmation
   await expect(page).toHaveURL(/\/admin\/login/);
   await page.goto("/admin/customers");
   await expect(page).toHaveURL(/\/admin\/login/);

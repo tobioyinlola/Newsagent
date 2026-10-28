@@ -72,6 +72,7 @@ class Settings(BaseSettings):
     storage_secret_key: str = "minioadmin"
     renderer_url: str = "http://localhost:4000"
     renderer_shared_secret: str = ""
+    invite_ttl_hours: int = 336  # how long an emailed invitation to join stays valid (never less than 48 hours)
     otp_ttl_minutes: int = 10
     session_idle_minutes: int = 60
     session_absolute_days: int = 30
