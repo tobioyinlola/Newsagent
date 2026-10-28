@@ -38,6 +38,12 @@ class HttpRenderer(RendererClient):
             await asyncio.sleep(delay)
             waited += delay
 
+    async def cancel(self, render_id: str) -> None:
+        try:
+            await self._client.delete(f"/renders/{render_id}")
+        except httpx.HTTPError:  # best effort: the render then just finishes unused
+            pass
+
     def estimate_cost(self, req: RenderRequest) -> float:
         return COST_PER_OUTPUT * len(req.outputs)
 
