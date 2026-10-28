@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 test("open sign-up: business name, email, password, emailed code, dashboard", async ({ page, request }) => {
   const email = `owner${Date.now()}@newbiz.example.com`;
   await page.goto("/");
-  await page.getByRole("link", { name: "Publish Your Story Free!" }).first().click();
+  await page.getByRole("link", { name: "Publish your free story!" }).first().click();
   await expect(page.getByRole("heading", { name: "Publish your story free" })).toBeVisible();
   await page.getByLabel("Business name").fill("NewBiz Ltd");
   await page.getByLabel("Work email").fill(email);
