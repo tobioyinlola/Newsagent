@@ -11883,6 +11883,30 @@
         ]
       }
     },
+    "/v1/public/stats": {
+      "get": {
+        "description": "Live numbers for the public site: videos finished, and how often shared videos have been opened.",
+        "operationId": "public_stats_v1_public_stats_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Public Stats V1 Public Stats Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Public Stats",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/v1/share/{token}": {
       "get": {
         "operationId": "view_share_v1_share__token__get",

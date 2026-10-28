@@ -8,11 +8,11 @@ import { getToken } from "../lib/auth";
 // The public landing page. Layout: dark site with poster-style art (sunburst, mountains, clouds) drawn in the brand palette,
 // product "screens" built from real app states, and credit-based pricing read live from the packs on sale.
 
-const CONTACT = "mailto:coverfounder@gmail.com?subject=Cover%20Founder%20access";
+export const CONTACT = "mailto:coverfounder@gmail.com?subject=Cover%20Founder%20access";
 const P = { ink: "#222222", navy: "#191A30", green: "#C0FE73", red: "#EB464B", purple: "#634EA0", aqua: "#0CC0DF", peach: "#FFBD59", cream: "#F3EBDD" };
 
 // ---------- poster art (inline SVG, brand colours only) ----------
-function Rays({ colors, cx = 600, cy = 520, count = 18 }: { colors: string[]; cx?: number; cy?: number; count?: number }) {
+export function Rays({ colors, cx = 600, cy = 520, count = 18 }: { colors: string[]; cx?: number; cy?: number; count?: number }) {
   const rays = Array.from({ length: count }, (_, i) => {
     const a0 = Math.PI + (i / count) * Math.PI, a1 = Math.PI + ((i + 0.5) / count) * Math.PI;
     const r = 1600;
@@ -21,7 +21,7 @@ function Rays({ colors, cx = 600, cy = 520, count = 18 }: { colors: string[]; cx
   return <g>{rays}</g>;
 }
 
-function Cloud({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
+export function Cloud({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
   return (
     <g transform={`translate(${x} ${y}) scale(${s})`} fill={P.cream}>
       <ellipse cx="0" cy="0" rx="90" ry="38" /><ellipse cx="60" cy="-22" rx="62" ry="44" /><ellipse cx="-55" cy="-14" rx="52" ry="34" /><ellipse cx="120" cy="6" rx="60" ry="28" />
@@ -29,7 +29,7 @@ function Cloud({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
   );
 }
 
-function HeroArt() {
+export function HeroArt() {
   return (
     <svg viewBox="0 0 1200 620" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" aria-hidden="true">
       <rect width="1200" height="620" fill={P.navy} />
@@ -43,7 +43,7 @@ function HeroArt() {
   );
 }
 
-function BannerArt() {
+export function BannerArt() {
   return (
     <svg viewBox="0 0 1200 420" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" aria-hidden="true">
       <rect width="1200" height="420" fill={P.aqua} />
@@ -58,7 +58,7 @@ function BannerArt() {
   );
 }
 
-function CardArt({ variant }: { variant: "video" | "story" }) {
+export function CardArt({ variant }: { variant: "video" | "story" }) {
   const colors = variant === "video" ? [P.red, P.peach, P.aqua] : [P.purple, P.green, P.peach];
   return (
     <svg viewBox="0 0 600 340" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" aria-hidden="true">
@@ -71,11 +71,11 @@ function CardArt({ variant }: { variant: "video" | "story" }) {
 }
 
 // ---------- small building blocks ----------
-function Eyebrow({ children }: { children: ReactNode }) {
+export function Eyebrow({ children }: { children: ReactNode }) {
   return <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-brand-green"><span aria-hidden="true">● </span>{children}</p>;
 }
 
-function Panel({ title, right, children, className = "" }: { title: string; right?: ReactNode; children: ReactNode; className?: string }) {
+export function Panel({ title, right, children, className = "" }: { title: string; right?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <div className={`rounded-sm border border-white/10 bg-[#141522]/95 p-3 font-mono text-[11px] text-white/80 shadow-2xl ${className}`}>
       <div className="mb-2 flex items-center justify-between uppercase tracking-wider text-white/50"><span>{title}</span>{right}</div>
@@ -84,9 +84,9 @@ function Panel({ title, right, children, className = "" }: { title: string; righ
   );
 }
 
-const Live = ({ children = "LIVE" }: { children?: ReactNode }) => <span className="text-brand-green"><span aria-hidden="true">● </span>{children}</span>;
+export const Live = ({ children = "LIVE" }: { children?: ReactNode }) => <span className="text-brand-green"><span aria-hidden="true">● </span>{children}</span>;
 
-function Cta({ to, href, children, primary = false }: { to?: string; href?: string; children: ReactNode; primary?: boolean }) {
+export function Cta({ to, href, children, primary = false }: { to?: string; href?: string; children: ReactNode; primary?: boolean }) {
   const cls = primary
     ? "inline-flex items-center gap-2 rounded-sm border-2 border-brand-green bg-brand-green px-5 py-3 text-sm font-bold text-ink hover:bg-transparent hover:text-brand-green"
     : "inline-flex items-center gap-2 rounded-sm border-2 border-white/60 px-5 py-3 text-sm font-bold text-white hover:border-brand-green hover:text-brand-green";
@@ -94,7 +94,7 @@ function Cta({ to, href, children, primary = false }: { to?: string; href?: stri
 }
 
 // ---------- the product "screen" in the hero (mirrors the real app) ----------
-function StudioMock() {
+export function StudioMock() {
   return (
     <div className="relative z-10 mx-auto grid max-w-5xl gap-3 rounded-sm border border-white/10 bg-ink/95 p-3 text-left md:grid-cols-[1fr_1.6fr_1fr]">
       <div className="col-span-full flex items-center justify-between rounded-sm bg-white/5 px-3 py-2 font-mono text-xs text-white/60">
@@ -269,7 +269,7 @@ function HowItWorks() {
 }
 
 function Distribution() {
-  const regions = ["North America", "Europe", "Africa", "South America", "Asia-Pacific", "Middle East"];
+  const regions = ["United States", "Canada", "Europe", "East Africa", "Nigeria", "More regions"];
   return (
     <section id="distribution" className="border-t border-white/10 bg-ink px-4 py-20 md:px-8">
       <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
@@ -280,7 +280,7 @@ function Distribution() {
           <ul className="mt-6 space-y-3 text-white/90">
             {["Pick one region or several for each announcement", "Credits per region, shown before you confirm", "Your video and story stay yours to share anywhere"].map((x) => <li key={x} className="flex gap-3"><span className="text-brand-green" aria-hidden="true">✓</span>{x}</li>)}
           </ul>
-          <div className="mt-8"><Cta href={`${CONTACT}%20-%20distribution`} primary>Join the distribution waitlist</Cta></div>
+          <div className="mt-8 flex flex-wrap gap-3"><Cta to="/distribution" primary>Explore distribution</Cta><Cta href={`${CONTACT}%20-%20distribution`}>Join the waitlist</Cta></div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {regions.map((r, i) => (
@@ -388,15 +388,13 @@ function Faq() {
   );
 }
 
-function Footer() {
+export function Footer() {
   const cols: { title: string; links: [string, string][] }[] = [
-    { title: "Product", links: [["Use cases", "#use-cases"], ["How it works", "#how"], ["Distribution", "#distribution"], ["Pricing", "#pricing"], ["FAQ", "#faq"]] },
+    { title: "Product", links: [["AI Newsroom", "/newsroom"], ["Distribution", "/distribution"], ["How it works", "/#how"], ["Pricing", "/#pricing"], ["FAQ", "/#faq"]] },
     { title: "Members", links: [["Sign in", "/login"], ["Reset password", "/forgot"], ["Request access", CONTACT], ["Contact support", "mailto:coverfounder@gmail.com"]] },
-    { title: "Trust", links: [["AI disclosure", "#faq"], ["Your data", "/account"], ["Security", "/security"]] },
+    { title: "Trust", links: [["AI disclosure", "/#faq"], ["Your data", "/account"], ["Security", "/security"]] },
   ];
-  const link = (label: string, href: string) => href.startsWith("/")
-    ? <Link to={href} className="text-white/80 hover:text-brand-green">{label}</Link>
-    : <a href={href} className="text-white/80 hover:text-brand-green">{label}</a>;
+  const link = (label: string, href: string) => <SiteLink to={href} className="text-white/80 hover:text-brand-green">{label}</SiteLink>;
   return (
     <footer className="relative overflow-hidden border-t border-white/10 bg-navy px-4 pt-14 md:px-8">
       <div className="mx-auto max-w-6xl">
@@ -414,7 +412,7 @@ function Footer() {
         </div>
         <div className="mt-12 flex flex-wrap items-center justify-between gap-3 text-xs text-white/60">
           <p className="font-bold">© {new Date().getFullYear()} Cover Founder. All rights reserved.</p>
-          <p className="max-w-lg">Every Cover Founder video uses an AI-generated presenter and is labelled as such. Founder answers are the founder's own recordings.</p>
+          <p className="max-w-lg">Every Cover Founder video uses an AI-generated presenter, disclosed with the video. Founder answers are the founder's own recordings.</p>
         </div>
       </div>
       <p aria-hidden="true" className="pointer-events-none mt-6 select-none whitespace-nowrap bg-gradient-to-b from-white/35 to-transparent bg-clip-text text-center font-mono text-[11vw] font-bold leading-[0.85] text-transparent md:text-[9.5rem]">COVER FOUNDER</p>
@@ -422,7 +420,12 @@ function Footer() {
   );
 }
 
-const NAV: [string, string][] = [["Use cases", "#use-cases"], ["How it works", "#how"], ["Distribution", "#distribution"], ["Pricing", "#pricing"], ["FAQ", "#faq"]];
+const NAV: [string, string][] = [["AI Newsroom", "/newsroom"], ["Distribution", "/distribution"], ["Pricing", "/#pricing"], ["FAQ", "/#faq"]];
+
+// A site link: a page of the app (client-side) or a section of the home page (a normal link, so the browser scrolls to it).
+function SiteLink({ to, className, onClick, children }: { to: string; className: string; onClick?: () => void; children: ReactNode }) {
+  return to.startsWith("/") && !to.includes("#") ? <Link to={to} className={className} onClick={onClick}>{children}</Link> : <a href={to} className={className} onClick={onClick}>{children}</a>;
+}
 
 // Phones and tablets: the site menu slides in from the right edge over a dimmed page. Esc, the scrim, Close or any link closes it.
 function MobileMenu({ open, onClose, signedIn }: { open: boolean; onClose: () => void; signedIn: boolean }) {
@@ -443,7 +446,7 @@ function MobileMenu({ open, onClose, signedIn }: { open: boolean; onClose: () =>
           <button type="button" onClick={onClose} className="rounded-sm border-2 border-brand-green px-3 py-1.5 text-sm font-bold text-brand-green">Close</button>
         </div>
         <nav aria-label="Site (mobile)" className="mt-6 flex flex-col">
-          {NAV.map(([l, h]) => <a key={h} href={h} onClick={onClose} className="border-b border-white/10 py-4 text-lg font-bold text-white hover:text-brand-green">{l}</a>)}
+          {NAV.map(([l, h]) => <SiteLink key={h} to={h} onClick={onClose} className="border-b border-white/10 py-4 text-lg font-bold text-white hover:text-brand-green">{l}</SiteLink>)}
         </nav>
         <div className="mt-auto flex flex-col gap-3 pt-6">
           {signedIn ? <Link to="/dashboard" onClick={onClose} className="rounded-sm border-2 border-brand-green bg-brand-green px-4 py-3 text-center font-bold text-ink">Dashboard</Link> : (
@@ -458,18 +461,53 @@ function MobileMenu({ open, onClose, signedIn }: { open: boolean; onClose: () =>
   );
 }
 
-export function Landing() {
+// The home page's at-a-glance numbers. Videos and impressions are live (impressions = times a shared video was opened).
+export const CHANNELS = ["YouTube", "LinkedIn", "X", "Instagram", "TikTok", "Facebook"];
+export const GEOGRAPHY: [string, string[]][] = [["North America", ["United States", "Canada"]], ["Europe", []], ["East Africa", []], ["Nigeria", []]];
+export function StatsStrip() {
+  const stats = useQuery({ queryKey: ["public-stats"], queryFn: () => unwrap(api.GET("/v1/public/stats")), retry: false, staleTime: 300000 });
+  const d = stats.data as { videos?: number; impressions?: number } | undefined;
+  const n = (v?: number) => (v == null ? "…" : v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}K` : String(v));
+  const tiles: [string, string, string][] = [
+    [n(d?.videos), "Videos created", "Finished news segments"],
+    [n(d?.impressions), "Impressions", "Views of shared videos"],
+    [String(CHANNELS.length), "Channels", CHANNELS.join(" · ")],
+    ["25K+", "Media platforms", "Distribution coverage"],
+  ];
+  return (
+    <section aria-label="Cover Founder in numbers" className="border-b border-white/10 bg-ink px-4 py-12 md:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="grid grid-cols-2 border border-white/10 md:grid-cols-4">
+          {tiles.map(([v, label, sub], i) => (
+            <div key={label} className={`p-6 ${i % 2 === 0 ? "border-r border-white/10" : "md:border-r md:border-white/10"} ${i < 2 ? "border-b border-white/10 md:border-b-0" : ""} ${i === 3 ? "md:border-r-0" : ""}`}>
+              <p className="font-mono text-4xl font-bold text-white md:text-5xl">{v}</p>
+              <p className="mt-2 font-mono text-xs font-bold uppercase tracking-wider text-brand-green">{label}</p>
+              <p className="mt-1 text-xs text-white/60">{sub}</p>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 border border-t-0 border-white/10 p-4">
+          <span className="mr-2 font-mono text-xs font-bold uppercase tracking-wider text-brand-peach">Geography</span>
+          {GEOGRAPHY.map(([region, parts]) => (
+            <span key={region} className="rounded-sm border border-white/20 bg-white/5 px-3 py-1 text-sm text-white">{region}{parts.length ? <span className="text-white/60"> · {parts.join(", ")}</span> : null}</span>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function SiteShell({ children }: { children: ReactNode }) {
   const signedIn = Boolean(getToken());
   const [menu, setMenu] = useState(false);
   const closeMenu = useCallback(() => setMenu(false), []);
-  const ticker = "FEATURED: Your launch, told like news  •  AI interview in your browser  •  Written story and social post included  •  Credits, no subscription  •  ";
   return (
     <div className="min-h-screen bg-ink text-white">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-ink/95 backdrop-blur">
         <nav aria-label="Site" className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <Link to="/" className="flex items-center gap-2 text-brand-green" aria-label="Cover Founder home"><SecondaryLogo className="h-9 w-auto" /></Link>
           <div className="hidden items-center gap-6 text-sm text-white/80 md:flex">
-            {NAV.map(([l, h]) => <a key={h} href={h} className="hover:text-brand-green">{l}</a>)}
+            {NAV.map(([l, h]) => <SiteLink key={h} to={h} className="hover:text-brand-green">{l}</SiteLink>)}
           </div>
           <div className="flex items-center gap-2">
             {signedIn ? <Link to="/dashboard" className="rounded-sm border-2 border-brand-green bg-brand-green px-3 py-2 text-sm font-bold text-ink">Dashboard</Link> : (
@@ -484,6 +522,21 @@ export function Landing() {
       </header>
       <MobileMenu open={menu} onClose={closeMenu} signedIn={signedIn} />
 
+      {children}
+      <Footer />
+    </div>
+  );
+}
+
+export function Landing() {
+  const signedIn = Boolean(getToken());
+  useEffect(() => { // arriving from another page at /#pricing etc.: the page loads after the browser looked for the section
+    const id = window.location.hash.slice(1);
+    if (id) window.setTimeout(() => document.getElementById(id)?.scrollIntoView(), 50);
+  }, []);
+  const ticker = "FEATURED: Your launch, told like news  •  AI interview in your browser  •  Written story and social post included  •  Credits, no subscription  •  ";
+  return (
+    <SiteShell>
       <main>
         <section className="cf-grain relative overflow-hidden px-4 pb-16 pt-16 md:px-8 md:pt-24">
           <HeroArt />
@@ -502,6 +555,7 @@ export function Landing() {
         <div className="overflow-hidden border-y border-brand-green/40 bg-ink py-3" aria-hidden="true">
           <div className="cf-ticker flex w-max whitespace-nowrap font-mono text-sm text-white/80"><span>{ticker.repeat(4)}</span><span>{ticker.repeat(4)}</span></div>
         </div>
+        <StatsStrip />
         <UseCases />
         <TwoWays />
         <Banner />
@@ -516,7 +570,6 @@ export function Landing() {
         </section>
       </main>
 
-      <Footer />
-    </div>
+    </SiteShell>
   );
 }

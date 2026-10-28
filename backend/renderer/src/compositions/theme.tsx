@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { AbsoluteFill, cancelRender, continueRender, delayRender, staticFile, useVideoConfig } from "remotion";
-import { CF_PATHS, CF_SYMBOL_VIEWBOX } from "./cf-paths";
+import { CF_PATHS, CF_SYMBOL_VIEWBOX, CF_VIEWBOX } from "./cf-paths";
 
 // Cover Founder brand (guideline v1.0). Channel graphics always use these; the startup's own brand kit only colours
 // the lower-third marker, so every video reads as a Cover Founder video.
@@ -61,3 +61,10 @@ export const StripesBackground: React.FC = () => {
     </AbsoluteFill>
   );
 };
+
+// The primary logo (the symbol with COVER FOUNDER under it), drawn on its own ink tile: the channel mark in the top-left corner.
+export const CFLogo: React.FC<{ height: number; color?: string }> = ({ height, color = CF.green }) => (
+  <svg viewBox={CF_VIEWBOX} height={height} style={{ display: "block" }} fill={color} aria-label="Cover Founder">
+    {CF_PATHS.map((p, i) => <path key={i} fillRule={p.rule} d={p.d} />)}
+  </svg>
+);

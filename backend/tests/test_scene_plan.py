@@ -103,16 +103,16 @@ async def test_the_plan_is_saved_with_the_video_and_describes_it(client, workspa
     async with maker() as s:
         p = await s.get(Project, pid)
     saved = sp.ScenePlan.model_validate(p.scene_plan)
-    assert saved.hash() == p.scene_plan_hash and saved.layout == "column"
+    assert saved.hash() == p.scene_plan_hash and saved.layout == "full"
     kinds = [s.type for s in saved.scenes]
-    assert kinds == ["anchor_intro"] + ["anchor_question", "founder_column"] * 4 + ["news_closing"]
-    founder_scenes = [s for s in saved.scenes if s.type == "founder_column"]
+    assert kinds == ["anchor_intro"] + ["anchor_question", "founder_fullscreen"] * 4 + ["news_closing"]
+    founder_scenes = [s for s in saved.scenes if s.type == "founder_fullscreen"]
     assert all(s.provenance == "founder_statement" and s.cues for s in founder_scenes)
     assert saved.scenes[0].provenance == "owner_script" and saved.captions
     assert all("http" not in (r.key) for _s, r in sp.asset_refs(saved))  # keys, never signed URLs
     req = registry.get_renderer().requests[-1]
     assert [s["type"] for s in req.props["scenes"]][:3] == ["anchor", "question", "answer"]
-    assert req.props["scenes"][2]["layout"] == "column"
+    assert req.props["scenes"][2]["layout"] == "full"
 
 
 async def test_a_missing_founder_clip_stops_the_video_with_a_clear_reason(client, workspace, maker):
@@ -179,7 +179,7 @@ async def test_explanation_and_analysis_are_their_own_presenter_scenes(client, w
         assets = {(a.type, a.format) for a in (await s.execute(select(Asset).where(Asset.project_id == pid))).scalars()}
     assert [s.type for s in saved.scenes] == (
         ["anchor_intro", "anchor_explanation"]
-        + ["anchor_question", "founder_column"] * 4
+        + ["anchor_question", "founder_fullscreen"] * 4
         + ["anchor_analysis", "news_closing"]
     )
     assert {("anchor", "main"), ("anchor", "explanation"), ("anchor", "analysis"), ("anchor_outro", "outro")} <= assets

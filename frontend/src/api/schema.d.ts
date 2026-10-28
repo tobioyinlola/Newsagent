@@ -1937,6 +1937,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public Stats
+         * @description Live numbers for the public site: videos finished, and how often shared videos have been opened.
+         */
+        get: operations["public_stats_v1_public_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/share/{token}": {
         parameters: {
             query?: never;
@@ -7978,6 +7998,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PackOut"][];
+                };
+            };
+        };
+    };
+    public_stats_v1_public_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

@@ -6,15 +6,17 @@ import { ClipScene } from "./ClipScene";
 import { FullFrameAnchor } from "./FullFrameAnchor";
 import { NewsDesk, SOFT_TOP, StudioProvider } from "./NewsSet";
 import { CF, Fonts, MONO, SANS } from "./theme";
+import { LowerThird } from "./LowerThird";
 
 export type Scene =
-  | { type: "anchor" | "question"; src: string; seconds: number }
+  | { type: "anchor" | "question"; src: string; seconds: number; headline?: string }
   | { type: "clip"; src: string; seconds: number } // real presenter footage from the operator's library, full frame
   // the owner's product footage. `synthetic` shots (AI-generated) carry a mandatory on-screen label.
   | { type: "broll"; src: string; seconds: number; kind: "image" | "video"; caption?: string; synthetic?: boolean }
   | {
       type: "answer";
       seconds: number;
+      headline?: string; // this answer's headline bar (a short line drawn from what the founder said)
       src: string | null; // founder video (mp4); null for audio-only answers
       audioSrc?: string | null; // audio-only answers
       photoSrc?: string | null; // still shown for audio-only answers
@@ -42,6 +44,8 @@ export type MergeProps = {
   anchorCovers?: boolean;
   scenes: Scene[];
   totalSeconds: number;
+  headline?: string; // the story's headline: the bar under the presenter
+  presenter?: { name: string; title: string }; // the presenter's name box
   productUrl?: string; // the product's address, shown in the bottom-left corner from `productUrlFromSeconds` (the sign-off) to the end
   productUrlFromSeconds?: number;
 };
@@ -180,11 +184,11 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
   );
 
   if (layout === "full") {
-    // founder_fullscreen: the founder's own video fills the frame under the channel graphics
+    // founder_fullscreen, news-channel style: the founder fills the frame; their name box and a headline bar sit above the ticker
     return (
       <AbsoluteFill>
-        <div style={{ position: "absolute", left: 0, right: 0, top: 100 * u, bottom: 72 * u, background: "#000" }}>{founder}</div>
-        {lowerThird}
+        <div style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 72 * u, background: "#000" }}>{founder}</div>
+        <LowerThird name={scene.founder.name} title={scene.founder.title} headline={scene.headline} />
       </AbsoluteFill>
     );
   }
@@ -235,7 +239,7 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
       <Series>
         {p.scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={Math.max(1, Math.round(s.seconds * fps))}>
-            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} fullFrame={p.anchorFullFrame} /> : s.type === "clip" ? <ClipScene src={s.src} /> : s.type === "broll" ? <BrollScene scene={s} /> : <AnchorScene src={s.src} portrait={portrait} fullFrame={p.anchorFullFrame} covers={p.anchorCovers} />}
+            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} fullFrame={p.anchorFullFrame} /> : s.type === "clip" ? <ClipScene src={s.src} /> : s.type === "broll" ? <BrollScene scene={s} /> : <><AnchorScene src={s.src} portrait={portrait} fullFrame={p.anchorFullFrame} covers={p.anchorCovers} /><LowerThird name={p.presenter?.name} title={p.presenter?.title} headline={s.headline ?? p.headline} /></>}
           </Series.Sequence>
         ))}
       </Series>

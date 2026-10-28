@@ -166,7 +166,7 @@ async def interview_status(
         questions=list(script.interview_questions),
         takes=[take_out(t, attempts.get(q, 1), True) for q, t in sorted(takes.items()) if t.status != "recording"],
         plan=project.merge_plan
-        or default_plan(len(script.interview_questions), "column" if project.interview_mode == "live" else "pip"),
+        or default_plan(len(script.interview_questions), "full" if project.interview_mode == "live" else "pip"),
         photo_url=storage.presign_get(s.photo_key, URL_TTL) if s and s.photo_key else None,
     )
 
@@ -262,7 +262,7 @@ async def _proceed_live(session: AsyncSession, project: Project, p: Principal) -
         raise HTTPException(409, "Answer every question first.")
     if any(t.status in {"recording", "uploaded", "processing"} for t in takes.values()):
         raise HTTPException(409, "Your answers are still being checked. Try again in a moment.")
-    plan_now = project.merge_plan or default_plan(n, "column")
+    plan_now = project.merge_plan or default_plan(n, "full")
     included = {a["question_index"] for a in plan_now["answers"] if a.get("include", True)}
     if not included:
         raise HTTPException(409, "Include at least one answer, or skip the interview.")
@@ -282,7 +282,8 @@ async def _proceed_live(session: AsyncSession, project: Project, p: Principal) -
         # guided: the interview is done; write the story from what was said and let the owner review it before anything is paid
         plan_now = guided.featured_plan(project.merge_plan, sorted(takes), n)
         answers = [
-            {"question": script.interview_questions[q], "answer": takes[q].transcript or ""} for q in sorted(takes)
+            {"index": q, "question": script.interview_questions[q], "answer": takes[q].transcript or ""}
+            for q in sorted(takes)
         ]
         project.merge_plan, project.layout = plan_now, plan_now["layout"]
         await guided.write_story(session, project, script, answers)

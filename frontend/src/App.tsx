@@ -17,11 +17,15 @@ import { Share } from "./pages/Share";
 // The founder page is its own chunk so a phone on 4G downloads as little as possible before the camera starts.
 const Founder = lazy(() => import("./founder/Founder"));
 const Landing = lazy(() => import("./pages/Landing").then((m) => ({ default: m.Landing })));
+const Newsroom = lazy(() => import("./pages/Newsroom").then((m) => ({ default: m.Newsroom })));
+const DistributionPage = lazy(() => import("./pages/DistributionPage").then((m) => ({ default: m.DistributionPage })));
 
 export function App() {
   return (
     <Routes>
       <Route path="/" element={<Suspense fallback={<div className="min-h-screen bg-ink" />}><Landing /></Suspense>} />
+      <Route path="/newsroom" element={<Suspense fallback={<div className="min-h-screen bg-ink" />}><Newsroom /></Suspense>} />
+      <Route path="/distribution" element={<Suspense fallback={<div className="min-h-screen bg-ink" />}><DistributionPage /></Suspense>} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/otp" element={<OtpChallenge />} />

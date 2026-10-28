@@ -18,7 +18,7 @@ from app.integrations.errors import ProviderPending, classify
 from app.integrations.renderer.base import RenderRequest
 from app.models import Asset, BrandKit, InterviewSession, Job, Project, ScriptVersion, Take
 from app.services import presenter as clip_lib
-from app.services import provider_requests
+from app.services import provider_requests, tech_news
 from app.services import scene_plan as sp
 from app.services import state_machine as sm
 from app.services.captions import build_srt
@@ -78,8 +78,30 @@ async def approved_script(session: AsyncSession, project_id: str) -> ScriptVersi
     return script
 
 
+FEATURE_INVITE = "If you'd like your business or founder story featured on Cover Founder, get in touch with us and we'll report on it."
+
+
+def with_invite(text: str) -> str:
+    """Every video ends by inviting viewers to get featured. The invitation goes just before a closing "thank you for
+    watching" line when there is one, otherwise at the very end; a text that already invites is left alone."""
+    t = text.strip()
+    if "featured on cover founder" in t.lower():
+        return t
+    if not t:
+        return FEATURE_INVITE
+    head, sep, last = t.rpartition(". ")
+    if sep and "watching" in last.lower():
+        return f"{head}. {FEATURE_INVITE} {last}"
+    return f"{t} {FEATURE_INVITE}"
+
+
 def anchor_text(script: ScriptVersion) -> str:
     return " ".join(s["text"] for s in script.segments)
+
+
+def presenter_only_text(script: ScriptVersion) -> str:
+    """What the presenter says in a presenter-only video: the whole script, ending with the invitation to get featured."""
+    return with_invite(anchor_text(script))
 
 
 def _fullframe_entries() -> dict[str, bool]:
@@ -132,7 +154,7 @@ async def anchor_inputs(session: AsyncSession, project: Project) -> dict:
         "brand_version": kit.version if kit else 0,
         "glossary": kit.pronunciation_glossary if kit else {},
         "script_id": script.id,
-        "text": anchor_text(script),
+        "text": presenter_only_text(script),
         "accent": project.voice_accent,
         "anchor": avatar_for(project),
         "accent_override": project.accent_override,
@@ -164,7 +186,7 @@ async def build_overlay_props(
             project
         ),  # draw our boards over that picture's screens (false for a plain newsroom)
         "anchorDurationSeconds": anchor_duration_s,
-        "tickerLines": script.ticker_lines,
+        "tickerLines": [*script.ticker_lines, *[f"TECH: {h}" for h in await tech_news.headlines()]],
         "lowerThirds": script.lower_thirds,
     }
 
@@ -456,7 +478,7 @@ def segment_texts(script: ScriptVersion) -> dict[str, str]:
         "main": join(lambda k: k != "outro" and k not in EXTRA_KINDS),
         "explanation": join(lambda k: k == "explanation"),
         "analysis": join(lambda k: k == "analysis"),
-        "outro": join(lambda k: k == "outro"),
+        "outro": with_invite(join(lambda k: k == "outro")),  # every video signs off with the invitation to get featured
     }
     if not out["main"] and out["explanation"]:  # a script that only has an explanation: it is the opening
         out["main"], out["explanation"] = out["explanation"], ""
@@ -505,7 +527,7 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
         return StepOutcome({"split": True}, recorded_cost=total)
     kit = await current_kit(session, project.workspace_id)
     req = AvatarRequest(
-        script_text=anchor_text(script),
+        script_text=presenter_only_text(script),
         pronunciation=(kit.pronunciation_glossary if kit else None) or None,
         voice_accent=project.voice_accent,
         avatar_id=avatar_for(project),
@@ -682,7 +704,7 @@ async def final_render(session: AsyncSession, project: Project, guard: SpendGuar
     script, anchor, props, status, cost = await _render(session, project, guard, final_formats(), "final")
     analyses = await _record_outputs(session, project, status)
     lead = float((props.get("introClip") or {}).get("seconds", 0))  # captions start after the opening shot
-    srt = build_srt(script.segments, float(anchor.duration or 60))
+    srt = build_srt([{"text": presenter_only_text(script)}], float(anchor.duration or 60))  # exactly what is spoken
     if lead:
         srt = merge_srt([(a + lead, b + lead, t) for a, b, t in parse_srt(srt)])
     srt_key = await _store_srt(session, project, srt)
@@ -889,6 +911,7 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
             question_number=shown.index(q) + 1,
             total_questions=len(shown),
             founder=sp.Founder(**founder),
+            headline=chyron_for(script, q),
             trim_start_s=trim,
             cues=[sp.Cue(**c) for c in words],
             provenance="founder_statement",  # the founder's own recorded words, never rewritten
@@ -933,7 +956,14 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
     scenes_out = sp.to_render_scenes(scene_plan, lambda k: storage.presign_get(k, RENDER_LINK_S))
     base = await build_overlay_props(session, project, script, t_cursor)
     site = project.brief.website_url if project.brief else None
-    props = {**base, "layout": layout, "scenes": scenes_out, "totalSeconds": t_cursor}
+    props = {
+        **base,
+        "layout": layout,
+        "scenes": scenes_out,
+        "totalSeconds": t_cursor,
+        "headline": story_headline(script),
+        "presenter": presenter_identity(project),
+    }
     if site and closing_at is not None:  # shown in a corner while the presenter signs off
         props |= {"productUrl": display_url(site), "productUrlFromSeconds": closing_at}
     status, cost = await _submit_render(
@@ -954,6 +984,31 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
     return StepOutcome(
         {"props": safe_props, "output_keys": status.output_keys, "srt_key": srt_key, "analyses": analyses}, cost
     )
+
+
+def story_headline(script: ScriptVersion) -> str:
+    """The headline bar under the presenter: the written story's headline, else the script's first lower third."""
+    story = script.story or {}
+    if story.get("headline"):
+        return str(story["headline"])[:110]
+    lts = script.lower_thirds or []
+    return str(lts[0].get("title", "")) if lts else ""
+
+
+def chyron_for(script: ScriptVersion, q: int) -> str:
+    """The headline bar while the founder answers question q: a short line from what they said (written with the story),
+    else the story's headline."""
+    chyrons = (script.story or {}).get("chyrons") or {}
+    return str(chyrons.get(str(q)) or story_headline(script))[:90]
+
+
+def presenter_identity(project: Project) -> dict:
+    """The presenter's name box: their first name from the house presenter list, and the channel."""
+    from app.services import presenters as pres
+
+    look = avatar_for(project)
+    name = next((p.name.split(",")[0].strip() for p in pres.featured() if p.id == look), "")
+    return {"name": name, "title": "Presenter, Cover Founder News"} if name else {"name": "", "title": ""}
 
 
 def display_url(url: str) -> str:

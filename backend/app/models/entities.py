@@ -244,6 +244,7 @@ class ShareLink(Base, TimestampMixin):
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    views: Mapped[int] = mapped_column(Integer, default=0, server_default="0")  # times the shared video was opened
 
 
 class BrandAsset(Base, TimestampMixin):
