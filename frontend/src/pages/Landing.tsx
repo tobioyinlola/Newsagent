@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, unwrap } from "../api/client";
-import { CFSymbol, Logo } from "../components/Logo";
+import { Logo, SecondaryLogo } from "../components/Logo";
 import { getToken } from "../lib/auth";
 
 // The public landing page. Layout: dark site with poster-style art (sunburst, mountains, clouds) drawn in the brand palette,
@@ -467,7 +467,7 @@ export function Landing() {
     <div className="min-h-screen bg-ink text-white">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-ink/95 backdrop-blur">
         <nav aria-label="Site" className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
-          <Link to="/" className="flex items-center gap-2 text-brand-green" aria-label="Cover Founder home"><CFSymbol className="h-8 w-auto" /><span className="font-mono text-lg font-bold text-white">Cover Founder</span></Link>
+          <Link to="/" className="flex items-center gap-2 text-brand-green" aria-label="Cover Founder home"><SecondaryLogo className="h-9 w-auto" /></Link>
           <div className="hidden items-center gap-6 text-sm text-white/80 md:flex">
             {NAV.map(([l, h]) => <a key={h} href={h} className="hover:text-brand-green">{l}</a>)}
           </div>

@@ -2,7 +2,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { signOut } from "../lib/auth";
-import { CFSymbol } from "./Logo";
+import { CFSymbol, SecondaryLogo } from "./Logo";
 import { ConfirmDialog } from "./ui";
 import { useMe } from "./RequireOperator";
 
@@ -64,8 +64,8 @@ export function Layout() {
       {confirmOut && <ConfirmDialog title="Sign out?" confirmLabel="Sign out" cancelLabel="Stay signed in" onConfirm={() => { setConfirmOut(false); void signOutNow(); }} onCancel={() => setConfirmOut(false)}>You will need to sign in again to get back to the back office.</ConfirmDialog>}
       <div className="flex items-center justify-between bg-ink px-4 py-2 md:hidden">
         <Link to="/" className="flex items-center gap-2 text-brand-green" aria-label="Back office home">
-          <CFSymbol className="h-8 w-auto" />
-          <span className="font-mono text-lg font-bold text-white">Back office</span>
+          <SecondaryLogo className="h-8 w-auto" />
+          <span className="rounded-sm bg-brand-purple px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest text-white">Back office</span>
         </Link>
         <button type="button" className="rounded-sm border-2 border-brand-green px-3 py-1.5 text-sm font-bold text-brand-green" aria-expanded={open} aria-controls="sidebar" onClick={() => setOpen(true)}>Menu</button>
       </div>
@@ -80,8 +80,7 @@ export function Layout() {
             <button type="button" className="rounded-sm border-2 border-brand-green px-3 py-1.5 text-sm font-bold text-brand-green" onClick={() => setOpen(false)}>Close</button>
           </div>
           <Link to="/" className={`mb-3 hidden items-center gap-2 px-1 py-1 text-brand-green md:flex ${rail ? "justify-center" : ""}`} aria-label="Back office home">
-            <CFSymbol className={rail ? "h-8 w-auto" : "h-9 w-auto"} />
-            {!rail && <span><span className="block font-mono text-lg font-bold leading-tight text-white">Cover Founder</span><span className="rounded-sm bg-brand-purple px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest text-white">Back office</span></span>}
+            {rail ? <CFSymbol className="h-8 w-auto" /> : <span className="flex flex-col items-start gap-1.5"><SecondaryLogo className="h-9 w-auto" /><span className="rounded-sm bg-brand-purple px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest text-white">Back office</span></span>}
           </Link>
           {GROUPS.map((g) => (
             <div key={g.title} className="space-y-1 pb-2">

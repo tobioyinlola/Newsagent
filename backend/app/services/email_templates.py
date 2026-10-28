@@ -20,6 +20,13 @@ def _paragraphs(text: str) -> str:
     return "".join(out)
 
 
+def logo_url() -> str:
+    """The secondary logo as a picture, served by the web app (mail apps don't show SVG). Its alt text reads as the name."""
+    from app.config import get_settings
+
+    return absolute(get_settings().app_base_url.rstrip("/") + "/email-logo.png")
+
+
 def absolute(url: str) -> str:
     """A link mail apps can open. A site address set without "https://" (e.g. APP_BASE_URL=app.example.com) would otherwise
     become a relative link that goes nowhere when the button is clicked."""
@@ -63,7 +70,9 @@ def render(
         f'<!doctype html><html><body style="margin:0;padding:0;background:{PAPER}">'
         f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{PAPER}"><tr><td align="center" style="padding:24px 12px">'
         f'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#fff;border:2px solid {INK}">'
-        f'<tr><td style="background:{INK};padding:18px 28px;font:700 18px {HEAD};color:{GREEN};letter-spacing:1px">COVER FOUNDER</td></tr>'
+        f'<tr><td style="background:{INK};padding:18px 28px;font:700 18px {HEAD};color:{GREEN};letter-spacing:1px">'
+        f'<img src="{escape(logo_url(), quote=True)}" width="174" height="60" alt="COVER FOUNDER" '
+        f'style="display:block;border:0;width:174px;height:60px;color:{GREEN};font:700 18px {HEAD}"></td></tr>'
         f'<tr><td style="padding:32px 28px 12px"><h1 style="margin:0 0 18px;font:700 24px/1.25 {HEAD};color:{INK}">{escape(heading)}</h1>'
         f"{_paragraphs(body)}{code_html}{button_html}{_paragraphs(after) if after else ''}</td></tr>"
         f'<tr><td style="padding:16px 28px 28px;border-top:1px solid #E3E3DC;font:12px/1.5 {BODY};color:{MUTED}">{escape(footer)}<br>'

@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { signOut } from "../lib/auth";
-import { CFSymbol } from "./Logo";
+import { CFSymbol, SecondaryLogo } from "./Logo";
 import { ConfirmDialog } from "./ui";
 
 export function useMe() {
@@ -80,8 +80,7 @@ export function Layout() {
       {/* phone top bar */}
       <div className="flex items-center justify-between bg-ink px-4 py-2 md:hidden">
         <Link to="/dashboard" className="flex items-center gap-2 text-brand-green" aria-label="Cover Founder home">
-          <CFSymbol className="h-8 w-auto" />
-          <span className="font-mono text-lg font-bold text-white">Cover Founder</span>
+          <SecondaryLogo className="h-8 w-auto" />
         </Link>
         <button type="button" className="rounded-sm border-2 border-brand-green px-3 py-1.5 text-sm font-bold text-brand-green" aria-expanded={open} aria-controls="sidebar" onClick={() => setOpen(true)}>
           Menu
@@ -102,8 +101,7 @@ export function Layout() {
             <button type="button" className="rounded-sm border-2 border-brand-green px-3 py-1.5 text-sm font-bold text-brand-green" onClick={() => setOpen(false)}>Close</button>
           </div>
           <Link to="/dashboard" className={`mb-4 hidden items-center gap-2 px-1 py-1 text-brand-green md:flex ${rail ? "justify-center" : ""}`} aria-label="Cover Founder home">
-            <CFSymbol className={rail ? "h-8 w-auto" : "h-9 w-auto"} />
-            {!rail && <span className="font-mono text-lg font-bold text-white">Cover Founder</span>}
+            {rail ? <CFSymbol className="h-8 w-auto" /> : <SecondaryLogo className="h-9 w-auto" />}
           </Link>
 
           {item("/dashboard", "Dashboard", ICONS.home)}
