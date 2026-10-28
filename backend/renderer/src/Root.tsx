@@ -2,6 +2,8 @@ import React from "react";
 import { AbsoluteFill, Composition } from "remotion";
 import { InterviewMerge, MergeProps, defaultMergeProps } from "./compositions/InterviewMerge";
 import { AnchorFigure } from "./compositions/AnchorFigure";
+import { BrandIntro, INTRO_SECONDS } from "./compositions/BrandIntro";
+import { BrandOutro, OUTRO_SECONDS } from "./compositions/BrandOutro";
 import { NewsStudio } from "./compositions/NewsStudio";
 import { FPS, NewsProps, defaultProps } from "./compositions/types";
 
@@ -25,6 +27,9 @@ const StandInAnchor: React.FC = () => (
 
 export const Root: React.FC = () => (
   <>
+    {/* preview only: the branded opening and closing cards, not used by any video yet */}
+    <Composition id="BrandIntro" component={BrandIntro} width={1920} height={1080} fps={FPS} durationInFrames={INTRO_SECONDS * FPS} />
+    <Composition id="BrandOutro" component={BrandOutro} width={1920} height={1080} fps={FPS} durationInFrames={OUTRO_SECONDS * FPS} />
     <Composition id="StandInAnchor" component={StandInAnchor} width={640} height={720} fps={FPS} durationInFrames={FPS * 30} />
     <Composition id="NewsStudio-16x9" component={NewsStudio} width={1920} height={1080} fps={FPS}
       durationInFrames={300} defaultProps={defaultProps} calculateMetadata={calc} />
