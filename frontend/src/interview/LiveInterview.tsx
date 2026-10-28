@@ -197,8 +197,7 @@ function Review({ projectId, status, guided, onRedo, busy, error }: { projectId:
   useEffect(() => {
     if (!status.plan || plan) return;
     const p = status.plan as Plan;
-    let left = 2; // guided: at most two answers are featured, and the first two are chosen until the owner picks
-    setPlan(guided ? { ...p, answers: p.answers.map((a) => ({ ...a, include: a.include && left-- > 0 })) } : p);
+    setPlan(p); // every answer is in the video unless the owner leaves one out
   }, [status.plan, plan, guided]);
   const make = useMutation({
     mutationFn: async () => {
@@ -210,12 +209,10 @@ function Review({ projectId, status, guided, onRedo, busy, error }: { projectId:
   if (!plan) return <Card title="Review your interview"><p aria-busy="true">Loading…</p></Card>;
   const update = (q: number, patch: Partial<Plan["answers"][number]>) => setPlan({ ...plan, answers: plan.answers.map((a) => (a.question_index === q ? { ...a, ...patch } : a)) });
   const total = status.takes.reduce((n, t) => n + Number(t.duration_s ?? 0), 0);
-  const MAX_FEATURED = 2;
-  const featured = plan.answers.filter((a) => a.include).length;
   return (
     <Card title="Review your interview">
       <div className="space-y-4">
-        <Notice tone="ok">Great interview{status.founder_name ? `, ${status.founder_name.split(" ")[0]}` : ""}. You spoke for {mmss(total)}. {guided ? `Pick the ${MAX_FEATURED} answers to feature in your video. Next we write your story from everything you said, and you check it before anything is made.` : "Check your answers, then we'll create your AI presenter and weave your answers into the video."}</Notice>
+        <Notice tone="ok">Great interview{status.founder_name ? `, ${status.founder_name.split(" ")[0]}` : ""}. You spoke for {mmss(total)}. {guided ? `Every answer goes into your video; untick any you would rather leave out. Next we write your story from everything you said, and you check it before anything is made.` : "Check your answers, then we'll create your AI presenter and weave your answers into the video."}</Notice>
         <Field label="How your answers appear in the video">
           {(id) => (
             <select id={id} className={inputCls} value={plan.layout} onChange={(e) => setPlan({ ...plan, layout: e.target.value })}>
@@ -238,7 +235,7 @@ function Review({ projectId, status, guided, onRedo, busy, error }: { projectId:
                   {t?.transcript && <p className="text-sm text-muted">“{t.transcript}”</p>}
                   {t && t.messages.length > 0 && <Notice tone="warn">{t.messages.join(" ")}</Notice>}
                   <div className="flex flex-wrap items-center gap-3 text-sm">
-                    <label className="flex items-center gap-2"><input type="checkbox" checked={a.include} disabled={guided && !a.include && featured >= MAX_FEATURED} onChange={(e) => update(q, { include: e.target.checked })} /> {guided ? "Feature this answer in the video" : "Use this answer"}</label>
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={a.include} onChange={(e) => update(q, { include: e.target.checked })} /> {guided ? "Feature this answer in the video" : "Use this answer"}</label>
                     {t?.duration_s != null && <span className="text-muted">{Number(t.duration_s).toFixed(0)}s</span>}
                     <Button variant="secondary" disabled={!!busy} onClick={() => onRedo(q)}>{busy ?? "Record this one again"}</Button>
                   </div>

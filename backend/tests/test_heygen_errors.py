@@ -54,3 +54,12 @@ async def test_a_look_without_a_voice_gets_a_matching_english_one(monkeypatch):
     req = AvatarRequest(script_text="Hi", avatar_id="look1", voice_accent="british", transparent=True)
     assert await HeyGenProvider().submit(req) == "v1"
     assert sent["voice_id"] == "m-uk"
+
+
+def test_a_look_with_no_gender_field_is_read_from_its_name():
+    from app.integrations.avatar.heygen import _look_gender
+
+    assert _look_gender({"name": "CF News Desk Anchor - man (sample)"}) == "male"
+    assert _look_gender({"name": "Studio Woman 2"}) == "female"
+    assert _look_gender({"name": "Dante"}) == "male"  # unknown: the house presenter is a man
+    assert _look_gender({"name": "Dante", "gender": "female"}) == "female"

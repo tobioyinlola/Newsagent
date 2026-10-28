@@ -88,4 +88,9 @@ class MockScriptLLM(ScriptLLM):
             ticker_lines=[f"FEATURED: {company}"],
             lower_thirds=[{"title": company, "subtitle": kind.title()}],
             unverified=[],
+            outro=(
+                f"That's our look at {company} tonight. Thank you to the founder for joining us and for being so open about "
+                "what they are building. If you'd like to know more, search for the company by name and see it for yourself. "
+                "For Cover Founder News, thank you for watching."
+            ),
         )

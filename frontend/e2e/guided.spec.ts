@@ -49,13 +49,14 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
     if (q < 4) await expect(room.getByText("Your turn: answer now")).toBeHidden();
   }
 
-  // 3. choose the (at most two) answers to feature, then the story is written
+  // 3. every answer is featured by default, then the story is written
   await expect(page.getByRole("heading", { name: "Review your interview" })).toBeVisible({ timeout: 60_000 });
   const boxes = page.getByLabel("Feature this answer in the video");
   await expect(boxes).toHaveCount(4);
   await expect(boxes.nth(0)).toBeChecked();
   await expect(boxes.nth(1)).toBeChecked();
-  await expect(boxes.nth(2)).toBeDisabled(); // two is the most
+  await expect(boxes.nth(3)).toBeChecked();
+  await expect(boxes.nth(3)).toBeEnabled();
   await expect(page.getByRole("button", { name: "Skip the interview" })).toHaveCount(0);
   await page.getByRole("button", { name: "Write my story" }).click();
 

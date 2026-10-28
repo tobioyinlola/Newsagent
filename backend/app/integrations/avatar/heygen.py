@@ -7,6 +7,7 @@ beyond those named in the spec are UNVERIFIED against the live API; confirm in t
 
 import asyncio
 import logging
+import re
 
 import httpx
 
@@ -48,6 +49,18 @@ def _detail(r: httpx.Response) -> str:
     else:
         msg = e or (j.get("message") if isinstance(j, dict) else None)
     return str(msg or j)[:300]
+
+
+def _look_gender(look: dict) -> str:
+    """The presenter's gender: HeyGen's field when it has one, otherwise the word in the look's name ("... anchor - man"). When
+    neither says, assume male, the house default presenter, rather than letting a voice be picked at random."""
+    g = _gender(look.get("gender"))
+    if g:
+        return g
+    words = set(re.findall(r"[a-z]+", str(look.get("name", "")).lower()))
+    if words & {"woman", "women", "female", "lady", "girl"}:
+        return "female"
+    return "male"
 
 
 class HeyGenProvider(AvatarProvider):
@@ -137,7 +150,7 @@ class HeyGenProvider(AvatarProvider):
         look = await self._look(c, avatar_id)
         if look.get("default_voice_id"):
             return look["default_voice_id"]
-        gender = _gender(look.get("gender"))
+        gender = _look_gender(look)
         st = get_settings()
         chosen = {"male": st.heygen_voice_male, "female": st.heygen_voice_female}.get(
             gender

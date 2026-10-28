@@ -67,18 +67,25 @@ class JsonScriptLLM(ScriptLLM):
         return draft
 
     async def write_story(self, facts: dict, announcement_type: str, answers: list[dict]) -> StoryDraft:
-        said = "\n".join(f"Q: {a['question']}\nA: {a['answer']}" for a in answers)[:5000]
+        said = "\n".join(f"Q: {a['question']}\nA: {a['answer']}" for a in answers)[:8000]
         raw = await self._json(
-            "Write the Cover Founder news story for this announcement, as JSON with keys: headline (under 100 chars), "
-            "dek (one sentence, under 200 chars), sections [{heading, paragraphs [str]}] (4 or 5 sections of 1-2 short "
-            "paragraphs: the news itself, the problem and why it matters, the founders and how the product works, "
-            'and a last section titled "What the company hasn\'t said" listing what was NOT disclosed, such as revenue, '
-            "customers or valuation, when it was not), social {hook (under 90 chars, makes people stop scrolling), "
-            'post (under 270 chars, plain, no hype), hashtags (at most 4)}, segments [{kind: "intro"|"body", text}] '
-            "(what the presenter says aloud: 35 to 45 words in total, then hands over to the founder), ticker_lines "
-            "(2 or 3 short strings), lower_thirds [{title, subtitle}] (one, short), unverified [str] (claims the "
-            "founder made that the facts do not support; the story must hedge them with 'says' or 'the company "
-            "reports'). Use only the facts and the founder's own words below; never invent numbers, names or quotes. "
+            "Write the Cover Founder news feature for this announcement, as JSON with keys: headline (under 100 chars), "
+            "dek (one sentence, under 220 chars), sections [{heading, paragraphs [str]}] (a thorough, detailed feature of 6 to 8 "
+            "sections, each with 2 to 4 full paragraphs, about 700 to 900 words in all: the news itself and when it happens; the "
+            "problem and who feels it; how the product works in concrete terms; the founders and why they are the ones to build it; "
+            "what customers or users get; what the founder said in the interview, quoted where it is strong; why it matters for the "
+            'market; what comes next; and a last section titled "What the company hasn\'t said" listing what was NOT disclosed, such '
+            "as revenue, customers or valuation, when it was not), social {hook (under 90 chars, makes people stop scrolling), "
+            'post (under 270 chars, plain, no hype), hashtags (at most 4)}, segments [{kind: "intro"|"body", text}] (what the '
+            "presenter says aloud before the interview: 70 to 90 words in total, in the warm, confident voice of a TV news presenter, "
+            "setting up the story and handing over to the founder), outro (what the presenter says aloud to close the programme: 100 "
+            "to 140 words, natural and conversational like a TV presenter signing off: recap what was announced and why it matters, "
+            "thank the founder by name, and invite viewers to look the product up. If a website is given in the facts, say the address "
+            "aloud the way a presenter would, such as 'acme dot com'; if not, say to search for the company by name. Never read out a "
+            "full URL with slashes. End with a sign-off for Cover Founder News), ticker_lines (2 or 3 short strings), lower_thirds "
+            "[{title, subtitle}] (one, short), unverified [str] (claims the founder made that the facts do not support; the story must "
+            "hedge them with 'says' or 'the company reports'). Use only the facts and the founder's own words below; never invent "
+            "numbers, names or quotes. "
             f"Announcement type: {announcement_type}. Facts: {json.dumps(facts)}\nInterview:\n{said}"
         )
         return StoryDraft.model_validate(raw)

@@ -18,7 +18,7 @@ class OpenAIScriptLLM(JsonScriptLLM):
         self._client = client or httpx.AsyncClient(
             base_url=s.llm_api_url.rstrip("/"),
             headers={"Authorization": f"Bearer {key}"},
-            timeout=60,
+            timeout=150,
         )
 
     async def _complete(self, prompt: str) -> str:

@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Audio, Freeze, Img, OffthreadVideo, Series, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Audio, Freeze, Img, OffthreadVideo, Sequence, Series, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { Backdrop, Chrome } from "./Chrome";
 import { BrollScene } from "./BrollScene";
 import { ClipScene } from "./ClipScene";
@@ -42,6 +42,8 @@ export type MergeProps = {
   anchorCovers?: boolean;
   scenes: Scene[];
   totalSeconds: number;
+  productUrl?: string; // the product's address, shown in the bottom-left corner from `productUrlFromSeconds` (the sign-off) to the end
+  productUrlFromSeconds?: number;
 };
 
 export const defaultMergeProps: MergeProps = {
@@ -208,6 +210,20 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
   );
 };
 
+// The product's web address, in the corner while the presenter signs off, for anyone who wants to look it up.
+const UrlBadge: React.FC<{ url: string }> = ({ url }) => {
+  const frame = useCurrentFrame();
+  const { width, height, fps } = useVideoConfig();
+  const u = Math.min(width, height) / 1080;
+  const appear = interpolate(frame, [0, fps * 0.5], [0, 1], { extrapolateRight: "clamp" });
+  return (
+    <div style={{ position: "absolute", left: 36 * u, bottom: 96 * u, opacity: appear, transform: `translateY(${(1 - appear) * 24 * u}px)`, background: CF.ink, border: `${4 * u}px solid ${CF.green}`, borderRadius: 6 * u, padding: `${10 * u}px ${22 * u}px` }}>
+      <div style={{ color: CF.green, fontFamily: MONO, fontWeight: 700, fontSize: 20 * u, letterSpacing: 2 * u, textTransform: "uppercase" }}>Find them online</div>
+      <div style={{ color: CF.white, fontFamily: MONO, fontWeight: 700, fontSize: 36 * u, marginTop: 4 * u }}>{url}</div>
+    </div>
+  );
+};
+
 export const InterviewMerge: React.FC<MergeProps> = (p) => {
   const { fps, height, width } = useVideoConfig();
   const portrait = height > width;
@@ -224,6 +240,11 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
         ))}
       </Series>
       <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} />
+      {p.productUrl && p.productUrlFromSeconds != null && (
+        <Sequence from={Math.round(p.productUrlFromSeconds * fps)}>
+          <UrlBadge url={p.productUrl} />
+        </Sequence>
+      )}
     </AbsoluteFill>
     </StudioProvider>
   );

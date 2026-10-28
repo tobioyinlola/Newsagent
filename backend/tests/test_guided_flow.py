@@ -8,7 +8,6 @@ from app.integrations import registry
 from app.integrations.avatar.mock import MockAvatarProvider
 from app.models import Asset, Job, Project, ScriptVersion, Workspace
 from app.pipeline.queue import get_queue
-from app.services import presenters
 from tests.conftest import OWNER
 from tests.helpers import record
 from tests.test_broll import add_image
@@ -57,12 +56,14 @@ async def test_finishing_the_interview_writes_the_story_for_review(client, works
     story = (await client.get(f"/v1/projects/{pid}/story", headers=OWNER)).json()
     assert story["headline"] and story["sections"] and story["social"]["hook"] and story["social"]["post"]
     script = (await client.get(f"/v1/projects/{pid}/script", headers=OWNER)).json()
-    assert script["segments"][-1] == {"kind": "outro", "text": presenters.STANDARD_OUTRO}
+    assert (
+        script["segments"][-1]["kind"] == "outro" and len(script["segments"][-1]["text"].split()) >= 40
+    )  # a real sign-off, not one line
     assert len(script["interview_questions"]) == 4 and not script["approved"] and script["story"]["headline"]
     async with maker() as s:  # nothing from the presenter vendor yet: the owner reviews the story first
         stages = {j.stage for j in (await s.execute(select(Job).where(Job.project_id == pid))).scalars()}
         assert stages <= {"process_take"}
-        assert len([a for a in (await s.get(Project, pid)).merge_plan["answers"] if a["include"]]) == 2
+        assert len([a for a in (await s.get(Project, pid)).merge_plan["answers"] if a["include"]]) == 4
 
 
 async def test_editing_the_story_keeps_the_questions_and_the_article(client, workspace):
@@ -75,12 +76,12 @@ async def test_editing_the_story_keeps_the_questions_and_the_article(client, wor
     assert r.json()["interview_questions"] == script["interview_questions"] and r.json()["story"] == script["story"]
 
 
-async def test_three_featured_answers_are_refused(client, workspace):
+async def test_all_four_answers_can_be_featured(client, workspace):
     pid = await interviewed(client)
-    plan = {"layout": "column", "answers": [{"question_index": q, "include": q < 3} for q in range(4)]}
+    plan = {"layout": "column", "answers": [{"question_index": q, "include": True} for q in range(4)]}
     assert (await client.put(f"/v1/projects/{pid}/interview/plan", json=plan, headers=OWNER)).status_code == 200
     r = await client.post(f"/v1/projects/{pid}/interview/merge", headers=OWNER)
-    assert r.status_code == 422 and r.json()["detail"]["error"] == "too_many_answers"
+    assert r.status_code == 200, r.text
 
 
 async def test_approval_needs_two_or_three_pictures_then_makes_the_video_cheaply(client, workspace, maker):
@@ -114,12 +115,10 @@ async def test_approval_needs_two_or_three_pictures_then_makes_the_video_cheaply
     assert await state(client, pid) == "final_ready"
     lead = "Let's hear from the founder."
     assert len([t for t in spy.texts if t.startswith(lead)]) == 1  # one hand-over, on the first featured question
-    assert len(spy.texts) == 4  # opening, two featured questions, the standard sign-off: nothing for the other answers
-    assert spy.texts.count(presenters.STANDARD_OUTRO) == 1
+    assert len(spy.texts) == 6  # opening, a question for each of the four answers, the sign-off
     async with maker() as s:
         kinds = {(a.type, a.format) for a in (await s.execute(select(Asset).where(Asset.project_id == pid))).scalars()}
-        assert ("question_clip", "q0") in kinds and ("question_clip", "q1") in kinds
-        assert ("question_clip", "q2") not in kinds and ("question_clip", "q3") not in kinds
+        assert all(("question_clip", f"q{i}") in kinds for i in range(4))
 
 
 def test_a_dollar_amount_with_a_decimal_point_is_one_claim_not_two():
@@ -129,3 +128,11 @@ def test_a_dollar_amount_with_a_decimal_point_is_one_claim_not_two():
     texts = {f.text for f in flags}
     assert "Minicor raised a $3.8M seed round led by IA Ventures" in texts
     assert not any(t in {"Minicor raised a $3", "8M seed round led by IA Ventures"} for t in texts)
+
+
+def test_the_product_address_is_shown_the_way_people_type_it():
+    from app.pipeline.steps import display_url
+
+    assert display_url("https://www.acme.com/") == "acme.com"
+    assert display_url("http://shop.acme.com/products") == "shop.acme.com/products"
+    assert display_url("acme.com") == "acme.com"
