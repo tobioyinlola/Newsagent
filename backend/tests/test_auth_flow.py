@@ -481,3 +481,35 @@ def test_email_buttons_always_carry_a_full_link():
     _, html, text = invite("NewCo", "newsagent.example.app/signup?code=abc", 336)
     assert 'href="https://newsagent.example.app/signup?code=abc"' in html
     assert "https://newsagent.example.app/signup?code=abc" in text
+
+
+async def test_a_business_can_sign_up_on_its_own_and_must_verify_its_emailed_code(client, workspace, maker):
+    from app.models import Workspace
+
+    email = "owner@newbiz.example.com"
+    r = await client.post("/v1/auth/signup/start", json={"email": email, "business_name": "NewBiz Ltd", "password": PW})
+    assert r.status_code == 200 and r.json()["email_hint"]
+    code = last_code(email)
+    wrong = "000000" if code != "000000" else "111111"
+    assert (await client.post("/v1/auth/signup/verify", json={"email": email, "code": wrong})).status_code == 401
+    r = await client.post("/v1/auth/signup/verify", json={"email": email, "code": code})
+    assert r.status_code == 200 and r.json()["token"]
+    me = (await client.get("/v1/me", headers=bearer(r.json()["token"]))).json()
+    assert me["email"] == email and me["workspace_name"] == "NewBiz Ltd" and float(me["credit_balance"]) == 5.0
+    async with maker() as db:
+        assert (await db.execute(select(Workspace).where(Workspace.name == "NewBiz Ltd"))).scalar_one()
+    # the same email can't sign up twice
+    r = await client.post("/v1/auth/signup/start", json={"email": email, "business_name": "Again", "password": PW})
+    assert r.status_code == 409
+
+
+async def test_open_sign_up_can_be_switched_off_and_needs_a_business_name(client, workspace, monkeypatch):
+    r = await client.post("/v1/auth/signup/start", json={"email": "x@biz.example.com", "password": PW})
+    assert r.status_code == 422
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "open_signup_enabled", False)
+    r = await client.post(
+        "/v1/auth/signup/start", json={"email": "x@biz.example.com", "business_name": "Biz", "password": PW}
+    )
+    assert r.status_code == 403

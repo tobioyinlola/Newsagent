@@ -54,6 +54,9 @@ class Settings(BaseSettings):
     heygen_default_avatar_id: str = ""
     heygen_voice_male: str = ""  # voice used when a presenter's look has no voice of its own and the presenter is a man
     heygen_voice_female: str = ""  # ... and a woman
+    heygen_closing_params: str = (
+        ""  # JSON object merged into the HeyGen request for the closing sign-off clip only (expression/smile settings)
+    )
     heygen_default_voice_id: str = ""  # optional: used for any presenter whose look has no voice of its own
     # Looks whose video already contains the whole studio (a photo of a news set that the vendor animates). Those are
     # requested as ordinary MP4 and shown full frame; every other look is requested as a transparent cut-out.
@@ -72,6 +75,8 @@ class Settings(BaseSettings):
     storage_secret_key: str = "minioadmin"
     renderer_url: str = "http://localhost:4000"
     renderer_shared_secret: str = ""
+    open_signup_enabled: bool = True  # anyone can create a workspace by confirming their email (no invitation needed)
+    signup_credits: str = "5"  # credits a new workspace starts with when it signs up on its own
     invite_ttl_hours: int = 336  # how long an emailed invitation to join stays valid (never less than 48 hours)
     otp_ttl_minutes: int = 10
     session_idle_minutes: int = 60
@@ -86,7 +91,6 @@ class Settings(BaseSettings):
     enforce_limits: bool = True
     # true: every finished video is also rendered in vertical 9:16. Off by default: it doubles the final render time.
     render_vertical: bool = False
-    ticker_tech_news: bool = True  # the ticker continues with today's tech headlines after the video's own lines
     # false: content that only needs a second look (not clearly disallowed) goes ahead without waiting for an operator. Clearly
     # disallowed content is still blocked.
     moderation_hold_for_review: bool = True

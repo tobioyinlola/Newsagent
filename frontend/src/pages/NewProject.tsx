@@ -26,7 +26,7 @@ export function NewProject() {
   const m = useMutation({
     mutationFn: async () => {
       const label = KINDS.find((k) => k[0] === kind)?.[1] ?? "Announcement";
-      const p = await unwrap(api.POST("/v1/projects", { body: { brief_text: `${details.trim()}\n\nAnnouncement type: ${label}.`, website_url: site || null, region: "NG", voice_accent: "british", founder_name: founder.trim(), founder_title: role.trim(), anchor_id: presenter || null, flow: "guided", announcement_type: kind } }));
+      const p = await unwrap(api.POST("/v1/projects", { body: { brief_text: `${details.trim()}\n\nAnnouncement type: ${label}.`, website_url: site.trim() ? (/^https?:\/\//i.test(site.trim()) ? site.trim() : `https://${site.trim()}`) : null, region: "NG", voice_accent: "british", founder_name: founder.trim(), founder_title: role.trim(), anchor_id: presenter || null, flow: "guided", announcement_type: kind } }));
       await unwrap(api.POST("/v1/projects/{project_id}/guided/start", { params: { path: { project_id: p.id } } }));
       return p;
     },
@@ -53,7 +53,7 @@ export function NewProject() {
           <Field label="Your name" hint="Our AI interviewer greets you by name.">{(id) => <input id={id} required maxLength={200} className={inputCls} value={founder} onChange={(e) => setFounder(e.target.value)} />}</Field>
           <Field label="Your role">{(id) => <input id={id} maxLength={200} className={inputCls} placeholder="CEO, Acme" value={role} onChange={(e) => setRole(e.target.value)} />}</Field>
         </div>
-        <Field label="Website (optional)">{(id) => <input id={id} type="url" className={inputCls} value={site} onChange={(e) => setSite(e.target.value)} placeholder="https://" />}</Field>
+        <Field label="Website (optional)">{(id) => <input id={id} type="text" inputMode="url" autoComplete="url" className={inputCls} value={site} onChange={(e) => setSite(e.target.value)} placeholder="yourbusiness.com" />}</Field>
         <PresenterPicker value={presenter} onChange={setPresenter} />
         <p className="text-sm text-muted">Next, our AI interviewer asks you a few questions on camera (about 4 minutes). Then we write your news story and you check it. Nothing is made until you approve it.</p>
         <ErrorBox error={m.error} />

@@ -114,6 +114,16 @@ async def test_approval_needs_two_or_three_pictures_then_makes_the_video_cheaply
     lead = "Let's hear from the founder."
     assert len([t for t in spy.texts if t.startswith(lead)]) == 1  # one hand-over, on the first featured question
     assert len(spy.texts) == 6  # opening, a question for each of the four answers, the sign-off
+    # a published story (live share link) appears in other videos' tickers; an unshared one never does
+    from app.services import cf_news
+
+    async with maker() as s:
+        assert await cf_news.ticker_items(s) == []
+    assert (await client.post(f"/v1/projects/{pid}/share", headers=OWNER)).status_code == 200
+    async with maker() as s:
+        items = await cf_news.ticker_items(s)
+        assert len(items) == 1 and items[0].startswith("ON COVER FOUNDER: ")
+        assert await cf_news.ticker_items(s, exclude_project=pid) == []  # a video never lists itself
     async with maker() as s:
         kinds = {(a.type, a.format) for a in (await s.execute(select(Asset).where(Asset.project_id == pid))).scalars()}
         assert all(("question_clip", f"q{i}") in kinds for i in range(4))
@@ -169,3 +179,25 @@ async def test_the_video_can_be_made_without_pictures(client, workspace):
     await client.put(f"/v1/projects/{pid}/script", json=body, headers=OWNER)
     r = await client.post(f"/v1/projects/{pid}/script/approve", json={}, headers=OWNER)
     assert r.status_code == 200, r.text
+
+
+def test_a_story_draft_accepts_single_strings_where_lists_are_expected():
+    from app.integrations.llm.base import StoryDraft
+
+    d = StoryDraft.model_validate(
+        {
+            "headline": "H",
+            "dek": "D",
+            "sections": [],
+            "social": {"hook": "h", "post": "p"},
+            "segments": [],
+            "ticker_lines": "One line",
+            "lower_thirds": {"title": "T", "subtitle": "S"},
+            "unverified": "Akumah claims they will reach every market.",
+            "chyrons": {"0": "AKUMAH: WE GROW"},
+            "outro": ["Thanks.", "Goodbye."],
+        }
+    )
+    assert d.unverified == ["Akumah claims they will reach every market."]
+    assert d.ticker_lines == ["One line"] and d.chyrons == ["AKUMAH: WE GROW"]
+    assert d.lower_thirds == [{"title": "T", "subtitle": "S"}] and d.outro == "Thanks. Goodbye."

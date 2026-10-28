@@ -648,12 +648,17 @@ Otp = Annotated[str, Field(min_length=6, max_length=6, pattern=r"^\d{6}$")]
 
 
 class SignupStartIn(BaseModel):
-    invite_code: str = Field(min_length=8, max_length=100)
+    """Sign up with an invitation (invite_code + password), or on your own (email + business_name + password)."""
+
+    invite_code: str | None = Field(default=None, min_length=8, max_length=100)
+    email: EmailStr | None = None
+    business_name: str | None = Field(default=None, min_length=2, max_length=200)
     password: Password
 
 
 class SignupVerifyIn(BaseModel):
-    invite_code: str = Field(min_length=8, max_length=100)
+    invite_code: str | None = Field(default=None, min_length=8, max_length=100)
+    email: EmailStr | None = None
     code: Otp
 
 

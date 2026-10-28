@@ -69,7 +69,7 @@ export function Login() {
         </form>
         <p className="mt-3 text-sm"><Link className="underline" to="/forgot">Forgot your password?</Link></p>
       </Card>
-      <p className="text-sm text-white">Invite-only pilot. Have an invite link? Open it to create your workspace.</p>
+      <p className="text-sm text-white">New here? <Link className="underline" to="/signup">Create your free account</Link>. Have an invite link? Open it to join your workspace.</p>
     </Shell>
   );
 }
@@ -77,10 +77,14 @@ export function Login() {
 export function Signup() {
   const [params] = useSearchParams();
   const inviteCode = params.get("code") ?? "";
+  const [business, setBusiness] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [sent, setSent] = useState(false);
+  const [hint, setHint] = useState("");
   const [code, setCode] = useState("");
+  const [created, setCreated] = useState(false);
   const finish = useFinish();
   const preview = useQuery({
     queryKey: ["invite", inviteCode],
@@ -88,37 +92,46 @@ export function Signup() {
     enabled: inviteCode.length > 0,
     retry: false,
   });
+  const body = inviteCode ? { invite_code: inviteCode } : { email: email.trim(), business_name: business.trim() };
   const start = useMutation({
-    mutationFn: () => unwrap(api.POST("/v1/auth/signup/start", { body: { invite_code: inviteCode, password } })),
-    onSuccess: () => setSent(true),
+    mutationFn: () => unwrap(api.POST("/v1/auth/signup/start", { body: { ...body, password } })),
+    onSuccess: (r) => { setHint(r.email_hint ?? email); setSent(true); },
   });
   const verify = useMutation({
-    mutationFn: () => unwrap(api.POST("/v1/auth/signup/verify", { body: { invite_code: inviteCode, code: code.trim() } })),
+    mutationFn: () => unwrap(api.POST("/v1/auth/signup/verify", { body: { ...(inviteCode ? { invite_code: inviteCode } : { email: email.trim() }), code: code.trim() } })),
     onSuccess: (s) => { setCreated(true); window.setTimeout(() => finish(s), 1800); },
   });
-  const [created, setCreated] = useState(false);
   const mismatch = confirm.length > 0 && confirm !== password;
+  if (getToken() && !created) return <Navigate to="/dashboard" replace />;
   return (
     <Shell>
       {created && <Toast>Account created. Taking you to your dashboard…</Toast>}
-      <Card title="Create your workspace">
-        {!inviteCode || preview.isError ? (
-          <Notice tone="warn">This invite link is not valid or has expired. Ask us for a new one, or <Link className="underline" to="/login">sign in</Link>.</Notice>
-        ) : preview.isLoading ? (
+      <Card title={inviteCode ? "Create your workspace" : "Publish your story free"}>
+        {inviteCode && preview.isError ? (
+          <Notice tone="warn">This invite link is not valid or has expired. You can <Link className="underline" to="/signup">sign up here</Link> instead, or <Link className="underline" to="/login">sign in</Link>.</Notice>
+        ) : inviteCode && preview.isLoading ? (
           <p aria-busy="true">Loading…</p>
         ) : sent ? (
           <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); verify.mutate(); }}>
-            <Notice tone="ok">We emailed a 6-digit code to {preview.data?.email_hint}. It expires in 10 minutes; if you ask for more than one, use the newest.</Notice>
+            <Notice tone="ok">We emailed a 6-digit code to {hint}. Enter it to confirm your email. It expires in 10 minutes; if you ask for more than one, use the newest.</Notice>
             <CodeField value={code} onChange={setCode} />
-            <ErrorBox error={verify.error} />
-            <div className="flex gap-3">
+            <ErrorBox error={verify.error ?? start.error} />
+            <div className="flex flex-wrap gap-3">
               <Button type="submit" disabled={verify.isPending}>Verify and create workspace</Button>
               <Button type="button" variant="secondary" onClick={() => start.mutate()} disabled={start.isPending}>Send a new code</Button>
             </div>
           </form>
         ) : (
           <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!mismatch) start.mutate(); }}>
-            <p>You have been invited to set up <strong>{preview.data?.workspace_name}</strong> as <strong>{preview.data?.email_hint}</strong>. Choose a password; then we will email a code to confirm it is you.</p>
+            {inviteCode ? (
+              <p>You have been invited to set up <strong>{preview.data?.workspace_name}</strong> as <strong>{preview.data?.email_hint}</strong>. Choose a password; then we will email a code to confirm it is you.</p>
+            ) : (
+              <>
+                <p>Create a free workspace for your business. We'll email you a 6-digit code to confirm your email before you get in.</p>
+                <Field label="Business name">{(id) => <input id={id} required minLength={2} maxLength={200} autoComplete="organization" className={inputCls} value={business} onChange={(e) => setBusiness(e.target.value)} />}</Field>
+                <Field label="Work email">{(id) => <input id={id} type="email" required autoComplete="email" className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} />}</Field>
+              </>
+            )}
             <PasswordField value={password} onChange={setPassword} autoComplete="new-password" hint="At least 10 characters." />
             <PasswordField label="Confirm password" value={confirm} onChange={setConfirm} autoComplete="new-password" />
             {mismatch && <Notice tone="warn">The passwords don’t match.</Notice>}
@@ -126,6 +139,7 @@ export function Signup() {
             <Button type="submit" disabled={start.isPending || mismatch}>Continue</Button>
           </form>
         )}
+        <p className="mt-3 text-sm">Already have an account? <Link className="underline" to="/login">Sign in</Link></p>
       </Card>
     </Shell>
   );

@@ -10,6 +10,7 @@ all give the same 401.
 
 import hashlib
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy import select
@@ -34,7 +35,7 @@ from app.schemas.api import (
     SignupVerifyIn,
 )
 from app.services import email_templates as templates
-from app.services import passwords, ratelimit
+from app.services import ledger, passwords, ratelimit
 from app.services import sessions as sess
 from app.services.audit import audit
 from app.services.notifications import send_email
@@ -85,47 +86,82 @@ async def invite_preview(code: str, request: Request, db: AsyncSession = Depends
 async def signup_start(
     body: SignupStartIn, request: Request, bg: BackgroundTasks, db: AsyncSession = Depends(get_session)
 ) -> CodeSentOut:
-    await _throttle(request, "signup", body.invite_code, (5, 3600), (20, 3600))
-    inv = await _invite(db, body.invite_code)
-    if (await db.execute(select(User.id).where(User.email == inv.email.lower()))).first():
+    settings = get_settings()
+    if body.invite_code:  # an invitation: the workspace and the address are already decided
+        await _throttle(request, "signup", body.invite_code, (5, 3600), (20, 3600))
+        inv = await _invite(db, body.invite_code)
+        email, invite_id, workspace_name = inv.email.lower(), inv.id, None
+    else:  # open sign-up: a business creates its own workspace after confirming its email
+        if not settings.open_signup_enabled:
+            raise HTTPException(403, "Sign-up is by invitation for now. Ask us for an invite link.")
+        if not body.email or not body.business_name or not body.business_name.strip():
+            raise HTTPException(422, "Enter your business name and email address.")
+        email, invite_id, workspace_name = str(body.email).lower(), None, body.business_name.strip()
+        await _throttle(request, "signup", email, (5, 3600), (20, 3600))
+    if (await db.execute(select(User.id).where(User.email == email))).first():
         raise HTTPException(409, "This email already has an account. Sign in instead.")
-    _check_password(body.password, inv.email)
+    _check_password(body.password, email)
     code = await sess.issue_code(
         db,
-        inv.email,
+        email,
         "signup",
-        invite_id=inv.id,
+        invite_id=invite_id,
         password_hash=passwords.hash_password(body.password),
         ip=ratelimit.client_ip(request),
+        workspace_name=workspace_name,
     )
     await db.commit()
     subject, html, text = _email("signup", code)
-    bg.add_task(send_email, inv.email, subject, text, html)
-    return CodeSentOut(email_hint=sess.mask_email(inv.email), expires_in_s=get_settings().otp_ttl_minutes * 60)
+    bg.add_task(send_email, email, subject, text, html)
+    return CodeSentOut(email_hint=sess.mask_email(email), expires_in_s=settings.otp_ttl_minutes * 60)
 
 
 @router.post("/auth/signup/verify", response_model=SessionOut)
 async def signup_verify(body: SignupVerifyIn, request: Request, db: AsyncSession = Depends(get_session)) -> SessionOut:
-    await _throttle(request, "signup-verify", body.invite_code, (10, 600), (30, 600))
-    inv = await _invite(db, body.invite_code)
-    row = await sess.check_code(db, inv.email, "signup", body.code, invite_id=inv.id)
+    inv: Invite | None = None
+    if body.invite_code:
+        await _throttle(request, "signup-verify", body.invite_code, (10, 600), (30, 600))
+        inv = await _invite(db, body.invite_code)
+        email = inv.email.lower()
+    else:
+        if not get_settings().open_signup_enabled or not body.email:
+            raise BAD_CODE
+        email = str(body.email).lower()
+        await _throttle(request, "signup-verify", email, (10, 600), (30, 600))
+    row = await sess.check_code(db, email, "signup", body.code, invite_id=inv.id if inv else None)
     await db.commit()  # persists the failed-attempt counter too
-    if row is None or not row.password_hash:
+    if row is None or not row.password_hash or (inv is None and (row.invite_id or not row.workspace_name)):
         raise BAD_CODE
-    if (await db.execute(select(User.id).where(User.email == inv.email.lower()))).first():
+    if (await db.execute(select(User.id).where(User.email == email))).first():
         raise HTTPException(409, "This email already has an account. Sign in instead.")
-    ws = await db.get(Workspace, inv.workspace_id)
-    assert ws is not None
-    user = User(email=inv.email.lower(), role="owner", workspace_id=ws.id, password_hash=row.password_hash)
+    if inv is not None:
+        ws = await db.get(Workspace, inv.workspace_id)
+        assert ws is not None
+        inv.used_at = datetime.now(UTC)
+    else:  # a new workspace for a business that signed up on its own
+        ws = Workspace(name=row.workspace_name, credit_balance=Decimal("0"), spend_cap=Decimal("0"))
+        db.add(ws)
+        await db.flush()
+        credits = Decimal(get_settings().signup_credits or "0")
+        if credits > 0:
+            await ledger.apply(db, ws, credits, "grant", description="Welcome credits (sign-up)")
+    user = User(email=email, role="owner", workspace_id=ws.id, password_hash=row.password_hash)
     db.add(user)
     kit = BrandKit(workspace_id=ws.id)  # neutral fallback kit (spec section 10)
     db.add(kit)
     await db.flush()
     ws.brand_kit_id = kit.id
-    inv.used_at = datetime.now(UTC)
     row.password_hash = None  # not needed any more
     ns = await sess.create_session(db, user, request, otp_verified=True)
-    audit(db, user.email, "auth.signup", target_type="workspace", target_id=ws.id, request=request)
+    audit(
+        db,
+        user.email,
+        "auth.signup",
+        target_type="workspace",
+        target_id=ws.id,
+        detail={"via": "invite" if inv else "open"},
+        request=request,
+    )
     await db.commit()
     return SessionOut(token=ns.token, expires_at=ns.row.expires_at, otp_required=False)
 

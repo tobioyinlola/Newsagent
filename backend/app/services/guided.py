@@ -5,6 +5,7 @@ opening, a hand-over line plus a question for each of the answers that are featu
 """
 
 from fastapi import HTTPException
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -125,7 +126,17 @@ async def write_story(
         "founder_title": project.founder_title,
         "website": project.brief.website_url if project.brief else None,
     }
-    draft = await llm.write_story(facts, project.announcement_type or "other", answers)
+    draft = None
+    for attempt in range(2):  # the writer occasionally returns a malformed draft: one more try, then say so plainly
+        try:
+            draft = await llm.write_story(facts, project.announcement_type or "other", answers)
+            break
+        except ValidationError:
+            if attempt:
+                raise HTTPException(
+                    502, "We couldn't finish writing your story just now. Please press “Produce my story” again."
+                ) from None
+    assert draft is not None
     segments = _trim_words(draft.segments, PRESENTER_WORDS)
     if (
         not segments
