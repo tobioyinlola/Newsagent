@@ -81,7 +81,7 @@ export function Brand() {
 
       <Card title="Import from your website">
         <form className="flex flex-col gap-2 sm:flex-row" onSubmit={(e) => { e.preventDefault(); imp.mutate(); }}>
-          <input aria-label="Website address" type="url" required placeholder="https://yourstartup.com" className={inputCls} value={site} onChange={(e) => setSite(e.target.value)} />
+          <input aria-label="Website address" type="url" required placeholder="https://yourbusiness.com" className={inputCls} value={site} onChange={(e) => setSite(e.target.value)} />
           <Button type="submit" variant="secondary" disabled={imp.isPending}>{imp.isPending ? "Reading…" : "Import"}</Button>
         </form>
         <ErrorBox error={imp.error} />
@@ -149,7 +149,7 @@ export function Brand() {
       </Card>
 
       <Card title="Pronunciation">
-        <p className="mb-3 text-sm text-muted">Names the anchor might get wrong: your startup, product and founders.</p>
+        <p className="mb-3 text-sm text-muted">Names the anchor might get wrong: your business, product and people.</p>
         <div className="space-y-2">
           {glossary.map((g, i) => (
             <div key={i} className="flex gap-2">

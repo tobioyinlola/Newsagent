@@ -22,10 +22,10 @@ export function Setup() {
 
   return (
     <>
-      <Card title="Invite a startup">
+      <Card title="Invite a business">
         <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); invite.mutate(); }}>
           <Field label="Invitee email">{(id) => <input id={id} type="email" required className={inputCls} value={inv.email} onChange={(e) => setInv({ ...inv, email: e.target.value })} />}</Field>
-          <Field label="Startup name">{(id) => <input id={id} required className={inputCls} value={inv.workspace_name} onChange={(e) => setInv({ ...inv, workspace_name: e.target.value })} />}</Field>
+          <Field label="Business name">{(id) => <input id={id} required className={inputCls} value={inv.workspace_name} onChange={(e) => setInv({ ...inv, workspace_name: e.target.value })} />}</Field>
           <Field label="Starting credits">{(id) => <input id={id} type="number" min="0" step="any" className={inputCls} value={inv.credits} onChange={(e) => setInv({ ...inv, credits: e.target.value })} />}</Field>
           <Field label="Spend cap">{(id) => <input id={id} type="number" min="0" step="any" className={inputCls} value={inv.spend_cap} onChange={(e) => setInv({ ...inv, spend_cap: e.target.value })} />}</Field>
           <div className="sm:col-span-2"><Button type="submit" disabled={invite.isPending}>Create invite</Button></div>

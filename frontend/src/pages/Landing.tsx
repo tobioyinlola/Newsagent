@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, unwrap } from "../api/client";
-import { CFSymbol, Logo } from "../components/Logo";
+import { Logo, SecondaryLogo } from "../components/Logo";
 import { getToken } from "../lib/auth";
 
 // The public landing page. Layout: dark site with poster-style art (sunburst, mountains, clouds) drawn in the brand palette,
@@ -113,11 +113,11 @@ function StudioMock() {
           <rect width="480" height="270" fill="#1d2a4a" />
           <rect x="0" y="150" width="480" height="120" fill="#16213b" />
           <rect x="300" y="40" width="150" height="90" fill="#26365e" stroke={P.aqua} strokeWidth="2" />
-          <text x="375" y="92" textAnchor="middle" fontFamily="Space Mono" fontSize="16" fontWeight="700" fill={P.green}>LAUNCH</text>
+          <text x="375" y="92" textAnchor="middle" fontFamily="Inter" fontSize="16" fontWeight="700" fill={P.green}>LAUNCH</text>
           <circle cx="170" cy="105" r="34" fill="#e7c2a0" /><path d="M110 230 Q170 140 230 230 Z" fill={P.ink} /><rect x="60" y="200" width="240" height="40" fill="#0f1730" />
-          <rect x="0" y="196" width="300" height="34" fill={P.green} /><text x="12" y="218" fontFamily="Space Mono" fontSize="14" fontWeight="700" fill={P.ink}>ACME FARMS RAISES SEED ROUND</text>
-          <rect x="0" y="246" width="480" height="24" fill={P.ink} /><text x="12" y="263" fontFamily="Roboto" fontSize="12" fill="#fff">FEATURED: Acme Farms helps growers sell direct  •  Founder interview inside  •</text>
-          <rect x="14" y="12" width="118" height="22" fill="rgba(14,22,44,.8)" /><text x="22" y="28" fontFamily="Space Mono" fontSize="12" fontWeight="700" fill="#fff">COVER FOUNDER</text>
+          <rect x="0" y="196" width="300" height="34" fill={P.green} /><text x="12" y="218" fontFamily="Inter" fontSize="14" fontWeight="700" fill={P.ink}>ACME FARMS RAISES SEED ROUND</text>
+          <rect x="0" y="246" width="480" height="24" fill={P.ink} /><text x="12" y="263" fontFamily="Inter" fontSize="12" fill="#fff">FEATURED: Acme Farms helps growers sell direct  •  Founder interview inside  •</text>
+          <rect x="14" y="12" width="118" height="22" fill="rgba(14,22,44,.8)" /><text x="22" y="28" fontFamily="Inter" fontSize="12" fontWeight="700" fill="#fff">COVER FOUNDER</text>
         </svg>
       </div>
       <Panel title="Your video" right={<span className="text-brand-green">89%</span>}>
@@ -217,7 +217,7 @@ function Banner() {
   return (
     <section className="border-t border-white/10 bg-ink px-4 pt-20 md:px-8">
       <div className="mx-auto max-w-6xl text-center">
-        <h2 className="text-3xl text-white md:text-5xl">A newsroom for startups,<br />without the newsroom.</h2>
+        <h2 className="text-3xl text-white md:text-5xl">A newsroom for businesses,<br />without the newsroom.</h2>
         <p className="mx-auto mt-4 max-w-2xl text-white/70">You bring the news and twenty minutes. We bring the presenter, the questions, the writer, the edit and the graphics, and label every AI-generated presenter clearly.</p>
         <div className="mt-6 flex justify-center gap-3"><Cta href={CONTACT} primary>Get started</Cta><Cta href="#pricing">See pricing</Cta></div>
       </div>
@@ -276,7 +276,7 @@ function Distribution() {
         <div>
           <Eyebrow>Distribution · coming soon</Eyebrow>
           <h2 className="mt-3 text-3xl text-white md:text-5xl">Take your news across borders.</h2>
-          <p className="mt-4 text-white/70">Founders in one market rarely reach the next. Distribution will place your segment and story with audiences in the regions you choose, paid for with the same credits you use to make the video.</p>
+          <p className="mt-4 text-white/70">Businesses in one market rarely reach the next. Distribution will place your segment and story with audiences in the regions you choose, paid for with the same credits you use to make the video.</p>
           <ul className="mt-6 space-y-3 text-white/90">
             {["Pick one region or several for each announcement", "Credits per region, shown before you confirm", "Your video and story stay yours to share anywhere"].map((x) => <li key={x} className="flex gap-3"><span className="text-brand-green" aria-hidden="true">✓</span>{x}</li>)}
           </ul>
@@ -355,7 +355,7 @@ function Faq() {
         <div>
           <Eyebrow>FAQ</Eyebrow>
           <h2 className="mt-3 text-3xl text-white md:text-4xl">Questions, answered.</h2>
-          <p className="mt-3 text-white/70">Everything founders ask before their first segment. Something else on your mind?</p>
+          <p className="mt-3 text-white/70">Everything businesses ask before their first segment. Something else on your mind?</p>
           <a href="mailto:coverfounder@gmail.com" className="mt-5 inline-flex items-center gap-2 font-bold text-brand-green hover:underline">Ask us directly <span aria-hidden="true">→</span></a>
         </div>
         <div className="space-y-8">
@@ -403,7 +403,7 @@ function Footer() {
         <div className="grid grid-cols-2 gap-10 border-t border-white/15 pt-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div className="col-span-2 md:col-span-1">
             <Logo className="h-auto w-[200px] text-brand-green" />
-            <p className="mt-5 max-w-xs text-white/80">The AI newsroom for startups. Your announcement, told like news, in your own words.</p>
+            <p className="mt-5 max-w-xs text-white/80">The AI newsroom for businesses. Your announcement, told like news, in your own words.</p>
           </div>
           {cols.map((c) => (
             <nav key={c.title} aria-label={c.title}>
@@ -467,7 +467,7 @@ export function Landing() {
     <div className="min-h-screen bg-ink text-white">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-ink/95 backdrop-blur">
         <nav aria-label="Site" className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
-          <Link to="/" className="flex items-center gap-2 text-brand-green" aria-label="Cover Founder home"><CFSymbol className="h-8 w-auto" /><span className="font-mono text-lg font-bold text-white">Cover Founder</span></Link>
+          <Link to="/" className="flex items-center gap-2 text-brand-green" aria-label="Cover Founder home"><SecondaryLogo className="h-9 w-auto" /></Link>
           <div className="hidden items-center gap-6 text-sm text-white/80 md:flex">
             {NAV.map(([l, h]) => <a key={h} href={h} className="hover:text-brand-green">{l}</a>)}
           </div>
@@ -489,7 +489,7 @@ export function Landing() {
           <HeroArt />
           <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(25,26,48,0.88)_0%,rgba(25,26,48,0.55)_45%,transparent_75%)]" />
           <div className="relative z-10 mx-auto max-w-4xl text-center">
-            <p className="inline-block rounded-sm border border-white/20 bg-ink/70 px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest text-white"><span className="text-brand-green" aria-hidden="true">● </span>AI newsroom for startups</p>
+            <p className="inline-block rounded-sm border border-white/20 bg-ink/70 px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest text-white"><span className="text-brand-green" aria-hidden="true">● </span>AI newsroom for businesses</p>
             <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">Your launch, on the news.<br /><span className="text-brand-green">Told in your own words.</span></h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg text-white/85">An AI interviewer, an AI presenter and a newsroom writer turn your announcement into a broadcast-style video and a full written story, in one afternoon.</p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">

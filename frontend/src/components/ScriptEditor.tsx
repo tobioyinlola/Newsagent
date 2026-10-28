@@ -23,7 +23,7 @@ export function ScriptEditor({ projectId, script, guided = false, pictures = 99 
 
   const ORDER = ["intro", "body", "explanation", "analysis", "outro"];
   const EXTRA: Record<string, string> = {
-    explanation: "Explanation: the presenter explains the startup before your interview",
+    explanation: "Explanation: the presenter explains the business before your interview",
     analysis: "Analysis: the presenter reflects on your answers after the interview",
   };
   const addable = Object.keys(EXTRA).filter((k) => !segments.some((x) => x.kind === k));

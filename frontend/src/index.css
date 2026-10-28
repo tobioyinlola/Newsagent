@@ -1,14 +1,14 @@
 @import "tailwindcss";
-@import "@fontsource/space-mono/latin-400.css";
-@import "@fontsource/space-mono/latin-700.css";
-@import "@fontsource/roboto/latin-400.css";
-@import "@fontsource/roboto/latin-500.css";
-@import "@fontsource/roboto/latin-700.css";
+@import "@fontsource/inter/latin-400.css";
+@import "@fontsource/inter/latin-500.css";
+@import "@fontsource/inter/latin-600.css";
+@import "@fontsource/inter/latin-700.css";
+@import "@fontsource/inter/latin-800.css";
 
 /* Cover Founder brand guideline: palette, typography. Colours are used as approved, no gradients or effects on the logo. */
 @theme {
-  --font-sans: "Roboto", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Space Mono", ui-monospace, monospace;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Inter", ui-sans-serif, system-ui, sans-serif; /* one typeface everywhere: Inter */
 
   --color-ink: #222222; /* the dark ground and headline colour */
   --color-navy: #191a30; /* paragraph text */
@@ -31,7 +31,7 @@
 
 html { font-family: var(--font-sans); color: var(--color-navy); background: #fff; }
 @layer base {
-  h1, h2, h3, h4 { font-family: var(--font-mono); font-weight: 700; color: var(--color-ink); }
+  h1, h2, h3, h4 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0.02em; color: var(--color-ink); }
 }
 :focus-visible { outline: 3px solid var(--color-brand-purple); outline-offset: 2px; }
 

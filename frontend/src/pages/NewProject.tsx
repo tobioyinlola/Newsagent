@@ -11,7 +11,7 @@ const KINDS: [string, string, string][] = [
   ["partnership", "Partnership", "A deal or collaboration with another company."],
   ["hiring", "Hiring", "You are growing the team."],
   ["milestone", "Milestone", "Customers, revenue, a launch in a new country."],
-  ["other", "Something else", "Any other news about your startup."],
+  ["other", "Something else", "Any other news about your business."],
 ];
 
 // Step 1 of the guided flow: what you are announcing, who is presenting. Then the AI interview opens straight away.
