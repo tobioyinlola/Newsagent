@@ -48,6 +48,7 @@ export type MergeProps = {
   presenter?: { name: string; title: string }; // the presenter's name box
   productUrl?: string; // the product's address, shown in the top-right corner from `productUrlFromSeconds` (the sign-off) to the end
   productUrlFromSeconds?: number;
+  brandCards?: boolean; // open with the Cover Founder intro and close with the outro
 };
 
 export const defaultMergeProps: MergeProps = {
