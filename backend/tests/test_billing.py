@@ -167,3 +167,8 @@ async def test_the_packs_on_sale_are_public_for_the_landing_page(client, workspa
     r = await client.get("/v1/public/packs")
     assert r.status_code == 200 and isinstance(r.json(), list)
     assert all({"name", "credits", "price_usd"} <= set(p) for p in r.json())
+
+
+async def test_public_stats_count_finished_videos_and_shared_video_views(client, workspace):
+    r = await client.get("/v1/public/stats")
+    assert r.status_code == 200 and set(r.json()) == {"videos", "impressions"}

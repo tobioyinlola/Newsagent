@@ -50,6 +50,16 @@ async def public_packs(session: AsyncSession = Depends(get_session)) -> list[Cre
     return list(rows.scalars().all())
 
 
+@router.get("/v1/public/stats", dependencies=[Depends(limit("public-packs", 120, 600))])
+async def public_stats(session: AsyncSession = Depends(get_session)) -> dict:
+    """Live numbers for the public site: videos finished, and how often shared videos have been opened."""
+    from app.models import Project, ShareLink
+
+    videos = (await session.execute(select(func.count()).where(Project.state == "final_ready"))).scalar_one()
+    views = (await session.execute(select(func.coalesce(func.sum(ShareLink.views), 0)))).scalar_one()
+    return {"videos": int(videos), "impressions": int(views)}
+
+
 @router.get("/v1/billing/summary", response_model=BillingSummary)
 async def summary(p: Principal = Depends(current_principal)) -> BillingSummary:
     w = p.workspace

@@ -177,6 +177,8 @@ async def view_share(token: str, session: AsyncSession = Depends(get_session)) -
     if video is None:
         raise gone
     company, hook = await _hook(session, project.id)
+    link.views = (link.views or 0) + 1  # an impression: someone opened the shared video
+    await session.commit()
     return SharePublic(
         title=company or "Featured startup",
         video_url=storage.presign_get(video.storage_key, SIGNED_URL_TTL_S),

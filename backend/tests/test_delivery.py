@@ -53,6 +53,8 @@ async def test_share_lifecycle_and_revoke(client, workspace):
     token = url.rsplit("/s/", 1)[1]
     pub = await client.get(f"/v1/share/{token}")  # no auth header
     assert pub.status_code == 200
+    stats = (await client.get("/v1/public/stats")).json()
+    assert stats["videos"] >= 1 and stats["impressions"] == 1  # opening the shared video counts as an impression
     body = pub.json()
     assert body["tag"] == "Featured" and body["disclosure"] == DISCLOSURE and body["video_url"]
     assert (await client.delete(f"/v1/projects/{pid}/share", headers=OWNER)).status_code == 200

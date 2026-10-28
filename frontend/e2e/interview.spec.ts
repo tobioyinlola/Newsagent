@@ -91,7 +91,7 @@ test("AI interview: understands the announcement, interviews on camera, then mak
   // answers are checked, then the owner reviews them on the dashboard
   await expect(page.getByRole("heading", { name: "Review your interview" })).toBeVisible({ timeout: 60_000 });
   await expect(page.getByLabel(/Your answer to question/)).toHaveCount(4);
-  await expect(page.getByLabel("How your answers appear in the video")).toHaveValue("column");
+  await expect(page.getByLabel("How your answers appear in the video")).toHaveValue("full") // news-channel style: the founder full screen;
   await page.getByRole("button", { name: "Make my video" }).click();
 
   // the presenter is created and the interview is merged in, with no further clicks
