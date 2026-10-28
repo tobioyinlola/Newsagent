@@ -30,7 +30,7 @@ export function BrollPanel({ projectId }: { projectId: string }) {
   return (
     <Card title="Product footage (optional)">
       <div className="space-y-3">
-        <p className="text-sm text-muted">Pick up to 5 of your own product images or clips to show right after the presenter introduces your startup. They play silent, with an optional caption.</p>
+        <p className="text-sm text-muted">Pick up to 5 of your own product images or clips to show right after the presenter introduces your business. They play silent, with an optional caption.</p>
         {candidates.length === 0 && <Notice>You haven't uploaded product images or videos yet. Add them on the <Link className="underline" to="/brand">Brand kit</Link> page.</Notice>}
         <ul className="grid gap-3 sm:grid-cols-2">
           {candidates.map((c) => {

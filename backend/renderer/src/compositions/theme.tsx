@@ -13,13 +13,12 @@ export const CF = {
   white: "#FFFFFF",
 } as const;
 
-export const MONO = '"Space Mono", ui-monospace, monospace'; // headlines: Space Mono Bold
-export const SANS = '"Roboto", Helvetica, Arial, sans-serif'; // body: Roboto
+export const MONO = '"Inter", Helvetica, Arial, sans-serif'; // headlines: Inter Bold (one typeface everywhere)
+export const SANS = '"Inter", Helvetica, Arial, sans-serif'; // body: Inter
 
 const FONT_FILES: [string, string, number][] = [
-  ["Space Mono", "fonts/SpaceMono-Bold.woff2", 700],
-  ["Roboto", "fonts/Roboto-Regular.woff2", 400],
-  ["Roboto", "fonts/Roboto-Bold.woff2", 700],
+  ["Inter", "fonts/Inter-Regular.woff2", 400],
+  ["Inter", "fonts/Inter-Bold.woff2", 700],
 ];
 
 // Fonts ship inside the render bundle (no network at render time). Rendering waits until they are loaded, so a frame

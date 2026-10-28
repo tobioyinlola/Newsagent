@@ -27,7 +27,7 @@ export function Dashboard() {
       </div>
       <Card title="How it works">
         <ol className="list-decimal space-y-1 pl-5 text-sm">
-          <li>Tell us about your startup.</li>
+          <li>Tell us about your business.</li>
           <li>Answer a short interview with our AI interviewer.</li>
           <li>Review your written story and pick two or three pictures.</li>
           <li>We make the video; download it or share a link.</li>

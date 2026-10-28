@@ -5,10 +5,8 @@ Every email also carries a plain-text twin, so text-only readers and tests see t
 from html import escape
 
 INK, NAVY, GREEN, PURPLE, PAPER, MUTED = "#222222", "#191A30", "#C0FE73", "#634EA0", "#F4F4F0", "#5B5C6E"
-HEAD = (
-    "'Courier New',Courier,monospace"  # Space Mono is not available in mail apps; monospace is the closest safe match
-)
-BODY = "Roboto,Helvetica,Arial,sans-serif"
+HEAD = "Inter,'Helvetica Neue',Helvetica,Arial,sans-serif"  # Inter where the mail app has it, a close sans otherwise
+BODY = HEAD
 
 
 def _paragraphs(text: str) -> str:
@@ -118,7 +116,7 @@ def _span(hours: int) -> str:
 
 def invite(workspace: str, signup_url: str, hours: int, credits: str | None = None) -> tuple[str, str, str]:
     body = (
-        f"You've been invited to Cover Founder, where startups turn a short interview into a news-style video presented by an "
+        f"You've been invited to Cover Founder, where businesses turn a short interview into a news-style video presented by an "
         f"AI-generated anchor.\n\nYour workspace, {workspace}, is ready"
         + (f" with {credits} starting credits." if credits else ".")
     )

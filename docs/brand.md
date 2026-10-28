@@ -13,8 +13,8 @@ Source: the Cover Founder brand guideline PDF (v1.0, 2026). Implemented in `fron
 | `brand-aqua` / `brand-peach` | `#0CC0DF` / `#FFBD59` | secondary; peach marks the "Featured" disclosure and warnings |
 | tints | `lime-tint`, `lilac`, `peach-tint`, `red-tint` | quiet notice backgrounds only |
 
-- **Type:** Space Mono Bold for headings, Roboto Regular/Medium/Bold for everything else. Both are self-hosted through
-  `@fontsource` (the CSP only allows `font-src 'self'`).
+- **Type:** Inter everywhere (headings Bold/ExtraBold, body Regular/Medium), on the site, in the back office, in emails
+  (with a Helvetica/Arial fallback) and in the video graphics. Self-hosted through `@fontsource/inter`; no third-party font CDN.
 - **Logo:** the real vector paths from the guideline (page 14). The full logo is used at 200px and up (sign-in screens);
   the CF symbol is used below that (header), as the guideline requires. Colours stay within approved pairs: green on ink,
   ink on white. No gradients, shadows or transparency on the mark.
@@ -30,11 +30,11 @@ brand-kit editor, which is the *startup's* look.
 ## Video graphics (`backend/renderer/src/compositions`)
 - `theme.tsx` holds the palette, the CF symbol and the striped ground; `Chrome.tsx` is the channel bug, the mandatory
   disclosures and the ticker, shared by every composition so none can drop a disclosure.
-- Ground: ink `#222` with olive stripes. Channel bug: CF symbol in green + "COVER FOUNDER" in Space Mono Bold. "Featured"
-  tag: Peach with ink text. Ticker: ink with a green rule, Roboto. "Featured startup" banner: Pastel Green, Space Mono.
-- Lower thirds: ink panel, white Space Mono title, green Roboto subtitle. The **startup's own accent colour** is only the
+- Ground: ink `#222` with olive stripes. Channel bug: CF symbol in green + "COVER FOUNDER" in Inter Bold. "Featured"
+  tag: Peach with ink text. Ticker: ink with a green rule, Inter. "Featured startup" banner: Pastel Green, Inter Bold.
+- Lower thirds: ink panel, white Inter Bold title, green Inter subtitle. The **startup's own accent colour** is only the
   marker bar beside the lower third (and not the ground), so every video reads as a Cover Founder video.
-- Fonts (Space Mono Bold, Roboto Regular/Bold) are bundled in `backend/renderer/public/fonts` and loaded before any frame is
+- Fonts (Inter Regular/Bold) are bundled in `backend/renderer/public/fonts` and loaded before any frame is
   captured, so a render never falls back to another font and needs no network.
 
 ## Answers column and back office (added)

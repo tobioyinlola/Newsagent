@@ -25,7 +25,7 @@ export function Projects() {
               </li>
             ))}
           </ul>
-        ) : <p className="text-muted">No videos yet. Start with a short brief about your startup.</p>}
+        ) : <p className="text-muted">No videos yet. Start with a short brief about your business.</p>}
       </Card>
     </>
   );
