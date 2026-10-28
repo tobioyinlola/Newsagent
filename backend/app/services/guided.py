@@ -1,7 +1,7 @@
 """The guided flow: details -> AI interview -> written story -> video.
 
 Nothing paid runs until the owner has reviewed the story. The only vendor spend after that is the presenter speaking a short
-opening, a hand-over line plus a question for each of the (at most two) answers that are featured, and the standard sign-off.
+opening, a hand-over line plus a question for each of the answers that are featured, and the standard sign-off.
 """
 
 from fastapi import HTTPException
@@ -17,8 +17,8 @@ from app.services import state_machine as sm
 from app.services.claims import detect_claims
 from app.services.safety import find_banned
 
-MAX_FEATURED = 2  # answers shown in the video; each one costs a presenter question clip
-PRESENTER_WORDS = 55  # the opening the presenter speaks; every second of it is paid for
+MAX_FEATURED = iv.MAX_QUESTIONS  # every answer can be in the video; each one costs a presenter question clip
+PRESENTER_WORDS = 90  # the opening the presenter speaks; every second of it is paid for
 
 TYPES = {
     "product_launch": "Product launch",
@@ -121,10 +121,11 @@ async def write_story(
         **((project.brief.structured_facts if project.brief else None) or {}),
         "founder_name": project.founder_name,
         "founder_title": project.founder_title,
+        "website": project.brief.website_url if project.brief else None,
     }
     draft = await llm.write_story(facts, project.announcement_type or "other", answers)
     segments = _trim_words(draft.segments, PRESENTER_WORDS)
-    segments.append({"kind": "outro", "text": presenters.STANDARD_OUTRO})
+    segments.append({"kind": "outro", "text": draft.outro.strip() or presenters.STANDARD_OUTRO})
     story = {
         "headline": draft.headline,
         "dek": draft.dek,

@@ -24,7 +24,7 @@ from app.services import state_machine as sm
 from app.services.captions import build_srt
 from app.services.claims import detect_claims
 from app.services.interview import answer_cues, merge_srt, parse_srt, shifted_cues
-from app.services.notifications import notify_operators
+from app.services.notifications import low_balance_alert, notify_operators, vendor_budget_alert
 from app.services.safety import find_banned
 from app.services.spend_guard import LimitReached, SpendGuard
 
@@ -228,6 +228,7 @@ async def generate_anchor(
                         "avatar": req.avatar_id,
                         "glossary": req.pronunciation,
                         "transparent": req.transparent,
+                        "voice": voice_tag(),
                     }
                 )
                 pr_id, res = await provider_requests.begin(
@@ -325,14 +326,36 @@ async def _reuse_clip(session: AsyncSession, project: Project, *, atype: str, fm
     return False
 
 
+def voice_tag() -> str:
+    """Part of every presenter clip's identity: a clip made with one voice is never reused once the voices are changed."""
+    st = get_settings()
+    return f"{st.heygen_voice_male}|{st.heygen_voice_female}|{st.heygen_default_voice_id}|v2"
+
+
 async def _paid_avatar_asset(
-    session: AsyncSession, project: Project, guard: SpendGuard, *, atype: str, fmt: str, text: str, key: str
+    session: AsyncSession,
+    project: Project,
+    guard: SpendGuard,
+    *,
+    atype: str,
+    fmt: str,
+    text: str,
+    key: str,
+    add_cost: bool = True,
 ) -> Decimal:
     """Generate one anchor clip unless an identical one already exists. Commits as it goes so a later failure
     never makes a retry pay for this clip again. Returns the cost it recorded on the project."""
     kit = await current_kit(session, project.workspace_id)
     glossary = (kit.pronunciation_glossary if kit else None) or None
-    h = input_hash({"text": text, "accent": project.voice_accent, "avatar": avatar_for(project), "glossary": glossary})
+    h = input_hash(
+        {
+            "text": text,
+            "accent": project.voice_accent,
+            "avatar": avatar_for(project),
+            "glossary": glossary,
+            "voice": voice_tag(),
+        }
+    )
     existing = (
         await session.execute(
             select(Asset.id).where(
@@ -369,9 +392,45 @@ async def _paid_avatar_asset(
             duration=Decimal(str(out.duration_s)),
         )
     )
-    project.cost_total += cost
+    if add_cost:
+        project.cost_total += cost
     await session.commit()
     return cost
+
+
+PARALLEL_CLIPS = 3  # presenter clips made at once (the avatar vendor's own concurrency limit)
+
+
+async def _paid_clips(session: AsyncSession, project: Project, guard: SpendGuard, jobs: list[dict]) -> Decimal:
+    """Make several presenter clips at the same time, each in its own database session, so a video with four questions takes about
+    as long as one clip rather than six in a row. Every clip commits as it finishes, so a failure never loses (or re-buys) the others.
+    The first failure is raised once all of them have settled."""
+    import asyncio
+
+    if session.get_bind().dialect.name == "sqlite":  # one writer at a time (local development and tests)
+        total = Decimal("0")
+        for spec in jobs:
+            total += await _paid_avatar_asset(session, project, guard, **spec)
+        return total
+    pid, wid = project.id, project.workspace_id
+    gate = asyncio.Semaphore(PARALLEL_CLIPS)
+
+    async def one(spec: dict) -> Decimal:
+        async with gate, session_maker()() as s:
+            p = await s.get(Project, pid)
+            assert p is not None and p.workspace_id == wid
+            g = SpendGuard(s, on_alert=vendor_budget_alert, on_low_balance=low_balance_alert)
+            return await _paid_avatar_asset(s, p, g, add_cost=False, **spec)
+
+    results = await asyncio.gather(*(one(j) for j in jobs), return_exceptions=True)
+    total = sum((r for r in results if isinstance(r, Decimal)), Decimal("0"))
+    if total:
+        project.cost_total += total
+    for r in results:
+        if isinstance(r, BaseException):
+            await session.commit()  # keep the cost of the clips that did finish
+            raise r
+    return total
 
 
 EXTRA_KINDS = ("explanation", "analysis")
@@ -406,36 +465,34 @@ async def anchor_render(session: AsyncSession, project: Project, guard: SpendGua
     if project.interview_enabled:
         t = segment_texts(script)
         main, outro = t["main"], t["outro"]
-        total = await _paid_avatar_asset(
-            session,
-            project,
-            guard,
-            atype="anchor",
-            fmt="main",
-            text=main or anchor_text(script),
-            key=f"projects/{project.id}/anchor.{clip_ext(project)}",
-        )
+        jobs = [
+            dict(
+                atype="anchor",
+                fmt="main",
+                text=main or anchor_text(script),
+                key=f"projects/{project.id}/anchor.{clip_ext(project)}",
+            )
+        ]
         for part in EXTRA_KINDS:  # separate presenter clips only when the script has those parts
             if t[part]:
-                total += await _paid_avatar_asset(
-                    session,
-                    project,
-                    guard,
-                    atype="anchor",
-                    fmt=part,
-                    text=t[part],
-                    key=f"projects/{project.id}/anchor-{part}.{clip_ext(project)}",
+                jobs.append(
+                    dict(
+                        atype="anchor",
+                        fmt=part,
+                        text=t[part],
+                        key=f"projects/{project.id}/anchor-{part}.{clip_ext(project)}",
+                    )
                 )
         if outro:
-            total += await _paid_avatar_asset(
-                session,
-                project,
-                guard,
-                atype="anchor_outro",
-                fmt="outro",
-                text=outro,
-                key=f"projects/{project.id}/anchor-outro.{clip_ext(project)}",
+            jobs.append(
+                dict(
+                    atype="anchor_outro",
+                    fmt="outro",
+                    text=outro,
+                    key=f"projects/{project.id}/anchor-outro.{clip_ext(project)}",
+                )
             )
+        total = await _paid_clips(session, project, guard, jobs)
         return StepOutcome({"split": True}, recorded_cost=total)
     kit = await current_kit(session, project.workspace_id)
     req = AvatarRequest(
@@ -477,17 +534,20 @@ async def question_clips(session: AsyncSession, project: Project, guard: SpendGu
     """One anchor clip per featured interview question (stage 8). Idempotent per question."""
     script = await approved_script(session, project.id)
     needed = needed_questions(project, len(script.interview_questions))
-    total = Decimal("0")
-    for i in needed:
-        total += await _paid_avatar_asset(
-            session,
-            project,
-            guard,
-            atype="question_clip",
-            fmt=f"q{i}",
-            text=question_text(project, script, i, needed),
-            key=f"projects/{project.id}/question-{i}.{clip_ext(project)}",
-        )
+    total = await _paid_clips(
+        session,
+        project,
+        guard,
+        [
+            dict(
+                atype="question_clip",
+                fmt=f"q{i}",
+                text=question_text(project, script, i, needed),
+                key=f"projects/{project.id}/question-{i}.{clip_ext(project)}",
+            )
+            for i in needed
+        ],
+    )
     return StepOutcome({"questions": len(needed)}, recorded_cost=total)
 
 
@@ -756,7 +816,9 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
         )
 
     presenter_part("explanation", "anchor_explanation")
-    for item in project.broll or []:  # the owner's product footage, silent, between the presenter and the interview
+    for item in (
+        [] if project.flow == "guided" else project.broll or []
+    ):  # product footage (the guided video leaves the owner's pictures to the written story)
         add(
             type="product_broll",
             duration_s=float(item["seconds"]),
@@ -817,8 +879,9 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
         if clips.cutaways and q != shown[-1]:  # a cutaway to the presenter between answers, never after the last one
             clip_scene(clips.cutaways[shown.index(q) % len(clips.cutaways)], "cutaway")
     presenter_part("analysis", "anchor_analysis")
+    closing_at: float | None = None
     if outro:
-        start = cursor
+        start = closing_at = cursor
         add(
             type="news_closing",
             duration_s=float(outro.duration or 0),
@@ -848,7 +911,10 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
     t_cursor = scene_plan.total_s
     scenes_out = sp.to_render_scenes(scene_plan, storage.presign_get)
     base = await build_overlay_props(session, project, script, t_cursor)
+    site = project.brief.website_url if project.brief else None
     props = {**base, "layout": layout, "scenes": scenes_out, "totalSeconds": t_cursor}
+    if site and closing_at is not None:  # shown in a corner while the presenter signs off
+        props |= {"productUrl": display_url(site), "productUrlFromSeconds": closing_at}
     status, cost = await _submit_render(
         guard, project, composition="InterviewMerge", props=props, outputs=FORMATS, prefix="final", input_urls={}
     )
@@ -861,6 +927,15 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
     return StepOutcome(
         {"props": safe_props, "output_keys": status.output_keys, "srt_key": srt_key, "analyses": analyses}, cost
     )
+
+
+def display_url(url: str) -> str:
+    """The address as people would type it: no scheme, no "www.", no trailing slash."""
+    u = url.strip()
+    for prefix in ("https://", "http://"):
+        if u.lower().startswith(prefix):
+            u = u[len(prefix) :]
+    return u.removeprefix("www.").rstrip("/")
 
 
 async def merge_inputs(session: AsyncSession, project: Project) -> dict:

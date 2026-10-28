@@ -16,7 +16,7 @@ class AnthropicScriptLLM(JsonScriptLLM):
     async def _complete(self, prompt: str) -> str:
         msg = await self._client.messages.create(
             model=get_settings().llm_model or DEFAULT_MODEL,
-            max_tokens=4000,
+            max_tokens=8000,
             system=SYSTEM,
             messages=[{"role": "user", "content": prompt}],
         )

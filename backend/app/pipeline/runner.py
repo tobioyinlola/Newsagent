@@ -129,8 +129,14 @@ async def _attempt_loop(step, fn, pid, ih, policy) -> bool:
                 await session.rollback()
                 c = classify(e)
                 log.warning(
-                    "step attempt failed",
-                    extra={"project_id": pid, "stage": step, "attempt": attempt, "category": c.category},
+                    f"step attempt failed: {type(e).__name__}: {str(e)[:200]}",
+                    extra={
+                        "project_id": pid,
+                        "stage": step,
+                        "attempt": attempt,
+                        "category": c.category,
+                        "error": f"{type(e).__name__}: {str(e)[:200]}",
+                    },
                 )
                 async with session_maker()() as s2:
                     j2 = (

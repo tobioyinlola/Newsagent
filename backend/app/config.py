@@ -15,7 +15,7 @@ class VendorPolicy(BaseModel):
 
 # One place for timeouts, retries and concurrency per vendor (spec section 3).
 VENDOR_POLICIES: dict[str, VendorPolicy] = {
-    "llm": VendorPolicy(timeout_s=90, max_attempts=3),
+    "llm": VendorPolicy(timeout_s=170, max_attempts=3),
     "avatar": VendorPolicy(timeout_s=900, max_attempts=3, max_concurrency=3),
     "renderer": VendorPolicy(timeout_s=1200, max_attempts=2, max_concurrency=2),
     "transcription": VendorPolicy(timeout_s=300, max_attempts=3),
@@ -83,6 +83,9 @@ class Settings(BaseSettings):
     # ENFORCE_LIMITS=false: video creation is never refused for credits, spend caps, vendor budgets, a maintenance pause or request
     # rate limits. Spend is still recorded. Sign-in throttles, webhook/share limits and the suspended flag always apply.
     enforce_limits: bool = True
+    # false: content that only needs a second look (not clearly disallowed) goes ahead without waiting for an operator. Clearly
+    # disallowed content is still blocked.
+    moderation_hold_for_review: bool = True
     use_mocks: bool = True
     operator_emails: str = ""  # comma separated; may call /admin
     queue_backend: str = "inline"  # inline | celery

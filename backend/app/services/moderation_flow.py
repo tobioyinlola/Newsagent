@@ -77,6 +77,9 @@ async def enforce(
     v = await evaluate(session, text)
     if v.level == "allow":
         return
+    if v.level == "review" and not get_settings().moderation_hold_for_review:
+        log.warning("moderation (no hold): %s %s", stage, v.categories)
+        return
     if await mode(session) == "log_only":
         log.warning("moderation (log only): %s %s %s", stage, v.level, v.categories)
         return
