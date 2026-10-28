@@ -84,6 +84,8 @@ class Settings(BaseSettings):
     # ENFORCE_LIMITS=false: video creation is never refused for credits, spend caps, vendor budgets, a maintenance pause or request
     # rate limits. Spend is still recorded. Sign-in throttles, webhook/share limits and the suspended flag always apply.
     enforce_limits: bool = True
+    # true: every finished video is also rendered in vertical 9:16. Off by default: it doubles the final render time.
+    render_vertical: bool = False
     # false: content that only needs a second look (not clearly disallowed) goes ahead without waiting for an operator. Clearly
     # disallowed content is still blocked.
     moderation_hold_for_review: bool = True

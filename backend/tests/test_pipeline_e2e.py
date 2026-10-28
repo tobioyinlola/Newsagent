@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+import pytest
 from sqlalchemy import select
 
 from app.integrations import registry
@@ -34,7 +35,11 @@ async def test_claims_block_approval_until_confirmed(client, workspace):
     assert r.status_code == 422 and r.json()["detail"]["error"] == "claims_unconfirmed"
 
 
-async def test_full_mock_pipeline_run(client, workspace, maker):
+@pytest.mark.parametrize("vertical", [False, True])
+async def test_full_mock_pipeline_run(client, workspace, maker, monkeypatch, vertical):
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "render_vertical", vertical)
     pid, script = await _to_ready(client)
     body = {k: script[k] for k in ("segments", "ticker_lines", "lower_thirds", "interview_questions")}
     body["segments"] = [{"kind": "intro", "text": "Tonight we feature Acme, a farm marketplace."}]
@@ -48,7 +53,9 @@ async def test_full_mock_pipeline_run(client, workspace, maker):
     r = await client.get(f"/v1/projects/{pid}", headers=OWNER)
     data = r.json()
     assert data["state"] == "final_ready", data
-    assert {a["format"] for a in data["assets"] if a["type"] == "render"} == {"16x9", "9x16"}
+    assert {a["format"] for a in data["assets"] if a["type"] == "render"} == (
+        {"16x9", "9x16"} if vertical else {"16x9"}
+    )  # vertical only when RENDER_VERTICAL is on
     assert {a["type"] for a in data["assets"]} >= {"anchor", "preview", "render", "thumbnail", "caption"}
     sent = registry.get_email().sent
     assert {m["to"] for m in sent} == {"owner@acme.test", "ops@example.com"}

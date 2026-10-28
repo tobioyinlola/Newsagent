@@ -20,7 +20,7 @@ async def test_downloads_signed_urls_and_disclosure(client, workspace):
     pid = await make_final_ready(client)
     d = (await client.get(f"/v1/projects/{pid}/downloads", headers=OWNER)).json()
     kinds = {(i["type"], i["format"]) for i in d["items"]}
-    assert {("render", "16x9"), ("render", "9x16"), ("thumbnail", "16x9"), ("caption", None)} <= kinds
+    assert {("render", "16x9"), ("thumbnail", "16x9"), ("caption", None)} <= kinds
     assert d["disclosure"] == DISCLOSURE
     assert all(i["expires_in_s"] <= 900 and i["url"] for i in d["items"])
 
