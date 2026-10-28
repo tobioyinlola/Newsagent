@@ -164,7 +164,7 @@ function UseCases() {
             <h3 className="text-2xl text-white">{u.title}</h3>
             <p className="mt-3 text-white/70">{u.body}</p>
             <ul className="mt-6 space-y-3">{u.points.map((p) => <li key={p} className="flex gap-3 text-white/90"><span className="text-brand-green" aria-hidden="true">✓</span>{p}</li>)}</ul>
-            <div className="mt-8"><Cta href={CONTACT} primary>Request access</Cta></div>
+            <div className="mt-8"><Cta href={CONTACT} primary>Publish Your Story Free!</Cta></div>
           </div>
           <div className="cf-grain relative min-h-72 overflow-hidden">
             <CardArt variant={u.key === "funding" || u.key === "milestone" ? "story" : "video"} />
@@ -342,7 +342,7 @@ const FAQ: { group: string; items: [string, string][] }[] = [
   { group: "Credits & access", items: [
     ["How does pricing work?", "You buy a pack of credits and spend them as you make videos. There's no subscription, and a step that fails is never charged."],
     ["What is distribution?", "Coming soon: placing your segment and story with audiences in the regions you choose (North America, Europe, Africa, South America, Asia-Pacific, the Middle East), paid per region in credits."],
-    ["Who can sign up?", "Cover Founder is invite-only while we grow. Request access and we'll email you an invitation link; it stays valid for at least 48 hours."],
+    ["Who can sign up?", "Cover Founder is invite-only while we grow. Press “Publish Your Story Free!” and we'll email you an invitation link; it stays valid for at least 48 hours."],
     ["Who owns the video?", "You do. Download it, post it anywhere, or share a private link."],
   ] },
 ];
@@ -391,7 +391,7 @@ function Faq() {
 export function Footer() {
   const cols: { title: string; links: [string, string][] }[] = [
     { title: "Product", links: [["AI Newsroom", "/newsroom"], ["Distribution", "/distribution"], ["How it works", "/#how"], ["Pricing", "/#pricing"], ["FAQ", "/#faq"]] },
-    { title: "Members", links: [["Sign in", "/login"], ["Reset password", "/forgot"], ["Request access", CONTACT], ["Contact support", "mailto:coverfounder@gmail.com"]] },
+    { title: "Members", links: [["Sign in", "/login"], ["Reset password", "/forgot"], ["Publish Your Story Free!", CONTACT], ["Contact support", "mailto:coverfounder@gmail.com"]] },
     { title: "Trust", links: [["AI disclosure", "/#faq"], ["Your data", "/account"], ["Security", "/security"]] },
   ];
   const link = (label: string, href: string) => <SiteLink to={href} className="text-white/80 hover:text-brand-green">{label}</SiteLink>;
@@ -451,7 +451,7 @@ function MobileMenu({ open, onClose, signedIn }: { open: boolean; onClose: () =>
         <div className="mt-auto flex flex-col gap-3 pt-6">
           {signedIn ? <Link to="/dashboard" onClick={onClose} className="rounded-sm border-2 border-brand-green bg-brand-green px-4 py-3 text-center font-bold text-ink">Dashboard</Link> : (
             <>
-              <a href={CONTACT} onClick={onClose} className="rounded-sm border-2 border-brand-green bg-brand-green px-4 py-3 text-center font-bold text-ink">Request access</a>
+              <a href={CONTACT} onClick={onClose} className="rounded-sm border-2 border-brand-green bg-brand-green px-4 py-3 text-center font-bold text-ink">Publish Your Story Free!</a>
               <Link to="/login" onClick={onClose} className="rounded-sm border-2 border-white/60 px-4 py-3 text-center font-bold text-white">Sign in</Link>
             </>
           )}
@@ -507,12 +507,12 @@ export function SiteShell({ children }: { children: ReactNode }) {
         <nav aria-label="Site" className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <Link to="/" className="flex items-center gap-2 text-brand-green" aria-label="Cover Founder home"><SecondaryLogo className="h-9 w-auto" /></Link>
           <div className="hidden items-center gap-6 text-sm text-white/80 md:flex">
-            {NAV.map(([l, h]) => <SiteLink key={h} to={h} className="hover:text-brand-green">{l}</SiteLink>)}
+            {NAV.map(([l, h]) => <SiteLink key={h} to={h} className="whitespace-nowrap hover:text-brand-green">{l}</SiteLink>)}
           </div>
           <div className="flex items-center gap-2">
             {signedIn ? <Link to="/dashboard" className="rounded-sm border-2 border-brand-green bg-brand-green px-3 py-2 text-sm font-bold text-ink">Dashboard</Link> : (
-              <><Link to="/login" className="rounded-sm border-2 border-white/60 px-3 py-2 text-sm font-bold hover:border-brand-green hover:text-brand-green">Sign in</Link>
-              <a href={CONTACT} className="hidden rounded-sm border-2 border-brand-green bg-brand-green px-3 py-2 text-sm font-bold text-ink sm:inline-block">Request access</a></>
+              <><Link to="/login" className="whitespace-nowrap rounded-sm border-2 border-white/60 px-3 py-2 text-sm font-bold hover:border-brand-green hover:text-brand-green">Sign in</Link>
+              <a href={CONTACT} className="hidden whitespace-nowrap rounded-sm border-2 border-brand-green bg-brand-green px-3 py-2 text-sm font-bold text-ink lg:inline-block">Publish Your Story Free!</a></>
             )}
             <button type="button" onClick={() => setMenu(true)} aria-expanded={menu} aria-controls="site-menu" aria-label="Open menu" className="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-brand-green text-brand-green md:hidden">
               <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
@@ -546,7 +546,7 @@ export function Landing() {
             <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">Your launch, on the news.<br /><span className="text-brand-green">Told in your own words.</span></h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg text-white/85">An AI interviewer, an AI presenter and a newsroom writer turn your announcement into a broadcast-style video and a full written story, in one afternoon.</p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              {signedIn ? <Cta to="/projects/new" primary>Make a video</Cta> : <Cta href={CONTACT} primary>Request access</Cta>}
+              {signedIn ? <Cta to="/projects/new" primary>Make a video</Cta> : <Cta href={CONTACT} primary>Publish Your Story Free!</Cta>}
               <Cta href="#how">See how it works</Cta>
             </div>
           </div>
@@ -566,7 +566,7 @@ export function Landing() {
         <section className="cf-stripes border-t border-white/10 px-4 py-20 text-center md:px-8">
           <h2 className="text-3xl text-white md:text-5xl">Ready to go on air?</h2>
           <p className="mx-auto mt-3 max-w-xl text-white/70">Tell us about your next announcement. We'll send you an invitation and your first credits.</p>
-          <div className="mt-8 flex justify-center gap-3">{signedIn ? <Cta to="/projects/new" primary>Make a video</Cta> : <Cta href={CONTACT} primary>Request access</Cta>}<Cta to="/login">Sign in</Cta></div>
+          <div className="mt-8 flex justify-center gap-3">{signedIn ? <Cta to="/projects/new" primary>Make a video</Cta> : <Cta href={CONTACT} primary>Publish Your Story Free!</Cta>}<Cta to="/login">Sign in</Cta></div>
         </section>
       </main>
 
