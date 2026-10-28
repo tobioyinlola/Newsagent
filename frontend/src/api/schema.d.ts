@@ -1896,6 +1896,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/packs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public Packs
+         * @description The credit packs on sale, for the public pricing section of the landing page (no sign-in needed).
+         */
+        get: operations["public_packs_v1_public_packs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/share/{token}": {
         parameters: {
             query?: never;
@@ -7884,6 +7904,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_packs_v1_public_packs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackOut"][];
                 };
             };
         };

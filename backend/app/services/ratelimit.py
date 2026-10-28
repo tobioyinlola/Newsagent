@@ -80,7 +80,7 @@ async def hit(key: str, max_calls: int, per_s: int) -> bool:
     return await _memory_hit(key, max_calls, per_s)
 
 
-ALWAYS_LIMITED = {"webhook", "share-view", "share", "export", "account-delete", "checkout"}
+ALWAYS_LIMITED = {"public-packs", "webhook", "share-view", "share", "export", "account-delete", "checkout"}
 
 
 def limit(name: str, max_calls: int, per_s: int):

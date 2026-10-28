@@ -43,6 +43,13 @@ async def packs(
     return list(rows.scalars().all())
 
 
+@router.get("/v1/public/packs", response_model=list[PackOut], dependencies=[Depends(limit("public-packs", 120, 600))])
+async def public_packs(session: AsyncSession = Depends(get_session)) -> list[CreditPack]:
+    """The credit packs on sale, for the public pricing section of the landing page (no sign-in needed)."""
+    rows = await session.execute(select(CreditPack).where(CreditPack.active.is_(True)).order_by(CreditPack.price_usd))
+    return list(rows.scalars().all())
+
+
 @router.get("/v1/billing/summary", response_model=BillingSummary)
 async def summary(p: Principal = Depends(current_principal)) -> BillingSummary:
     w = p.workspace
