@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { NewsBackdrop } from "./NewsSet";
-import { CF, CFSymbol, MONO, SANS } from "./theme";
+import { CF, CFLogo, SANS } from "./theme";
 
 type ChromeProps = {
   channel: { name: string };
@@ -13,8 +13,8 @@ type ChromeProps = {
 // A dark plate keeps the channel bug and the mandatory labels readable on any studio, including a bright one.
 const PLATE = "rgba(14, 22, 44, 0.78)";
 
-// Elements shown on EVERY video, in every composition: channel bug, mandatory disclosures, ticker.
-// Keeping them in one place guarantees the interview cut can never drop a disclosure (hard rule 2).
+// Elements shown on EVERY video, in every composition: the channel logo and the ticker. (The AI-presenter disclosure travels
+// with the video's captions, description and share page rather than as an on-screen label.)
 export const Chrome: React.FC<ChromeProps> = (p) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
@@ -24,15 +24,9 @@ export const Chrome: React.FC<ChromeProps> = (p) => {
   const tickerX = -((frame * 3 * u) % tickerW);
   return (
     <>
-      {/* channel bug: CF symbol + name */}
-      <div style={{ position: "absolute", top: 32 * u, left: 36 * u, display: "flex", gap: 16 * u, alignItems: "center", background: PLATE, padding: `${8 * u}px ${16 * u}px`, borderRadius: 6 * u }}>
-        <CFSymbol height={52 * u} />
-        <div style={{ color: CF.white, fontFamily: MONO, fontWeight: 700, fontSize: 30 * u, letterSpacing: 1 * u, textTransform: "uppercase" }}>{p.channel.name}</div>
-      </div>
-      {/* mandatory disclosures (hard rule 2): tag + anchor label, always on screen */}
-      <div style={{ position: "absolute", top: 32 * u, right: 36 * u, textAlign: "right", background: PLATE, padding: `${8 * u}px ${12 * u}px`, borderRadius: 6 * u }}>
-        <div style={{ display: "inline-block", background: CF.peach, color: CF.ink, fontFamily: MONO, fontWeight: 700, fontSize: 28 * u, padding: `${6 * u}px ${18 * u}px`, textTransform: "uppercase", letterSpacing: 2 * u }}>{p.disclosures.tag}</div>
-        <div style={{ color: CF.white, fontFamily: SANS, fontSize: 22 * u, marginTop: 8 * u }}>{p.disclosures.anchor}</div>
+      {/* channel mark: the primary Cover Founder logo, top-left, on every video */}
+      <div style={{ position: "absolute", top: 28 * u, left: 32 * u, background: CF.navy, padding: 6 * u, borderRadius: 4 * u }}>
+        <CFLogo height={92 * u} />
       </div>
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 72 * u, background: CF.ink, overflow: "hidden", borderTop: `${4 * u}px solid ${CF.green}` }}>
         <div style={{ whiteSpace: "nowrap", color: CF.white, fontFamily: SANS, fontSize: 32 * u, lineHeight: `${68 * u}px`, transform: `translateX(${tickerX}px)` }}>

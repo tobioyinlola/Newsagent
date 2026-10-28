@@ -44,6 +44,7 @@ class StoryDraft(BaseModel):
     ticker_lines: list[str]
     lower_thirds: list[dict]
     unverified: list[str] = []  # things the founder said that we could not check; the story hedges them
+    chyrons: list[str] = []  # one per answer, in order: the headline bar shown while the founder speaks
     outro: str = ""  # the presenter's closing words (a natural wrap-up that points viewers to the product's website)
 
 

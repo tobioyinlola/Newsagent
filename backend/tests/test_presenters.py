@@ -5,6 +5,7 @@ import pytest
 
 from app.config import get_settings
 from app.integrations.avatar.heygen import HeyGenProvider
+from app.pipeline.steps import with_invite
 from app.services import presenters
 from tests.conftest import OWNER
 from tests.helpers import BRIEF
@@ -203,7 +204,7 @@ async def test_the_standard_sign_off_is_paid_for_once_and_reused(client, workspa
 
     await make("Acme")
     await make("Beta")
-    assert spy.texts.count(presenters.STANDARD_OUTRO) == 1  # bought once, copied for the second video
+    assert spy.texts.count(with_invite(presenters.STANDARD_OUTRO)) == 1  # bought once, copied for the second video
 
 
 async def test_house_presenters_come_first_and_are_always_valid(client, workspace, monkeypatch):

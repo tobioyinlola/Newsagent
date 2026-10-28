@@ -78,7 +78,7 @@ def featured_plan(saved: dict | None, answered: list[int], count: int) -> dict:
     """The merge plan with at most MAX_FEATURED answers included. With no choice saved yet, the first answers that exist."""
     from app.pipeline.steps import default_plan
 
-    plan = saved or default_plan(count, "column")
+    plan = saved or default_plan(count, "full")
     chosen = [
         a["question_index"] for a in plan["answers"] if a.get("include", True) and a["question_index"] in answered
     ]
@@ -141,6 +141,10 @@ async def write_story(
         "sections": [s.model_dump() for s in draft.sections],
         "social": draft.social.model_dump(),
         "unverified": draft.unverified,
+        # the headline bar for each answer, keyed by question number (answers arrive in question order)
+        "chyrons": {
+            str(a.get("index", i)): c for i, (a, c) in enumerate(zip(answers, draft.chyrons, strict=False)) if c
+        },
     }
     text = "\n".join(  # one line per piece, so a claim is quoted whole and each sentence is checked on its own
         [s["text"] for s in segments]

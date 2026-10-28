@@ -205,6 +205,7 @@ def to_render_scenes(plan: ScenePlan, url: Callable[[str], str]) -> list[dict]:
                 "founder": s.founder.model_dump(),
                 "src": None,
                 "question": s.question,
+                "headline": s.headline or "",
                 "questionNumber": s.question_number,
                 "totalQuestions": s.total_questions,
                 "cues": [c.model_dump() for c in s.cues],

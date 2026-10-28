@@ -86,6 +86,7 @@ class Settings(BaseSettings):
     enforce_limits: bool = True
     # true: every finished video is also rendered in vertical 9:16. Off by default: it doubles the final render time.
     render_vertical: bool = False
+    ticker_tech_news: bool = True  # the ticker continues with today's tech headlines after the video's own lines
     # false: content that only needs a second look (not clearly disallowed) goes ahead without waiting for an operator. Clearly
     # disallowed content is still blocked.
     moderation_hold_for_review: bool = True

@@ -260,7 +260,9 @@ async def test_submit_needs_every_answer_and_leaves_the_owner_to_proceed(client,
     assert (await client.post(f"/v1/interview/{token}/submit")).status_code == 200
     assert await state(client, pid) == "interviewing"  # the owner reviews first
     st = (await client.get(f"/v1/projects/{pid}/interview", headers=OWNER)).json()
-    assert st["submitted"] and len(st["takes"]) == 4 and st["plan"]["layout"] == "column"
+    assert (
+        st["submitted"] and len(st["takes"]) == 4 and st["plan"]["layout"] == "full"
+    )  # news-channel style: the founder full frame
 
 
 async def test_proceed_needs_all_answers_then_makes_the_presenter_and_merges_automatically(client, workspace, maker):
@@ -275,7 +277,7 @@ async def test_proceed_needs_all_answers_then_makes_the_presenter_and_merges_aut
     await get_queue().drain()  # anchor, question clips, then the merge, with no further clicks
     assert await state(client, pid) == "final_ready"
     req = registry.get_renderer().requests[-1]
-    assert req.composition == "InterviewMerge" and req.props["layout"] == "column"
+    assert req.composition == "InterviewMerge" and req.props["layout"] == "full"
     kinds = [s["type"] for s in req.props["scenes"]]
     assert kinds == ["anchor"] + ["question", "answer"] * 4 + ["anchor"]
     answers = [s for s in req.props["scenes"] if s["type"] == "answer"]

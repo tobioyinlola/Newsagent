@@ -82,7 +82,7 @@ class JsonScriptLLM(ScriptLLM):
             "to 140 words, natural and conversational like a TV presenter signing off: recap what was announced and why it matters, "
             "thank the founder by name, and invite viewers to look the product up. If a website is given in the facts, say the address "
             "aloud the way a presenter would, such as 'acme dot com'; if not, say to search for the company by name. Never read out a "
-            "full URL with slashes. End with a sign-off for Cover Founder News), ticker_lines (2 or 3 short strings), lower_thirds "
+            "full URL with slashes. Before the final sign-off, always invite viewers who want their business or founder story featured on Cover Founder to get in touch. End with a sign-off for Cover Founder News), chyrons [str] (exactly one per interview answer below, in the same order: a news-channel headline bar for while that answer plays, in the form 'SURNAME: WHAT THEY SAID IN A FEW WORDS', under 60 characters, drawn only from that answer), ticker_lines (2 or 3 short strings), lower_thirds "
             "[{title, subtitle}] (one, short), unverified [str] (claims the founder made that the facts do not support; the story must "
             "hedge them with 'says' or 'the company reports'). Use only the facts and the founder's own words below; never invent "
             "numbers, names or quotes. "
