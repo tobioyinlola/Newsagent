@@ -471,3 +471,13 @@ async def test_an_invitation_stays_valid_for_at_least_48_hours(client, workspace
     assert left >= timedelta(hours=48) and r.json()["emailed"] is True
     mail = [m for m in registry.get_email().sent if m["to"] == NEW and "invited" in m["subject"]][-1]
     assert "stays valid for" in mail["text"]
+
+
+def test_email_buttons_always_carry_a_full_link():
+    from app.services.email_templates import absolute, invite
+
+    assert absolute("newsagent.example.app/signup?code=x") == "https://newsagent.example.app/signup?code=x"
+    assert absolute("https://a.example/x") == "https://a.example/x"
+    _, html, text = invite("NewCo", "newsagent.example.app/signup?code=abc", 336)
+    assert 'href="https://newsagent.example.app/signup?code=abc"' in html
+    assert "https://newsagent.example.app/signup?code=abc" in text

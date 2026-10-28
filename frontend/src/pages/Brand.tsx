@@ -116,7 +116,7 @@ export function Brand() {
         <div className="grid gap-4 sm:grid-cols-2">
           {UPLOADS.map((u) => (
             <Field key={u.kind} label={u.label}>
-              {(id) => <input id={id} type="file" accept={u.accept} className="text-sm" disabled={upload.isPending}
+              {(id) => <input id={id} type="file" accept={u.accept} className="w-full max-w-full text-sm" disabled={upload.isPending}
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate({ kind: u.kind, file: f, types: u.types }); e.target.value = ""; }} />}
             </Field>
           ))}

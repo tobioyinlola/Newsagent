@@ -18,7 +18,7 @@ export function Card({ title, children, actions }: { title?: string; children: R
   return (
     <section className="rounded-md border-2 border-ink bg-white p-4 sm:p-6">
       {(title || actions) && (
-        <div className="mb-4 flex items-center justify-between gap-2">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           {title && <h2 className="text-lg font-bold text-ink">{title}</h2>}
           {actions}
         </div>

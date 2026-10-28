@@ -51,7 +51,7 @@ export function Billing() {
         <ErrorBox error={buy.error} />
       </Card>
       <Card title="Usage" actions={
-        <span className="flex items-center gap-2">
+        <span className="flex flex-wrap items-center gap-2">
           <label className="text-sm" htmlFor="month">Month</label>
           <input id="month" type="month" className="rounded border border-ink px-2 py-1 text-sm" value={month} onChange={(e) => setMonth(e.target.value)} />
           <Button variant="secondary" onClick={() => downloadAuthed(`/v1/billing/usage.csv?month=${month}`, `usage-${month}.csv`).catch((e) => setCsvErr(e.message))}>Download CSV</Button>

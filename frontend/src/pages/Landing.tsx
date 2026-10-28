@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { CFSymbol, Logo } from "../components/Logo";
@@ -327,27 +327,141 @@ function Pricing() {
   );
 }
 
+const FAQ: { group: string; items: [string, string][] }[] = [
+  { group: "The product", items: [
+    ["What exactly do I get?", "A broadcast-style news video with an AI presenter and your founder's answers cut in, a detailed written story (700 to 900 words), a social post with a hook and hashtags, captions and a thumbnail. All from one short interview."],
+    ["Is the presenter a real person?", "No. The presenter is AI-generated and every video says so on screen. The founder's answers are real: your own recording, never rewritten or re-voiced."],
+    ["How long does it take?", "About two minutes for your details and five for the interview. The written story is ready within a minute or two; the video usually follows within the hour."],
+    ["Can I check everything before it's made?", "Yes. You review the written story and the presenter's words, choose which answers go in, and nothing that costs credits runs until you approve."],
+  ] },
+  { group: "The interview", items: [
+    ["Do I need a studio or equipment?", "No. A laptop or phone with a camera, a quiet room and a decent connection. The interview runs in your browser; nothing to install."],
+    ["What will I be asked?", "Four questions written for your announcement: what's new, who it's for, how it works and what comes next. You see them before you start."],
+    ["What if I stumble on an answer?", "Record it again. Only the take you keep is used, and you pick which answers appear in the video."],
+  ] },
+  { group: "Credits & access", items: [
+    ["How does pricing work?", "You buy a pack of credits and spend them as you make videos. There's no subscription, and a step that fails is never charged."],
+    ["What is distribution?", "Coming soon: placing your segment and story with audiences in the regions you choose (North America, Europe, Africa, South America, Asia-Pacific, the Middle East), paid per region in credits."],
+    ["Who can sign up?", "Cover Founder is invite-only while we grow. Request access and we'll email you an invitation link; it stays valid for at least 48 hours."],
+    ["Who owns the video?", "You do. Download it, post it anywhere, or share a private link."],
+  ] },
+];
+
 function Faq() {
-  const qs = [
-    ["Is the presenter a real person?", "No. The presenter is AI-generated, and every video says so on screen. The founder answers are real: your own recording, never rewritten."],
-    ["Do I need any equipment?", "A laptop or phone with a camera and a quiet room. The interview runs in your browser."],
-    ["Can I check everything before it's made?", "Yes. You review the written story and the presenter's words, pick which answers go in, and nothing paid runs until you approve."],
-    ["Who can sign up?", "Cover Founder is invite-only while we grow. Request access and we'll send you an invitation by email."],
-  ];
+  const [open, setOpen] = useState<string>(FAQ[0].items[0][0]);
   return (
     <section id="faq" className="border-t border-white/10 bg-ink px-4 py-20 md:px-8">
-      <div className="mx-auto max-w-3xl">
-        <h2 className="text-center text-3xl text-white md:text-4xl">Questions</h2>
-        <div className="mt-8 divide-y divide-white/10 border-y border-white/10">
-          {qs.map(([q, a]) => <details key={q} className="group py-4"><summary className="cursor-pointer list-none font-bold text-white marker:hidden"><span className="mr-2 text-brand-green group-open:hidden" aria-hidden="true">+</span><span className="mr-2 hidden text-brand-green group-open:inline" aria-hidden="true">–</span>{q}</summary><p className="mt-2 text-white/70">{a}</p></details>)}
+      <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-[1fr_2fr]">
+        <div>
+          <Eyebrow>FAQ</Eyebrow>
+          <h2 className="mt-3 text-3xl text-white md:text-4xl">Questions, answered.</h2>
+          <p className="mt-3 text-white/70">Everything founders ask before their first segment. Something else on your mind?</p>
+          <a href="mailto:coverfounder@gmail.com" className="mt-5 inline-flex items-center gap-2 font-bold text-brand-green hover:underline">Ask us directly <span aria-hidden="true">→</span></a>
+        </div>
+        <div className="space-y-8">
+          {FAQ.map((g) => (
+            <div key={g.group}>
+              <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.2em] text-brand-peach">{g.group}</p>
+              <div className="divide-y divide-white/10 border-y border-white/10">
+                {g.items.map(([q, a]) => {
+                  const isOpen = open === q;
+                  const id = `faq-${q.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+                  return (
+                    <div key={q}>
+                      <h3 className="m-0">
+                        <button type="button" aria-expanded={isOpen} aria-controls={id} onClick={() => setOpen(isOpen ? "" : q)}
+                          className="flex w-full items-center justify-between gap-4 py-4 text-left font-sans text-base font-bold text-white hover:text-brand-green">
+                          {q}
+                          <span aria-hidden="true" className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border text-lg transition-transform ${isOpen ? "rotate-45 border-brand-green text-brand-green" : "border-white/30 text-white/70"}`}>+</span>
+                        </button>
+                      </h3>
+                      <div id={id} hidden={!isOpen} className="pb-5 pr-10 text-white/75">{a}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
   );
 }
 
+function Footer() {
+  const cols: { title: string; links: [string, string][] }[] = [
+    { title: "Product", links: [["Use cases", "#use-cases"], ["How it works", "#how"], ["Distribution", "#distribution"], ["Pricing", "#pricing"], ["FAQ", "#faq"]] },
+    { title: "Members", links: [["Sign in", "/login"], ["Reset password", "/forgot"], ["Request access", CONTACT], ["Contact support", "mailto:coverfounder@gmail.com"]] },
+    { title: "Trust", links: [["AI disclosure", "#faq"], ["Your data", "/account"], ["Security", "/security"]] },
+  ];
+  const link = (label: string, href: string) => href.startsWith("/")
+    ? <Link to={href} className="text-white/80 hover:text-brand-green">{label}</Link>
+    : <a href={href} className="text-white/80 hover:text-brand-green">{label}</a>;
+  return (
+    <footer className="relative overflow-hidden border-t border-white/10 bg-navy px-4 pt-14 md:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="grid grid-cols-2 gap-10 border-t border-white/15 pt-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div className="col-span-2 md:col-span-1">
+            <Logo className="h-auto w-[200px] text-brand-green" />
+            <p className="mt-5 max-w-xs text-white/80">The AI newsroom for startups. Your announcement, told like news, in your own words.</p>
+          </div>
+          {cols.map((c) => (
+            <nav key={c.title} aria-label={c.title}>
+              <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-brand-peach">{c.title}</p>
+              <ul className="mt-4 space-y-2.5">{c.links.map(([l, h]) => <li key={l}>{link(l, h)}</li>)}</ul>
+            </nav>
+          ))}
+        </div>
+        <div className="mt-12 flex flex-wrap items-center justify-between gap-3 text-xs text-white/60">
+          <p className="font-bold">© {new Date().getFullYear()} Cover Founder. All rights reserved.</p>
+          <p className="max-w-lg">Every Cover Founder video uses an AI-generated presenter and is labelled as such. Founder answers are the founder's own recordings.</p>
+        </div>
+      </div>
+      <p aria-hidden="true" className="pointer-events-none mt-6 select-none whitespace-nowrap bg-gradient-to-b from-white/35 to-transparent bg-clip-text text-center font-mono text-[11vw] font-bold leading-[0.85] text-transparent md:text-[9.5rem]">COVER FOUNDER</p>
+    </footer>
+  );
+}
+
+const NAV: [string, string][] = [["Use cases", "#use-cases"], ["How it works", "#how"], ["Distribution", "#distribution"], ["Pricing", "#pricing"], ["FAQ", "#faq"]];
+
+// Phones and tablets: the site menu slides in from the right edge over a dimmed page. Esc, the scrim, Close or any link closes it.
+function MobileMenu({ open, onClose, signedIn }: { open: boolean; onClose: () => void; signedIn: boolean }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden"; // the page behind doesn't scroll while the menu is open
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
+  }, [open, onClose]);
+  return (
+    <div className="md:hidden">
+      <div aria-hidden="true" onClick={onClose} className={`fixed inset-0 z-50 bg-ink/70 transition-opacity duration-200 ${open ? "opacity-100" : "pointer-events-none opacity-0"}`} />
+      <div id="site-menu" role="dialog" aria-modal="true" aria-label="Menu" className={`fixed inset-y-0 right-0 z-50 flex w-80 max-w-[85vw] flex-col border-l border-white/10 bg-ink p-5 transition-transform duration-200 ${open ? "translate-x-0" : "invisible translate-x-full"}`}>
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-lg font-bold text-white">Menu</span>
+          <button type="button" onClick={onClose} className="rounded-sm border-2 border-brand-green px-3 py-1.5 text-sm font-bold text-brand-green">Close</button>
+        </div>
+        <nav aria-label="Site (mobile)" className="mt-6 flex flex-col">
+          {NAV.map(([l, h]) => <a key={h} href={h} onClick={onClose} className="border-b border-white/10 py-4 text-lg font-bold text-white hover:text-brand-green">{l}</a>)}
+        </nav>
+        <div className="mt-auto flex flex-col gap-3 pt-6">
+          {signedIn ? <Link to="/dashboard" onClick={onClose} className="rounded-sm border-2 border-brand-green bg-brand-green px-4 py-3 text-center font-bold text-ink">Dashboard</Link> : (
+            <>
+              <a href={CONTACT} onClick={onClose} className="rounded-sm border-2 border-brand-green bg-brand-green px-4 py-3 text-center font-bold text-ink">Request access</a>
+              <Link to="/login" onClick={onClose} className="rounded-sm border-2 border-white/60 px-4 py-3 text-center font-bold text-white">Sign in</Link>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Landing() {
   const signedIn = Boolean(getToken());
+  const [menu, setMenu] = useState(false);
+  const closeMenu = useCallback(() => setMenu(false), []);
   const ticker = "FEATURED: Your launch, told like news  •  AI interview in your browser  •  Written story and social post included  •  Credits, no subscription  •  ";
   return (
     <div className="min-h-screen bg-ink text-white">
@@ -355,16 +469,20 @@ export function Landing() {
         <nav aria-label="Site" className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <Link to="/" className="flex items-center gap-2 text-brand-green" aria-label="Cover Founder home"><CFSymbol className="h-8 w-auto" /><span className="font-mono text-lg font-bold text-white">Cover Founder</span></Link>
           <div className="hidden items-center gap-6 text-sm text-white/80 md:flex">
-            <a href="#use-cases" className="hover:text-brand-green">Use cases</a><a href="#how" className="hover:text-brand-green">How it works</a><a href="#distribution" className="hover:text-brand-green">Distribution</a><a href="#pricing" className="hover:text-brand-green">Pricing</a>
+            {NAV.map(([l, h]) => <a key={h} href={h} className="hover:text-brand-green">{l}</a>)}
           </div>
           <div className="flex items-center gap-2">
             {signedIn ? <Link to="/dashboard" className="rounded-sm border-2 border-brand-green bg-brand-green px-3 py-2 text-sm font-bold text-ink">Dashboard</Link> : (
               <><Link to="/login" className="rounded-sm border-2 border-white/60 px-3 py-2 text-sm font-bold hover:border-brand-green hover:text-brand-green">Sign in</Link>
               <a href={CONTACT} className="hidden rounded-sm border-2 border-brand-green bg-brand-green px-3 py-2 text-sm font-bold text-ink sm:inline-block">Request access</a></>
             )}
+            <button type="button" onClick={() => setMenu(true)} aria-expanded={menu} aria-controls="site-menu" aria-label="Open menu" className="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-brand-green text-brand-green md:hidden">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+            </button>
           </div>
         </nav>
       </header>
+      <MobileMenu open={menu} onClose={closeMenu} signedIn={signedIn} />
 
       <main>
         <section className="cf-grain relative overflow-hidden px-4 pb-16 pt-16 md:px-8 md:pt-24">
@@ -398,13 +516,7 @@ export function Landing() {
         </section>
       </main>
 
-      <footer className="border-t border-white/10 bg-ink px-4 py-10 md:px-8">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-6">
-          <Logo className="h-auto w-[200px] text-brand-green" />
-          <p className="max-w-md text-xs text-white/50">Cover Founder videos use an AI-generated presenter and are always labelled as such. Founder answers are the founder's own recordings.</p>
-          <p className="text-xs text-white/50">© {new Date().getFullYear()} Cover Founder · <a className="underline" href="mailto:coverfounder@gmail.com">coverfounder@gmail.com</a></p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

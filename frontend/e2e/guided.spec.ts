@@ -63,7 +63,7 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   // 4. review the story, add two pictures, approve
   await expect(page.getByRole("heading", { name: "Your news story" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "What your presenter says" })).toBeVisible();
-  await expect(page.getByLabel("Outro")).toHaveValue("That was Cover Founder News. Thank you for watching.");
+  await expect(page.getByLabel("Outro")).toHaveValue(/For Cover Founder News, thank you for watching\.$/); // a full sign-off, not one line
   await expect(page.getByLabel(/Interview question/)).toHaveCount(0); // the questions are fixed once the answers are recorded
   await expect(page.getByRole("button", { name: "Make my video" })).toBeDisabled(); // pictures first
   await page.getByLabel("Choose pictures").setInputFiles([{ name: "one.png", mimeType: "image/png", buffer: PNG }, { name: "two.png", mimeType: "image/png", buffer: PNG }]);

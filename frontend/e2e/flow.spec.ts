@@ -24,8 +24,9 @@ test("invite to shared video", async ({ page, browser }) => {
   await fp.getByLabel("6-digit code").fill(/\b(\d{6})\b/.exec(mail.text)![1]);
   await fp.getByRole("button", { name: "Verify and create workspace" }).click();
 
-  // --- brand kit
-  await expect(fp.getByRole("heading", { name: /Brand kit/ })).toBeVisible();
+  // --- signing up lands on the dashboard; then the brand kit
+  await expect(fp.getByRole("heading", { name: "Welcome, Acme Farms" })).toBeVisible();
+  await fp.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Brand kit" }).click();
   await fp.getByLabel("Accent color", { exact: true }).fill("#00AA66");
   // logo upload: verified, scanned, then usable; malware is refused
   const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(64)]);
@@ -62,7 +63,7 @@ test("invite to shared video", async ({ page, browser }) => {
   // --- render completes (mock vendors), live status
   await expect(fp.getByRole("heading", { name: "Your video", exact: true })).toBeVisible({ timeout: 60_000 });
   await expect(fp.getByText("AI-generated anchor").first()).toBeVisible();
-  await expect(fp.getByRole("link", { name: "Download" })).toHaveCount(4);
+  await expect(fp.getByRole("link", { name: "Download" })).toHaveCount(3); // widescreen, thumbnail, captions (vertical only with RENDER_VERTICAL)
   await expect(fp.getByRole("heading", { name: "Suggested captions" })).toBeVisible();
   await expect(fp.locator("pre").first()).toContainText("AI-generated anchor");
 
@@ -112,7 +113,7 @@ test("sign up with a password, verify the emailed code, sign out, sign back in, 
   const mail = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: email } })).json();
   await page.getByLabel("6-digit code").fill(/\b(\d{6})\b/.exec(mail.text)![1]);
   await page.getByRole("button", { name: "Verify and create workspace" }).click();
-  await expect(page.getByRole("heading", { name: /Brand kit/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Welcome, / })).toBeVisible(); // straight to the dashboard
 
   await page.getByRole("navigation", { name: "Main" }).getByRole("button", { name: "Sign out" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Sign out" }).click(); // the confirmation
