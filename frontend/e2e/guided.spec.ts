@@ -58,19 +58,26 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await expect(boxes.nth(3)).toBeChecked();
   await expect(boxes.nth(3)).toBeEnabled();
   await expect(page.getByRole("button", { name: "Skip the interview" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Write my story" }).click();
+  await page.getByRole("button", { name: "Produce my story" }).click();
 
-  // 4. review the story, add two pictures, approve
+  // 4. review the story; going back to the interview and producing it again works
+  await expect(page.getByRole("heading", { name: "Your news story" })).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: "← Back to the interview" }).click();
+  await expect(page.getByRole("heading", { name: "Review your interview" })).toBeVisible();
+  await page.getByRole("button", { name: "Produce my story" }).click();
   await expect(page.getByRole("heading", { name: "Your news story" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "What your presenter says" })).toBeVisible();
   await expect(page.getByLabel("Outro")).toHaveValue(/For Cover Founder News, thank you for watching\.$/); // a full sign-off, not one line
   await expect(page.getByLabel(/Interview question/)).toHaveCount(0); // the questions are fixed once the answers are recorded
-  await expect(page.getByRole("button", { name: "Make my video" })).toBeDisabled(); // pictures first
+  await expect(page.getByRole("button", { name: "Make my video" })).toBeEnabled(); // pictures are optional
   await page.getByLabel("Choose pictures").setInputFiles([{ name: "one.png", mimeType: "image/png", buffer: PNG }, { name: "two.png", mimeType: "image/png", buffer: PNG }]);
   await expect(page.getByAltText("Your picture")).toHaveCount(2, { timeout: 20_000 });
   await expect(page.getByRole("button", { name: "Make my video" })).toBeEnabled();
   const claims = page.getByRole("group", { name: "Confirm these claims are accurate" });
-  if (await claims.count()) for (const box of await claims.getByRole("checkbox").all()) await box.check();
+  if (await claims.count()) {
+    await claims.getByRole("button", { name: "Confirm all" }).click();
+    for (const box of await claims.getByRole("checkbox").all()) await expect(box).toBeChecked();
+  }
   await page.getByRole("button", { name: "Make my video" }).click();
 
   // 5. the video, the written announcement and the separate social post

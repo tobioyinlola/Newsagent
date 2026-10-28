@@ -10732,6 +10732,65 @@
         ]
       }
     },
+    "/v1/projects/{project_id}/interview/reopen": {
+      "post": {
+        "description": "Guided flow, while the story is being reviewed: go back to the interview to re-record or re-pick answers. Nothing paid\nhas run yet. The recorded answers are kept; producing the story again writes a new version from the answers then chosen.",
+        "operationId": "reopen_interview_v1_projects__project_id__interview_reopen_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reopen Interview",
+        "tags": [
+          "interview"
+        ]
+      }
+    },
     "/v1/projects/{project_id}/interview/retake": {
       "post": {
         "operationId": "request_retake_v1_projects__project_id__interview_retake_post",

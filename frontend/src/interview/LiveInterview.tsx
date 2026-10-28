@@ -88,12 +88,13 @@ export function LiveInterviewPanel({ projectId, founderName, founderTitle, guide
   }
   if (session) return <GetReady session={session} onStart={() => setInRoom(true)} onBack={closeSession} />;
 
-  if (finished && s) return <Review projectId={projectId} status={s} guided={guided} onRedo={(q) => void prepare([q], false)} busy={busy} error={error} />;
+  const overlay = busy ? <PreparingOverlay message={busy} /> : null;
+  if (finished && s) return <>{overlay}<Review projectId={projectId} status={s} guided={guided} onRedo={(q) => void prepare([q], false)} busy={busy} error={error} /></>;
 
   const resuming = (s?.takes.length ?? 0) > 0 && unanswered.length > 0;
   const facts = understanding.data;
   return (
-    <Card title="Your AI interview">
+    <>{overlay}<Card title="Your AI interview">
       <div className="space-y-4">
         <Notice tone="ok">
           {guided ? "Our AI interviewer will talk with you on camera: up to" : "Your script is approved. Before we make your video, our AI interviewer will talk with you on camera: up to"} {s?.questions.length ?? 4} questions, about 4 minutes, no more than 5.
@@ -113,6 +114,7 @@ export function LiveInterviewPanel({ projectId, founderName, founderTitle, guide
         <ul className="list-disc space-y-1 pl-5 text-sm">
           <li><strong>Your camera must be on.</strong> We use stills and video of you answering in the final video.</li>
           <li>Find a quiet spot with light on your face. The interviewer speaks out loud: use headphones if you can.</li>
+          <li><strong>Look into your camera, not at yourself on the screen.</strong> It makes you look straight at your viewers instead of down. Raising your laptop or phone to eye level helps.</li>
           <li>You can stop at any time. You'll review every answer before anything is made.</li>
         </ul>
         {resuming ? (
@@ -136,7 +138,33 @@ export function LiveInterviewPanel({ projectId, founderName, founderTitle, guide
           {!guided && <SkipButton projectId={projectId} />}
         </div>
       </div>
-    </Card>
+    </Card></>
+  );
+}
+
+// While the camera, the interview and the interviewer's voice are being set up, the page fades and says what is happening,
+// step by step, so nobody is left wondering whether their click worked.
+const PREP_STEPS = ["Turning on your camera…", "Opening your interview…", "Getting your interviewer ready…", "Joining the interview room…"];
+function PreparingOverlay({ message }: { message: string }) {
+  const at = Math.max(0, PREP_STEPS.indexOf(message));
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/80 p-4 backdrop-blur-sm" role="alertdialog" aria-modal="true" aria-busy="true" aria-labelledby="prep-title">
+      <div className="w-full max-w-sm rounded-sm border-2 border-brand-green bg-ink p-6 text-white shadow-2xl">
+        <div className="flex items-center gap-3">
+          <span className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-brand-green/30 border-t-brand-green motion-reduce:animate-none" aria-hidden="true" />
+          <h2 id="prep-title" className="text-lg font-bold text-white">Preparing your interview</h2>
+        </div>
+        <ol className="mt-5 space-y-2 text-sm" aria-live="polite">
+          {PREP_STEPS.map((step, i) => (
+            <li key={step} className={`flex items-center gap-2 ${i < at ? "text-white/60" : i === at ? "font-bold text-brand-green" : "text-white/40"}`}>
+              <span aria-hidden="true" className="w-4 text-center">{i < at ? "✓" : i === at ? "●" : "○"}</span>{step.replace("…", "")}
+            </li>
+          ))}
+        </ol>
+        <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-brand-green transition-all duration-500" style={{ width: `${((at + 0.5) / PREP_STEPS.length) * 100}%` }} /></div>
+        <p className="mt-3 text-xs text-white/60">This usually takes a few seconds. Please keep this tab open.</p>
+      </div>
+    </div>
   );
 }
 
@@ -212,7 +240,7 @@ function Review({ projectId, status, guided, onRedo, busy, error }: { projectId:
   return (
     <Card title="Review your interview">
       <div className="space-y-4">
-        <Notice tone="ok">Great interview{status.founder_name ? `, ${status.founder_name.split(" ")[0]}` : ""}. You spoke for {mmss(total)}. {guided ? `Every answer goes into your video; untick any you would rather leave out. Next we write your story from everything you said, and you check it before anything is made.` : "Check your answers, then we'll create your AI presenter and weave your answers into the video."}</Notice>
+        <Notice tone="ok">Great interview{status.founder_name ? `, ${status.founder_name.split(" ")[0]}` : ""}. You spoke for {mmss(total)}. {guided ? `Every answer goes into your video; untick any you would rather leave out. Next we produce your story from everything you said, and you check it before anything is made.` : "Check your answers, then we'll create your AI presenter and weave your answers into the video."}</Notice>
         <Field label="How your answers appear in the video">
           {(id) => (
             <select id={id} className={inputCls} value={plan.layout} onChange={(e) => setPlan({ ...plan, layout: e.target.value })}>
@@ -247,7 +275,7 @@ function Review({ projectId, status, guided, onRedo, busy, error }: { projectId:
         {!guided && <p className="text-sm text-muted">Next: the AI presenter is created from your script, then your answers are merged in. This takes a few minutes and uses credits.</p>}
         <ErrorBox error={make.error ?? (error ? new Error(error) : null)} />
         <div className="flex flex-wrap gap-3">
-          <Button onClick={() => make.mutate()} disabled={make.isPending || !plan.answers.some((a) => a.include)}>{make.isPending ? (guided ? "Writing your story…" : "Starting…") : guided ? "Write my story" : "Make my video"}</Button>
+          <Button onClick={() => make.mutate()} disabled={make.isPending || !plan.answers.some((a) => a.include)}>{make.isPending ? (guided ? "Producing your story…" : "Starting…") : guided ? "Produce my story" : "Make my video"}</Button>
           {!guided && <SkipButton projectId={projectId} />}
         </div>
       </div>

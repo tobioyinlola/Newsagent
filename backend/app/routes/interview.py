@@ -194,6 +194,23 @@ async def save_plan(
     return plan
 
 
+@router.post("/interview/reopen", response_model=ProjectOut)
+async def reopen_interview(
+    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> ProjectOut:
+    """Guided flow, while the story is being reviewed: go back to the interview to re-record or re-pick answers. Nothing paid
+    has run yet. The recorded answers are kept; producing the story again writes a new version from the answers then chosen."""
+    from app.routes.projects import _out
+
+    project = await _owned(session, project_id, p)
+    if project.flow != "guided" or project.state != "script_ready":
+        raise HTTPException(409, "You can go back to the interview only while you're reviewing your story.")
+    sm.transition(project, "interviewing")
+    await session.commit()
+    await session.refresh(project)
+    return await _out(session, project)
+
+
 @router.post("/interview/merge", response_model=ProjectOut)
 async def make_final(
     project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)

@@ -1,13 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api, unwrap } from "../api/client";
-import { Button, Card, ErrorBox, Notice } from "./ui";
+import { Button, Card, ErrorBox } from "./ui";
 
 const TYPES = ["image/png", "image/jpeg", "image/webp"];
-export const MIN_PICTURES = 2;
 export const MAX_PICTURES = 3;
 
-// The 2 or 3 pictures shown in the video (and used with the story). Uploaded straight to this video: no brand kit needed.
+// Up to 3 optional pictures that go with the written story. Uploaded straight to this video: no brand kit needed.
 export function StoryImages({ projectId }: { projectId: string }) {
   const qc = useQueryClient();
   const path = { params: { path: { project_id: projectId } } };
@@ -37,9 +36,9 @@ export function StoryImages({ projectId }: { projectId: string }) {
   const saveCaptions = useMutation({ mutationFn: () => put(items.map((i) => ({ key: i.key, caption: (captions[i.key] ?? i.caption).slice(0, 80), seconds: i.seconds }))) });
 
   return (
-    <Card title={`Add ${MIN_PICTURES} or ${MAX_PICTURES} pictures`}>
+    <Card title={`Pictures for your story (optional, up to ${MAX_PICTURES})`}>
       <div className="space-y-3">
-        <p className="text-sm text-muted">Pictures of your product, team or launch. They appear in your video and are used with your story. Use only pictures you own or have the right to publish.</p>
+        <p className="text-sm text-muted">Pictures of your product, team or launch to publish with your story. You can skip this. Use only pictures you own or have the right to publish.</p>
         <ul className="grid gap-3 sm:grid-cols-3">
           {items.map((i) => (
             <li key={i.key} className="space-y-2 rounded-sm border-2 border-ink p-2">
@@ -55,7 +54,6 @@ export function StoryImages({ projectId }: { projectId: string }) {
             <Button variant="secondary" disabled={add.isPending} onClick={() => input.current?.click()}>{add.isPending ? "Uploading…" : items.length ? "Add another picture" : "Choose pictures"}</Button>
           </div>
         )}
-        {items.length < MIN_PICTURES && <Notice>Add at least {MIN_PICTURES} pictures to continue.</Notice>}
         <ErrorBox error={add.error ?? remove.error ?? saveCaptions.error} />
       </div>
     </Card>

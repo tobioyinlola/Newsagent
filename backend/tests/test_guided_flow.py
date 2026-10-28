@@ -103,9 +103,7 @@ async def test_approval_needs_two_or_three_pictures_then_makes_the_video_cheaply
     body["confirmed_claims"] = [c["text"] for c in script["claim_flags"]]
     await client.put(f"/v1/projects/{pid}/script", json=body, headers=OWNER)
 
-    r = await client.post(f"/v1/projects/{pid}/script/approve", json={}, headers=OWNER)
-    assert r.status_code == 422 and r.json()["detail"]["error"] == "pictures_needed"
-    keys = [await add_image(client) for _ in range(2)]
+    keys = [await add_image(client) for _ in range(2)]  # pictures are optional; they go with the written story
     items = [{"key": k, "caption": f"Picture {i + 1}", "seconds": 3} for i, k in enumerate(keys)]
     assert (await client.put(f"/v1/projects/{pid}/broll", json={"items": items}, headers=OWNER)).status_code == 200
 
@@ -146,3 +144,28 @@ def test_the_presenter_always_has_an_opening():
         [ScriptSegment(kind="intro", text="Tonight, Acme. It matters."), ScriptSegment(kind="body", text="")], 90
     ) == [{"kind": "intro", "text": "Tonight, Acme. It matters."}]
     assert _trim_words([ScriptSegment(kind="intro", text=" . "), ScriptSegment(kind="body", text="")], 90) == []
+
+
+async def test_the_owner_can_go_back_from_the_story_to_the_interview_and_produce_it_again(client, workspace):
+    pid = await interviewed(client)
+    await client.post(f"/v1/projects/{pid}/interview/merge", headers=OWNER)
+    first = (await client.get(f"/v1/projects/{pid}/script", headers=OWNER)).json()["version"]
+    r = await client.post(f"/v1/projects/{pid}/interview/reopen", headers=OWNER)
+    assert r.status_code == 200 and r.json()["state"] == "interviewing"
+    assert (
+        await client.post(f"/v1/projects/{pid}/interview/reopen", headers=OWNER)
+    ).status_code == 409  # only from the story
+    r = await client.post(f"/v1/projects/{pid}/interview/merge", headers=OWNER)  # produce the story again
+    assert r.status_code == 200 and r.json()["state"] == "script_ready"
+    assert (await client.get(f"/v1/projects/{pid}/script", headers=OWNER)).json()["version"] > first
+
+
+async def test_the_video_can_be_made_without_pictures(client, workspace):
+    pid = await interviewed(client)
+    await client.post(f"/v1/projects/{pid}/interview/merge", headers=OWNER)
+    script = (await client.get(f"/v1/projects/{pid}/script", headers=OWNER)).json()
+    body = {k: script[k] for k in ("segments", "ticker_lines", "lower_thirds", "interview_questions")}
+    body["confirmed_claims"] = [c["text"] for c in script["claim_flags"]]
+    await client.put(f"/v1/projects/{pid}/script", json=body, headers=OWNER)
+    r = await client.post(f"/v1/projects/{pid}/script/approve", json={}, headers=OWNER)
+    assert r.status_code == 200, r.text

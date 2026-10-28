@@ -25,7 +25,11 @@ STATES = {
 
 ALLOWED: dict[str, set[str]] = {
     "draft": {"script_ready"},
-    "script_ready": {"script_ready", "script_approved"},
+    "script_ready": {
+        "script_ready",
+        "script_approved",
+        "interviewing",
+    },  # guided: back to the interview to change answers
     "script_approved": {"rendering_anchor", "interviewing"},
     # live interview: the owner is interviewed first; proceeding starts the paid pipeline
     # guided flow: answering the interview leads to the written story (script_ready), which the owner reviews

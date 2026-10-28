@@ -6,7 +6,7 @@ import { Button, Card, ErrorBox, Notice, inputCls } from "./ui";
 type Script = Schemas["ScriptOut"];
 type Seg = { kind: string; text: string };
 
-export function ScriptEditor({ projectId, script, guided = false, pictures = 99 }: { projectId: string; script: Script; guided?: boolean; pictures?: number }) {
+export function ScriptEditor({ projectId, script, guided = false }: { projectId: string; script: Script; guided?: boolean }) {
   const qc = useQueryClient();
   const [segments, setSegments] = useState<Seg[]>(script.segments as Seg[]);
   const [ticker, setTicker] = useState(script.ticker_lines.join("\n"));
@@ -37,7 +37,8 @@ export function ScriptEditor({ projectId, script, guided = false, pictures = 99 
   const approve = useMutation({
     mutationFn: async () => {
       const saved = await unwrap(api.PUT("/v1/projects/{project_id}/script", { ...path, body: body() }));
-      if (saved.claim_flags.some((c) => !c.confirmed)) throw new Error("Please confirm each flagged claim before approving.");
+      const left = new Set(saved.claim_flags.filter((c) => !c.confirmed).map((c) => String(c.text))).size; // one per sentence, as listed
+      if (left) throw new Error(`Please confirm the ${left === 1 ? "flagged claim" : `${left} flagged claims`} above (or press "Confirm all") before we make your video.`);
       return unwrap(api.POST("/v1/projects/{project_id}/script/approve", { ...path, body: { with_interview: withInterview, interview_mode: guided || mode !== "invite" ? "live" : "invite" } }));
     },
     onSettled: refresh, // also on failure: the save above may have produced claims to confirm
@@ -102,7 +103,10 @@ export function ScriptEditor({ projectId, script, guided = false, pictures = 99 
         {flags.length > 0 && (
           <fieldset className="space-y-2 rounded-md border border-brand-peach bg-peach-tint p-3">
             <legend className="px-1 text-sm font-semibold text-ink">Confirm these claims are accurate</legend>
-            <p className="text-sm text-ink">Revenue, user counts, funding, rankings and “first/best” statements must be confirmed by you before we render.</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm text-ink">Revenue, user counts, funding, rankings and “first/best” statements must be confirmed by you before we render. <strong>{flags.filter((t) => confirmed.has(t)).length} of {flags.length} confirmed.</strong></p>
+              <Button variant="secondary" onClick={() => setConfirmed(new Set(flags))} disabled={flags.every((t) => confirmed.has(t))}>Confirm all</Button>
+            </div>
             {flags.map((t) => (
               <label key={t} className="flex items-start gap-2 text-sm">
                 <input type="checkbox" className="mt-1" checked={confirmed.has(t)} onChange={() => toggle(t)} />
@@ -115,7 +119,7 @@ export function ScriptEditor({ projectId, script, guided = false, pictures = 99 
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => save.mutate()} disabled={save.isPending}>Save changes</Button>
           {!guided && <Button variant="secondary" onClick={() => regenerate.mutate()} disabled={regenerate.isPending}>Regenerate</Button>}
-          <Button onClick={() => approve.mutate()} disabled={approve.isPending || (guided && pictures < 2)}>{guided ? "Make my video" : "Approve and make my video"}</Button>
+          <Button onClick={() => approve.mutate()} disabled={approve.isPending}>{approve.isPending ? "Starting your video…" : guided ? "Make my video" : "Approve and make my video"}</Button>
         </div>
       </div>
     </Card>
