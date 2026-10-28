@@ -38,7 +38,6 @@ export function ProjectDetail() {
     enabled: !!state && ["script_ready", "processing_founder", "interviewing"].includes(state),
     refetchInterval: 15000,
   });
-  const broll = useQuery({ queryKey: ["broll", id], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/broll", path)), enabled: state === "script_ready" });
   const retry = useMutation({ mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/retry", path)), onSuccess: () => qc.invalidateQueries({ queryKey: ["project", id] }) });
 
   // Live status: refetch whenever the server pushes a new state.
@@ -85,14 +84,15 @@ export function ProjectDetail() {
       {moderation.data?.[0]?.status === "rejected" && (
         <Notice tone="warn">Our team couldn't approve this content.{moderation.data[0].note ? ` ${moderation.data[0].note}` : ""} Please edit it and try again.</Notice>
       )}
+      {p.state === "script_ready" && guided && <BackToInterview projectId={id} />}
       {p.state === "script_ready" && guided && <StoryCopy projectId={id} compact />}
       {p.state === "script_ready" && guided && <StoryImages projectId={id} />}
-      {p.state === "script_ready" && script.data && <ScriptEditor projectId={id} script={script.data} guided={guided} pictures={broll.data?.items.length ?? 0} />}
+      {p.state === "script_ready" && script.data && <ScriptEditor projectId={id} script={script.data} guided={guided} />}
       {!guided && p.interview_enabled && ["interviewing", "awaiting_founder", "processing_founder"].includes(p.state) && <BrollPanel projectId={id} />}
       {p.state === "interviewing" && <LiveInterviewPanel projectId={id} founderName={p.founder_name} founderTitle={p.founder_title} guided={guided} />}
       {["script_approved", "rendering_anchor", "anchor_ready"].includes(p.state) && (
         <Card title={guided || live ? "Creating your AI presenter" : p.interview_enabled ? "Preparing your interview" : "Making your video"}>
-          <p aria-busy="true">{guided || live ? "Your story is approved. We're creating the AI presenter and will weave your answers and pictures into the video. " : ""}This usually takes a few minutes. You can leave this page; we'll email you when it is ready.</p>
+          <p aria-busy="true">{guided || live ? "Your story is approved. We’re creating the AI presenter and will weave your answers into the video. " : ""}This usually takes a few minutes. You can leave this page; we'll email you when it is ready.</p>
         </Card>
       )}
       {p.state === "awaiting_founder" && <InterviewPanel projectId={id} />}
@@ -146,6 +146,22 @@ function Stepper({ labels, current, done }: { labels: string[]; current: number;
         })}
       </ol>
     </nav>
+  );
+}
+
+// Story review (guided): step back to the interview to re-record or re-pick answers, then produce the story again.
+function BackToInterview({ projectId }: { projectId: string }) {
+  const qc = useQueryClient();
+  const back = useMutation({
+    mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/interview/reopen", { params: { path: { project_id: projectId } } })),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["project", projectId] }); qc.invalidateQueries({ queryKey: ["interview", projectId] }); qc.invalidateQueries({ queryKey: ["script", projectId] }); },
+  });
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <Button variant="secondary" disabled={back.isPending} onClick={() => back.mutate()}>{back.isPending ? "Going back…" : "← Back to the interview"}</Button>
+      <span className="text-sm text-muted">Change or re-record your answers, then produce the story again. Nothing has been charged yet.</span>
+      <ErrorBox error={back.error} />
+    </div>
   );
 }
 

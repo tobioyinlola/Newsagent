@@ -240,7 +240,7 @@ function Review({ projectId, status, guided, onRedo, busy, error }: { projectId:
   return (
     <Card title="Review your interview">
       <div className="space-y-4">
-        <Notice tone="ok">Great interview{status.founder_name ? `, ${status.founder_name.split(" ")[0]}` : ""}. You spoke for {mmss(total)}. {guided ? `Every answer goes into your video; untick any you would rather leave out. Next we write your story from everything you said, and you check it before anything is made.` : "Check your answers, then we'll create your AI presenter and weave your answers into the video."}</Notice>
+        <Notice tone="ok">Great interview{status.founder_name ? `, ${status.founder_name.split(" ")[0]}` : ""}. You spoke for {mmss(total)}. {guided ? `Every answer goes into your video; untick any you would rather leave out. Next we produce your story from everything you said, and you check it before anything is made.` : "Check your answers, then we'll create your AI presenter and weave your answers into the video."}</Notice>
         <Field label="How your answers appear in the video">
           {(id) => (
             <select id={id} className={inputCls} value={plan.layout} onChange={(e) => setPlan({ ...plan, layout: e.target.value })}>
@@ -275,7 +275,7 @@ function Review({ projectId, status, guided, onRedo, busy, error }: { projectId:
         {!guided && <p className="text-sm text-muted">Next: the AI presenter is created from your script, then your answers are merged in. This takes a few minutes and uses credits.</p>}
         <ErrorBox error={make.error ?? (error ? new Error(error) : null)} />
         <div className="flex flex-wrap gap-3">
-          <Button onClick={() => make.mutate()} disabled={make.isPending || !plan.answers.some((a) => a.include)}>{make.isPending ? (guided ? "Writing your story…" : "Starting…") : guided ? "Write my story" : "Make my video"}</Button>
+          <Button onClick={() => make.mutate()} disabled={make.isPending || !plan.answers.some((a) => a.include)}>{make.isPending ? (guided ? "Producing your story…" : "Starting…") : guided ? "Produce my story" : "Make my video"}</Button>
           {!guided && <SkipButton projectId={projectId} />}
         </div>
       </div>

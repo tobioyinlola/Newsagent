@@ -238,11 +238,9 @@ async def approve_script(
         )
     guided_flow = project.flow == "guided"
     if guided_flow:
-        pictures = len(project.broll or [])
-        if not 2 <= pictures <= 3:
-            raise HTTPException(
-                422, {"error": "pictures_needed", "message": "Add 2 or 3 pictures to show in your video."}
-            )
+        pictures = len(project.broll or [])  # optional now: the pictures go with the written story, not into the video
+        if pictures > 3:
+            raise HTTPException(422, {"error": "too_many_pictures", "message": "Use at most 3 pictures."})
     banned = find_banned(json.dumps([sv.segments, sv.ticker_lines, sv.lower_thirds, sv.interview_questions, sv.story]))
     if banned:  # hard rule 1: checked before any paid step runs
         raise HTTPException(

@@ -55,7 +55,7 @@ test("invite to shared video", async ({ page, browser }) => {
   await fp.getByLabel("Intro").fill("Tonight we feature Acme Farms. They have 5,000 users and are the first in Ghana.");
   await fp.getByLabel("No interview").check(); // this journey is the presenter-only video; the interview has its own test
   await fp.getByRole("button", { name: "Approve and make my video" }).click();
-  await expect(fp.getByRole("alert")).toContainText("confirm each flagged claim");
+  await expect(fp.getByRole("alert")).toContainText(/Please confirm the .*flagged claim/);
   await expect(fp.getByRole("group", { name: "Confirm these claims are accurate" })).toBeVisible();
   for (const box of await fp.getByRole("group", { name: "Confirm these claims are accurate" }).getByRole("checkbox").all()) await box.check();
   await fp.getByRole("button", { name: "Approve and make my video" }).click();
