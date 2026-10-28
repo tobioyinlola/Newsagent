@@ -2,7 +2,7 @@ import React from "react";
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { CFLogo, CF, Fonts, SANS } from "./theme";
 
-// Cover Founder News: the closing card (about 6 s): the invitation, the address, the places we reach.
+// Cover Founder News: the closing card (about 6 s): the invitation, the address, the places we reach. It holds on screen to the last frame (no fade out).
 export const OUTRO_SECONDS = 6;
 
 const ease = Easing.bezier(0.22, 1, 0.36, 1);
@@ -20,14 +20,13 @@ export const BrandOutro: React.FC = () => {
   const underline = rise(60, 86);
   const chips = (i: number) => rise(86 + i * 6, 108 + i * 6);
   const logoIn = rise(100, 124);
-  const out = interpolate(frame, [160, 178], [1, 0], clamp);
   const pulse = 1 + 0.015 * Math.sin(frame / 8) * (frame > 90 ? 1 : 0);
 
   const tick = "ON COVER FOUNDER  •  PRESS DISTRIBUTION  •  25K+ MEDIA PLATFORMS  •  UNITED STATES  •  CANADA  •  EUROPE  •  EAST AFRICA  •  NIGERIA  •  ";
   const tickerX = -((frame * 4 * u) % (tick.length * 20 * u));
 
   return (
-    <AbsoluteFill style={{ background: CF.ink, overflow: "hidden", fontFamily: SANS, opacity: out }}>
+    <AbsoluteFill style={{ background: CF.ink, overflow: "hidden", fontFamily: SANS }}>
       <Fonts />
       {/* stripes + moving light */}
       {[[0.62, 0.15], [0.8, 0.07], [0.9, 0.04]].map(([x, w], i) => (
