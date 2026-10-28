@@ -63,11 +63,7 @@ export function ProjectDetail() {
         <h1 className="text-2xl font-bold">Video {p.id.slice(0, 6)}</h1>
         <span className="rounded-full bg-paper px-3 py-1 text-sm" aria-live="polite">{stateLabel(p.state)}</span>
       </div>
-      <ol className="flex flex-wrap gap-2" aria-label="Progress">
-        {steps.map((s, i) => (
-          <li key={s.label} aria-current={i === cur ? "step" : undefined} className={`rounded-full px-3 py-1 text-sm ${i < cur || p.state === "final_ready" ? "bg-lime-tint text-ink" : i === cur ? "bg-brand-purple text-white" : "bg-paper text-muted"}`}>{s.label}</li>
-        ))}
-      </ol>
+      <Stepper labels={steps.map((s) => s.label)} current={p.state === "final_ready" ? steps.length - 1 : cur} done={p.state === "final_ready"} />
 
       {["script_approved", "rendering_anchor", "anchor_ready", "merging", "failed", "limit_reached", "cancelled"].includes(p.state) && <ProgressPanel projectId={id} state={p.state} />}
       {p.state === "cancelled" && (
@@ -123,3 +119,33 @@ export function ProjectDetail() {
     </>
   );
 }
+
+// Where the video is in its journey: numbered steps joined by arrows ("1. Details » 2. AI interview » ..."), with a bar that fills
+// as each step is completed. Finished steps carry a tick; the current one is highlighted.
+function Stepper({ labels, current, done }: { labels: string[]; current: number; done: boolean }) {
+  const finished = done ? labels.length : current;
+  const pct = Math.round(((done ? labels.length : current + 0.5) / labels.length) * 100);
+  return (
+    <nav aria-label="Progress" className="space-y-2">
+      <p className="text-sm font-bold text-ink">{done ? "All steps complete" : `Step ${current + 1} of ${labels.length}: ${labels[current]}`}</p>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-line" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label="Overall progress">
+        <div className="h-full rounded-full bg-brand-green transition-all duration-500" style={{ width: `${pct}%` }} />
+      </div>
+      <ol className="flex flex-wrap items-center gap-x-1 gap-y-2">
+        {labels.map((label, i) => {
+          const state = i < finished ? "done" : i === current ? "current" : "todo";
+          return (
+            <li key={label} className="flex items-center gap-1" aria-current={state === "current" ? "step" : undefined}>
+              <span className={`inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1 text-sm font-bold ${state === "done" ? "border-ink bg-lime-tint text-ink" : state === "current" ? "border-brand-purple bg-brand-purple text-white" : "border-line bg-white text-muted"}`}>
+                <span aria-hidden="true">{state === "done" ? "✓" : `${i + 1}.`}</span>{label}
+                {state === "done" && <span className="sr-only"> (done)</span>}
+              </span>
+              {i < labels.length - 1 && <span aria-hidden="true" className={`px-1 font-bold ${i < finished ? "text-ink" : "text-line"}`}>»</span>}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+

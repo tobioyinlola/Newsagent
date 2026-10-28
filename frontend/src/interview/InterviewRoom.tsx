@@ -270,6 +270,13 @@ export function InterviewRoom(p: RoomProps) {
         <div className={`absolute right-3 top-3 rounded-sm px-3 py-1.5 font-mono text-sm font-bold ${overtime ? "bg-brand-red text-ink" : "bg-ink text-brand-green"}`} aria-label="Time left in the interview">
           {overtime ? "Time's up" : `${mmss(remaining)} left`}
         </div>
+        {["greeting", "asking", "answering", "between", "closing"].includes(phase) && !cameraLost && (
+          <div className="pointer-events-none absolute inset-x-0 top-14 flex justify-center px-3">
+            <p className="flex items-center gap-2 rounded-sm bg-ink/85 px-3 py-2 text-center text-sm font-bold text-white shadow-lg">
+              <span aria-hidden="true" className="text-brand-green">▲</span> Look into your camera, not at yourself on the screen
+            </p>
+          </div>
+        )}
         {phase === "answering" && (
           <div className="absolute inset-x-0 bottom-0 h-2 bg-ink" role="progressbar" aria-label="Time left for this answer" aria-valuemin={0} aria-valuemax={ansWindow} aria-valuenow={Math.round(ansLeft)}>
             <div className="h-full bg-brand-green transition-[width] duration-300" style={{ width: `${ansWindow ? (ansLeft / ansWindow) * 100 : 0}%` }} />
@@ -307,7 +314,7 @@ export function InterviewRoom(p: RoomProps) {
             <button type="button" onClick={() => doneNow.current?.()} className="w-full rounded-sm border-2 border-ink bg-brand-green px-5 py-4 text-lg font-bold text-ink">I’m done answering</button>
           </div>
         )}
-        {phase === "finishing" && <p className="mt-auto text-sm text-white" aria-busy="true">Hold on while we check your recordings. This takes a moment.</p>}
+        {phase === "finishing" && <CheckingProgress indices={p.indices} takes={takes} />}
         {phase === "attention" && (
           <div className="space-y-3">
             {needsAttention.map((q) => (
@@ -334,3 +341,38 @@ export function InterviewRoom(p: RoomProps) {
     </div>
   );
 }
+
+// After the last question: how far the checks have got, answer by answer, so the wait never looks stuck.
+const STEP_OF: Record<string, number> = { uploading: 1, processing: 2, ready: 3, needs_retake: 3, failed: 3 };
+function CheckingProgress({ indices, takes }: { indices: number[]; takes: Record<number, TakeState | undefined> }) {
+  const total = indices.length * 3;
+  const done = indices.reduce((n, q) => n + (STEP_OF[takes[q]?.status ?? ""] ?? 0), 0);
+  const checked = indices.filter((q) => (STEP_OF[takes[q]?.status ?? ""] ?? 0) === 3).length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  const label = (st?: string) => st === "uploading" ? "Uploading" : st === "processing" ? "Checking sound and picture" : st === "ready" ? "Ready" : st === "needs_retake" ? "Needs a look" : st === "failed" ? "Couldn't process" : "Waiting";
+  return (
+    <div className="mt-auto space-y-3" aria-busy="true">
+      <div className="flex items-baseline justify-between text-sm"><span className="font-bold text-white">Checked {checked} of {indices.length} answers</span><span className="font-mono text-brand-green">{pct}%</span></div>
+      <div className="h-2.5 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-label="Checking your answers" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+        <div className="h-full rounded-full bg-brand-green transition-all duration-500" style={{ width: `${pct}%` }} />
+      </div>
+      <ul className="space-y-1.5 text-sm">
+        {indices.map((q, i) => {
+          const st = takes[q]?.status;
+          const finished = (STEP_OF[st ?? ""] ?? 0) === 3;
+          return (
+            <li key={q} className="flex items-center justify-between gap-2">
+              <span className="text-white/80">Answer {i + 1}</span>
+              <span className={`flex items-center gap-1.5 ${st === "ready" ? "text-brand-green" : finished ? "text-brand-peach" : "text-white/60"}`}>
+                {!finished && <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/20 border-t-brand-green motion-reduce:animate-none" aria-hidden="true" />}
+                {label(st)}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="text-xs text-white/60">Hold on while we check your recordings. Please keep this tab open.</p>
+    </div>
+  );
+}
+
