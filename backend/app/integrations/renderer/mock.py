@@ -1,3 +1,6 @@
+import time
+
+from app.config import get_settings
 from app.integrations.renderer.base import (
     Analysis,
     KeyResult,
@@ -16,6 +19,7 @@ class MockRenderer(RendererClient):
     def __init__(self, storage: StorageProvider) -> None:
         self.storage = storage
         self._done: dict[str, list[str]] = {}
+        self._ready_at: dict[str, float] = {}
         self.duration_s = 0.0  # set from the last request so the mock "renders" the right length
         self.process_duration_s = 4.0  # what a processed founder take measures
         self.process_flags: list[str] = []  # tests set e.g. ["no_speech"] to simulate a bad take
@@ -77,7 +81,10 @@ class MockRenderer(RendererClient):
             await self.storage.put(key, PLACEHOLDER_MP4, "image/png" if ext == "png" else "video/mp4")
             keys.append(key)
         self._done[rid] = keys
+        self._ready_at[rid] = time.time() + get_settings().mock_vendor_latency_s
         return rid
 
     async def status(self, render_id: str) -> RenderStatus:
+        if time.time() < self._ready_at.get(render_id, 0):
+            return RenderStatus("running", 0.5, [])
         return RenderStatus("succeeded", 1.0, self._done[render_id])

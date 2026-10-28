@@ -95,8 +95,22 @@ class Settings(BaseSettings):
     # disallowed content is still blocked.
     moderation_hold_for_review: bool = True
     use_mocks: bool = True
+    # Mock vendors normally answer at once. Above 0 they behave like real ones: a presenter clip and a render each take this many
+    # seconds (the avatar mock then submits and is polled, so vendor slots, waiting and queueing are exercised). For load tests.
+    mock_vendor_latency_s: float = 0.0
     operator_emails: str = ""  # comma separated; may call /admin
     queue_backend: str = "inline"  # inline | celery
+    # Database connections per process (the API, and each worker). Keep (pool_size + max_overflow) x processes under Postgres's
+    # max_connections. A request waits up to db_pool_timeout_s for a free connection, then fails fast instead of piling up.
+    # With the Celery queue, a worker waits at most this long on a presenter clip, then is released and the same vendor job is polled
+    # again shortly. Workers are the scarce thing: without this, each clip in progress would hold one for its whole (minutes-long) wait.
+    vendor_hold_s: float = 45.0
+    db_pool_size: int = 10
+    db_max_overflow: int = 10
+    db_pool_timeout_s: int = 20
+    db_pool_recycle_s: int = (
+        1800  # replace connections older than this, so a database/proxy idle-timeout never hands out a dead one
+    )
     rate_limit_backend: str = ""  # "memory" | "redis"; default: redis outside local
     trust_proxy_headers: bool = False  # True behind Railway/Cloudflare so X-Forwarded-For identifies clients
     secret_key: str = ""  # Fernet key (urlsafe base64, 32 bytes) for encrypting reminder links; required outside local

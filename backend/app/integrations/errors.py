@@ -32,6 +32,15 @@ class ProviderPending(ProviderError):
         super().__init__(message, "timeout")
 
 
+class Deferred(ProviderPending):
+    """Still working, and this worker has waited long enough: let it go and poll the same vendor job again shortly. Nothing failed
+    and no attempt is used; the job simply goes back in line."""
+
+    def __init__(self, resume_after: float = 20.0) -> None:
+        super().__init__("The vendor is still rendering; checking again shortly")
+        self.resume_after = resume_after
+
+
 @dataclass(frozen=True)
 class Classified:
     category: str

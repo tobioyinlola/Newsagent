@@ -119,6 +119,9 @@ class ProgressOut(BaseModel):
     cancellable: bool
     failure_category: str | None = None  # why the last step failed, in plain categories (auth, rate_limited, ...)
     vendor_jobs_in_flight: int = 0
+    queue_ahead: int = (
+        0  # other videos in the same step that started waiting earlier (about how many are in front of this one)
+    )
 
 
 class ScriptOut(BaseModel):
