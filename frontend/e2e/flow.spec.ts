@@ -115,6 +115,7 @@ test("sign up with a password, verify the emailed code, sign out, sign back in, 
   await expect(page.getByRole("heading", { name: /Brand kit/ })).toBeVisible();
 
   await page.getByRole("navigation", { name: "Main" }).getByRole("button", { name: "Sign out" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Sign out" }).click(); // the confirmation
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(pw);
   await page.getByRole("button", { name: "Sign in" }).click();

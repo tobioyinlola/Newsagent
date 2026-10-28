@@ -102,6 +102,8 @@ def _trim_words(segments: list[ScriptSegment], budget: int) -> list[dict]:
             continue
         kept: list[str] = []
         for sentence in s.text.replace("\n", " ").split(". "):
+            if not any(ch.isalnum() for ch in sentence):  # blank or stray punctuation: nothing to say
+                continue
             n = len(sentence.split())
             if used + n > budget and (kept or out):
                 break
@@ -125,6 +127,13 @@ async def write_story(
     }
     draft = await llm.write_story(facts, project.announcement_type or "other", answers)
     segments = _trim_words(draft.segments, PRESENTER_WORDS)
+    if (
+        not segments
+    ):  # the writer gave no usable opening: build one from the story itself so the presenter always has words
+        lead = [draft.dek] + [p for sec in draft.sections[:2] for p in sec.paragraphs[:1]]
+        segments = _trim_words([ScriptSegment(kind="intro", text=" ".join(x for x in lead if x))], PRESENTER_WORDS)
+    if segments and segments[0]["kind"] != "intro":
+        segments[0]["kind"] = "intro"
     segments.append({"kind": "outro", "text": draft.outro.strip() or presenters.STANDARD_OUTRO})
     story = {
         "headline": draft.headline,

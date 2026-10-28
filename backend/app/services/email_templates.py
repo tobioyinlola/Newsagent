@@ -89,7 +89,11 @@ def sign_in_code(kind: str, code: str, minutes: int) -> tuple[str, str, str]:
     return f"{code} is your Cover Founder code", html, text
 
 
-def invite(workspace: str, signup_url: str, days: int, credits: str | None = None) -> tuple[str, str, str]:
+def _span(hours: int) -> str:
+    return f"{hours // 24} days" if hours >= 72 and hours % 24 == 0 else f"{hours} hours"
+
+
+def invite(workspace: str, signup_url: str, hours: int, credits: str | None = None) -> tuple[str, str, str]:
     body = (
         f"You've been invited to Cover Founder, where startups turn a short interview into a news-style video presented by an "
         f"AI-generated anchor.\n\nYour workspace, {workspace}, is ready"
@@ -99,7 +103,7 @@ def invite(workspace: str, signup_url: str, days: int, credits: str | None = Non
         "How to sign up:\n1. Press the button above (or open the link).\n2. Check this email address matches the one you were "
         "invited on, then choose a password of at least 10 characters.\n3. We email you a 6-digit code. Enter it to confirm your email.\n"
         "4. You land on your dashboard, ready to make your first video.\n\n"
-        f"The invitation can be used once and expires in {days} days."
+        f"The invitation can be used once and stays valid for {_span(hours)}."
     )
     html, text = render(
         "You're invited to Cover Founder", body, button=("Create your account", signup_url), after=after

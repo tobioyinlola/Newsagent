@@ -38,6 +38,7 @@ async def create_invite(
     op: Principal = Depends(operator),
     session: AsyncSession = Depends(get_session),
 ) -> InviteOut:
+    invite_hours = max(48, get_settings().invite_ttl_hours)
     ws = Workspace(name=body.workspace_name, credit_balance=Decimal("0"), spend_cap=body.spend_cap)
     session.add(ws)
     await session.flush()
@@ -49,7 +50,7 @@ async def create_invite(
         email=body.email.lower(),
         code=secrets.token_urlsafe(24),
         workspace_id=ws.id,
-        expires_at=datetime.now(UTC) + timedelta(days=14),
+        expires_at=datetime.now(UTC) + timedelta(hours=invite_hours),
     )
     session.add(inv)
     audit(

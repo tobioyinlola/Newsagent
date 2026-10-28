@@ -457,3 +457,17 @@ async def test_an_invite_is_emailed_to_the_startup_with_the_signup_link(client, 
     assert len(mail) == 1
     assert f"/signup?code={body['code']}" in mail[0]["text"] and "How to sign up" in mail[0]["text"]
     assert "#C0FE73" in mail[0]["html"] and "Create your account" in mail[0]["html"]
+
+
+async def test_an_invitation_stays_valid_for_at_least_48_hours(client, workspace, maker):
+    from app.models import Invite
+
+    r = await client.post(
+        "/v1/admin/invites", json={"email": NEW, "workspace_name": "NewCo", "credits": "5"}, headers=OPS
+    )
+    async with maker() as db:
+        inv = (await db.execute(select(Invite))).scalar_one()
+        left = inv.expires_at.replace(tzinfo=UTC) - datetime.now(UTC)
+    assert left >= timedelta(hours=48) and r.json()["emailed"] is True
+    mail = [m for m in registry.get_email().sent if m["to"] == NEW and "invited" in m["subject"]][-1]
+    assert "stays valid for" in mail["text"]

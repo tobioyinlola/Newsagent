@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import { api } from "../api/client";
 import { signOut } from "../lib/auth";
 import { CFSymbol } from "./Logo";
+import { ConfirmDialog } from "./ui";
 import { useMe } from "./RequireOperator";
 
 const KEY = "newsagent.admin.sidebar";
@@ -55,10 +56,12 @@ export function Layout() {
     return !c;
   });
   const rail = collapsed && !open;
+  const [confirmOut, setConfirmOut] = useState(false);
   const signOutNow = async () => { await api.POST("/v1/auth/logout").catch(() => undefined); signOut(); nav("/login"); };
 
   return (
     <div className="min-h-screen bg-paper text-ink md:flex">
+      {confirmOut && <ConfirmDialog title="Sign out?" confirmLabel="Sign out" cancelLabel="Stay signed in" onConfirm={() => { setConfirmOut(false); void signOutNow(); }} onCancel={() => setConfirmOut(false)}>You will need to sign in again to get back to the back office.</ConfirmDialog>}
       <div className="flex items-center justify-between bg-ink px-4 py-2 md:hidden">
         <Link to="/" className="flex items-center gap-2 text-brand-green" aria-label="Back office home">
           <CFSymbol className="h-8 w-auto" />
@@ -100,7 +103,7 @@ export function Layout() {
           ))}
           <div className="mt-auto space-y-2 border-t-2 border-stripe pt-3">
             {me.data && !rail && <p className="truncate px-3 text-sm text-white" title={me.data.email}>{me.data.email}</p>}
-            <button type="button" onClick={signOutNow} title={rail ? "Sign out" : undefined} className={`flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-bold text-brand-green hover:bg-stripe ${rail ? "justify-center" : ""}`}>
+            <button type="button" onClick={() => setConfirmOut(true)} title={rail ? "Sign out" : undefined} className={`flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-bold text-brand-green hover:bg-stripe ${rail ? "justify-center" : ""}`}>
               {I.out}<span className={rail ? "sr-only" : ""}>Sign out</span>
             </button>
             <button

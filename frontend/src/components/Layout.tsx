@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import { api, unwrap } from "../api/client";
 import { signOut } from "../lib/auth";
 import { CFSymbol } from "./Logo";
+import { ConfirmDialog } from "./ui";
 
 export function useMe() {
   return useQuery({ queryKey: ["me"], queryFn: () => unwrap(api.GET("/v1/me")), retry: false });
@@ -70,10 +71,12 @@ export function Layout() {
       <span className={rail ? "sr-only" : ""}>{label}</span>
     </NavLink>
   );
+  const [confirmOut, setConfirmOut] = useState(false);
   const signOutNow = async () => { await api.POST("/v1/auth/logout").catch(() => undefined); signOut(); nav("/login"); };
 
   return (
     <div className="min-h-screen bg-paper text-ink md:flex">
+      {confirmOut && <ConfirmDialog title="Sign out?" confirmLabel="Sign out" cancelLabel="Stay signed in" onConfirm={() => { setConfirmOut(false); void signOutNow(); }} onCancel={() => setConfirmOut(false)}>You will need to sign in again to get back to your work.</ConfirmDialog>}
       {/* phone top bar */}
       <div className="flex items-center justify-between bg-ink px-4 py-2 md:hidden">
         <Link to="/dashboard" className="flex items-center gap-2 text-brand-green" aria-label="Cover Founder home">
@@ -123,7 +126,7 @@ export function Layout() {
                 <span className="sr-only"> credits in {me.data.workspace_name}</span>
               </p>
             )}
-            <button type="button" onClick={signOutNow} title={rail ? "Sign out" : undefined} className={`flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-bold text-brand-green hover:bg-stripe ${rail ? "justify-center" : ""}`}>
+            <button type="button" onClick={() => setConfirmOut(true)} title={rail ? "Sign out" : undefined} className={`flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-bold text-brand-green hover:bg-stripe ${rail ? "justify-center" : ""}`}>
               {ICONS.out}
               <span className={rail ? "sr-only" : ""}>Sign out</span>
             </button>
