@@ -11798,6 +11798,32 @@
         ]
       }
     },
+    "/v1/public/packs": {
+      "get": {
+        "description": "The credit packs on sale, for the public pricing section of the landing page (no sign-in needed).",
+        "operationId": "public_packs_v1_public_packs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PackOut"
+                  },
+                  "title": "Response Public Packs V1 Public Packs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Public Packs",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/v1/share/{token}": {
       "get": {
         "operationId": "view_share_v1_share__token__get",

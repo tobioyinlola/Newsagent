@@ -161,3 +161,9 @@ async def test_usage_and_ledger_are_private_to_the_workspace(client, workspace, 
 async def test_summary(client, workspace):
     s = (await client.get("/v1/billing/summary", headers=OWNER)).json()
     assert Decimal(s["credit_balance"]) == Decimal("10") and Decimal(s["low_balance_threshold"]) == Decimal("5")
+
+
+async def test_the_packs_on_sale_are_public_for_the_landing_page(client, workspace):
+    r = await client.get("/v1/public/packs")
+    assert r.status_code == 200 and isinstance(r.json(), list)
+    assert all({"name", "credits", "price_usd"} <= set(p) for p in r.json())
