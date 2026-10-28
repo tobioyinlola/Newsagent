@@ -1000,7 +1000,9 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
         input_urls={},
     )
     analyses = await _record_outputs(session, project, status)
-    srt_key = await _store_srt(session, project, merge_srt([(a + brand_lead(), b + brand_lead(), t) for a, b, t in cues]))
+    srt_key = await _store_srt(
+        session, project, merge_srt([(a + brand_lead(), b + brand_lead(), t) for a, b, t in cues])
+    )
     safe_props = {k: v for k, v in props.items() if k != "scenes"} | {
         "sceneCount": len(scenes),
         "scenePlanHash": project.scene_plan_hash,

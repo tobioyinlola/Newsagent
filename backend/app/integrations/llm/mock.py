@@ -69,13 +69,21 @@ class MockScriptLLM(ScriptLLM):
             headline=f"{company}: {facts.get('announcement', kind)}"[:110],
             dek=f"{company} shares its {kind} with Cover Founder.",
             sections=[
-                StorySection(heading="The announcement", paragraphs=[str(facts.get("announcement", "")), first]),
-                StorySection(heading="The problem", paragraphs=[str(facts.get("problem", ""))]),
                 StorySection(
-                    heading="What the company hasn't said",
-                    paragraphs=["Revenue, customer numbers and valuation were not disclosed."],
-                ),
+                    heading="",
+                    paragraphs=[
+                        p
+                        for p in (
+                            str(facts.get("announcement", "")),
+                            first,
+                            str(facts.get("problem", "")),
+                            "Revenue, customer numbers and valuation were not disclosed.",
+                        )
+                        if p
+                    ],
+                )
             ],
+            about=f"{company} is a company that shares its {kind} with Cover Founder.",
             social=SocialPost(
                 hook=f"{company} just made a move.",
                 post=f"{company}: {facts.get('announcement', kind)}. Watch the full story on Cover Founder.",

@@ -4,6 +4,8 @@ Nothing paid runs until the owner has reviewed the story. The only vendor spend 
 opening, a hand-over line plus a question for each of the answers that are featured, and the standard sign-off.
 """
 
+from datetime import UTC, datetime
+
 from fastapi import HTTPException
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -11,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.integrations import registry
 from app.integrations.llm.base import ScriptSegment
-from app.models import Project, ScriptVersion
+from app.models import Project, ScriptVersion, User, Workspace
 from app.services import interview as iv
 from app.services import presenters
 from app.services import state_machine as sm
@@ -115,6 +117,28 @@ def _trim_words(segments: list[ScriptSegment], budget: int) -> list[dict]:
     return out
 
 
+async def press_release_details(session: AsyncSession, project: Project, company: str) -> dict:
+    """What the press release needs besides the writing: the dateline (the business's city and country, today's date) and the
+    media contact. All of it comes from what was given at sign-up and on the details page; nothing is made up."""
+    ws = await session.get(Workspace, project.workspace_id)
+    owner = (
+        (await session.execute(select(User).where(User.workspace_id == project.workspace_id).order_by(User.created_at)))
+        .scalars()
+        .first()
+    )
+    now = datetime.now(UTC)
+    place = ", ".join(x.strip() for x in (ws.city if ws else None, ws.country if ws else None) if x and x.strip())
+    date = f"{now:%B} {now.day}, {now.year}"
+    contact = {
+        "name": project.founder_name or "",
+        "title": project.founder_title or "",
+        "company": company,
+        "email": owner.email if owner else "",
+        "website": (project.brief.website_url if project.brief else None) or "",
+    }
+    return {"dateline": f"{place.upper()} — {date}" if place else date, "contact": contact}
+
+
 async def write_story(
     session: AsyncSession, project: Project, plan_script: ScriptVersion, answers: list[dict]
 ) -> ScriptVersion:
@@ -146,7 +170,13 @@ async def write_story(
     if segments and segments[0]["kind"] != "intro":
         segments[0]["kind"] = "intro"
     segments.append({"kind": "outro", "text": draft.outro.strip() or presenters.STANDARD_OUTRO})
+    company = str(facts.get("company") or "")
+    ws = await session.get(Workspace, project.workspace_id)
+    company = company or (ws.name if ws else "")
     story = {
+        **await press_release_details(session, project, company),
+        "about": draft.about.strip(),
+        "company": company,
         "headline": draft.headline,
         "dek": draft.dek,
         "sections": [s.model_dump() for s in draft.sections],
@@ -159,7 +189,7 @@ async def write_story(
     }
     text = "\n".join(  # one line per piece, so a claim is quoted whole and each sentence is checked on its own
         [s["text"] for s in segments]
-        + [draft.headline, draft.dek]
+        + [draft.headline, draft.dek, draft.about]
         + [p for sec in draft.sections for p in sec.paragraphs]
         + [draft.social.post]
     )

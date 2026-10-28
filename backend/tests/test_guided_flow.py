@@ -55,6 +55,11 @@ async def test_finishing_the_interview_writes_the_story_for_review(client, works
     assert await state(client, pid) == "script_ready"
     story = (await client.get(f"/v1/projects/{pid}/story", headers=OWNER)).json()
     assert story["headline"] and story["sections"] and story["social"]["hook"] and story["social"]["post"]
+    # press-release parts: the dateline carries today's date, the contact and "about" come from the details given
+    from datetime import UTC, datetime
+
+    assert str(datetime.now(UTC).year) in story["dateline"] and story["about"]
+    assert story["contact"]["email"] and "company" in story["contact"]
     script = (await client.get(f"/v1/projects/{pid}/script", headers=OWNER)).json()
     assert (
         script["segments"][-1]["kind"] == "outro" and len(script["segments"][-1]["text"].split()) >= 40

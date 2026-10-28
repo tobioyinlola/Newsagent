@@ -69,13 +69,16 @@ class JsonScriptLLM(ScriptLLM):
     async def write_story(self, facts: dict, announcement_type: str, answers: list[dict]) -> StoryDraft:
         said = "\n".join(f"Q: {a['question']}\nA: {a['answer']}" for a in answers)[:8000]
         raw = await self._json(
-            "Write the Cover Founder news feature for this announcement, as JSON with keys: headline (under 100 chars), "
-            "dek (one sentence, under 220 chars), sections [{heading, paragraphs [str]}] (a thorough, detailed feature of 6 to 8 "
-            "sections, each with 2 to 4 full paragraphs, about 700 to 900 words in all: the news itself and when it happens; the "
-            "problem and who feels it; how the product works in concrete terms; the founders and why they are the ones to build it; "
-            "what customers or users get; what the founder said in the interview, quoted where it is strong; why it matters for the "
-            'market; what comes next; and a last section titled "What the company hasn\'t said" listing what was NOT disclosed, such '
-            "as revenue, customers or valuation, when it was not), social {hook (under 90 chars, makes people stop scrolling), "
+            "Write a professional press release for this announcement, as JSON with keys: headline (under 110 chars, a plain news headline "
+            "stating the announcement), dek (the subheadline: one sentence, under 220 chars, on what the news will support), "
+            'sections (exactly ONE section: [{heading: "", paragraphs [str]}], the body of the release as 7 to 9 paragraphs, about '
+            "500 to 700 words, with NO headings and NO dateline (the dateline is added for you). Write it the way a wire-service press "
+            "release reads: paragraph 1 states who announced what, with the key numbers and when; paragraph 2 says what the funding or "
+            "launch will be used for; then a quote from the founder introduced as '\u201cquote,\u201d said Name, Title of Company'; "
+            "what the company does; how the plan works and what customers can expect; a second short founder quote; the wider ambitions "
+            "and targets the founder mentioned; and a last paragraph on what the company will prioritise next. Quote the founder only "
+            "with words they actually said, lightly trimmed for length, and never invent quotes), about (the 'About <company>' "
+            "boilerplate: 2 to 3 sentences on what the company is, what it offers and who leads it), social {hook (under 90 chars, makes people stop scrolling), "
             'post (under 270 chars, plain, no hype), hashtags (at most 4)}, segments [{kind: "intro"|"body", text}] (what the '
             "presenter says aloud before the interview: 70 to 90 words in total, in the warm, confident voice of a TV news presenter, "
             "setting up the story and handing over to the founder), outro (what the presenter says aloud to close the programme: 100 "

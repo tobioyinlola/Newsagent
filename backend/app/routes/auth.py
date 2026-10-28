@@ -96,6 +96,8 @@ async def signup_start(
             raise HTTPException(403, "Sign-up is by invitation for now. Ask us for an invite link.")
         if not body.email or not body.business_name or not body.business_name.strip():
             raise HTTPException(422, "Enter your business name and email address.")
+        if not (body.city or "").strip() or not (body.country or "").strip():
+            raise HTTPException(422, "Enter the city and country your business is based in.")
         email, invite_id, workspace_name = str(body.email).lower(), None, body.business_name.strip()
         await _throttle(request, "signup", email, (5, 3600), (20, 3600))
     if (await db.execute(select(User.id).where(User.email == email))).first():
@@ -109,6 +111,8 @@ async def signup_start(
         password_hash=passwords.hash_password(body.password),
         ip=ratelimit.client_ip(request),
         workspace_name=workspace_name,
+        city=(body.city or "").strip() or None,
+        country=(body.country or "").strip() or None,
     )
     await db.commit()
     subject, html, text = _email("signup", code)
@@ -139,7 +143,13 @@ async def signup_verify(body: SignupVerifyIn, request: Request, db: AsyncSession
         assert ws is not None
         inv.used_at = datetime.now(UTC)
     else:  # a new workspace for a business that signed up on its own
-        ws = Workspace(name=row.workspace_name, credit_balance=Decimal("0"), spend_cap=Decimal("0"))
+        ws = Workspace(
+            name=row.workspace_name,
+            city=row.city,
+            country=row.country,
+            credit_balance=Decimal("0"),
+            spend_cap=Decimal("0"),
+        )
         db.add(ws)
         await db.flush()
         credits = Decimal(get_settings().signup_credits or "0")

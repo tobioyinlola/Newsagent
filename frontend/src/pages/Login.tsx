@@ -78,6 +78,8 @@ export function Signup() {
   const [params] = useSearchParams();
   const inviteCode = params.get("code") ?? "";
   const [business, setBusiness] = useState("");
+  const [city, setCity] = useState("");
+  const [country, setCountry] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -92,7 +94,7 @@ export function Signup() {
     enabled: inviteCode.length > 0,
     retry: false,
   });
-  const body = inviteCode ? { invite_code: inviteCode } : { email: email.trim(), business_name: business.trim() };
+  const body = inviteCode ? { invite_code: inviteCode } : { email: email.trim(), business_name: business.trim(), city: city.trim(), country: country.trim() };
   const start = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/auth/signup/start", { body: { ...body, password } })),
     onSuccess: (r) => { setHint(r.email_hint ?? email); setSent(true); },
@@ -129,6 +131,10 @@ export function Signup() {
               <>
                 <p>Create a free workspace for your business. We'll email you a 6-digit code to confirm your email before you get in.</p>
                 <Field label="Business name">{(id) => <input id={id} required minLength={2} maxLength={200} autoComplete="organization" className={inputCls} value={business} onChange={(e) => setBusiness(e.target.value)} />}</Field>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="City">{(id) => <input id={id} required minLength={2} maxLength={120} autoComplete="address-level2" className={inputCls} value={city} onChange={(e) => setCity(e.target.value)} />}</Field>
+                  <Field label="Country">{(id) => <input id={id} required minLength={2} maxLength={120} autoComplete="country-name" className={inputCls} value={country} onChange={(e) => setCountry(e.target.value)} />}</Field>
+                </div>
                 <Field label="Work email">{(id) => <input id={id} type="email" required autoComplete="email" className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} />}</Field>
               </>
             )}
