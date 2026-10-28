@@ -20,6 +20,15 @@ def _paragraphs(text: str) -> str:
     return "".join(out)
 
 
+def absolute(url: str) -> str:
+    """A link mail apps can open. A site address set without "https://" (e.g. APP_BASE_URL=app.example.com) would otherwise
+    become a relative link that goes nowhere when the button is clicked."""
+    u = url.strip()
+    if u.startswith(("http://", "https://", "mailto:")):
+        return u
+    return "https://" + u.lstrip("/")
+
+
 def render(
     heading: str,
     body: str,
@@ -36,12 +45,17 @@ def render(
         if code
         else ""
     )
+    if button:
+        button = (button[0], absolute(button[1]))
+    href = escape(button[1], quote=True) if button else ""
+    # A "bulletproof" button: the whole coloured cell is the link, so it works in Gmail, Apple Mail and Outlook alike.
     button_html = (
-        f'<p style="margin:8px 0 20px"><a href="{escape(button[1], quote=True)}" style="display:inline-block;padding:14px 26px;'
-        f"background:{GREEN};color:{INK};border:2px solid {INK};border-radius:2px;font:700 16px {HEAD};"
-        f'text-decoration:none">{escape(button[0])}</a></p>'
+        f'<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 20px"><tr>'
+        f'<td bgcolor="{GREEN}" style="background:{GREEN};border:2px solid {INK};border-radius:2px">'
+        f'<a href="{href}" target="_blank" rel="noopener" style="display:inline-block;padding:14px 26px;color:{INK};'
+        f'font:700 16px {HEAD};text-decoration:none">{escape(button[0])}</a></td></tr></table>'
         f'<p style="margin:0 0 16px;font:13px/1.5 {BODY};color:{MUTED}">Button not working? Copy this link into your browser:<br>'
-        f'<a href="{escape(button[1], quote=True)}" style="color:{PURPLE};word-break:break-all">{escape(button[1])}</a></p>'
+        f'<a href="{href}" target="_blank" rel="noopener" style="color:{PURPLE};word-break:break-all">{escape(button[1])}</a></p>'
         if button
         else ""
     )

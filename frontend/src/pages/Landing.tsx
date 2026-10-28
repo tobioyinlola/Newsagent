@@ -327,22 +327,98 @@ function Pricing() {
   );
 }
 
+const FAQ: { group: string; items: [string, string][] }[] = [
+  { group: "The product", items: [
+    ["What exactly do I get?", "A broadcast-style news video with an AI presenter and your founder's answers cut in, a detailed written story (700 to 900 words), a social post with a hook and hashtags, captions and a thumbnail. All from one short interview."],
+    ["Is the presenter a real person?", "No. The presenter is AI-generated and every video says so on screen. The founder's answers are real: your own recording, never rewritten or re-voiced."],
+    ["How long does it take?", "About two minutes for your details and five for the interview. The written story is ready within a minute or two; the video usually follows within the hour."],
+    ["Can I check everything before it's made?", "Yes. You review the written story and the presenter's words, choose which answers go in, and nothing that costs credits runs until you approve."],
+  ] },
+  { group: "The interview", items: [
+    ["Do I need a studio or equipment?", "No. A laptop or phone with a camera, a quiet room and a decent connection. The interview runs in your browser; nothing to install."],
+    ["What will I be asked?", "Four questions written for your announcement: what's new, who it's for, how it works and what comes next. You see them before you start."],
+    ["What if I stumble on an answer?", "Record it again. Only the take you keep is used, and you pick which answers appear in the video."],
+  ] },
+  { group: "Credits & access", items: [
+    ["How does pricing work?", "You buy a pack of credits and spend them as you make videos. There's no subscription, and a step that fails is never charged."],
+    ["What is distribution?", "Coming soon: placing your segment and story with audiences in the regions you choose (North America, Europe, Africa, South America, Asia-Pacific, the Middle East), paid per region in credits."],
+    ["Who can sign up?", "Cover Founder is invite-only while we grow. Request access and we'll email you an invitation link; it stays valid for at least 48 hours."],
+    ["Who owns the video?", "You do. Download it, post it anywhere, or share a private link."],
+  ] },
+];
+
 function Faq() {
-  const qs = [
-    ["Is the presenter a real person?", "No. The presenter is AI-generated, and every video says so on screen. The founder answers are real: your own recording, never rewritten."],
-    ["Do I need any equipment?", "A laptop or phone with a camera and a quiet room. The interview runs in your browser."],
-    ["Can I check everything before it's made?", "Yes. You review the written story and the presenter's words, pick which answers go in, and nothing paid runs until you approve."],
-    ["Who can sign up?", "Cover Founder is invite-only while we grow. Request access and we'll send you an invitation by email."],
-  ];
+  const [open, setOpen] = useState<string>(FAQ[0].items[0][0]);
   return (
     <section id="faq" className="border-t border-white/10 bg-ink px-4 py-20 md:px-8">
-      <div className="mx-auto max-w-3xl">
-        <h2 className="text-center text-3xl text-white md:text-4xl">Questions</h2>
-        <div className="mt-8 divide-y divide-white/10 border-y border-white/10">
-          {qs.map(([q, a]) => <details key={q} className="group py-4"><summary className="cursor-pointer list-none font-bold text-white marker:hidden"><span className="mr-2 text-brand-green group-open:hidden" aria-hidden="true">+</span><span className="mr-2 hidden text-brand-green group-open:inline" aria-hidden="true">–</span>{q}</summary><p className="mt-2 text-white/70">{a}</p></details>)}
+      <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-[1fr_2fr]">
+        <div>
+          <Eyebrow>FAQ</Eyebrow>
+          <h2 className="mt-3 text-3xl text-white md:text-4xl">Questions, answered.</h2>
+          <p className="mt-3 text-white/70">Everything founders ask before their first segment. Something else on your mind?</p>
+          <a href="mailto:coverfounder@gmail.com" className="mt-5 inline-flex items-center gap-2 font-bold text-brand-green hover:underline">Ask us directly <span aria-hidden="true">→</span></a>
+        </div>
+        <div className="space-y-8">
+          {FAQ.map((g) => (
+            <div key={g.group}>
+              <p className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.2em] text-brand-peach">{g.group}</p>
+              <div className="divide-y divide-white/10 border-y border-white/10">
+                {g.items.map(([q, a]) => {
+                  const isOpen = open === q;
+                  const id = `faq-${q.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+                  return (
+                    <div key={q}>
+                      <h3 className="m-0">
+                        <button type="button" aria-expanded={isOpen} aria-controls={id} onClick={() => setOpen(isOpen ? "" : q)}
+                          className="flex w-full items-center justify-between gap-4 py-4 text-left font-sans text-base font-bold text-white hover:text-brand-green">
+                          {q}
+                          <span aria-hidden="true" className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border text-lg transition-transform ${isOpen ? "rotate-45 border-brand-green text-brand-green" : "border-white/30 text-white/70"}`}>+</span>
+                        </button>
+                      </h3>
+                      <div id={id} hidden={!isOpen} className="pb-5 pr-10 text-white/75">{a}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
+  );
+}
+
+function Footer() {
+  const cols: { title: string; links: [string, string][] }[] = [
+    { title: "Product", links: [["Use cases", "#use-cases"], ["How it works", "#how"], ["Distribution", "#distribution"], ["Pricing", "#pricing"], ["FAQ", "#faq"]] },
+    { title: "Members", links: [["Sign in", "/login"], ["Reset password", "/forgot"], ["Request access", CONTACT], ["Contact support", "mailto:coverfounder@gmail.com"]] },
+    { title: "Trust", links: [["AI disclosure", "#faq"], ["Your data", "/account"], ["Security", "/security"]] },
+  ];
+  const link = (label: string, href: string) => href.startsWith("/")
+    ? <Link to={href} className="text-white/80 hover:text-brand-green">{label}</Link>
+    : <a href={href} className="text-white/80 hover:text-brand-green">{label}</a>;
+  return (
+    <footer className="relative overflow-hidden border-t border-white/10 bg-navy px-4 pt-14 md:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="grid grid-cols-2 gap-10 border-t border-white/15 pt-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div className="col-span-2 md:col-span-1">
+            <Logo className="h-auto w-[200px] text-brand-green" />
+            <p className="mt-5 max-w-xs text-white/80">The AI newsroom for startups. Your announcement, told like news, in your own words.</p>
+          </div>
+          {cols.map((c) => (
+            <nav key={c.title} aria-label={c.title}>
+              <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-brand-peach">{c.title}</p>
+              <ul className="mt-4 space-y-2.5">{c.links.map(([l, h]) => <li key={l}>{link(l, h)}</li>)}</ul>
+            </nav>
+          ))}
+        </div>
+        <div className="mt-12 flex flex-wrap items-center justify-between gap-3 text-xs text-white/60">
+          <p className="font-bold">© {new Date().getFullYear()} Cover Founder. All rights reserved.</p>
+          <p className="max-w-lg">Every Cover Founder video uses an AI-generated presenter and is labelled as such. Founder answers are the founder's own recordings.</p>
+        </div>
+      </div>
+      <p aria-hidden="true" className="pointer-events-none mt-6 select-none whitespace-nowrap bg-gradient-to-b from-white/35 to-transparent bg-clip-text text-center font-mono text-[11vw] font-bold leading-[0.85] text-transparent md:text-[9.5rem]">COVER FOUNDER</p>
+    </footer>
   );
 }
 
@@ -398,13 +474,7 @@ export function Landing() {
         </section>
       </main>
 
-      <footer className="border-t border-white/10 bg-ink px-4 py-10 md:px-8">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-6">
-          <Logo className="h-auto w-[200px] text-brand-green" />
-          <p className="max-w-md text-xs text-white/50">Cover Founder videos use an AI-generated presenter and are always labelled as such. Founder answers are the founder's own recordings.</p>
-          <p className="text-xs text-white/50">© {new Date().getFullYear()} Cover Founder · <a className="underline" href="mailto:coverfounder@gmail.com">coverfounder@gmail.com</a></p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
