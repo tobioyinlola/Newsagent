@@ -25,8 +25,8 @@ export const Chrome: React.FC<ChromeProps> = (p) => {
   return (
     <>
       {/* channel mark: the primary Cover Founder logo, top-left, on every video */}
-      <div style={{ position: "absolute", top: 28 * u, left: 32 * u, background: CF.navy, padding: 6 * u, borderRadius: 4 * u }}>
-        <CFLogo height={92 * u} />
+      <div style={{ position: "absolute", top: 24 * u, left: 28 * u, background: CF.navy, padding: 8 * u, borderRadius: 4 * u }}>
+        <CFLogo height={150 * u} />
       </div>
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 72 * u, background: CF.ink, overflow: "hidden", borderTop: `${4 * u}px solid ${CF.green}` }}>
         <div style={{ whiteSpace: "nowrap", color: CF.white, fontFamily: SANS, fontSize: 32 * u, lineHeight: `${68 * u}px`, transform: `translateX(${tickerX}px)` }}>

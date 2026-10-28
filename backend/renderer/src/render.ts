@@ -33,7 +33,8 @@ export async function renderOne(opts: {
     timeoutInMilliseconds: Number(process.env.RENDER_LOAD_TIMEOUT_MS ?? 180000), // a frame may wait this long for its media
     offthreadVideoCacheSizeInBytes: Number(process.env.RENDER_VIDEO_CACHE_MB ?? 384) * 1024 * 1024,
     offthreadVideoThreads: Number(process.env.RENDER_VIDEO_THREADS ?? 1),
-    jpegQuality: process.env.RENDER_JPEG_QUALITY ? Number(process.env.RENDER_JPEG_QUALITY) : undefined,
+    // frames are captured as JPEG: the default quality softens thin logo and text edges, so capture them near-lossless
+    jpegQuality: Number(process.env.RENDER_JPEG_QUALITY ?? 95),
     scale: opts.scale,
     cancelSignal: opts.cancelSignal,
     onProgress: ({ progress }) => opts.onProgress?.(progress),

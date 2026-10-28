@@ -64,7 +64,7 @@ export const StripesBackground: React.FC = () => {
 
 // The primary logo (the symbol with COVER FOUNDER under it), drawn on its own ink tile: the channel mark in the top-left corner.
 export const CFLogo: React.FC<{ height: number; color?: string }> = ({ height, color = CF.green }) => (
-  <svg viewBox={CF_VIEWBOX} height={height} style={{ display: "block" }} fill={color} aria-label="Cover Founder">
+  <svg viewBox={CF_VIEWBOX} height={height} style={{ display: "block" }} fill={color} shapeRendering="geometricPrecision" aria-label="Cover Founder">
     {CF_PATHS.map((p, i) => <path key={i} fillRule={p.rule} d={p.d} />)}
   </svg>
 );
