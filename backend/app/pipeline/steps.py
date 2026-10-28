@@ -161,6 +161,14 @@ async def anchor_inputs(session: AsyncSession, project: Project) -> dict:
     }
 
 
+BRAND_INTRO_S, BRAND_OUTRO_S = 5.0, 6.0  # keep in step with renderer/src/compositions/brand.ts
+
+
+def brand_lead() -> float:
+    """Seconds of branded opening before the video proper (captions and the thumbnail skip it)."""
+    return BRAND_INTRO_S if get_settings().brand_cards else 0.0
+
+
 async def build_overlay_props(
     session: AsyncSession, project: Project, script: ScriptVersion, anchor_duration_s: float
 ) -> dict:
@@ -188,6 +196,9 @@ async def build_overlay_props(
         "anchorDurationSeconds": anchor_duration_s,
         "tickerLines": [*script.ticker_lines, *await cf_news.ticker_items(session, exclude_project=project.id)],
         "lowerThirds": script.lower_thirds,
+        "brandCards": get_settings().brand_cards,
+        "brandIntroSeconds": brand_lead(),
+        "brandOutroSeconds": BRAND_OUTRO_S if get_settings().brand_cards else 0.0,
     }
 
 
@@ -716,9 +727,10 @@ async def final_render(session: AsyncSession, project: Project, guard: SpendGuar
     script, anchor, props, status, cost = await _render(session, project, guard, final_formats(), "final")
     analyses = await _record_outputs(session, project, status)
     lead = float((props.get("introClip") or {}).get("seconds", 0))  # captions start after the opening shot
+    shift = lead + brand_lead()
     srt = build_srt([{"text": presenter_only_text(script)}], float(anchor.duration or 60))  # exactly what is spoken
-    if lead:
-        srt = merge_srt([(a + lead, b + lead, t) for a, b, t in parse_srt(srt)])
+    if shift:
+        srt = merge_srt([(a + shift, b + shift, t) for a, b, t in parse_srt(srt)])
     srt_key = await _store_srt(session, project, srt)
     safe = {k: v for k, v in props.items() if k not in {"introClip", "outroClip"}} | {
         "introSeconds": lead,
@@ -988,7 +1000,7 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
         input_urls={},
     )
     analyses = await _record_outputs(session, project, status)
-    srt_key = await _store_srt(session, project, merge_srt(cues))
+    srt_key = await _store_srt(session, project, merge_srt([(a + brand_lead(), b + brand_lead(), t) for a, b, t in cues]))
     safe_props = {k: v for k, v in props.items() if k != "scenes"} | {
         "sceneCount": len(scenes),
         "scenePlanHash": project.scene_plan_hash,
@@ -1087,6 +1099,8 @@ def quality_gate(result: dict, outputs: int) -> list[str]:  # outputs = expected
         float(props["anchorDurationSeconds"])
         + float(props.get("introSeconds", 0))
         + float(props.get("outroSeconds", 0))
+        + float(props.get("brandIntroSeconds", 0))
+        + float(props.get("brandOutroSeconds", 0))
     )
     for key, a in result.get("analyses", {}).items():
         name = key.rsplit("/", 1)[-1]

@@ -189,7 +189,7 @@ async def test_the_presenter_only_video_gets_the_opening_shot_and_sign_off(clien
     assert req.props["introClip"]["seconds"] == 5 and req.props["outroClip"]["seconds"] == 5
     assert "cutaway" not in str(req.props)  # cutaways only make sense between founder answers
     # the quality gate measured the whole video, clips included
-    assert abs(renderer.duration_s - (req.props["anchorDurationSeconds"] + 10)) < 0.01
+    assert abs(renderer.duration_s - (req.props["anchorDurationSeconds"] + 10 + 11)) < 0.01  # + the 5 s intro and 6 s outro cards
 
 
 async def test_without_clips_the_presenter_only_video_is_unchanged(client, workspace):

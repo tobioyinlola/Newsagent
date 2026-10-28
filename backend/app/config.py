@@ -91,6 +91,8 @@ class Settings(BaseSettings):
     enforce_limits: bool = True
     # true: every finished video is also rendered in vertical 9:16. Off by default: it doubles the final render time.
     render_vertical: bool = False
+    # true: every video opens with the Cover Founder intro (5 s) and closes with the outro (6 s).
+    brand_cards: bool = True
     # false: content that only needs a second look (not clearly disallowed) goes ahead without waiting for an operator. Clearly
     # disallowed content is still blocked.
     moderation_hold_for_review: bool = True

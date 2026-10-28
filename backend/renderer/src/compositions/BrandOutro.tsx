@@ -1,9 +1,10 @@
 import React from "react";
-import { AbsoluteFill, Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Audio, Easing, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { OUTRO_SECONDS } from "./brand";
 import { CFLogo, CF, Fonts, SANS } from "./theme";
 
 // Cover Founder News: the closing card (about 6 s): the invitation, the address, the places we reach. It holds on screen to the last frame (no fade out).
-export const OUTRO_SECONDS = 6;
+export { OUTRO_SECONDS };
 
 const ease = Easing.bezier(0.22, 1, 0.36, 1);
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -28,6 +29,7 @@ export const BrandOutro: React.FC = () => {
   return (
     <AbsoluteFill style={{ background: CF.ink, overflow: "hidden", fontFamily: SANS }}>
       <Fonts />
+      <Audio src={staticFile("audio/brand-outro.wav")} volume={0.5} />
       {/* stripes + moving light */}
       {[[0.62, 0.15], [0.8, 0.07], [0.9, 0.04]].map(([x, w], i) => (
         <div key={i} style={{ position: "absolute", left: width * x, top: -200, width: width * w, height: height + 400, background: i === 1 ? "#3a3d31" : CF.stripe, transform: `skewX(-18deg) translateY(${(1 - rise(i * 5, 26 + i * 5)) * -height}px)` }} />
@@ -44,7 +46,7 @@ export const BrandOutro: React.FC = () => {
         </div>
         {/* the address */}
         <div style={{ marginTop: 26 * u, overflow: "hidden", height: 190 * u }}>
-          <div style={{ color: CF.green, fontWeight: 800, fontSize: 168 * u, letterSpacing: -4 * u, lineHeight: `${190 * u}px`, transform: `translateY(${(1 - url) * 105}%) scale(${pulse})`, transformOrigin: "left center", whiteSpace: "nowrap" }}>coverfounder.com</div>
+          <div style={{ color: CF.green, fontWeight: 800, fontSize: Math.min(168 * u, (width - 280 * u) / 8.7), letterSpacing: -4 * u, lineHeight: `${190 * u}px`, transform: `translateY(${(1 - url) * 105}%) scale(${pulse})`, transformOrigin: "left center", whiteSpace: "nowrap" }}>coverfounder.com</div>
         </div>
         <div style={{ height: 10 * u, width: `${underline * 100}%`, maxWidth: 1180 * u, background: `linear-gradient(90deg, ${CF.green}, ${CF.peach})`, marginTop: 4 * u }} />
         {/* where it reaches */}

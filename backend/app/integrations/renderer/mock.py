@@ -68,6 +68,8 @@ class MockRenderer(RendererClient):
             float(req.props.get("anchorDurationSeconds", 0))
             + float((req.props.get("introClip") or {}).get("seconds", 0))  # presenter footage before and after
             + float((req.props.get("outroClip") or {}).get("seconds", 0))
+            + float(req.props.get("brandIntroSeconds", 0))  # the branded opening and closing cards
+            + float(req.props.get("brandOutroSeconds", 0))
         )
         rid = f"mock-{len(self._done) + 1}"
         keys = []

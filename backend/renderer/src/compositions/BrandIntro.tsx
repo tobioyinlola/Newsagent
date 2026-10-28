@@ -1,11 +1,12 @@
 import React from "react";
-import { AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Audio, Easing, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { INTRO_SECONDS } from "./brand";
 import { CF_PATHS, CF_VIEWBOX } from "./cf-paths";
 import { CF, Fonts, SANS } from "./theme";
 
 // Cover Founder News: the opening sting (about 5 s). Stripes sweep in, the logo builds piece by piece, the name rises out of a
 // mask, a green wipe takes the picture away. Everything is drawn in code from the brand palette.
-export const INTRO_SECONDS = 5;
+export { INTRO_SECONDS };
 
 const ease = Easing.bezier(0.22, 1, 0.36, 1);
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -43,6 +44,7 @@ export const BrandIntro: React.FC = () => {
   return (
     <AbsoluteFill style={{ background: CF.ink, overflow: "hidden", fontFamily: SANS }}>
       <Fonts />
+      <Audio src={staticFile("audio/brand-intro.wav")} volume={0.8} />
       {/* brand stripes, sweeping in from the top */}
       <Beam x={width * 0.58} w={width * 0.14} delay={0} color={CF.stripe} />
       <Beam x={width * 0.74} w={width * 0.08} delay={6} color="#3a3d31" />

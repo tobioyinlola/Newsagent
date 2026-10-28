@@ -12,6 +12,7 @@ export type NewsProps = {
   studio?: string; // which set to draw (project.studio_id): "blue" (default) or "navy"
   introClip?: { src: string; seconds: number } | null;
   outroClip?: { src: string; seconds: number } | null;
+  brandCards?: boolean; // open with the Cover Founder intro and close with the outro
 };
 
 export const defaultProps: NewsProps = {

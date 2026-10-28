@@ -1,6 +1,7 @@
 import { bundle } from "@remotion/bundler";
 import { type CancelSignal, renderMedia, renderStill, selectComposition } from "@remotion/renderer";
 import path from "node:path";
+import { INTRO_SECONDS } from "./compositions/brand";
 import { NewsProps } from "./compositions/types";
 
 let serveUrl: string | null = null;
@@ -45,7 +46,8 @@ export async function renderOne(opts: {
 export async function renderThumbnail(format: "16x9" | "9x16", props: NewsProps | Record<string, unknown>, outFile: string, composition?: string) {
   const url = await getBundle();
   const comp = await selectComposition({ serveUrl: url, id: `${compositionName(composition)}-${format}`, inputProps: props, browserExecutable });
-  await renderStill({ composition: comp, serveUrl: url, output: outFile, frame: Math.min(45, comp.durationInFrames - 1), inputProps: props, browserExecutable });
+  const lead = (props as { brandCards?: boolean }).brandCards ? Math.round(INTRO_SECONDS * comp.fps) : 0; // skip the opening card
+  await renderStill({ composition: comp, serveUrl: url, output: outFile, frame: Math.min(lead + 45, comp.durationInFrames - 1), inputProps: props, browserExecutable });
 }
 
 // H.264 needs even dimensions: reject scales that would produce odd pixel sizes before launching Chrome.
