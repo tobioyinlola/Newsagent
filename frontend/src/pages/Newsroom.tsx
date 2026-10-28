@@ -65,7 +65,7 @@ export function Newsroom() {
             <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">A full newsroom team.<br /><span className="text-brand-green">On call for your business.</span></h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg text-white/85">Interviewer, writer, presenter and editor, working together to turn your announcement into a news segment and a written feature.</p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              {signedIn ? <Cta to="/projects/new" primary>Make a video</Cta> : <Cta href={CONTACT} primary>Request access</Cta>}
+              {signedIn ? <Cta to="/projects/new" primary>Make a video</Cta> : <Cta href={CONTACT} primary>Publish Your Story Free!</Cta>}
               <Cta href="#how">How a segment is made</Cta>
             </div>
           </div>
@@ -121,7 +121,7 @@ export function Newsroom() {
         <section className="cf-stripes border-t border-white/10 px-4 py-20 text-center md:px-8">
           <h2 className="text-3xl text-white md:text-5xl">Put your newsroom to work.</h2>
           <p className="mx-auto mt-3 max-w-xl text-white/70">Then take the story further with distribution.</p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">{signedIn ? <Cta to="/projects/new" primary>Make a video</Cta> : <Cta href={CONTACT} primary>Request access</Cta>}<Cta to="/distribution">See distribution</Cta></div>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">{signedIn ? <Cta to="/projects/new" primary>Make a video</Cta> : <Cta href={CONTACT} primary>Publish Your Story Free!</Cta>}<Cta to="/distribution">See distribution</Cta></div>
         </section>
       </main>
     </SiteShell>
