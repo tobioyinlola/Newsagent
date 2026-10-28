@@ -17,8 +17,8 @@ from app.integrations.avatar.base import AvatarRequest
 from app.integrations.errors import ProviderPending, classify
 from app.integrations.renderer.base import RenderRequest
 from app.models import Asset, BrandKit, InterviewSession, Job, Project, ScriptVersion, Take
+from app.services import cf_news, provider_requests
 from app.services import presenter as clip_lib
-from app.services import provider_requests, tech_news
 from app.services import scene_plan as sp
 from app.services import state_machine as sm
 from app.services.captions import build_srt
@@ -186,7 +186,7 @@ async def build_overlay_props(
             project
         ),  # draw our boards over that picture's screens (false for a plain newsroom)
         "anchorDurationSeconds": anchor_duration_s,
-        "tickerLines": [*script.ticker_lines, *[f"TECH: {h}" for h in await tech_news.headlines()]],
+        "tickerLines": [*script.ticker_lines, *await cf_news.ticker_items(session, exclude_project=project.id)],
         "lowerThirds": script.lower_thirds,
     }
 
@@ -357,6 +357,17 @@ async def _reuse_clip(session: AsyncSession, project: Project, *, atype: str, fm
     return False
 
 
+def closing_params() -> dict | None:
+    """Optional vendor fields for the sign-off clip (HEYGEN_CLOSING_PARAMS, a JSON object), so its expression can be set."""
+    raw = get_settings().heygen_closing_params.strip()
+    try:
+        data = json.loads(raw) if raw else None
+    except ValueError:
+        log.warning("HEYGEN_CLOSING_PARAMS is not valid JSON; ignored")
+        return None
+    return data if isinstance(data, dict) and data else None
+
+
 def voice_tag() -> str:
     """Part of every presenter clip's identity: a clip made with one voice is never reused once the voices are changed."""
     st = get_settings()
@@ -404,6 +415,7 @@ async def _paid_avatar_asset(
         voice_accent=project.voice_accent,
         avatar_id=avatar_for(project),
         transparent=not is_fullframe(project),
+        extra=closing_params() if atype == "anchor_outro" else None,
     )
     out, cost, _vendor = await generate_anchor(session, project, guard, req, key, atype)
     # an older clip for the same slot (e.g. the owner edited a question) is replaced
@@ -1002,13 +1014,21 @@ def chyron_for(script: ScriptVersion, q: int) -> str:
     return str(chyrons.get(str(q)) or story_headline(script))[:90]
 
 
+PRESENTER_ROLES = {  # first name -> (name shown on screen, role shown under it)
+    "marcus": ("Marcus Richard", "Lead BTN Director, CF"),
+}
+
+
 def presenter_identity(project: Project) -> dict:
-    """The presenter's name box: their first name from the house presenter list, and the channel."""
+    """The presenter's name box. The house presenter is Marcus Richard, Lead BTN Director, CF; another house presenter shows
+    their first name as a CF presenter."""
     from app.services import presenters as pres
 
     look = avatar_for(project)
-    name = next((p.name.split(",")[0].strip() for p in pres.featured() if p.id == look), "")
-    return {"name": name, "title": "Presenter, Cover Founder News"} if name else {"name": "", "title": ""}
+    first = next((p.name.split(",")[0].strip() for p in pres.featured() if p.id == look), "")
+    if not first:
+        return {"name": "", "title": ""}
+    return dict(zip(("name", "title"), PRESENTER_ROLES.get(first.lower(), (first, "Presenter, CF")), strict=True))
 
 
 def display_url(url: str) -> str:

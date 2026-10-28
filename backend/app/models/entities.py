@@ -402,6 +402,7 @@ class AuthCode(Base, TimestampMixin):
     password_hash: Mapped[str | None] = mapped_column(
         Text, nullable=True
     )  # signup: the chosen password, held until the code is verified
+    workspace_name: Mapped[str | None] = mapped_column(String(200), nullable=True)  # open sign-up: the business name
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

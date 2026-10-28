@@ -46,7 +46,7 @@ export type MergeProps = {
   totalSeconds: number;
   headline?: string; // the story's headline: the bar under the presenter
   presenter?: { name: string; title: string }; // the presenter's name box
-  productUrl?: string; // the product's address, shown in the bottom-left corner from `productUrlFromSeconds` (the sign-off) to the end
+  productUrl?: string; // the product's address, shown in the top-right corner from `productUrlFromSeconds` (the sign-off) to the end
   productUrlFromSeconds?: number;
 };
 
@@ -214,14 +214,15 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
   );
 };
 
-// The product's web address, in the corner while the presenter signs off, for anyone who wants to look it up.
+// The product's web address, top-right while the presenter signs off, for anyone who wants to look it up. (Top right so it never
+// sits on the presenter's name box or the headline bar at the bottom.)
 const UrlBadge: React.FC<{ url: string }> = ({ url }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
   const u = Math.min(width, height) / 1080;
   const appear = interpolate(frame, [0, fps * 0.5], [0, 1], { extrapolateRight: "clamp" });
   return (
-    <div style={{ position: "absolute", left: 36 * u, bottom: 96 * u, opacity: appear, transform: `translateY(${(1 - appear) * 24 * u}px)`, background: CF.ink, border: `${4 * u}px solid ${CF.green}`, borderRadius: 6 * u, padding: `${10 * u}px ${22 * u}px` }}>
+    <div style={{ position: "absolute", right: 36 * u, top: 32 * u, opacity: appear, transform: `translateY(${-(1 - appear) * 24 * u}px)`, background: CF.ink, border: `${4 * u}px solid ${CF.green}`, borderRadius: 6 * u, padding: `${10 * u}px ${22 * u}px` }}>
       <div style={{ color: CF.green, fontFamily: MONO, fontWeight: 700, fontSize: 20 * u, letterSpacing: 2 * u, textTransform: "uppercase" }}>Find them online</div>
       <div style={{ color: CF.white, fontFamily: MONO, fontWeight: 700, fontSize: 36 * u, marginTop: 4 * u }}>{url}</div>
     </div>

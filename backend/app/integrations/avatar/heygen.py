@@ -186,6 +186,8 @@ class HeyGenProvider(AvatarProvider):
         body: dict = {"type": "avatar", "avatar_id": req.avatar_id, "script": " ".join(req.script_text.split())}
         if req.transparent:
             body["output_format"] = "webm"  # never send "background" with webm
+        if req.extra:
+            body.update(req.extra)  # e.g. HEYGEN_CLOSING_PARAMS, set once the vendor's expression field is confirmed
         async with httpx.AsyncClient(base_url=BASE, headers=self._headers, timeout=30) as c:
             if req.avatar_id:
                 try:

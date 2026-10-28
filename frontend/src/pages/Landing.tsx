@@ -164,7 +164,7 @@ function UseCases() {
             <h3 className="text-2xl text-white">{u.title}</h3>
             <p className="mt-3 text-white/70">{u.body}</p>
             <ul className="mt-6 space-y-3">{u.points.map((p) => <li key={p} className="flex gap-3 text-white/90"><span className="text-brand-green" aria-hidden="true">✓</span>{p}</li>)}</ul>
-            <div className="mt-8"><Cta href={CONTACT} primary>Publish Your Story Free!</Cta></div>
+            <div className="mt-8"><Cta to="/signup" primary>Publish Your Story Free!</Cta></div>
           </div>
           <div className="cf-grain relative min-h-72 overflow-hidden">
             <CardArt variant={u.key === "funding" || u.key === "milestone" ? "story" : "video"} />
@@ -219,7 +219,7 @@ function Banner() {
       <div className="mx-auto max-w-6xl text-center">
         <h2 className="text-3xl text-white md:text-5xl">A newsroom for businesses,<br />without the newsroom.</h2>
         <p className="mx-auto mt-4 max-w-2xl text-white/70">You bring the news and twenty minutes. We bring the presenter, the questions, the writer, the edit and the graphics, and label every AI-generated presenter clearly.</p>
-        <div className="mt-6 flex justify-center gap-3"><Cta href={CONTACT} primary>Get started</Cta><Cta href="#pricing">See pricing</Cta></div>
+        <div className="mt-6 flex justify-center gap-3"><Cta to="/signup" primary>Get started</Cta><Cta href="#pricing">See pricing</Cta></div>
       </div>
       <div className="cf-grain relative mx-auto mt-12 h-64 max-w-6xl overflow-hidden md:h-96"><BannerArt /></div>
       <div className="mx-auto grid max-w-6xl grid-cols-2 border border-t-0 border-white/10 md:grid-cols-4">
@@ -310,12 +310,12 @@ function Pricing() {
               <p className="font-mono text-xs uppercase tracking-wider text-white/60">{p.name}</p>
               <p className="mt-4 font-mono text-4xl font-bold text-white">${Number(p.price_usd).toLocaleString()}</p>
               <p className="mt-1 text-brand-green">{Number(p.credits).toLocaleString()} credits</p>
-              <div className="mt-6"><Cta href={CONTACT} primary={i === Math.min(1, list.length - 1)}>Get started</Cta></div>
+              <div className="mt-6"><Cta to="/signup" primary={i === Math.min(1, list.length - 1)}>Get started</Cta></div>
             </div>
           )) : (
             <div className="rounded-sm border border-white/10 p-6 md:col-span-3 text-center">
               <p className="text-white">{packs.isLoading ? "Loading credit packs…" : "Credit packs are set up with you when you join."}</p>
-              {!packs.isLoading && <div className="mt-4"><Cta href={CONTACT} primary>Talk to us</Cta></div>}
+              {!packs.isLoading && <div className="mt-4"><Cta to="/signup" primary>Get started free</Cta></div>}
             </div>
           )}
         </div>
@@ -342,7 +342,7 @@ const FAQ: { group: string; items: [string, string][] }[] = [
   { group: "Credits & access", items: [
     ["How does pricing work?", "You buy a pack of credits and spend them as you make videos. There's no subscription, and a step that fails is never charged."],
     ["What is distribution?", "Coming soon: placing your segment and story with audiences in the regions you choose (North America, Europe, Africa, South America, Asia-Pacific, the Middle East), paid per region in credits."],
-    ["Who can sign up?", "Cover Founder is invite-only while we grow. Press “Publish Your Story Free!” and we'll email you an invitation link; it stays valid for at least 48 hours."],
+    ["Who can sign up?", "Anyone can. Press “Publish Your Story Free!”, enter your business name and email, and confirm the 6-digit code we email you. Invitations from our team still work too."],
     ["Who owns the video?", "You do. Download it, post it anywhere, or share a private link."],
   ] },
 ];
@@ -391,7 +391,7 @@ function Faq() {
 export function Footer() {
   const cols: { title: string; links: [string, string][] }[] = [
     { title: "Product", links: [["AI Newsroom", "/newsroom"], ["Distribution", "/distribution"], ["How it works", "/#how"], ["Pricing", "/#pricing"], ["FAQ", "/#faq"]] },
-    { title: "Members", links: [["Sign in", "/login"], ["Reset password", "/forgot"], ["Publish Your Story Free!", CONTACT], ["Contact support", "mailto:coverfounder@gmail.com"]] },
+    { title: "Members", links: [["Sign in", "/login"], ["Reset password", "/forgot"], ["Publish Your Story Free!", "/signup"], ["Contact support", "mailto:coverfounder@gmail.com"]] },
     { title: "Trust", links: [["AI disclosure", "/#faq"], ["Your data", "/account"], ["Security", "/security"]] },
   ];
   const link = (label: string, href: string) => <SiteLink to={href} className="text-white/80 hover:text-brand-green">{label}</SiteLink>;
@@ -451,7 +451,7 @@ function MobileMenu({ open, onClose, signedIn }: { open: boolean; onClose: () =>
         <div className="mt-auto flex flex-col gap-3 pt-6">
           {signedIn ? <Link to="/dashboard" onClick={onClose} className="rounded-sm border-2 border-brand-green bg-brand-green px-4 py-3 text-center font-bold text-ink">Dashboard</Link> : (
             <>
-              <a href={CONTACT} onClick={onClose} className="rounded-sm border-2 border-brand-green bg-brand-green px-4 py-3 text-center font-bold text-ink">Publish Your Story Free!</a>
+              <Link to="/signup" onClick={onClose} className="rounded-sm border-2 border-brand-green bg-brand-green px-4 py-3 text-center font-bold text-ink">Publish Your Story Free!</Link>
               <Link to="/login" onClick={onClose} className="rounded-sm border-2 border-white/60 px-4 py-3 text-center font-bold text-white">Sign in</Link>
             </>
           )}
@@ -512,7 +512,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2">
             {signedIn ? <Link to="/dashboard" className="rounded-sm border-2 border-brand-green bg-brand-green px-3 py-2 text-sm font-bold text-ink">Dashboard</Link> : (
               <><Link to="/login" className="whitespace-nowrap rounded-sm border-2 border-white/60 px-3 py-2 text-sm font-bold hover:border-brand-green hover:text-brand-green">Sign in</Link>
-              <a href={CONTACT} className="hidden whitespace-nowrap rounded-sm border-2 border-brand-green bg-brand-green px-3 py-2 text-sm font-bold text-ink lg:inline-block">Publish Your Story Free!</a></>
+              <Link to="/signup" className="hidden whitespace-nowrap rounded-sm border-2 border-brand-green bg-brand-green px-3 py-2 text-sm font-bold text-ink lg:inline-block">Publish Your Story Free!</Link></>
             )}
             <button type="button" onClick={() => setMenu(true)} aria-expanded={menu} aria-controls="site-menu" aria-label="Open menu" className="flex h-10 w-10 items-center justify-center rounded-sm border-2 border-brand-green text-brand-green md:hidden">
               <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
@@ -546,7 +546,7 @@ export function Landing() {
             <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">Your launch, on the news.<br /><span className="text-brand-green">Told in your own words.</span></h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg text-white/85">An AI interviewer, an AI presenter and a newsroom writer turn your announcement into a broadcast-style video and a full written story, in one afternoon.</p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              {signedIn ? <Cta to="/projects/new" primary>Make a video</Cta> : <Cta href={CONTACT} primary>Publish Your Story Free!</Cta>}
+              {signedIn ? <Cta to="/projects/new" primary>Make a video</Cta> : <Cta to="/signup" primary>Publish Your Story Free!</Cta>}
               <Cta href="#how">See how it works</Cta>
             </div>
           </div>
@@ -566,7 +566,7 @@ export function Landing() {
         <section className="cf-stripes border-t border-white/10 px-4 py-20 text-center md:px-8">
           <h2 className="text-3xl text-white md:text-5xl">Ready to go on air?</h2>
           <p className="mx-auto mt-3 max-w-xl text-white/70">Tell us about your next announcement. We'll send you an invitation and your first credits.</p>
-          <div className="mt-8 flex justify-center gap-3">{signedIn ? <Cta to="/projects/new" primary>Make a video</Cta> : <Cta href={CONTACT} primary>Publish Your Story Free!</Cta>}<Cta to="/login">Sign in</Cta></div>
+          <div className="mt-8 flex justify-center gap-3">{signedIn ? <Cta to="/projects/new" primary>Make a video</Cta> : <Cta to="/signup" primary>Publish Your Story Free!</Cta>}<Cta to="/login">Sign in</Cta></div>
         </section>
       </main>
 

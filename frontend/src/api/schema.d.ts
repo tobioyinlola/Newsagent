@@ -3697,10 +3697,17 @@ export interface components {
             /** Workspace Id */
             workspace_id: string;
         };
-        /** SignupStartIn */
+        /**
+         * SignupStartIn
+         * @description Sign up with an invitation (invite_code + password), or on your own (email + business_name + password).
+         */
         SignupStartIn: {
+            /** Business Name */
+            business_name?: string | null;
+            /** Email */
+            email?: string | null;
             /** Invite Code */
-            invite_code: string;
+            invite_code?: string | null;
             /** Password */
             password: string;
         };
@@ -3708,8 +3715,10 @@ export interface components {
         SignupVerifyIn: {
             /** Code */
             code: string;
+            /** Email */
+            email?: string | null;
             /** Invite Code */
-            invite_code: string;
+            invite_code?: string | null;
         };
         /** TakeOut */
         TakeOut: {

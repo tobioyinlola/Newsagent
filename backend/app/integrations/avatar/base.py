@@ -9,6 +9,9 @@ class AvatarRequest:
     avatar_id: str | None = None
     pronunciation: dict[str, str] | None = None
     transparent: bool = False  # Option B: transparent WebM for Remotion compositing
+    extra: dict | None = (
+        None  # vendor-specific request fields for this clip (e.g. an expression setting for the sign-off)
+    )
 
 
 @dataclass
