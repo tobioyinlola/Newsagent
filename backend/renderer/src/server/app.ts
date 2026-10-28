@@ -1,3 +1,4 @@
+import { makeCancelSignal } from "@remotion/renderer";
 import express from "express";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -9,8 +10,9 @@ import { Analysis, analyzeUrl, normalizeAudio } from "../media";
 import { chromaKey } from "../chromakey";
 import { processTake } from "../process";
 import { putFile } from "./storage";
+import { localizeMedia } from "./localize";
 
-type Job = { status: "queued" | "running" | "succeeded" | "failed"; progress: number; output_keys: string[]; error: string | null; result?: unknown };
+type Job = { status: "queued" | "running" | "succeeded" | "failed"; progress: number; output_keys: string[]; error: string | null; result?: unknown; cancel?: () => void; cancelled?: boolean };
 type Output = { kind?: "video" | "thumbnail"; name?: string; scale?: number; format: "16x9" | "9x16"; width: number; height: number };
 
 export function createApp(opts: { maxQueue?: number; secret: string; maxConcurrent?: number; processFn?: typeof processTake; keyFn?: typeof chromaKey; renderFn?: typeof renderOne; thumbFn?: typeof renderThumbnail; analyzeFn?: (url: string) => Promise<Analysis>; normalizeFn?: (file: string) => Promise<void> }) {
@@ -37,6 +39,15 @@ export function createApp(opts: { maxQueue?: number; secret: string; maxConcurre
   };
 
   app.get("/health", (_req, res) => res.json({ status: "ok", queued: queue.length, running }));
+
+  // Media for a render in progress, downloaded beforehand (see localize.ts). Served to the render's own browser on this
+  // machine only; the folder name is a random render id and is deleted when the render ends.
+  const mediaDirs = new Map<string, string>();
+  app.get("/media/:id/:file", (req, res) => {
+    const dir = mediaDirs.get(req.params.id);
+    if (!dir || !/^[0-9]+\.[a-z0-9]{2,5}$/.test(req.params.file)) return res.status(404).end();
+    res.sendFile(path.join(dir, req.params.file));
+  });
 
   app.use((req, res, next) => {
     const given = Buffer.from(String(req.header("x-renderer-secret") || ""));
@@ -70,19 +81,29 @@ export function createApp(opts: { maxQueue?: number; secret: string; maxConcurre
     const merged = composition === "InterviewMerge"
       ? (props as Record<string, unknown>)
       : ({ ...defaultProps, ...props, anchorSrc: input_urls?.anchor ?? props.anchorSrc ?? null } as NewsProps);
+    const { cancelSignal, cancel } = makeCancelSignal();
+    job.cancel = cancel;
     queue.push(async () => {
+      if (job.cancelled) return; // stopped while it was waiting in line
       job.status = "running";
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), "render-"));
       try {
+        // Download every remote file first: links signed for minutes can expire during a long render (403), and reading
+        // from disk is far faster than streaming each frame's source over the network.
+        const mediaDir = path.join(dir, "media");
+        mediaDirs.set(id, mediaDir);
+        const port = Number(process.env.PORT || 4000);
+        const local = await localizeMedia(merged, mediaDir, (f) => `http://127.0.0.1:${port}/media/${id}/${f}`);
         for (const [i, o] of outputs.entries()) {
           const thumb = o.kind === "thumbnail";
           const base = o.name ?? o.format;
           if (!/^[a-z0-9x_-]+$/i.test(base)) throw new Error("invalid output name");
           const file = path.join(dir, `${base}.${thumb ? "png" : "mp4"}`);
-          if (thumb) await renderThumb(o.format, merged, file, composition);
+          if (thumb) await renderThumb(o.format, local, file, composition);
           else {
             assertEvenScale(o.width, o.height, o.scale ?? 1);
-            await render({ composition, format: o.format, props: merged, outFile: file, scale: o.scale, onProgress: (p) => { job.progress = (i + p) / outputs.length; } });
+            if (job.cancelled) throw new Error("cancelled");
+            await render({ composition, format: o.format, props: local, outFile: file, scale: o.scale, cancelSignal, onProgress: (p) => { job.progress = (i + p) / outputs.length; } });
           }
           if (!thumb && o.name !== "preview") await normalize(file); // preview skips the extra pass
           const key = `${output_prefix}/${base}.${thumb ? "png" : "mp4"}`;
@@ -95,6 +116,7 @@ export function createApp(opts: { maxQueue?: number; secret: string; maxConcurre
         job.status = "failed";
         job.error = String((e as Error).message).slice(0, 500);
       } finally {
+        mediaDirs.delete(id);
         fs.rmSync(dir, { recursive: true, force: true });
       }
     });
@@ -166,6 +188,18 @@ export function createApp(opts: { maxQueue?: number; secret: string; maxConcurre
     } catch (e) {
       res.status(422).json({ error: String((e as Error).message).slice(0, 300) });
     }
+  });
+
+  // Stop a render whose video was cancelled, so it doesn't hold the renderer (and delay everyone else) for nothing.
+  app.delete("/renders/:id", (req, res) => {
+    const job = jobs.get(req.params.id);
+    if (!job) return res.status(404).json({ error: "not found" });
+    if (job.status === "queued" || job.status === "running") {
+      job.cancelled = true;
+      job.cancel?.();
+      if (job.status === "queued") { job.status = "failed"; job.error = "cancelled"; }
+    }
+    res.json({ status: job.status });
   });
 
   app.get("/renders/:id", (req, res) => {

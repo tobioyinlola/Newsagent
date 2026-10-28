@@ -77,3 +77,6 @@ class RendererClient(ABC):
 
     @abstractmethod
     async def status(self, render_id: str) -> RenderStatus: ...
+
+    async def cancel(self, render_id: str) -> None:  # noqa: B027 - optional: stop a render nobody is waiting for any more
+        return None

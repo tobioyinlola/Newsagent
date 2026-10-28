@@ -209,7 +209,7 @@ async def _finish(step: str, pid: str, next_state: str | None) -> None:
                 .first()
             )
             assert job is not None and job.result is not None
-            problems = steps.quality_gate(job.result, len(steps.FORMATS))
+            problems = steps.quality_gate(job.result, len(steps.final_formats()))
             if problems:
                 sm.fail(project, "Quality check failed: " + "; ".join(problems), retryable=False)
                 await session.commit()

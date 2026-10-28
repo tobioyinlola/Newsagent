@@ -1,5 +1,5 @@
 import { bundle } from "@remotion/bundler";
-import { renderMedia, renderStill, selectComposition } from "@remotion/renderer";
+import { type CancelSignal, renderMedia, renderStill, selectComposition } from "@remotion/renderer";
 import path from "node:path";
 import { NewsProps } from "./compositions/types";
 
@@ -18,7 +18,7 @@ export function compositionName(name?: string): string {
 }
 
 export async function renderOne(opts: {
-  composition?: string; format: "16x9" | "9x16"; props: NewsProps | Record<string, unknown>; outFile: string; scale?: number; onProgress?: (p: number) => void;
+  composition?: string; format: "16x9" | "9x16"; props: NewsProps | Record<string, unknown>; outFile: string; scale?: number; onProgress?: (p: number) => void; cancelSignal?: CancelSignal;
 }) {
   const url = await getBundle();
   const id = `${compositionName(opts.composition)}-${opts.format}`;
@@ -30,10 +30,12 @@ export async function renderOne(opts: {
     concurrency: process.env.RENDER_CONCURRENCY ? Number(process.env.RENDER_CONCURRENCY) : undefined,
     // Remotion defaults to half the host's CPU cores, which on a shared cloud host is far more browser tabs than the container's
     // memory allows: the video decoder is then killed (SIGKILL) mid-render. Keep the decoder's frame cache and threads small.
+    timeoutInMilliseconds: Number(process.env.RENDER_LOAD_TIMEOUT_MS ?? 180000), // a frame may wait this long for its media
     offthreadVideoCacheSizeInBytes: Number(process.env.RENDER_VIDEO_CACHE_MB ?? 384) * 1024 * 1024,
     offthreadVideoThreads: Number(process.env.RENDER_VIDEO_THREADS ?? 1),
     jpegQuality: process.env.RENDER_JPEG_QUALITY ? Number(process.env.RENDER_JPEG_QUALITY) : undefined,
     scale: opts.scale,
+    cancelSignal: opts.cancelSignal,
     onProgress: ({ progress }) => opts.onProgress?.(progress),
   });
   return comp;

@@ -35,6 +35,14 @@ FORMATS = [
     {"kind": "video", "format": "9x16", "width": 1080, "height": 1920},
     {"kind": "thumbnail", "format": "16x9", "name": "thumbnail", "width": 1920, "height": 1080},
 ]
+VERTICAL = "9x16"
+
+
+def final_formats() -> list[dict]:
+    """What the final render produces: widescreen and a thumbnail, plus vertical when RENDER_VERTICAL is on."""
+    return [o for o in FORMATS if o["format"] != VERTICAL or get_settings().render_vertical]
+
+
 PREVIEW = [{"kind": "video", "format": "16x9", "name": "preview", "width": 1920, "height": 1080, "scale": 0.5}]
 
 # Locked channel identity and mandatory disclosures (hard rules 1 and 2). Never user-editable.
@@ -161,6 +169,7 @@ async def build_overlay_props(
     }
 
 
+RENDER_LINK_S = 6 * 3600  # links handed to the renderer outlive a long render (it also downloads them first)
 MAX_VIDEO_DOWNLOAD_BYTES = 600 * 1024 * 1024
 
 
@@ -584,11 +593,15 @@ async def _submit_render(
     res = await guard.reserve(
         project.workspace_id, "renderer", renderer.estimate_cost(req), project_id=project.id, stage=prefix
     )
+    # A render can take many minutes. Commit now so no database row stays locked while it runs: an open transaction here
+    # held the project and the workspace, which made "Cancel" (and other spending in the workspace) hang until it finished.
+    await guard.session.commit()
     try:
         render_id = await renderer.submit(req)
-        status = await _wait(renderer, render_id)
-    except Exception:
+        status = await _wait(renderer, render_id, project.id)
+    except BaseException:
         await guard.release(res)
+        await guard.session.commit()  # the release must survive the caller's rollback
         raise
     cost = await guard.settle(res, renderer.estimate_cost(req))
     return status, cost
@@ -609,7 +622,7 @@ async def _render(session: AsyncSession, project: Project, guard: SpendGuard, ou
     storage = registry.get_storage()
     for field, c in (("introClip", clips.intro), ("outroClip", clips.outro)):
         if c is not None:
-            props[field] = {"src": storage.presign_get(c.key), "seconds": float(c.duration_s or 0)}
+            props[field] = {"src": storage.presign_get(c.key, RENDER_LINK_S), "seconds": float(c.duration_s or 0)}
     status, cost = await _submit_render(
         guard,
         project,
@@ -617,7 +630,7 @@ async def _render(session: AsyncSession, project: Project, guard: SpendGuard, ou
         props=props,
         outputs=outputs,
         prefix=prefix,
-        input_urls={"anchor": registry.get_storage().presign_get(anchor.storage_key)},
+        input_urls={"anchor": registry.get_storage().presign_get(anchor.storage_key, RENDER_LINK_S)},
     )
     return script, anchor, props, status, cost
 
@@ -632,7 +645,15 @@ async def _record_outputs(session: AsyncSession, project: Project, status) -> di
     """Register rendered files as assets and measure each video for the quality gate."""
     renderer = registry.get_renderer()
     analyses = {}
-    for o, key in zip(FORMATS, status.output_keys, strict=False):
+    made = final_formats()
+    if not any(o["format"] == VERTICAL for o in made):  # an older vertical file no longer matches this video
+        for old in (
+            await session.execute(
+                select(Asset).where(Asset.project_id == project.id, Asset.type == "render", Asset.format == VERTICAL)
+            )
+        ).scalars():
+            await session.delete(old)
+    for o, key in zip(made, status.output_keys, strict=False):
         atype = "thumbnail" if o["kind"] == "thumbnail" else "render"
         for old in (  # a re-render replaces the previous version in place (same storage key)
             await session.execute(
@@ -658,7 +679,7 @@ async def _store_srt(session: AsyncSession, project: Project, srt: str) -> str:
 
 
 async def final_render(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
-    script, anchor, props, status, cost = await _render(session, project, guard, FORMATS, "final")
+    script, anchor, props, status, cost = await _render(session, project, guard, final_formats(), "final")
     analyses = await _record_outputs(session, project, status)
     lead = float((props.get("introClip") or {}).get("seconds", 0))  # captions start after the opening shot
     srt = build_srt(script.segments, float(anchor.duration or 60))
@@ -909,14 +930,20 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
     )  # missing media fails now, with a message, before any render time is spent
     project.scene_plan, project.scene_plan_hash = scene_plan.model_dump(mode="json"), scene_plan.hash()
     t_cursor = scene_plan.total_s
-    scenes_out = sp.to_render_scenes(scene_plan, storage.presign_get)
+    scenes_out = sp.to_render_scenes(scene_plan, lambda k: storage.presign_get(k, RENDER_LINK_S))
     base = await build_overlay_props(session, project, script, t_cursor)
     site = project.brief.website_url if project.brief else None
     props = {**base, "layout": layout, "scenes": scenes_out, "totalSeconds": t_cursor}
     if site and closing_at is not None:  # shown in a corner while the presenter signs off
         props |= {"productUrl": display_url(site), "productUrlFromSeconds": closing_at}
     status, cost = await _submit_render(
-        guard, project, composition="InterviewMerge", props=props, outputs=FORMATS, prefix="final", input_urls={}
+        guard,
+        project,
+        composition="InterviewMerge",
+        props=props,
+        outputs=final_formats(),
+        prefix="final",
+        input_urls={},
     )
     analyses = await _record_outputs(session, project, status)
     srt_key = await _store_srt(session, project, merge_srt(cues))
@@ -948,15 +975,21 @@ async def merge_inputs(session: AsyncSession, project: Project) -> dict:
     }
 
 
-async def _wait(renderer, render_id: str):
+async def _wait(renderer, render_id: str, project_id: str | None = None):
+    """Wait for a render. If the owner cancels the video meanwhile, stop the render too, so it frees the renderer."""
     import asyncio
 
+    polls = 0
     while True:
         st = await renderer.status(render_id)
         if st.status == "succeeded":
             return st
         if st.status == "failed":
             raise RuntimeError(st.error or "render failed")
+        polls += 1
+        if project_id and polls % 5 == 0 and await _is_cancelled(project_id):
+            await renderer.cancel(render_id)
+            raise provider_requests.Cancelled()
         await asyncio.sleep(2)
 
 
