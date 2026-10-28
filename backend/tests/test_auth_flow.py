@@ -487,7 +487,12 @@ async def test_a_business_can_sign_up_on_its_own_and_must_verify_its_emailed_cod
     from app.models import Workspace
 
     email = "owner@newbiz.example.com"
+    place = {"city": "Lagos", "country": "Nigeria"}
     r = await client.post("/v1/auth/signup/start", json={"email": email, "business_name": "NewBiz Ltd", "password": PW})
+    assert r.status_code == 422  # the press release dateline needs the city and country
+    r = await client.post(
+        "/v1/auth/signup/start", json={"email": email, "business_name": "NewBiz Ltd", "password": PW, **place}
+    )
     assert r.status_code == 200 and r.json()["email_hint"]
     code = last_code(email)
     wrong = "000000" if code != "000000" else "111111"
@@ -497,9 +502,12 @@ async def test_a_business_can_sign_up_on_its_own_and_must_verify_its_emailed_cod
     me = (await client.get("/v1/me", headers=bearer(r.json()["token"]))).json()
     assert me["email"] == email and me["workspace_name"] == "NewBiz Ltd" and float(me["credit_balance"]) == 5.0
     async with maker() as db:
-        assert (await db.execute(select(Workspace).where(Workspace.name == "NewBiz Ltd"))).scalar_one()
+        ws = (await db.execute(select(Workspace).where(Workspace.name == "NewBiz Ltd"))).scalar_one()
+        assert (ws.city, ws.country) == ("Lagos", "Nigeria")
     # the same email can't sign up twice
-    r = await client.post("/v1/auth/signup/start", json={"email": email, "business_name": "Again", "password": PW})
+    r = await client.post(
+        "/v1/auth/signup/start", json={"email": email, "business_name": "Again", "password": PW, **place}
+    )
     assert r.status_code == 409
 
 
@@ -510,6 +518,13 @@ async def test_open_sign_up_can_be_switched_off_and_needs_a_business_name(client
 
     monkeypatch.setattr(get_settings(), "open_signup_enabled", False)
     r = await client.post(
-        "/v1/auth/signup/start", json={"email": "x@biz.example.com", "business_name": "Biz", "password": PW}
+        "/v1/auth/signup/start",
+        json={
+            "email": "x@biz.example.com",
+            "business_name": "Biz",
+            "password": PW,
+            "city": "Lagos",
+            "country": "Nigeria",
+        },
     )
     assert r.status_code == 403

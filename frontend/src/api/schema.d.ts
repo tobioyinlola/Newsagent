@@ -3704,6 +3704,10 @@ export interface components {
         SignupStartIn: {
             /** Business Name */
             business_name?: string | null;
+            /** City */
+            city?: string | null;
+            /** Country */
+            country?: string | null;
             /** Email */
             email?: string | null;
             /** Invite Code */

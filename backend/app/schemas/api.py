@@ -653,6 +653,8 @@ class SignupStartIn(BaseModel):
     invite_code: str | None = Field(default=None, min_length=8, max_length=100)
     email: EmailStr | None = None
     business_name: str | None = Field(default=None, min_length=2, max_length=200)
+    city: str | None = Field(default=None, min_length=2, max_length=120)  # the press release dateline
+    country: str | None = Field(default=None, min_length=2, max_length=120)
     password: Password
 
 

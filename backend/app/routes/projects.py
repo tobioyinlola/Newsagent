@@ -254,7 +254,8 @@ async def approve_script(
     brief_text = project.brief.raw_text if project.brief else ""
     text = script_text(brief_text, sv.segments, sv.ticker_lines, sv.lower_thirds, sv.interview_questions)
     if sv.story:  # the article and the social post are published too
-        text += "\n" + json.dumps(sv.story)
+        # the media contact is the owner's own sign-up details, shown back to them: not content to screen for personal data
+        text += "\n" + json.dumps({k: v for k, v in sv.story.items() if k != "contact"})
     await moderation_flow.enforce(
         session,
         project_id=project.id,

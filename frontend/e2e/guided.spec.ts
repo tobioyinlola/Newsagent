@@ -61,11 +61,11 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await page.getByRole("button", { name: "Produce my story" }).click();
 
   // 4. review the story; going back to the interview and producing it again works
-  await expect(page.getByRole("heading", { name: "Your news story" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Your press release" })).toBeVisible({ timeout: 30_000 });
   await page.getByRole("button", { name: "← Back to the interview" }).click();
   await expect(page.getByRole("heading", { name: "Review your interview" })).toBeVisible();
   await page.getByRole("button", { name: "Produce my story" }).click();
-  await expect(page.getByRole("heading", { name: "Your news story" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Your press release" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "What your presenter says" })).toBeVisible();
   await expect(page.getByLabel("Outro")).toHaveValue(/For Cover Founder News, thank you for watching\.$/); // a full sign-off, not one line
   await expect(page.getByLabel(/Interview question/)).toHaveCount(0); // the questions are fixed once the answers are recorded

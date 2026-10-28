@@ -43,6 +43,7 @@ class StoryDraft(BaseModel):
     segments: list[ScriptSegment]  # intro + body only; the standard sign-off is added by the caller
     ticker_lines: list[str]
     lower_thirds: list[dict]
+    about: str = ""  # the "About <company>" boilerplate paragraph of the press release
     unverified: list[str] = []  # things the founder said that we could not check; the story hedges them
     chyrons: list[str] = []  # one per answer, in order: the headline bar shown while the founder speaks
     outro: str = ""  # the presenter's closing words (a natural wrap-up that points viewers to the product's website)
@@ -58,6 +59,11 @@ class StoryDraft(BaseModel):
         if isinstance(v, dict):
             v = list(v.values())
         return [str(x) for x in v if str(x).strip()] if isinstance(v, list) else v
+
+    @field_validator("about", mode="before")
+    @classmethod
+    def _about_text(cls, v):
+        return " ".join(str(x) for x in v) if isinstance(v, list) else (v or "")
 
     @field_validator("outro", mode="before")
     @classmethod
