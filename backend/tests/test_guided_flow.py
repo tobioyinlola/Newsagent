@@ -169,3 +169,25 @@ async def test_the_video_can_be_made_without_pictures(client, workspace):
     await client.put(f"/v1/projects/{pid}/script", json=body, headers=OWNER)
     r = await client.post(f"/v1/projects/{pid}/script/approve", json={}, headers=OWNER)
     assert r.status_code == 200, r.text
+
+
+def test_a_story_draft_accepts_single_strings_where_lists_are_expected():
+    from app.integrations.llm.base import StoryDraft
+
+    d = StoryDraft.model_validate(
+        {
+            "headline": "H",
+            "dek": "D",
+            "sections": [],
+            "social": {"hook": "h", "post": "p"},
+            "segments": [],
+            "ticker_lines": "One line",
+            "lower_thirds": {"title": "T", "subtitle": "S"},
+            "unverified": "Akumah claims they will reach every market.",
+            "chyrons": {"0": "AKUMAH: WE GROW"},
+            "outro": ["Thanks.", "Goodbye."],
+        }
+    )
+    assert d.unverified == ["Akumah claims they will reach every market."]
+    assert d.ticker_lines == ["One line"] and d.chyrons == ["AKUMAH: WE GROW"]
+    assert d.lower_thirds == [{"title": "T", "subtitle": "S"}] and d.outro == "Thanks. Goodbye."

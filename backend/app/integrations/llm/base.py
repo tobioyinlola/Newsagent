@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class ScriptSegment(BaseModel):
@@ -46,6 +46,32 @@ class StoryDraft(BaseModel):
     unverified: list[str] = []  # things the founder said that we could not check; the story hedges them
     chyrons: list[str] = []  # one per answer, in order: the headline bar shown while the founder speaks
     outro: str = ""  # the presenter's closing words (a natural wrap-up that points viewers to the product's website)
+
+    @field_validator("unverified", "chyrons", "ticker_lines", mode="before")
+    @classmethod
+    def _as_text_list(cls, v):
+        """Language models sometimes answer one item as a plain string, or a list as {key: text}. Accept both shapes."""
+        if v is None:
+            return []
+        if isinstance(v, str):
+            return [v] if v.strip() else []
+        if isinstance(v, dict):
+            v = list(v.values())
+        return [str(x) for x in v if str(x).strip()] if isinstance(v, list) else v
+
+    @field_validator("outro", mode="before")
+    @classmethod
+    def _as_text(cls, v):
+        if isinstance(v, list):
+            return " ".join(str(x) for x in v)
+        return v or ""
+
+    @field_validator("lower_thirds", mode="before")
+    @classmethod
+    def _as_dict_list(cls, v):
+        if isinstance(v, dict):
+            return [v]
+        return v or []
 
 
 class ScriptLLM(ABC):
