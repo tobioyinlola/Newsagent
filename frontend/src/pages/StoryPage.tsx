@@ -6,12 +6,39 @@ import { PressRelease, type Story } from "../components/PressRelease";
 import { clock, dayOf, STORIES_PATH, StoryRow, useStories } from "../components/StoryCards";
 import { Cta, SiteShell } from "./Landing";
 
+const shareBtn = "rounded-sm border border-white/40 px-3 py-1.5 text-xs font-bold text-white hover:border-brand-green hover:text-brand-green";
+
+// Share this story: WhatsApp, LinkedIn, X (Twitter), Facebook, email, a copied link, and the phone's own share sheet where there is one.
+function ShareStory({ title, company }: { title: string; company: string }) {
+  const [copied, setCopied] = useState(false);
+  const url = window.location.href;
+  const text = `${title} (${company}) on Cover Founder News`;
+  const u = encodeURIComponent(url), t = encodeURIComponent(text);
+  const targets: [string, string][] = [
+    ["WhatsApp", `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`],
+    ["LinkedIn", `https://www.linkedin.com/sharing/share-offsite/?url=${u}`],
+    ["X (Twitter)", `https://twitter.com/intent/tweet?text=${t}&url=${u}`],
+    ["Facebook", `https://www.facebook.com/sharer/sharer.php?u=${u}`],
+    ["Email", `mailto:?subject=${t}&body=${u}`],
+  ];
+  const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  return (
+    <div className="mt-6 flex flex-wrap items-center gap-2" role="group" aria-label="Share this story">
+      <span className="mr-1 text-sm font-semibold text-white">Share this story</span>
+      {targets.map(([name, href]) => (
+        <a key={name} href={href} target={name === "Email" ? undefined : "_blank"} rel="noopener noreferrer" className={shareBtn} aria-label={`Share on ${name}`}>{name}</a>
+      ))}
+      <button type="button" className={shareBtn} onClick={async () => { try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { setCopied(false); } }}>{copied ? "Link copied" : "Copy link"}</button>
+      {canNativeShare && <button type="button" className={shareBtn} onClick={() => { void navigator.share({ title, text, url }).catch(() => undefined); }}>More…</button>}
+    </div>
+  );
+}
+
 export function StoryPage() {
   const { slug = "" } = useParams();
   const q = useQuery({ queryKey: ["public-story", slug], queryFn: () => unwrap(api.GET("/v1/public/stories/{slug}", { params: { path: { slug } } })), retry: false });
   const more = useStories(12);
   const video = useRef<HTMLVideoElement>(null);
-  const [copied, setCopied] = useState(false);
   const [silent, setSilent] = useState(false); // the browser only allowed it to start muted
   // Autoplay with sound. Arriving from a click on a story card counts as the visitor's go-ahead, so this normally just plays; if
   // the browser refuses (a link opened straight into the page), play muted instead and offer a one-tap "Turn sound on".
@@ -59,8 +86,8 @@ export function StoryPage() {
                 {s.industry && <span>· {s.industry}</span>}
                 <span>· {dayOf(s.published_at)}</span>
                 {s.duration_s != null && <span>· {clock(s.duration_s)}</span>}
-                <button type="button" className="ml-auto rounded-sm border border-white/40 px-3 py-1 text-xs font-bold text-white hover:border-brand-green hover:text-brand-green" onClick={async () => { try { await navigator.clipboard.writeText(window.location.href); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { setCopied(false); } }}>{copied ? "Link copied" : "Copy link"}</button>
               </div>
+              <ShareStory title={s.title} company={s.company} />
               <div className="mt-8 border-t border-white/10 pt-8">
                 <PressRelease
                   tone="dark"
