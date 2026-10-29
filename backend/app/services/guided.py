@@ -191,7 +191,9 @@ async def write_story(
         segments = _trim_words([ScriptSegment(kind="intro", text=" ".join(x for x in lead if x))], PRESENTER_WORDS)
     if segments and segments[0]["kind"] != "intro":
         segments[0]["kind"] = "intro"
-    segments.append({"kind": "outro", "text": draft.outro.strip() or presenters.STANDARD_OUTRO})
+    segments.append(
+        {"kind": "outro", "text": presenters.STANDARD_OUTRO}
+    )  # always the same closing words, not the writer's
     cleaned = polish.remove_repeats(
         [s["text"] for s in segments]
     )  # nothing said twice, from the opening to the sign-off

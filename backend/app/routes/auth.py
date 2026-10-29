@@ -162,7 +162,7 @@ async def signup_verify(body: SignupVerifyIn, request: Request, db: AsyncSession
         await db.flush()
         credits = Decimal(get_settings().signup_credits or "0")
         if credits > 0:
-            await ledger.apply(db, ws, credits, "grant", description="Welcome credits (sign-up)")
+            await ledger.apply(db, ws, credits, "grant", description="Free first video (1 credit)")
     user = User(email=email, role="owner", workspace_id=ws.id, password_hash=row.password_hash)
     db.add(user)
     kit = BrandKit(workspace_id=ws.id)  # neutral fallback kit (spec section 10)

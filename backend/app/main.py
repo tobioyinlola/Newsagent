@@ -112,6 +112,17 @@ def create_app() -> FastAPI:
     if s.sentry_dsn:
         sentry_sdk.init(dsn=s.sentry_dsn, environment=s.environment, before_send=_scrub_sentry, send_default_pii=False)
     app = FastAPI(title="Newsagent API", version="0.1.0", lifespan=_lifespan)
+
+    @app.middleware("http")
+    async def answer_errors(request: Request, call_next):
+        """An unexpected error still answers as JSON from inside the CORS layer. Without this the 500 carries no CORS headers
+        and the browser reports only "Failed to fetch", hiding what happened."""
+        try:
+            return await call_next(request)
+        except Exception:
+            logging.getLogger("api").exception("unhandled error on %s %s", request.method, request.url.path)
+            return JSONResponse({"detail": "Something went wrong on our side. Please try again."}, status_code=500)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=sorted({origin_of(s.app_base_url), origin_of(s.admin_base_url)}),  # origins only, never paths

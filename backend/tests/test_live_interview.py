@@ -10,7 +10,7 @@ from app.integrations.tts.base import TTSProvider
 from app.models import Asset, InterviewSession, Job, Take, Workspace
 from app.pipeline.queue import get_queue
 from app.services import interview as iv
-from tests.conftest import OPS, OWNER
+from tests.conftest import OPS, OWNER, VIDEO
 from tests.helpers import BRIEF, api_path, record, upload_chunks
 
 QUESTIONS = ["What problem are you solving?", "Why now?", "Who is it for?", "What is next?"]
@@ -66,7 +66,7 @@ async def test_live_approval_waits_for_the_interview_and_spends_nothing(client, 
     async with maker() as s:
         assert (await s.execute(select(Job).where(Job.project_id == pid))).scalars().all() == []
         assert (await s.execute(select(Asset).where(Asset.project_id == pid))).scalars().all() == []
-        assert (await s.get(Workspace, workspace)).credit_balance == Decimal("10")  # untouched
+        assert (await s.get(Workspace, workspace)).credit_balance == Decimal("10") - VIDEO  # only the video's own price
 
 
 async def test_invite_mode_is_unchanged(client, workspace):

@@ -7,7 +7,7 @@ from app.integrations.avatar.mock import MockAvatarProvider
 from app.models import Asset, CreditTransaction, VendorBudget, Workspace
 from app.services import ledger
 from app.services.ledger import ledger_sum
-from tests.conftest import OPS, OWNER
+from tests.conftest import OPS, OWNER, VIDEO
 from tests.helpers import make_awaiting_founder, make_final_ready
 
 
@@ -31,6 +31,7 @@ async def test_default_chain_is_the_single_configured_provider(client, workspace
         vendors = {
             t.vendor
             for t in (await s.execute(select(CreditTransaction).where(CreditTransaction.project_id == pid))).scalars()
+            if t.vendor  # the video's own price has no vendor
         }
     assert vendors == {"mock", "renderer"}
 
@@ -111,8 +112,8 @@ async def test_both_providers_down_fails_cleanly_with_nothing_charged(client, wo
     p = (await client.get(f"/v1/projects/{pid}", headers=OWNER)).json()
     assert p["state"] == "failed" and p["failure_retryable"] is True
     async with maker() as s:
-        assert (await s.get(Workspace, workspace)).credit_balance == Decimal("10")
-        assert await ledger_sum(s, workspace) == Decimal("10")
+        assert (await s.get(Workspace, workspace)).credit_balance == Decimal("10") - VIDEO
+        assert await ledger_sum(s, workspace) == Decimal("10") - VIDEO
 
 
 async def test_failover_off_means_the_secondary_is_never_used(client, workspace, maker):

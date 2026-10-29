@@ -210,7 +210,7 @@ async def test_with_manual_billing_checkout_says_the_team_adds_credits(client, w
     from app.config import get_settings
 
     monkeypatch.setattr(get_settings(), "billing_provider", "manual")
-    r = await client.post("/v1/billing/checkout", json={"pack_id": "anything"}, headers=OWNER)
+    r = await client.post("/v1/billing/checkout", json={"amount_usd": "10"}, headers=OWNER)
     assert r.status_code == 409 and "added by our team" in r.json()["detail"]
     assert (await client.get("/v1/capabilities", headers=OWNER)).json()["payments"] == "manual"
 

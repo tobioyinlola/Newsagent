@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { analyzeFile, makeLight, normalizeAudio } from "./media";
+import { analyzeFile, lightVideoKbps, makeLight, normalizeAudio } from "./media";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "media-test-"));
 function make(name: string, audioFilter: string, seconds = 3) {
@@ -32,6 +32,12 @@ describe("media analysis", () => {
     const f = path.join(dir, "silent.mp4");
     execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=red:s=160x90:r=30:d=1", "-c:v", "libx264", "-pix_fmt", "yuv420p", f]);
     expect((await analyzeFile(f)).has_audio).toBe(false);
+  });
+  it("works the light bitrate out from the length so the file lands near 20 MB", () => {
+    expect(lightVideoKbps(180)).toBeGreaterThan(700);
+    expect(lightVideoKbps(180)).toBeLessThan(1000); // 3 minutes: under 1 Mbps of picture
+    expect(lightVideoKbps(10)).toBe(4000); // a short clip is capped, never padded up
+    expect(lightVideoKbps(36000)).toBe(250); // a very long one keeps a floor
   });
   it("makes a light version that is much smaller with the same length, picture size and sound", async () => {
     const hd = path.join(dir, "hd.mp4");

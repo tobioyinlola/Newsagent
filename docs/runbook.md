@@ -21,7 +21,7 @@ Commands assume the API's environment variables (`DATABASE_URL`, ...) are set, e
 | Review queue | approve/reject content held for review (owners wait on this) |
 | Jobs | find failed or **stuck** jobs, retry a customer's video |
 | Costs | cost, credits charged and margin per video; CSV |
-| Billing | credit packs, record an offline payment |
+| Billing | credits, record an offline payment |
 | Setup | invites, vendor monthly budgets, per-workspace limits, suspend, disable sharing |
 | Audit log | who did what |
 

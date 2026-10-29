@@ -69,4 +69,7 @@ async def resolve(requested: str | None) -> str | None:
 
 # The sign-off every video ends with. It is the same words each time on purpose: the presenter clip for it is made once per
 # presenter and voice, then reused by every later video at no vendor cost. (An owner who edits it pays for the new words.)
-STANDARD_OUTRO = "That was Cover Founder News. Thank you for watching."
+STANDARD_OUTRO = (
+    "This is Cover Founder News. Want to join us as a guest on the show? Visit coverfounder.com to sign up and produce "
+    "your news coverage for free. Until our next story, have a great day!"
+)

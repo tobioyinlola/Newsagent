@@ -16,9 +16,11 @@
 ## Phase 3 decisions
 - **Credits are an append-only ledger.** Every balance change goes through `ledger.apply`; a test asserts the ledger
   always sums to the balance. A failed attempt rolls back whole (nothing recorded, nothing charged).
-- **Markup is global** (`CREDIT_MARKUP`, default 1). The customer's balance is debited vendor cost x markup; vendor budgets and
-  project cost use the real vendor cost; margin = credits charged x `USD_PER_CREDIT` - vendor cost.
-- **Payments**: provider-neutral interface, HMAC-signed webhook, idempotent by ledger ref, amount must match the pack price.
+- **A video costs one credit** (`CREDITS_PER_VIDEO`), charged when the project is created; a credit is sold at `USD_PER_CREDIT` ($2.70).
+  New sign-ups get `SIGNUP_CREDITS` (1) free. With no credit left, `POST /v1/projects` answers 402 `insufficient_credits` and the app
+  shows a "buy credits" popup. Customers buy fixed amounts (`CREDIT_PURCHASE_USD`: 10, 50, 100, 200) and get amount / price credits
+  (rounded to 0.01). Per-step charging is off (`CREDIT_MARKUP=0`); vendor cost is still recorded for budgets and margin.
+- **Payments**: provider-neutral interface, HMAC-signed webhook, idempotent by ledger ref, amount must match the checkout.
   The provider (Stripe / Paystack / Flutterwave) is **undecided**; only a mock exists. Mock provider and dev-pay route are local-only.
 - **Moderation is fail-safe**: LLM outage => hold for a human; unclear LLM answer => review. Approvals are keyed to a
   fingerprint of the content, so any edit needs a new review. Operators can switch to log-only (shown with a warning).

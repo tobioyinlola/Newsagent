@@ -2,6 +2,17 @@ import createClient, { type Middleware } from "openapi-fetch";
 import { getToken, setToken } from "../lib/auth";
 import type { components, paths } from "../../api/schema";
 
+// The browser's own "Failed to fetch" means the server couldn't be reached at all (offline, a deploy in progress, a blocked
+// request). Say that in plain words instead.
+const reachable: typeof fetch = async (input, init) => {
+  try {
+    return await fetch(input, init);
+  } catch (e) {
+    if (e instanceof TypeError) throw new Error("We couldn't reach the server. Check your connection and try again.");
+    throw e;
+  }
+};
+
 const auth: Middleware = {
   onRequest({ request }) {
     const t = getToken();
@@ -10,7 +21,7 @@ const auth: Middleware = {
   },
 };
 
-export const api = createClient<paths>({ baseUrl: import.meta.env.VITE_API_URL ?? "" });
+export const api = createClient<paths>({ baseUrl: import.meta.env.VITE_API_URL ?? "", fetch: reachable });
 api.use(auth);
 
 export type Schemas = components["schemas"];

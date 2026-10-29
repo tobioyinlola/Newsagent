@@ -19,6 +19,7 @@ from app.models import (
     Job,
     ModerationCase,
     Project,
+    ProviderRequest,
     ScriptVersion,
     ShareLink,
     Take,
@@ -60,7 +61,7 @@ async def purge_project(session: AsyncSession, project: Project) -> None:
     for a in (await session.execute(select(Asset).where(Asset.project_id == project.id))).scalars():
         await storage.delete(a.storage_key)
     await purge_takes(session, project.id)
-    for model in (Take, Asset, Job, ScriptVersion, ShareLink, InterviewSession, ModerationCase):
+    for model in (Take, Asset, Job, ProviderRequest, ScriptVersion, ShareLink, InterviewSession, ModerationCase):
         await session.execute(delete(model).where(model.project_id == project.id))
     await session.execute(delete(Brief).where(Brief.project_id == project.id))
     await session.delete(project)

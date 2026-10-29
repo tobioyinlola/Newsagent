@@ -266,41 +266,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/packs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Admin Packs */
-        get: operations["admin_packs_v1_admin_packs_get"];
-        put?: never;
-        /** Create Pack */
-        post: operations["create_pack_v1_admin_packs_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/admin/packs/{pack_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Patch Pack */
-        patch: operations["patch_pack_v1_admin_packs__pack_id__patch"];
-        trace?: never;
-    };
     "/v1/admin/payments": {
         parameters: {
             query?: never;
@@ -900,15 +865,18 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/billing/packs": {
+    "/v1/billing/options": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Packs */
-        get: operations["packs_v1_billing_packs_get"];
+        /**
+         * Options
+         * @description What can be bought: fixed amounts, each with the credits it gives.
+         */
+        get: operations["options_v1_billing_options_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2065,7 +2033,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/public/packs": {
+    "/v1/public/credit-options": {
         parameters: {
             query?: never;
             header?: never;
@@ -2073,10 +2041,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Public Packs
-         * @description The credit packs on sale, for the public pricing section of the landing page (no sign-in needed).
+         * Public Options
+         * @description The same, for the public pricing section of the landing page (no sign-in needed).
          */
-        get: operations["public_packs_v1_public_packs_get"];
+        get: operations["public_options_v1_public_credit_options_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2286,12 +2254,18 @@ export interface components {
         BillingSummary: {
             /** Credit Balance */
             credit_balance: string;
+            /** Credits Per Video */
+            credits_per_video: string;
             /** Low Balance Threshold */
             low_balance_threshold: string;
             /** Spend Cap */
             spend_cap: string;
             /** Spent Total */
             spent_total: string;
+            /** Usd Per Credit */
+            usd_per_credit: string;
+            /** Videos Left */
+            videos_left: number;
         };
         /** BrandAssetOut */
         BrandAssetOut: {
@@ -2526,8 +2500,8 @@ export interface components {
         };
         /** CheckoutIn */
         CheckoutIn: {
-            /** Pack Id */
-            pack_id: string;
+            /** Amount Usd */
+            amount_usd: number | string;
         };
         /** CheckoutOut */
         CheckoutOut: {
@@ -2641,6 +2615,15 @@ export interface components {
             lines: components["schemas"]["CostLine"][];
             /** Total */
             total: string;
+        };
+        /** CreditOptionOut */
+        CreditOptionOut: {
+            /** Amount Usd */
+            amount_usd: string;
+            /** Credits */
+            credits: string;
+            /** Videos */
+            videos: number;
         };
         /** CustomerDetail */
         CustomerDetail: {
@@ -3252,31 +3235,6 @@ export interface components {
             videos_by_state: {
                 [key: string]: number;
             };
-        };
-        /** PackIn */
-        PackIn: {
-            /** Credits */
-            credits: number | string;
-            /** Name */
-            name: string;
-            /** Price Usd */
-            price_usd: number | string;
-        };
-        /** PackOut */
-        PackOut: {
-            /** Credits */
-            credits: string;
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
-            /** Price Usd */
-            price_usd: string;
-        };
-        /** PackPatch */
-        PackPatch: {
-            /** Active */
-            active: boolean;
         };
         /** PayingCompany */
         PayingCompany: {
@@ -4827,111 +4785,6 @@ export interface operations {
             };
         };
     };
-    admin_packs_v1_admin_packs_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PackOut"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_pack_v1_admin_packs_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PackIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PackOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    patch_pack_v1_admin_packs__pack_id__patch: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                pack_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PackPatch"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     payments_v1_admin_payments_get: {
         parameters: {
             query?: never;
@@ -6280,7 +6133,7 @@ export interface operations {
             };
         };
     };
-    packs_v1_billing_packs_get: {
+    options_v1_billing_options_get: {
         parameters: {
             query?: never;
             header?: {
@@ -6297,7 +6150,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PackOut"][];
+                    "application/json": components["schemas"]["CreditOptionOut"][];
                 };
             };
             /** @description Validation Error */
@@ -8817,7 +8670,7 @@ export interface operations {
             };
         };
     };
-    public_packs_v1_public_packs_get: {
+    public_options_v1_public_credit_options_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -8832,7 +8685,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PackOut"][];
+                    "application/json": components["schemas"]["CreditOptionOut"][];
                 };
             };
         };

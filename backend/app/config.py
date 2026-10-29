@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     renderer_url: str = "http://localhost:4000"
     renderer_shared_secret: str = ""
     open_signup_enabled: bool = True  # anyone can create a workspace by confirming their email (no invitation needed)
-    signup_credits: str = "5"  # credits a new workspace starts with when it signs up on its own
+    signup_credits: str = "1"  # credits a new workspace starts with when it signs up on its own: one free video
     invite_ttl_hours: int = 336  # how long an emailed invitation to join stays valid (never less than 48 hours)
     otp_ttl_minutes: int = 10
     session_idle_minutes: int = 60
@@ -137,11 +137,13 @@ class Settings(BaseSettings):
     )
     local_storage_dir: str = ""  # shared folder for LocalStorage so a local renderer can read/write the same files
     mock_anchor_file: str = ""  # a real .webm the mock avatar copies as its output, for local end-to-end renders
-    usd_per_credit: str = "1"  # what one credit is worth in revenue, for margin reporting
-    credit_markup: str = (
-        "1"  # customer credits charged per 1 USD of vendor cost (pass-through until pricing is decided)
-    )
-    low_balance_threshold: str = "5"
+    # Credits: a video costs `credits_per_video` credit (one), whatever the vendors charge; one credit is sold at `usd_per_credit`.
+    # Customers buy fixed amounts (`credit_purchase_usd`) and get amount / usd_per_credit credits, rounded to 0.01.
+    usd_per_credit: str = "2.70"
+    credits_per_video: str = "1"
+    credit_purchase_usd: str = "10,50,100,200"
+    credit_markup: str = "0"  # credits taken per 1 USD of vendor cost while a video is made: 0 = none, the video's flat price is its only charge
+    low_balance_threshold: str = "1"
     billing_webhook_secret: str = ""  # HMAC secret for payment webhooks; REQUIRED outside local
     billing_provider: str = "mock"  # mock (local only) | manual (an operator adds credits; no checkout) | a real adapter, still to be chosen (Stripe / Paystack / Flutterwave)
     clamd_host: str = ""  # ClamAV daemon; required for uploads when USE_MOCKS=false

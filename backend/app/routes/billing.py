@@ -1,4 +1,4 @@
-"""Credits: packs, checkout, payment webhook, ledger and usage statements."""
+"""Credits: what can be bought, checkout, payment webhook, ledger and usage statements."""
 
 import csv
 import io
@@ -17,17 +17,17 @@ from app.db import get_session
 from app.integrations import registry
 from app.integrations.billing.base import InvalidSignature
 from app.integrations.billing.mock import SIGNATURE_HEADER, sign
-from app.models import Checkout, CreditPack, CreditTransaction, User, Workspace
+from app.models import Checkout, CreditTransaction, User, Workspace
 from app.schemas.api import (
     BillingSummary,
     CheckoutIn,
     CheckoutOut,
+    CreditOptionOut,
     LedgerEntry,
-    PackOut,
     UsageLine,
     UsageStatement,
 )
-from app.services import ledger
+from app.services import credits, ledger
 from app.services.audit import audit
 from app.services.notifications import send_email
 from app.services.ratelimit import limit
@@ -35,19 +35,26 @@ from app.services.ratelimit import limit
 router = APIRouter(tags=["billing"])
 
 
-@router.get("/v1/billing/packs", response_model=list[PackOut])
-async def packs(
-    _: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
-) -> list[CreditPack]:
-    rows = await session.execute(select(CreditPack).where(CreditPack.active.is_(True)).order_by(CreditPack.price_usd))
-    return list(rows.scalars().all())
+def _options() -> list[CreditOptionOut]:
+    return [
+        CreditOptionOut(amount_usd=o.amount_usd, credits=o.credits, videos=o.videos) for o in credits.purchase_options()
+    ]
 
 
-@router.get("/v1/public/packs", response_model=list[PackOut], dependencies=[Depends(limit("public-packs", 120, 600))])
-async def public_packs(session: AsyncSession = Depends(get_session)) -> list[CreditPack]:
-    """The credit packs on sale, for the public pricing section of the landing page (no sign-in needed)."""
-    rows = await session.execute(select(CreditPack).where(CreditPack.active.is_(True)).order_by(CreditPack.price_usd))
-    return list(rows.scalars().all())
+@router.get("/v1/billing/options", response_model=list[CreditOptionOut])
+async def options(_: Principal = Depends(current_principal)) -> list[CreditOptionOut]:
+    """What can be bought: fixed amounts, each with the credits it gives."""
+    return _options()
+
+
+@router.get(
+    "/v1/public/credit-options",
+    response_model=list[CreditOptionOut],
+    dependencies=[Depends(limit("public-packs", 120, 600))],
+)
+async def public_options() -> list[CreditOptionOut]:
+    """The same, for the public pricing section of the landing page (no sign-in needed)."""
+    return _options()
 
 
 @router.get("/v1/public/stats", dependencies=[Depends(limit("public-packs", 120, 600))])
@@ -68,6 +75,9 @@ async def summary(p: Principal = Depends(current_principal)) -> BillingSummary:
         spend_cap=w.spend_cap,
         spent_total=w.spent_total,
         low_balance_threshold=Decimal(get_settings().low_balance_threshold),
+        credits_per_video=credits.credits_per_video(),
+        usd_per_credit=credits.usd_per_credit(),
+        videos_left=credits.videos_for(w.credit_balance),
     )
 
 
@@ -77,23 +87,22 @@ async def checkout(
 ) -> CheckoutOut:
     if get_settings().billing_provider == "manual":
         raise HTTPException(409, "Credits are added by our team. Contact us to top up your workspace.")
-    pack = await session.get(CreditPack, body.pack_id)
-    if pack is None or not pack.active:
-        raise HTTPException(404, "That credit pack isn't available")
+    option = credits.option_for(body.amount_usd)
+    if option is None:
+        raise HTTPException(422, "Choose one of the amounts on offer.")
     co = Checkout(
         workspace_id=p.workspace.id,
-        pack_id=pack.id,
-        credits=pack.credits,
-        amount_usd=pack.price_usd,
+        credits=option.credits,
+        amount_usd=option.amount_usd,
         provider=get_settings().billing_provider,
     )
     session.add(co)
     await session.flush()
     sess = await registry.get_billing().create_checkout(
         checkout_id=co.id,
-        credits=pack.credits,
-        amount_usd=pack.price_usd,
-        description=f"{pack.name} ({pack.credits} credits)",
+        credits=option.credits,
+        amount_usd=option.amount_usd,
+        description=f"${option.amount_usd:f} of credits ({option.credits} credits)",
     )
     co.provider_ref = sess.provider_ref
     await session.commit()

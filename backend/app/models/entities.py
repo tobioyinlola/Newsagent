@@ -377,7 +377,9 @@ class Checkout(Base, TimestampMixin):
     __tablename__ = "checkouts"
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
     workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), index=True)
-    pack_id: Mapped[str] = mapped_column(ForeignKey("credit_packs.id"))
+    pack_id: Mapped[str | None] = mapped_column(
+        ForeignKey("credit_packs.id"), nullable=True
+    )  # legacy: sold packs, now fixed amounts
     credits: Mapped[Decimal] = mapped_column(Money)
     amount_usd: Mapped[Decimal] = mapped_column(Money)
     provider: Mapped[str] = mapped_column(String(30))

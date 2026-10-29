@@ -61,10 +61,6 @@ async def test_an_owner_invites_someone_who_joins_and_gets_exactly_their_role(cl
     assert (await client.get("/v1/admin/moderation", headers=sam)).status_code == 200
     # refused: money, presenter library, the audit log, the team, system switches
     assert (await client.get("/v1/admin/payments", headers=sam)).status_code == 403
-    assert (await client.get("/v1/admin/packs", headers=sam)).status_code == 403
-    assert (
-        await client.post("/v1/admin/packs", json={"name": "x", "credits": "1", "price_usd": "1"}, headers=sam)
-    ).status_code == 403
     assert (await client.get("/v1/admin/presenter-clips", headers=sam)).status_code == 403
     assert (await client.get("/v1/admin/audit", headers=sam)).status_code == 403
     assert (await client.get("/v1/admin/staff", headers=sam)).status_code == 403

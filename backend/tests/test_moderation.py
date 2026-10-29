@@ -7,7 +7,7 @@ from app.integrations import registry
 from app.models import AuditLog, ModerationCase, Project, Workspace
 from app.pipeline.queue import get_queue
 from app.services.moderation import fingerprint, screen_text
-from tests.conftest import OPS, OWNER
+from tests.conftest import OPS, OWNER, VIDEO
 from tests.helpers import invite, make_awaiting_founder, record
 
 BENIGN = [
@@ -80,7 +80,9 @@ async def test_review_content_is_held_then_approved_by_operator(client, workspac
     mine = (await client.get(f"/v1/projects/{pid}/moderation", headers=OWNER)).json()
     assert mine[0]["status"] == "pending"
     async with maker() as s:
-        assert (await s.get(Workspace, workspace)).credit_balance == Decimal("10")  # nothing paid while held
+        assert (await s.get(Workspace, workspace)).credit_balance == Decimal(
+            "10"
+        ) - VIDEO  # nothing paid for steps while held
 
     d = await client.post(
         f"/v1/admin/moderation/{queue[0]['id']}/decision", json={"decision": "approve", "note": "ok"}, headers=OPS
@@ -127,7 +129,7 @@ async def test_blocked_script_never_runs_and_is_recorded(client, workspace, make
     assert r.status_code == 422 and r.json()["detail"]["error"] == "content_blocked"
     async with maker() as s:
         case = (await s.execute(select(ModerationCase))).scalar_one()
-        assert case.status == "blocked" and (await s.get(Workspace, workspace)).credit_balance == Decimal("10")
+        assert case.status == "blocked" and (await s.get(Workspace, workspace)).credit_balance == Decimal("10") - VIDEO
     assert (await client.get("/v1/admin/moderation?status=blocked", headers=OPS)).json()[0]["id"] == case.id
     assert (await client.get("/v1/admin/moderation", headers=OPS)).json() == []  # blocked items aren't "pending"
     assert (

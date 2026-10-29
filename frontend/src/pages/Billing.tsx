@@ -15,11 +15,11 @@ export function Billing() {
   const summary = useQuery({ queryKey: ["billing-summary"], queryFn: () => unwrap(api.GET("/v1/billing/summary")) });
   const caps = useQuery({ queryKey: ["capabilities"], queryFn: () => unwrap(api.GET("/v1/capabilities")), staleTime: 600000, retry: false });
   const manual = (caps.data as { payments?: string } | undefined)?.payments === "manual";
-  const packs = useQuery({ queryKey: ["packs"], queryFn: () => unwrap(api.GET("/v1/billing/packs")) });
+  const options = useQuery({ queryKey: ["credit-options"], queryFn: () => unwrap(api.GET("/v1/billing/options")) });
   const usage = useQuery({ queryKey: ["usage", month], queryFn: () => unwrap(api.GET("/v1/billing/usage", { params: { query: { month } } })) });
   const ledger = useQuery({ queryKey: ["ledger"], queryFn: () => unwrap(api.GET("/v1/billing/ledger", { params: { query: { limit_: 50 } } })) });
   const buy = useMutation({
-    mutationFn: (pack_id: string) => unwrap(api.POST("/v1/billing/checkout", { body: { pack_id } })),
+    mutationFn: (amount_usd: string) => unwrap(api.POST("/v1/billing/checkout", { body: { amount_usd } })),
     onSuccess: (d) => { qc.invalidateQueries({ queryKey: ["me"] }); window.location.assign(d.url); },
   });
   const [csvErr, setCsvErr] = useState<string | null>(null);
@@ -33,21 +33,21 @@ export function Billing() {
       <Card title="Your balance">
         <p className="text-4xl font-extrabold tabular-nums" aria-label="Credit balance">{s ? Number(s.credit_balance).toFixed(2) : "…"} <span className="text-lg font-medium text-muted">credits</span></p>
         {low && <div className="mt-3"><Notice tone="warn">You're running low. Add credits so your next video isn't paused.</Notice></div>}
-        {s && <p className="mt-2 text-sm text-muted">A typical video uses a few credits; every video shows its cost on the project page.</p>}
+        {s && <p className="mt-2 text-sm text-muted">1 video = {Number(s.credits_per_video)} credit · 1 credit = {money(s.usd_per_credit)} · you can make {s.videos_left} more {s.videos_left === 1 ? "video" : "videos"}.</p>}
       </Card>
       <Card title="Add credits">
-        {manual ? <p className="text-muted">Credits are added by our team. Contact us with the amount you need and we'll top up your workspace.</p> : packs.data?.length ? (
-          <ul className="grid gap-3 sm:grid-cols-3">
-            {packs.data.map((p) => (
-              <li key={p.id} className="rounded-md border border-line p-4">
-                <p className="font-semibold">{p.name}</p>
-                <p className="text-2xl font-bold">{Number(p.credits).toFixed(0)} credits</p>
-                <p className="mb-3 text-muted">{money(p.price_usd)}</p>
-                <Button onClick={() => buy.mutate(p.id)} disabled={buy.isPending} aria-label={`Buy ${p.name}`}>Buy</Button>
+        {manual ? <p className="text-muted">Credits are added by our team. Contact us with the amount you need and we'll top up your workspace.</p> : options.data?.length ? (
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {options.data.map((o) => (
+              <li key={o.amount_usd} className="rounded-md border border-line p-4">
+                <p className="text-2xl font-bold">{money(o.amount_usd)}</p>
+                <p className="font-semibold">{Number(o.credits).toFixed(2)} credits</p>
+                <p className="mb-3 text-muted">{o.videos} {o.videos === 1 ? "video" : "videos"}</p>
+                <Button onClick={() => buy.mutate(o.amount_usd)} disabled={buy.isPending} aria-label={`Buy ${money(o.amount_usd)} of credits`}>Buy</Button>
               </li>
             ))}
           </ul>
-        ) : <p className="text-muted">Credit packs aren't available yet. Contact us to add credits.</p>}
+        ) : <p className="text-muted">Credits can't be bought right now. Contact us to add credits.</p>}
         <ErrorBox error={buy.error} />
       </Card>
       <Card title="Usage" actions={

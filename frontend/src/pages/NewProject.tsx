@@ -1,7 +1,8 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, unwrap } from "../api/client";
+import { OutOfCredits } from "../components/OutOfCredits";
 import { PresenterPicker } from "../components/PresenterPicker";
 import { Button, Card, ErrorBox, Field, inputCls } from "../components/ui";
 
@@ -32,6 +33,9 @@ export function NewProject() {
     },
     onSuccess: (p) => nav(`/ai-newsroom/${p.id}`),
   });
+  const summary = useQuery({ queryKey: ["billing-summary"], queryFn: () => unwrap(api.GET("/v1/billing/summary")) });
+  // out of credits: nothing to start. The popup explains and sends them to buy more.
+  if (summary.data && summary.data.videos_left < 1) return <OutOfCredits forced />;
   return (
     <Card title="Tell us about your announcement">
       <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); m.mutate(); }}>

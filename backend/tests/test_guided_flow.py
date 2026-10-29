@@ -8,7 +8,8 @@ from app.integrations import registry
 from app.integrations.avatar.mock import MockAvatarProvider
 from app.models import Asset, Job, Project, ScriptVersion, Workspace
 from app.pipeline.queue import get_queue
-from tests.conftest import OWNER
+from app.services import presenters
+from tests.conftest import OWNER, VIDEO
 from tests.helpers import record
 from tests.test_broll import add_image
 from tests.test_live_interview import start, state
@@ -43,7 +44,7 @@ async def test_details_open_the_interview_and_spend_nothing(client, workspace, m
     assert p["state"] == "interviewing" and p["flow"] == "guided" and p["announcement_type"] == "funding_round"
     async with maker() as s:
         assert (await s.execute(select(Job).where(Job.project_id == pid))).scalars().all() == []
-        assert (await s.get(Workspace, workspace)).credit_balance == Decimal("10")
+        assert (await s.get(Workspace, workspace)).credit_balance == Decimal("10") - VIDEO
         plan = (await s.execute(select(ScriptVersion).where(ScriptVersion.project_id == pid))).scalars().one()
         assert plan.approved and len(plan.interview_questions) == 4
 
@@ -61,9 +62,7 @@ async def test_finishing_the_interview_writes_the_story_for_review(client, works
     assert str(datetime.now(UTC).year) in story["dateline"] and story["about"]
     assert story["contact"]["email"] and "company" in story["contact"]
     script = (await client.get(f"/v1/projects/{pid}/script", headers=OWNER)).json()
-    assert (
-        script["segments"][-1]["kind"] == "outro" and len(script["segments"][-1]["text"].split()) >= 40
-    )  # a real sign-off, not one line
+    assert script["segments"][-1]["kind"] == "outro" and script["segments"][-1]["text"] == presenters.STANDARD_OUTRO
     assert len(script["interview_questions"]) == 4 and not script["approved"] and script["story"]["headline"]
     async with maker() as s:  # nothing from the presenter vendor yet: the owner reviews the story first
         stages = {j.stage for j in (await s.execute(select(Job).where(Job.project_id == pid))).scalars()}

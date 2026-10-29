@@ -8,7 +8,7 @@ from app.config import get_settings
 from app.integrations import registry
 from app.models import AuditLog, Job, Project
 from app.pipeline.queue import get_queue
-from tests.conftest import OPS, OWNER
+from tests.conftest import OPS, OWNER, VIDEO
 from tests.helpers import make_awaiting_founder, make_final_ready
 
 
@@ -84,8 +84,10 @@ async def test_cost_report_reconciles_with_the_ledger_and_computes_margin(client
     async with maker() as s:
         pa, pb = await s.get(Project, a), await s.get(Project, b)
     assert Decimal(rows[a]["vendor_cost"]) == pa.cost_total and Decimal(rows[b]["vendor_cost"]) == pb.cost_total
-    assert Decimal(rows[a]["credits_charged"]) == pa.cost_total * 2
-    assert Decimal(rows[a]["margin"]) == pa.cost_total  # charged 2x cost at $1/credit leaves 1x cost as margin
+    assert (
+        Decimal(rows[a]["credits_charged"]) == pa.cost_total * 2 + VIDEO
+    )  # the steps at 2x, plus the video's own price
+    assert Decimal(rows[a]["margin"]) == pa.cost_total + VIDEO  # (2x cost + 1) at $1/credit, less the cost
     assert set(rows[a]["by_vendor"]) == {"mock", "renderer"} and rows[b]["interview"] is True
     s_ = r["summary"]
     assert (

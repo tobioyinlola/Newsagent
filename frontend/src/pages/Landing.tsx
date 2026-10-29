@@ -7,7 +7,7 @@ import { ScrollRow, StoryTile, useStories } from "../components/StoryCards";
 import { getToken } from "../lib/auth";
 
 // The public landing page. Layout: dark site with poster-style art (sunburst, mountains, clouds) drawn in the brand palette,
-// product "screens" built from real app states, and credit-based pricing read live from the packs on sale.
+// product "screens" built from real app states, and credit pricing read live from the amounts on offer.
 
 export const CONTACT = "mailto:coverfounder@gmail.com?subject=Cover%20Founder%20access";
 const P = { ink: "#222222", navy: "#191A30", green: "#C0FE73", red: "#EB464B", purple: "#634EA0", aqua: "#0CC0DF", peach: "#FFBD59", cream: "#F3EBDD" };
@@ -304,24 +304,24 @@ function Distribution() {
 }
 
 function Pricing() {
-  const packs = useQuery({ queryKey: ["public-packs"], queryFn: () => unwrap(api.GET("/v1/public/packs")), retry: false, staleTime: 600000 });
+  const packs = useQuery({ queryKey: ["public-credit-options"], queryFn: () => unwrap(api.GET("/v1/public/credit-options")), retry: false, staleTime: 600000 });
   const list = packs.data ?? [];
   const uses = [["Make a video", "Credits cover the presenter, the interview transcription and the render. You see the cost before anything is made."], ["Written story & social post", "Included with every video you make."], ["Distribution", "Credits per region you choose. Coming soon."]];
   return (
     <section id="pricing" className="border-t border-white/10 bg-ink px-4 py-20 md:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="text-center"><Eyebrow>Pricing</Eyebrow><h2 className="mt-3 text-3xl text-white md:text-5xl">Buy credits. Spend them on news.</h2><p className="mx-auto mt-3 max-w-2xl text-white/70">No subscription. Top up a credit wallet and use it to make videos and, soon, to distribute them. Failed steps are never charged.</p></div>
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
+        <div className="mt-10 grid gap-4 md:grid-cols-4">
           {list.length ? list.map((p, i) => (
-            <div key={p.id} className={`rounded-sm border p-6 ${i === Math.min(1, list.length - 1) ? "border-brand-green bg-white/5" : "border-white/10"}`}>
-              <p className="font-mono text-xs uppercase tracking-wider text-white/60">{p.name}</p>
-              <p className="mt-4 font-mono text-4xl font-bold text-white">${Number(p.price_usd).toLocaleString()}</p>
+            <div key={p.amount_usd} className={`rounded-sm border p-6 ${i === 1 ? "border-brand-green bg-white/5" : "border-white/10"}`}>
+              <p className="font-mono text-4xl font-bold text-white">${Number(p.amount_usd).toLocaleString()}</p>
               <p className="mt-1 text-brand-green">{Number(p.credits).toLocaleString()} credits</p>
-              <div className="mt-6"><Cta to="/signup" primary={i === Math.min(1, list.length - 1)}>Get started</Cta></div>
+              <p className="mt-1 text-sm text-white/70">{p.videos} {p.videos === 1 ? "video" : "videos"}</p>
+              <div className="mt-6"><Cta to="/signup" primary={i === 1}>Get started</Cta></div>
             </div>
           )) : (
             <div className="rounded-sm border border-white/10 p-6 md:col-span-3 text-center">
-              <p className="text-white">{packs.isLoading ? "Loading credit packs…" : "Credit packs are set up with you when you join."}</p>
+              <p className="text-white">{packs.isLoading ? "Loading prices…" : "Your first video is free. Sign up to start."}</p>
               {!packs.isLoading && <div className="mt-4"><Cta to="/signup" primary>Get started free</Cta></div>}
             </div>
           )}

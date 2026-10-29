@@ -48,7 +48,7 @@ test("an owner invites a team member with a role; they join and only get what th
   // Support sees support's screens and not the rest
   const nav = sidebar(sam);
   for (const name of ["Customers", "Operations", "Review queue", "Jobs"]) await expect(nav.getByRole("link", { name })).toBeVisible();
-  for (const name of ["Revenue", "Credit packs", "Team", "Presenter clips", "Audit log", "Costs"]) await expect(nav.getByRole("link", { name })).toHaveCount(0);
+  for (const name of ["Revenue", "Credits", "Team", "Presenter clips", "Audit log", "Costs"]) await expect(nav.getByRole("link", { name })).toHaveCount(0);
   await expect(nav.getByText("Support", { exact: true })).toBeVisible();
   await sam.goto("/admin/revenue");
   await expect(sam.getByText("Your role doesn't include this part of the back office")).toBeVisible();

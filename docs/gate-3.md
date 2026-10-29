@@ -52,6 +52,6 @@ Recommendation: concurrency 2 per 4 vCPU; scale by adding instances. Sandbox num
 ## 6. What I need from you to finish Gate 3
 1. A HeyGen key and avatar id (anchor spike; real cost per minute).
 2. A payment provider decision (Stripe / Paystack / Flutterwave). Transcription: OpenAI chosen; needs a key.
-3. Prices: credit packs, markup, and what a credit is worth (`USD_PER_CREDIT`).
+3. Prices: the amounts on offer (`CREDIT_PURCHASE_USD`) and what a credit costs (`USD_PER_CREDIT`).
 4. A lawyer, and someone to own moderation policy.
 5. Permission to deploy staging (Railway) so the checklist and a real pen test can happen.

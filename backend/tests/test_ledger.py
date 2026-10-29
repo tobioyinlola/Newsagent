@@ -1,6 +1,5 @@
 from decimal import Decimal
 
-import pytest
 from sqlalchemy import func, select
 
 from app.config import get_settings
@@ -8,7 +7,7 @@ from app.integrations import registry
 from app.models import AuditLog, CreditTransaction, Project, SystemSetting, Workspace
 from app.pipeline.queue import get_queue
 from app.services import ledger
-from tests.conftest import OPS, OWNER
+from tests.conftest import OPS, OWNER, VIDEO
 from tests.helpers import invite, make_awaiting_founder, make_final_ready, record
 
 
@@ -45,11 +44,12 @@ async def test_failed_attempts_net_to_zero_in_the_ledger(client, workspace, make
     registry.override(avatar=Flaky())
     pid = await make_final_ready(client)
     total, balance = await ledger_total(maker, workspace)
-    assert total == balance == Decimal("10")
+    assert total == balance == Decimal("10") - VIDEO
     async with maker() as s:
         kinds = {
             t.kind
             for t in (await s.execute(select(CreditTransaction).where(CreditTransaction.project_id == pid))).scalars()
+            if t.stage != "video"  # the video's own price is taken when it starts, and stays
         }
     assert kinds == set()  # the failed attempt rolled back whole: nothing charged, nothing to reconcile
     assert (await client.get(f"/v1/projects/{pid}", headers=OWNER)).json()["state"] == "failed"
@@ -63,7 +63,7 @@ async def test_markup_charges_customer_more_than_vendor_cost(client, workspace, 
         charged = -(
             await s.execute(select(func.sum(CreditTransaction.amount)).where(CreditTransaction.project_id == pid))
         ).scalar_one()
-    assert charged == p.cost_total * 3
+    assert charged == p.cost_total * 3 + VIDEO  # the steps at 3x, plus the video's own price
     total, balance = await ledger_total(maker, workspace)
     assert total == balance == Decimal("10") - charged
 
@@ -73,7 +73,7 @@ async def test_markup_applies_to_the_balance_check(client, workspace, maker, mon
     pid = await make_final_ready(client)
     assert (await client.get(f"/v1/projects/{pid}", headers=OWNER)).json()["state"] == "limit_reached"
     total, balance = await ledger_total(maker, workspace)
-    assert total == balance == Decimal("10")
+    assert total == balance == Decimal("10") - VIDEO
 
 
 async def test_operator_pause_switch_stops_paid_steps_and_resumes(client, workspace, maker):
@@ -84,7 +84,7 @@ async def test_operator_pause_switch_stops_paid_steps_and_resumes(client, worksp
     p = (await client.get(f"/v1/projects/{pid}", headers=OWNER)).json()
     assert p["state"] == "limit_reached" and "paused for maintenance" in p["failure_reason"]
     total, balance = await ledger_total(maker, workspace)
-    assert balance == Decimal("10") and total == Decimal("10")
+    assert balance == Decimal("10") - VIDEO and total == balance
     async with maker() as s:
         (await s.get(SystemSetting, "paid_steps_paused")).value = {"paused": False}
         await s.commit()
@@ -98,7 +98,7 @@ async def test_low_balance_email_sent_once_and_rearmed_by_topup(client, workspac
 
     async with maker() as s:  # leave just enough for one video, so the balance ends below the threshold
         ws = await s.get(Workspace, workspace)
-        await ledger.apply(s, ws, Decimal("-9.8"), "adjustment")
+        await ledger.apply(s, ws, Decimal("-8.8"), "adjustment")
         await s.commit()
     registry.get_email().sent.clear()
     await make_final_ready(client)
@@ -153,6 +153,8 @@ async def test_invite_grant_is_in_the_ledger(client, workspace, maker):
         ] == "12"
 
 
-@pytest.mark.parametrize("bad", ["", "-"])
-def test_markup_default_is_pass_through(bad):
-    assert get_settings().credit_markup == "1"
+def test_the_shipped_settings_price_a_video_at_one_credit_and_take_nothing_for_steps():
+    from app.config import Settings
+
+    s = Settings()
+    assert (s.credits_per_video, s.usd_per_credit, s.credit_markup, s.signup_credits) == ("1", "2.70", "0", "1")
