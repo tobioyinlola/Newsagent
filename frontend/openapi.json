@@ -4438,7 +4438,8 @@
                   "technology",
                   "government",
                   "entertainment",
-                  "education"
+                  "education",
+                  "other"
                 ],
                 "type": "string"
               },
@@ -4447,6 +4448,18 @@
               }
             ],
             "title": "Industry"
+          },
+          "industry_other": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry Other"
           },
           "invite_code": {
             "anyOf": [

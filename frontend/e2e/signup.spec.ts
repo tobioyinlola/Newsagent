@@ -41,3 +41,14 @@ test("the website field in the details step takes anything, or nothing", async (
   await site.fill("");
   await expect(site).toHaveJSProperty("validity.valid", true);
 });
+
+test("choosing Others in the industry list opens a field for the business to say which", async ({ page }) => {
+  await page.goto("/signup");
+  await expect(page.getByLabel("Your industry")).toHaveCount(0);
+  await page.getByLabel("Industry", { exact: true }).selectOption("other");
+  const own = page.getByLabel("Your industry");
+  await expect(own).toBeVisible();
+  await expect(own).toHaveJSProperty("required", true);
+  await page.getByLabel("Industry", { exact: true }).selectOption("technology");
+  await expect(page.getByLabel("Your industry")).toHaveCount(0);
+});

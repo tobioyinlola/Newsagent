@@ -16,6 +16,7 @@ from app.integrations.llm.base import ScriptSegment
 from app.models import Project, ScriptVersion, User, Workspace
 from app.services import interview as iv
 from app.services import presenters
+from app.services import script_polish as polish
 from app.services import state_machine as sm
 from app.services.claims import detect_claims
 from app.services.safety import find_banned
@@ -31,6 +32,27 @@ TYPES = {
     "milestone": "Milestone",
     "other": "Other news",
 }
+
+
+def _distinct(questions: list[str]) -> list[str]:
+    """The same question asked twice reads as a glitch: keep the first of any that say the same thing."""
+    out: list[str] = []
+    for q in questions:
+        if q.strip() and not any(polish.same_thing(q, kept) for kept in out):
+            out.append(q)
+    return out
+
+
+def _unrepeated_sections(sections: list[dict]) -> list[dict]:
+    """The press release never says a sentence twice: later repeats are dropped, and a paragraph or section left empty goes."""
+    flat = [p for sec in sections for p in sec["paragraphs"]]
+    cleaned = iter(polish.remove_repeats(flat))
+    out = []
+    for sec in sections:
+        paragraphs = [c for _ in sec["paragraphs"] if (c := next(cleaned)).strip()]
+        if paragraphs:
+            out.append({**sec, "paragraphs": paragraphs})
+    return out
 
 
 def brief_from_details(kind: str | None, details: str) -> str:
@@ -64,7 +86,7 @@ async def start(session: AsyncSession, project: Project) -> None:
             segments=[s.model_dump() for s in draft.segments],
             ticker_lines=draft.ticker_lines,
             lower_thirds=draft.lower_thirds,
-            interview_questions=draft.interview_questions[: iv.MAX_QUESTIONS],
+            interview_questions=_distinct(draft.interview_questions)[: iv.MAX_QUESTIONS],
             claim_flags=[],
             approved=True,  # the interview plan; the story that is published is a later version the owner approves
             approved_by="system",
@@ -170,16 +192,21 @@ async def write_story(
     if segments and segments[0]["kind"] != "intro":
         segments[0]["kind"] = "intro"
     segments.append({"kind": "outro", "text": draft.outro.strip() or presenters.STANDARD_OUTRO})
+    cleaned = polish.remove_repeats(
+        [s["text"] for s in segments]
+    )  # nothing said twice, from the opening to the sign-off
+    segments = [{**s, "text": t} for s, t in zip(segments, cleaned, strict=True) if t]
     company = str(facts.get("company") or "")
     ws = await session.get(Workspace, project.workspace_id)
     company = company or (ws.name if ws else "")
+    sections = _unrepeated_sections([s.model_dump() for s in draft.sections])
     story = {
         **await press_release_details(session, project, company),
         "about": draft.about.strip(),
         "company": company,
         "headline": draft.headline,
         "dek": draft.dek,
-        "sections": [s.model_dump() for s in draft.sections],
+        "sections": sections,
         "social": draft.social.model_dump(),
         "unverified": draft.unverified,
         # the headline bar for each answer, keyed by question number (answers arrive in question order)
@@ -190,7 +217,7 @@ async def write_story(
     text = "\n".join(  # one line per piece, so a claim is quoted whole and each sentence is checked on its own
         [s["text"] for s in segments]
         + [draft.headline, draft.dek, draft.about]
-        + [p for sec in draft.sections for p in sec.paragraphs]
+        + [p for sec in sections for p in sec["paragraphs"]]
         + [draft.social.post]
     )
     prev = (

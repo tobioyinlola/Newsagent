@@ -16,8 +16,11 @@ export function Delivery({ projectId }: { projectId: string }) {
   const copy = async (key: string, text: string) => {
     try { await navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(null), 1500); } catch { setCopied(null); }
   };
-  const label = (t: string, f: string | null) => ({ render: f === "9x16" ? "Vertical video (9:16)" : "Widescreen video (16:9)", thumbnail: "Thumbnail", caption: "Captions (.srt)", preview: "Preview" } as Record<string, string>)[t] ?? t;
-  const items = (dl.data?.items ?? []).filter((i) => i.type !== "preview");
+  const shape = (f: string | null) => (f === "9x16" ? "Vertical video (9:16)" : "Widescreen video (16:9)");
+  const label = (t: string, f: string | null) => t === "render" ? `${shape(f)}: HD` : t === "render_light" ? `${shape(f)}: Light` : ({ thumbnail: "Thumbnail", caption: "Captions (.srt)", preview: "Preview" } as Record<string, string>)[t] ?? t;
+  const note = (t: string) => t === "render" ? "The original file, at full quality. Larger." : t === "render_light" ? "The same video, compressed to a much smaller file. Easier to upload and share." : null;
+  const order = (t: string) => ["render", "render_light", "thumbnail", "caption"].indexOf(t);
+  const items = (dl.data?.items ?? []).filter((i) => i.type !== "preview").sort((a, b) => order(a.type) - order(b.type) || String(a.format).localeCompare(String(b.format)));
   const videoUrl = dl.data?.items.find((i) => i.type === "render" && i.format === "16x9")?.url;
   const poster = dl.data?.items.find((i) => i.type === "thumbnail")?.url;
 
@@ -32,7 +35,7 @@ export function Delivery({ projectId }: { projectId: string }) {
         <ul className="divide-y divide-line">
           {items.map((i) => (
             <li key={i.filename} className="flex items-center justify-between py-2">
-              <span>{label(i.type, i.format)}</span>
+              <span>{label(i.type, i.format)}{note(i.type) && <span className="block text-xs text-muted">{note(i.type)}</span>}</span>
               <a className="rounded-md border border-ink px-3 py-1 text-sm font-medium hover:bg-paper" href={i.url} download={i.filename}>Download</a>
             </li>
           ))}

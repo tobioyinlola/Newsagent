@@ -660,7 +660,8 @@ class SignupStartIn(BaseModel):
     business_name: str | None = Field(default=None, min_length=2, max_length=200)
     city: str | None = Field(default=None, min_length=2, max_length=120)  # the press release dateline
     country: str | None = Field(default=None, min_length=2, max_length=120)
-    industry: Industry | None = None  # one of the eleven sectors
+    industry: Industry | None = None  # one of the listed sectors, or "other"
+    industry_other: str | None = Field(default=None, max_length=100)  # required when industry is "other"
     password: Password
 
 

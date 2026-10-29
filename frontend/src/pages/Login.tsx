@@ -88,6 +88,7 @@ const INDUSTRIES: [Industry, string, string][] = [
   ["government", "Government", "politics and public institutions"],
   ["entertainment", "Entertainment", "arts, music and sports"],
   ["education", "Education", "schools, universities and learning"],
+  ["other", "Others", "none of the above: tell us your industry"],
 ];
 
 export function Signup() {
@@ -97,6 +98,7 @@ export function Signup() {
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [industry, setIndustry] = useState("");
+  const [industryOther, setIndustryOther] = useState("");
   const [countries, setCountries] = useState<{ code: string; name: string }[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   useEffect(() => { fetch("/geo/countries.json").then((r) => r.json()).then(setCountries).catch(() => setCountries([])); }, []);
@@ -119,7 +121,7 @@ export function Signup() {
     enabled: inviteCode.length > 0,
     retry: false,
   });
-  const body = inviteCode ? { invite_code: inviteCode } : { email: email.trim(), business_name: business.trim(), city: city.trim(), country: country.trim(), industry: industry as Industry };
+  const body = inviteCode ? { invite_code: inviteCode } : { email: email.trim(), business_name: business.trim(), city: city.trim(), country: country.trim(), industry: industry as Industry, industry_other: industry === "other" ? industryOther.trim() : undefined };
   const start = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/auth/signup/start", { body: { ...body, password } })),
     onSuccess: (r) => { setHint(r.email_hint ?? email); setSent(true); },
@@ -166,6 +168,9 @@ export function Signup() {
                     {INDUSTRIES.map(([key, label, about]) => <option key={key} value={key}>{label} — {about}</option>)}
                   </select>
                 )}</Field>
+                {industry === "other" && (
+                  <Field label="Your industry" hint="In a few words, for example “Marine salvage”.">{(id) => <input id={id} required minLength={2} maxLength={100} autoFocus className={inputCls} value={industryOther} onChange={(e) => setIndustryOther(e.target.value)} />}</Field>
+                )}
                 <Field label="Work email">{(id) => <input id={id} type="email" required autoComplete="email" className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} />}</Field>
               </>
             )}

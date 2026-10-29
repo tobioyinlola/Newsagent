@@ -5,12 +5,14 @@ import { Backdrop, Chrome } from "./Chrome";
 import { ClipScene } from "./ClipScene";
 import { FullFrameAnchor } from "./FullFrameAnchor";
 import { NewsDesk, SOFT_TOP, StudioProvider } from "./NewsSet";
+import { SceneEdge, useEdgeVolume } from "./SceneEdge";
 import { CF, Fonts, MONO, SANS } from "./theme";
 import { NewsProps } from "./types";
 
 // Channel identity: Cover Founder (our own brand). Do not use any other real network's name, marks, music or trade dress.
 // The studio over the AI presenter: backdrop, presenter, banner and lower third (the channel graphics are added by the caller).
 const StudioBody: React.FC<NewsProps> = (p) => {
+  const volume = useEdgeVolume();
   const frame = useCurrentFrame();
   const { width, height, fps, durationInFrames } = useVideoConfig();
   const portrait = height > width;
@@ -30,7 +32,7 @@ const StudioBody: React.FC<NewsProps> = (p) => {
       {/* anchor */}
       {!(p.anchorFullFrame && p.anchorSrc) && <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "16%" : "11%" }}>
         {p.anchorSrc ? (
-          <OffthreadVideo src={p.anchorSrc.startsWith("http") ? p.anchorSrc : staticFile(p.anchorSrc)} transparent style={{ height: portrait ? "66%" : "80%", objectFit: "contain", ...SOFT_TOP }} />
+          <OffthreadVideo src={p.anchorSrc.startsWith("http") ? p.anchorSrc : staticFile(p.anchorSrc)} transparent volume={volume} style={{ height: portrait ? "66%" : "80%", objectFit: "contain", ...SOFT_TOP }} />
         ) : (
           <AnchorFigure height={portrait ? "68%" : "86%"} />
         )}
@@ -66,9 +68,9 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
     <StudioProvider studio={p.studio}>
     <AbsoluteFill style={{ background: CF.ink, fontFamily: SANS }}>
       <Series>
-        {p.introClip && <Series.Sequence durationInFrames={frames(p.introClip.seconds)}><ClipScene src={p.introClip.src} /></Series.Sequence>}
-        <Series.Sequence durationInFrames={frames(p.anchorDurationSeconds)}><StudioBody {...p} /></Series.Sequence>
-        {p.outroClip && <Series.Sequence durationInFrames={frames(p.outroClip.seconds)}><ClipScene src={p.outroClip.src} /></Series.Sequence>}
+        {p.introClip && <Series.Sequence durationInFrames={frames(p.introClip.seconds)}><SceneEdge><ClipScene src={p.introClip.src} /></SceneEdge></Series.Sequence>}
+        <Series.Sequence durationInFrames={frames(p.anchorDurationSeconds)}><SceneEdge><StudioBody {...p} /></SceneEdge></Series.Sequence>
+        {p.outroClip && <Series.Sequence durationInFrames={frames(p.outroClip.seconds)}><SceneEdge><ClipScene src={p.outroClip.src} /></SceneEdge></Series.Sequence>}
       </Series>
       <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} liveLocation={p.liveLocation} publishedLabel={p.publishedLabel} />
     </AbsoluteFill>

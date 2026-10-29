@@ -100,6 +100,8 @@ async def signup_start(
             raise HTTPException(422, "Enter the city and country your business is based in.")
         if not body.industry:
             raise HTTPException(422, "Choose the industry your business is in.")
+        if body.industry == "other" and len((body.industry_other or "").strip()) < 2:
+            raise HTTPException(422, "Tell us which industry your business is in.")
         email, invite_id, workspace_name = str(body.email).lower(), None, body.business_name.strip()
         await _throttle(request, "signup", email, (5, 3600), (20, 3600))
     if (await db.execute(select(User.id).where(User.email == email))).first():
@@ -116,6 +118,7 @@ async def signup_start(
         city=(body.city or "").strip() or None,
         country=(body.country or "").strip() or None,
         industry=body.industry,
+        industry_other=((body.industry_other or "").strip() or None) if body.industry == "other" else None,
     )
     await db.commit()
     subject, html, text = _email("signup", code)
@@ -151,6 +154,7 @@ async def signup_verify(body: SignupVerifyIn, request: Request, db: AsyncSession
             city=row.city,
             country=row.country,
             industry=row.industry,
+            industry_other=row.industry_other,
             credit_balance=Decimal("0"),
             spend_cap=Decimal("0"),
         )
