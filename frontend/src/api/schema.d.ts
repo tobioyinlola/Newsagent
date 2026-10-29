@@ -11,10 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Health
-         * @description Liveness: the process is up. Deliberately checks nothing else, so a database blip never makes the host restart a healthy API.
-         */
+        /** Health */
         get: operations["health_health_get"];
         put?: never;
         post?: never;

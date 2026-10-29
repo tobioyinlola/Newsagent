@@ -5110,7 +5110,6 @@
   "paths": {
     "/health": {
       "get": {
-        "description": "Liveness: the process is up. Deliberately checks nothing else, so a database blip never makes the host restart a healthy API.",
         "operationId": "health_health_get",
         "responses": {
           "200": {
