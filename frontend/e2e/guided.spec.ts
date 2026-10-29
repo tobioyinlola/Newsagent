@@ -96,6 +96,7 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
 
   // 6. the story is published on Latest Stories automatically, and the link replaces the old private share link
   const box = page.getByLabel("Link to your published story");
+  await expect(page.getByRole("group", { name: "Share this story" }).getByRole("link", { name: "Share on LinkedIn" })).toBeVisible(); // sharing is offered as soon as the video is done
   await expect(box).toBeVisible();
   const storyUrl = await box.inputValue();
   expect(storyUrl).toMatch(/\/latest-stories\/[a-z0-9-]+-[0-9a-f]{6}$/);

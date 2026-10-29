@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, unwrap } from "../api/client";
+import { ShareLinks } from "./ShareLinks";
 import { Button, Card, DisclosureBadge, ErrorBox } from "./ui";
 
 export function Delivery({ projectId }: { projectId: string }) {
@@ -53,6 +54,7 @@ export function Delivery({ projectId }: { projectId: string }) {
                 <input readOnly aria-label="Link to your published story" className="w-full rounded-md border border-ink bg-paper px-3 py-2 text-sm" value={storyUrl} onFocus={(e) => e.currentTarget.select()} />
                 <Button variant="secondary" onClick={() => copy("story", storyUrl)}>{copied === "story" ? "Copied" : "Copy"}</Button>
               </div>
+              <ShareLinks url={storyUrl} title="My story on Cover Founder News" text="Our story on Cover Founder News" />
               <div className="flex flex-wrap gap-2">
                 <a className="rounded-md border-2 border-ink bg-brand-green px-4 py-2 text-sm font-bold text-ink hover:bg-ink hover:text-brand-green" href={pub.data.path ?? "#"} target="_blank" rel="noreferrer">View your story</a>
                 <Button variant="danger" onClick={() => takeDown.mutate()} disabled={takeDown.isPending}>Take it down</Button>
