@@ -4,7 +4,7 @@ import { CF, CFSymbol, SANS } from "./theme";
 
 // Broadcast lower third (news-channel style): a name box above the right end of a full-width headline bar, the bar opening
 // with a Cover Founder NEWS block. Sits just above the ticker. The name box slides in after half a second; the headline stays.
-export const LowerThird: React.FC<{ name?: string; title?: string; headline?: string }> = ({ name, title, headline }) => {
+export const LowerThird: React.FC<{ name?: string; title?: string; location?: string; headline?: string }> = ({ name, title, location, headline }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
   const portrait = height > width;
@@ -26,6 +26,7 @@ export const LowerThird: React.FC<{ name?: string; title?: string; headline?: st
                 {title}
               </div>
             ) : null}
+            {location ? <div style={{ marginTop: 6 * u, color: CF.ink, opacity: 0.75, fontWeight: 600, fontSize: 21 * u, letterSpacing: 0.5 * u }}>{location}</div> : null}
           </div>
         </div>
       ) : null}

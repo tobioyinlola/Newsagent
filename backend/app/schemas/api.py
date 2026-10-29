@@ -4,6 +4,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.services.industries import Industry
+
 
 class MeOut(BaseModel):
     email: str
@@ -655,6 +657,7 @@ class SignupStartIn(BaseModel):
     business_name: str | None = Field(default=None, min_length=2, max_length=200)
     city: str | None = Field(default=None, min_length=2, max_length=120)  # the press release dateline
     country: str | None = Field(default=None, min_length=2, max_length=120)
+    industry: Industry | None = None  # one of the eleven sectors
     password: Password
 
 

@@ -4419,6 +4419,30 @@
             ],
             "title": "Email"
           },
+          "industry": {
+            "anyOf": [
+              {
+                "enum": [
+                  "energy",
+                  "industrials",
+                  "consumer",
+                  "agriculture",
+                  "health_care",
+                  "financials",
+                  "real_estate",
+                  "technology",
+                  "government",
+                  "entertainment",
+                  "education"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry"
+          },
           "invite_code": {
             "anyOf": [
               {

@@ -74,12 +74,28 @@ export function Login() {
   );
 }
 
+type Industry = NonNullable<Schemas["SignupStartIn"]["industry"]>;
+const INDUSTRIES: [Industry, string, string][] = [
+  ["energy", "Energy", "oil, gas, fuels, energy equipment, chemicals, materials, metals and mining"],
+  ["industrials", "Industrials", "aerospace, defense, machinery, transportation, commercial services"],
+  ["consumer", "Consumer", "retail, apparel, automotive, leisure goods, beverages, tobacco, personal care"],
+  ["agriculture", "Agriculture", "food and farming"],
+  ["health_care", "Health Care", "pharmaceuticals, biotechnology, medical equipment"],
+  ["financials", "Financials", "banks, insurance, capital markets"],
+  ["real_estate", "Real Estate", "REITs and development"],
+  ["technology", "Technology", "AI, software, hardware, semiconductors, IT services"],
+  ["government", "Government", "politics and public institutions"],
+  ["entertainment", "Entertainment", "arts, music and sports"],
+  ["education", "Education", "schools, universities and learning"],
+];
+
 export function Signup() {
   const [params] = useSearchParams();
   const inviteCode = params.get("code") ?? "";
   const [business, setBusiness] = useState("");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
+  const [industry, setIndustry] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -94,7 +110,7 @@ export function Signup() {
     enabled: inviteCode.length > 0,
     retry: false,
   });
-  const body = inviteCode ? { invite_code: inviteCode } : { email: email.trim(), business_name: business.trim(), city: city.trim(), country: country.trim() };
+  const body = inviteCode ? { invite_code: inviteCode } : { email: email.trim(), business_name: business.trim(), city: city.trim(), country: country.trim(), industry: industry as Industry };
   const start = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/auth/signup/start", { body: { ...body, password } })),
     onSuccess: (r) => { setHint(r.email_hint ?? email); setSent(true); },
@@ -135,6 +151,12 @@ export function Signup() {
                   <Field label="City">{(id) => <input id={id} required minLength={2} maxLength={120} autoComplete="address-level2" className={inputCls} value={city} onChange={(e) => setCity(e.target.value)} />}</Field>
                   <Field label="Country">{(id) => <input id={id} required minLength={2} maxLength={120} autoComplete="country-name" className={inputCls} value={country} onChange={(e) => setCountry(e.target.value)} />}</Field>
                 </div>
+                <Field label="Industry">{(id) => (
+                  <select id={id} required className={inputCls} value={industry} onChange={(e) => setIndustry(e.target.value)}>
+                    <option value="" disabled>Choose your industry</option>
+                    {INDUSTRIES.map(([key, label, about]) => <option key={key} value={key}>{label} — {about}</option>)}
+                  </select>
+                )}</Field>
                 <Field label="Work email">{(id) => <input id={id} type="email" required autoComplete="email" className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} />}</Field>
               </>
             )}

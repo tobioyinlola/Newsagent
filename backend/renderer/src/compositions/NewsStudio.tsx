@@ -70,7 +70,7 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
         <Series.Sequence durationInFrames={frames(p.anchorDurationSeconds)}><StudioBody {...p} /></Series.Sequence>
         {p.outroClip && <Series.Sequence durationInFrames={frames(p.outroClip.seconds)}><ClipScene src={p.outroClip.src} /></Series.Sequence>}
       </Series>
-      <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} />
+      <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} liveLocation={p.liveLocation} publishedLabel={p.publishedLabel} />
     </AbsoluteFill>
     </StudioProvider>
   );

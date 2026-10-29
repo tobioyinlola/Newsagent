@@ -349,7 +349,11 @@ async def test_merge_builds_scene_timeline_and_reaches_final(client, workspace):
     assert kinds == ["anchor", "question", "answer", "question", "answer", "anchor"]
     answers = [s for s in req.props["scenes"] if s["type"] == "answer"]
     assert [round(a["seconds"], 1) for a in answers] == [4.0, 3.0]  # question 1 untrimmed first, then 0 trimmed by 1s
-    assert answers[1]["startFromSeconds"] == 0.5 and answers[0]["founder"] == {"name": "Ada Obi", "title": "CEO, Acme"}
+    assert answers[1]["startFromSeconds"] == 0.5 and answers[0]["founder"] == {
+        "name": "Ada Obi",
+        "title": "CEO, Acme",
+        "location": "",
+    }
     assert req.props["totalSeconds"] == pytest.approx(sum(s["seconds"] for s in req.props["scenes"]))
     assert req.props["disclosures"] == {"tag": "Featured", "anchor": "AI-generated anchor"}
     d = (await client.get(f"/v1/projects/{pid}/downloads", headers=OWNER)).json()

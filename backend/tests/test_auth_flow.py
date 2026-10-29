@@ -487,9 +487,19 @@ async def test_a_business_can_sign_up_on_its_own_and_must_verify_its_emailed_cod
     from app.models import Workspace
 
     email = "owner@newbiz.example.com"
-    place = {"city": "Lagos", "country": "Nigeria"}
+    place = {"city": "Lagos", "country": "Nigeria", "industry": "technology"}
     r = await client.post("/v1/auth/signup/start", json={"email": email, "business_name": "NewBiz Ltd", "password": PW})
     assert r.status_code == 422  # the press release dateline needs the city and country
+    no_industry = {"city": "Lagos", "country": "Nigeria"}
+    r = await client.post(
+        "/v1/auth/signup/start", json={"email": email, "business_name": "NewBiz Ltd", "password": PW, **no_industry}
+    )
+    assert r.status_code == 422  # and the industry
+    r = await client.post(
+        "/v1/auth/signup/start",
+        json={"email": email, "business_name": "NewBiz Ltd", "password": PW, **no_industry, "industry": "mining"},
+    )
+    assert r.status_code == 422  # one of the eleven sectors
     r = await client.post(
         "/v1/auth/signup/start", json={"email": email, "business_name": "NewBiz Ltd", "password": PW, **place}
     )
@@ -503,7 +513,7 @@ async def test_a_business_can_sign_up_on_its_own_and_must_verify_its_emailed_cod
     assert me["email"] == email and me["workspace_name"] == "NewBiz Ltd" and float(me["credit_balance"]) == 5.0
     async with maker() as db:
         ws = (await db.execute(select(Workspace).where(Workspace.name == "NewBiz Ltd"))).scalar_one()
-        assert (ws.city, ws.country) == ("Lagos", "Nigeria")
+        assert (ws.city, ws.country, ws.industry) == ("Lagos", "Nigeria", "technology")
     # the same email can't sign up twice
     r = await client.post(
         "/v1/auth/signup/start", json={"email": email, "business_name": "Again", "password": PW, **place}
@@ -524,6 +534,7 @@ async def test_open_sign_up_can_be_switched_off_and_needs_a_business_name(client
             "business_name": "Biz",
             "password": PW,
             "city": "Lagos",
+            "industry": "energy",
             "country": "Nigeria",
         },
     )

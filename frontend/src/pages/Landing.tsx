@@ -543,7 +543,7 @@ export function Landing() {
           <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(25,26,48,0.88)_0%,rgba(25,26,48,0.55)_45%,transparent_75%)]" />
           <div className="relative z-10 mx-auto max-w-4xl text-center">
             <p className="inline-block rounded-sm border border-white/20 bg-ink/70 px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest text-white"><span className="text-brand-green" aria-hidden="true">● </span>AI newsroom for businesses</p>
-            <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">AI newsroom for businesses.<br /><span className="text-brand-green">Produce news videos, distribute press.</span></h1>
+            <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">AI newsroom for businesses.<br /><span className="text-brand-green">Press Creation &amp; Distribution</span></h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg text-white/85">In 10 minutes, we interview you on video, produce your news coverage, write your press release, and give you access to 25,000+ media channels for distribution, all in one place.</p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               {signedIn ? <Cta to="/projects/new" primary>Make a video</Cta> : <Cta to="/signup" primary>Publish your free story!</Cta>}

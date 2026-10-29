@@ -27,6 +27,9 @@ class Workspace(Base, TimestampMixin):
     region: Mapped[str] = mapped_column(String(50), default="NG")
     city: Mapped[str | None] = mapped_column(String(120), nullable=True)  # given at sign-up; the press release dateline
     country: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    industry: Mapped[str | None] = mapped_column(
+        String(30), nullable=True
+    )  # one of services/industries.py, chosen at sign-up
     plan: Mapped[str] = mapped_column(String(50), default="pilot")
     brand_kit_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     credit_balance: Mapped[Decimal] = mapped_column(Money, default=Decimal("0"))
@@ -407,6 +410,7 @@ class AuthCode(Base, TimestampMixin):
     workspace_name: Mapped[str | None] = mapped_column(String(200), nullable=True)  # open sign-up: the business name
     city: Mapped[str | None] = mapped_column(String(120), nullable=True)  # sign-up: held until the code is verified
     country: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    industry: Mapped[str | None] = mapped_column(String(30), nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

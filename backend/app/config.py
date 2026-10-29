@@ -93,6 +93,8 @@ class Settings(BaseSettings):
     render_vertical: bool = False
     # true: every video opens with the Cover Founder intro (5 s) and closes with the outro (6 s).
     brand_cards: bool = True
+    live_location: str = "Toronto, Canada"  # the LIVE badge on every video (blank hides it)
+    live_timezone: str = "America/Toronto"  # the published date and time stamp is shown in this zone
     # false: content that only needs a second look (not clearly disallowed) goes ahead without waiting for an operator. Clearly
     # disallowed content is still blocked.
     moderation_hold_for_review: bool = True
