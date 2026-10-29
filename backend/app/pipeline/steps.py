@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from pydantic import ValidationError
@@ -16,7 +17,7 @@ from app.integrations import registry
 from app.integrations.avatar.base import AvatarRequest
 from app.integrations.errors import ProviderPending, classify
 from app.integrations.renderer.base import RenderRequest
-from app.models import Asset, BrandKit, InterviewSession, Job, Project, ScriptVersion, Take
+from app.models import Asset, BrandKit, InterviewSession, Job, Project, ScriptVersion, Take, Workspace
 from app.services import cf_news, provider_requests
 from app.services import presenter as clip_lib
 from app.services import scene_plan as sp
@@ -161,6 +162,20 @@ async def anchor_inputs(session: AsyncSession, project: Project) -> dict:
     }
 
 
+def published_label(now: datetime | None = None) -> str:
+    """The date and time stamp on the video, news-channel style: 'OCT 29, 2026 · 10:42 AM EDT', in the channel's own time zone."""
+    from datetime import tzinfo
+    from zoneinfo import ZoneInfo
+
+    tz: tzinfo
+    try:
+        tz = ZoneInfo(get_settings().live_timezone)
+    except Exception:  # a mistyped zone must never fail a render
+        tz = UTC
+    t = (now or datetime.now(UTC)).astimezone(tz)
+    return f"{t:%b} {t.day}, {t.year} · {t.hour % 12 or 12}:{t:%M} {'AM' if t.hour < 12 else 'PM'} {t.tzname()}".upper()
+
+
 BRAND_INTRO_S, BRAND_OUTRO_S = 5.0, 6.0  # keep in step with renderer/src/compositions/brand.ts
 
 
@@ -196,6 +211,8 @@ async def build_overlay_props(
         "anchorDurationSeconds": anchor_duration_s,
         "tickerLines": [*script.ticker_lines, *await cf_news.ticker_items(session, exclude_project=project.id)],
         "lowerThirds": script.lower_thirds,
+        "liveLocation": get_settings().live_location,
+        "publishedLabel": published_label(),
         "brandCards": get_settings().brand_cards,
         "brandIntroSeconds": brand_lead(),
         "brandOutroSeconds": BRAND_OUTRO_S if get_settings().brand_cards else 0.0,
@@ -809,7 +826,12 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
         .scalars()
         .first()
     )
-    founder = {"name": isession.founder_name if isession else "", "title": isession.founder_title if isession else ""}
+    ws = await session.get(Workspace, project.workspace_id)
+    founder = {
+        "name": isession.founder_name if isession else "",
+        "title": isession.founder_title if isession else "",
+        "location": ", ".join(x.strip() for x in (ws.city, ws.country) if x and x.strip()) if ws else "",
+    }
 
     texts = segment_texts(script)
     main_text, outro_text = texts["main"], texts["outro"]
@@ -1067,9 +1089,14 @@ async def merge_inputs(session: AsyncSession, project: Project) -> dict:
 async def _wait(renderer, render_id: str, project_id: str | None = None):
     """Wait for a render. If the owner cancels the video meanwhile, stop the render too, so it frees the renderer."""
     import asyncio
+    import time
 
     polls = 0
+    deadline = time.monotonic() + VENDOR_POLICIES["renderer"].timeout_s
     while True:
+        if time.monotonic() > deadline:
+            await renderer.cancel(render_id)  # free the renderer; the retry submits a fresh render
+            raise TimeoutError("The render took too long")
         st = await renderer.status(render_id)
         if st.status == "succeeded":
             return st

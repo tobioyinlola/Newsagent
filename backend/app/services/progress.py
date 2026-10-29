@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Asset, Job, Project, ProviderRequest, ScriptVersion, Take
@@ -97,6 +97,20 @@ async def build(session: AsyncSession, project: Project) -> dict:
             stages.append(Stage(key, label, "pending"))
     failed_job = next((j for j in sorted(jobs, key=lambda j: j.created_at, reverse=True) if j.status == "failed"), None)
     done_n = sum(1 for st in stages if st.status == "done")
+    ahead = 0
+    if project.state in ACTIVE and project.state_changed_at is not None:
+        # work is taken in the order it arrived, so those that entered this same step earlier are in front of this one
+        ahead = (
+            await session.execute(
+                select(func.count())
+                .select_from(Project)
+                .where(
+                    Project.state == project.state,
+                    Project.id != project.id,
+                    Project.state_changed_at < project.state_changed_at,
+                )
+            )
+        ).scalar_one()
     return {
         "state": project.state,
         "percent": round(100 * done_n / len(stages)) if stages else 0,
@@ -114,4 +128,5 @@ async def build(session: AsyncSession, project: Project) -> dict:
         },
         "failure_category": failed_job.failure_category if failed_job and project.state == "failed" else None,
         "vendor_jobs_in_flight": len(inflight),
+        "queue_ahead": int(ahead),
     }

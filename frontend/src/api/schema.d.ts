@@ -3255,6 +3255,11 @@ export interface components {
             failure_category?: string | null;
             /** Percent */
             percent: number;
+            /**
+             * Queue Ahead
+             * @default 0
+             */
+            queue_ahead: number;
             /** Retryable */
             retryable: boolean;
             /** Stages */
@@ -3710,6 +3715,8 @@ export interface components {
             country?: string | null;
             /** Email */
             email?: string | null;
+            /** Industry */
+            industry?: ("energy" | "industrials" | "consumer" | "agriculture" | "health_care" | "financials" | "real_estate" | "technology" | "government" | "entertainment" | "education") | null;
             /** Invite Code */
             invite_code?: string | null;
             /** Password */

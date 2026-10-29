@@ -3219,6 +3219,11 @@
             "title": "Percent",
             "type": "integer"
           },
+          "queue_ahead": {
+            "default": 0,
+            "title": "Queue Ahead",
+            "type": "integer"
+          },
           "retryable": {
             "title": "Retryable",
             "type": "boolean"
@@ -4418,6 +4423,30 @@
               }
             ],
             "title": "Email"
+          },
+          "industry": {
+            "anyOf": [
+              {
+                "enum": [
+                  "energy",
+                  "industrials",
+                  "consumer",
+                  "agriculture",
+                  "health_care",
+                  "financials",
+                  "real_estate",
+                  "technology",
+                  "government",
+                  "entertainment",
+                  "education"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry"
           },
           "invite_code": {
             "anyOf": [

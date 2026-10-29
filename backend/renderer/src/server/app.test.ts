@@ -129,4 +129,25 @@ describe("renderer API", () => {
       expect((await post()).status).toBe(202); // room again
     } finally { release(); server.close(); }
   });
+  it("processes a founder's recording while a long render is still running", async () => {
+    let release!: () => void;
+    const blocked = new Promise<void>((r) => { release = r; });
+    const renderFn = async () => { await blocked; };
+    const processFn = async () => { throw new Error("quick job ran"); }; // fails fast: enough to prove it was not stuck behind the render
+    const server = createApp({ secret: "s3cret", renderFn: renderFn as any, processFn: processFn as any, normalizeFn: async () => {} }).listen(0);
+    const b = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const h = { "x-renderer-secret": "s3cret", "content-type": "application/json" };
+    try {
+      const outputs = [{ format: "16x9", width: 1920, height: 1080 }];
+      await fetch(`${b}/renders`, { method: "POST", headers: h, body: JSON.stringify({ composition: "NewsStudio", props: {}, outputs, output_prefix: "p/a" }) });
+      const { render_id } = await (await fetch(`${b}/renders`, { method: "POST", headers: h, body: JSON.stringify({ composition: "NewsStudio", props: {}, outputs, output_prefix: "p/b" }) })).json();
+      const q = await (await fetch(`${b}/process`, { method: "POST", headers: h, body: JSON.stringify({ chunk_urls: ["http://x/1"], kind: "audio", ext: "webm", output_prefix: "t/1" }) })).json();
+      let st: any;
+      for (let i = 0; i < 50 && st?.status !== "failed"; i++) { await new Promise((r) => setTimeout(r, 20)); st = await (await fetch(`${b}/renders/${q.render_id}`, { headers: h })).json(); }
+      expect(st.status).toBe("failed"); // it ran (and finished) although two renders are ahead of it
+      expect((await (await fetch(`${b}/renders/${render_id}`, { headers: h })).json()).status).toBe("queued");
+      const health = await (await fetch(`${b}/health`)).json();
+      expect(health.render.queued).toBe(1);
+    } finally { release(); server.close(); }
+  });
 });

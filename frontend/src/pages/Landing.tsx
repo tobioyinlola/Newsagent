@@ -269,7 +269,7 @@ function HowItWorks() {
 }
 
 function Distribution() {
-  const regions = ["United States", "Canada", "Europe", "East Africa", "Nigeria", "More regions"];
+  const regions = ["United States", "Canada", "United Kingdom", "Nigeria", "Kenya", "More countries"];
   return (
     <section id="distribution" className="border-t border-white/10 bg-ink px-4 py-20 md:px-8">
       <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
@@ -341,7 +341,7 @@ const FAQ: { group: string; items: [string, string][] }[] = [
   ] },
   { group: "Credits & access", items: [
     ["How does pricing work?", "You buy a pack of credits and spend them as you make videos. There's no subscription, and a step that fails is never charged."],
-    ["What is distribution?", "Coming soon: placing your segment and story with audiences in the regions you choose (North America, Europe, Africa, South America, Asia-Pacific, the Middle East), paid per region in credits."],
+    ["What is distribution?", "Coming soon: placing your segment and story with audiences in the regions you choose (the United States, Canada, the United Kingdom, Nigeria and Kenya to start), paid per region in credits."],
     ["Who can sign up?", "Anyone can. Press “Publish your free story!”, enter your business name and email, and confirm the 6-digit code we email you. Invitations from our team still work too."],
     ["Who owns the video?", "You do. Download it, post it anywhere, or share a private link."],
   ] },
@@ -463,7 +463,7 @@ function MobileMenu({ open, onClose, signedIn }: { open: boolean; onClose: () =>
 
 // The home page's at-a-glance numbers. Videos and impressions are live (impressions = times a shared video was opened).
 export const CHANNELS = ["YouTube", "LinkedIn", "X", "Instagram", "TikTok", "Facebook"];
-export const GEOGRAPHY: [string, string[]][] = [["North America", ["United States", "Canada"]], ["Europe", []], ["East Africa", []], ["Nigeria", []]];
+export const GEOGRAPHY: [string, string[]][] = [["United States", []], ["Canada", []], ["United Kingdom", []], ["Nigeria", []], ["Kenya", []]];
 export function StatsStrip() {
   const stats = useQuery({ queryKey: ["public-stats"], queryFn: () => unwrap(api.GET("/v1/public/stats")), retry: false, staleTime: 300000 });
   const d = stats.data as { videos?: number; impressions?: number } | undefined;
@@ -543,7 +543,7 @@ export function Landing() {
           <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(25,26,48,0.88)_0%,rgba(25,26,48,0.55)_45%,transparent_75%)]" />
           <div className="relative z-10 mx-auto max-w-4xl text-center">
             <p className="inline-block rounded-sm border border-white/20 bg-ink/70 px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest text-white"><span className="text-brand-green" aria-hidden="true">● </span>AI newsroom for businesses</p>
-            <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">AI newsroom for businesses.<br /><span className="text-brand-green">Produce news videos, distribute press.</span></h1>
+            <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">AI newsroom for businesses.<br /><span className="text-brand-green">Press Creation &amp; Distribution</span></h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg text-white/85">In 10 minutes, we interview you on video, produce your news coverage, write your press release, and give you access to 25,000+ media channels for distribution, all in one place.</p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               {signedIn ? <Cta to="/projects/new" primary>Make a video</Cta> : <Cta to="/signup" primary>Publish your free story!</Cta>}

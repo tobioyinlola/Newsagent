@@ -1,4 +1,7 @@
-from app.integrations.avatar.base import AvatarProvider, AvatarRequest, AvatarResult, Presenter, VoiceOption
+import time
+
+from app.config import get_settings
+from app.integrations.avatar.base import AvatarPoll, AvatarProvider, AvatarRequest, AvatarResult, Presenter, VoiceOption
 
 WORDS_PER_SECOND = 2.5
 MOCK_COST_PER_MINUTE = 1.0
@@ -10,6 +13,18 @@ class MockAvatarProvider(AvatarProvider):
     def __init__(self, name: str = "mock", green_screen: bool = False) -> None:
         self.name = name  # lets tests play "heygen" / "synthesia" and bill the right vendor budget
         self.green_screen = green_screen
+
+    @property
+    def supports_async(self) -> bool:  # type: ignore[override]
+        return get_settings().mock_vendor_latency_s > 0
+
+    async def submit(self, req: AvatarRequest) -> str:
+        return f"sim-{time.time():.3f}"
+
+    async def poll(self, vendor_id: str, req: AvatarRequest) -> AvatarPoll:
+        if time.time() < float(vendor_id.removeprefix("sim-")) + get_settings().mock_vendor_latency_s:
+            return AvatarPoll("pending")
+        return AvatarPoll("completed", await self.generate(req))
 
     def _duration(self, req: AvatarRequest) -> float:
         return max(1.0, len(req.script_text.split()) / WORDS_PER_SECOND)

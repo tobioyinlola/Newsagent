@@ -138,6 +138,11 @@ async def reconcile_projects(now: datetime | None = None) -> int:
     return len(fixed)
 
 
+async def run_sweep() -> dict:
+    """Every few minutes: re-send work whose queue message was lost (broker restart, failed publish, killed worker)."""
+    return {"stuck_projects": await reconcile_projects(), "requeued": await requeue_stuck()}
+
+
 async def run_hourly() -> dict:
     return {
         "stuck_projects": await reconcile_projects(),

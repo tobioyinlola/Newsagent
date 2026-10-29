@@ -12,6 +12,8 @@ export type NewsProps = {
   studio?: string; // which set to draw (project.studio_id): "blue" (default) or "navy"
   introClip?: { src: string; seconds: number } | null;
   outroClip?: { src: string; seconds: number } | null;
+  liveLocation?: string; // LIVE badge text
+  publishedLabel?: string; // date and time stamp
   brandCards?: boolean; // open with the Cover Founder intro and close with the outro
 };
 

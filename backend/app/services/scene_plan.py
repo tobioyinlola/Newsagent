@@ -64,6 +64,7 @@ class Cue(BaseModel):
 class Founder(BaseModel):
     name: str = ""
     title: str = ""
+    location: str = ""  # their city and country from sign-up, shown under their name
 
 
 class Scene(BaseModel):

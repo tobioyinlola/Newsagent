@@ -1,6 +1,6 @@
 import React from "react";
-import { AbsoluteFill, Audio, Freeze, Img, OffthreadVideo, Sequence, Series, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
-import { Backdrop, Chrome } from "./Chrome";
+import { AbsoluteFill, Audio, Freeze, Img, OffthreadVideo, Sequence, Series, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { Backdrop, Chrome, TOP_RIGHT_STACK } from "./Chrome";
 import { BrollScene } from "./BrollScene";
 import { ClipScene } from "./ClipScene";
 import { FullFrameAnchor } from "./FullFrameAnchor";
@@ -22,7 +22,7 @@ export type Scene =
       photoSrc?: string | null; // still shown for audio-only answers
       startFromSeconds?: number; // owner trim
       pipSrc: string; // the question clip, frozen on its first frame, shown as the anchor window
-      founder: { name: string; title: string };
+      founder: { name: string; title: string; location?: string }; // location: their city and country from sign-up
       // "answers column" layout: the question, its number, the founder's words timed to this answer (seconds from
       // the start of the trimmed answer) and a still taken while they spoke
       question?: string;
@@ -48,6 +48,8 @@ export type MergeProps = {
   presenter?: { name: string; title: string }; // the presenter's name box
   productUrl?: string; // the product's address, shown in the top-right corner from `productUrlFromSeconds` (the sign-off) to the end
   productUrlFromSeconds?: number;
+  liveLocation?: string; // LIVE badge text, top-right
+  publishedLabel?: string; // date and time stamp
   brandCards?: boolean; // open with the Cover Founder intro and close with the outro
 };
 
@@ -122,7 +124,7 @@ const ColumnAnswer: React.FC<{ scene: Extract<Scene, { type: "answer" }>; founde
           ) : null}
           <div>
             <div style={{ color: CF.white, fontFamily: SANS, fontWeight: 700, fontSize: 30 * u }}>{scene.founder.name}</div>
-            <div style={{ color: CF.green, fontFamily: SANS, fontSize: 24 * u }}>{scene.founder.title}</div>
+            <div style={{ color: CF.green, fontFamily: SANS, fontSize: 24 * u }}>{[scene.founder.title, scene.founder.location].filter(Boolean).join(" · ")}</div>
           </div>
         </div>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-start", gap: 14 * u, overflow: "hidden", paddingTop: 6 * u }}>
@@ -179,7 +181,7 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
     <div style={{ position: "absolute", left: 48 * u, bottom: (portrait ? 20 : 14) + "%", opacity: ltIn * ltOut }}>
       <div style={{ background: CF.ink, borderLeft: `${10 * u}px solid ${brand.accent}`, padding: `${14 * u}px ${28 * u}px` }}>
         <div style={{ color: CF.white, fontFamily: MONO, fontSize: 44 * u, fontWeight: 700 }}>{scene.founder.name}</div>
-        <div style={{ color: CF.green, fontFamily: SANS, fontSize: 28 * u }}>{scene.founder.title}</div>
+        <div style={{ color: CF.green, fontFamily: SANS, fontSize: 28 * u }}>{[scene.founder.title, scene.founder.location].filter(Boolean).join(" · ")}</div>
       </div>
     </div>
   );
@@ -189,7 +191,7 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
     return (
       <AbsoluteFill>
         <div style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 72 * u, background: "#000" }}>{founder}</div>
-        <LowerThird name={scene.founder.name} title={scene.founder.title} headline={scene.headline} />
+        <LowerThird name={scene.founder.name} title={scene.founder.title} location={scene.founder.location} headline={scene.headline} />
       </AbsoluteFill>
     );
   }
@@ -217,13 +219,16 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
 
 // The product's web address, top-right while the presenter signs off, for anyone who wants to look it up. (Top right so it never
 // sits on the presenter's name box or the headline bar at the bottom.)
+const URL_SHOWN_S = 5;
 const UrlBadge: React.FC<{ url: string }> = ({ url }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
   const u = Math.min(width, height) / 1080;
-  const appear = interpolate(frame, [0, fps * 0.5], [0, 1], { extrapolateRight: "clamp" });
+  const inn = spring({ frame, fps, config: { damping: 16, stiffness: 140 }, durationInFrames: Math.round(fps * 0.7) });
+  const out = interpolate(frame, [fps * (URL_SHOWN_S - 0.6), fps * URL_SHOWN_S], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const slide = (1 - inn) * 120 + out * 120; // % of its own width: in from the right, and back out
   return (
-    <div style={{ position: "absolute", right: 36 * u, top: 32 * u, opacity: appear, transform: `translateY(${-(1 - appear) * 24 * u}px)`, background: CF.ink, border: `${4 * u}px solid ${CF.green}`, borderRadius: 6 * u, padding: `${10 * u}px ${22 * u}px` }}>
+    <div style={{ position: "absolute", right: 36 * u, top: (TOP_RIGHT_STACK + 28) * u, opacity: Math.min(inn, 1 - out), transform: `translateX(${slide}%)`, background: CF.ink, border: `${4 * u}px solid ${CF.green}`, borderRadius: 6 * u, padding: `${10 * u}px ${22 * u}px` }}>
       <div style={{ color: CF.green, fontFamily: MONO, fontWeight: 700, fontSize: 20 * u, letterSpacing: 2 * u, textTransform: "uppercase" }}>Find them online</div>
       <div style={{ color: CF.white, fontFamily: MONO, fontWeight: 700, fontSize: 36 * u, marginTop: 4 * u }}>{url}</div>
     </div>
@@ -245,9 +250,9 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
           </Series.Sequence>
         ))}
       </Series>
-      <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} />
+      <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} liveLocation={p.liveLocation} publishedLabel={p.publishedLabel} />
       {p.productUrl && p.productUrlFromSeconds != null && (
-        <Sequence from={Math.round(p.productUrlFromSeconds * fps)}>
+        <Sequence from={Math.round(p.productUrlFromSeconds * fps)} durationInFrames={Math.round(URL_SHOWN_S * fps)}>
           <UrlBadge url={p.productUrl} />
         </Sequence>
       )}

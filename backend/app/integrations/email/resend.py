@@ -17,6 +17,8 @@ class ResendEmail(EmailProvider):
         body: dict = {"from": self._from, "to": [to], "subject": subject, "text": text}
         if html:
             body["html"] = html
+        if get_settings().email_reply_to:
+            body["reply_to"] = get_settings().email_reply_to
         if self._injected is not None:
             r = await self._injected.post("/emails", json=body)
         else:

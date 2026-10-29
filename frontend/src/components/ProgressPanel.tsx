@@ -25,6 +25,7 @@ export function ProgressPanel({ projectId, state }: { projectId: string; state: 
       <div className="h-2 w-full rounded-full bg-paper" role="progressbar" aria-valuenow={p.percent} aria-valuemin={0} aria-valuemax={100} aria-label="Video progress">
         <div className="h-2 rounded-full bg-brand-green" style={{ width: `${p.percent}%` }} />
       </div>
+      {p.queue_ahead > 0 && <p className="mt-2 text-sm text-muted">Lots of videos are being made right now. About {p.queue_ahead} {p.queue_ahead === 1 ? "is" : "are"} ahead of yours. It starts by itself, and you can leave this page.</p>}
       <ul className="mt-3 space-y-1 text-sm">
         {p.stages.map((s) => (
           <li key={s.key} className="flex flex-wrap items-baseline gap-2">
