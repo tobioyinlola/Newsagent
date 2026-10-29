@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.db import get_session
 from app.models import User, UserSession, Workspace
+from app.services import rbac
 from app.services import sessions as sess
 
 UNAUTHENTICATED = HTTPException(401, "Please sign in.")
@@ -65,13 +66,43 @@ async def auth_ctx(ctx: AuthCtx = Depends(auth_ctx_any)) -> AuthCtx:
 class Principal:
     user: User
     workspace: Workspace
-    is_operator: bool
+    is_operator: bool  # may use the back office at all (an owner, or an active team member with any permission)
     session: UserSession | None = None
+    permissions: frozenset[str] = frozenset()
+    is_owner: bool = False  # listed in OPERATOR_EMAILS: holds every permission and can't be edited from the back office
+
+    def can(self, permission: str) -> bool:
+        return permission in self.permissions
 
 
 async def current_principal(ctx: AuthCtx = Depends(auth_ctx), db: AsyncSession = Depends(get_session)) -> Principal:
     ws = await db.get(Workspace, ctx.user.workspace_id)
-    return Principal(ctx.user, ws, sess.is_operator_email(ctx.user.email), ctx.row)  # type: ignore[arg-type]
+    perms = await rbac.permissions_for(db, ctx.user.email)
+    return Principal(
+        ctx.user,
+        ws,  # type: ignore[arg-type]
+        bool(perms),
+        ctx.row,
+        perms,
+        rbac.is_owner(ctx.user.email),
+    )
+
+
+def require(permission: str):
+    """A dependency: the signed-in person must hold this back-office permission (checked on the server on every request)."""
+    if permission not in rbac.ALL:
+        raise ValueError(f"unknown permission {permission}")
+
+    async def check(p: Principal = Depends(current_principal)) -> Principal:
+        if not p.is_operator:
+            raise HTTPException(403, "Operator only")
+        if not p.can(permission):
+            raise HTTPException(
+                403, {"error": "forbidden", "message": "Your role doesn't allow this.", "permission": permission}
+            )
+        return p
+
+    return check
 
 
 async def operator(p: Principal = Depends(current_principal)) -> Principal:

@@ -425,6 +425,59 @@ export interface paths {
         patch: operations["patch_system_settings_v1_admin_settings_patch"];
         trace?: never;
     };
+    "/v1/admin/staff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Team */
+        get: operations["team_v1_admin_staff_get"];
+        put?: never;
+        /** Invite Member */
+        post: operations["invite_member_v1_admin_staff_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/staff/{staff_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Member */
+        delete: operations["remove_member_v1_admin_staff__staff_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Member */
+        patch: operations["update_member_v1_admin_staff__staff_id__patch"];
+        trace?: never;
+    };
+    "/v1/admin/staff/{staff_id}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend Invite */
+        post: operations["resend_invite_v1_admin_staff__staff_id__resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/vendor-budgets": {
         parameters: {
             query?: never;
@@ -715,6 +768,57 @@ export interface paths {
         put?: never;
         /** Signup Verify */
         post: operations["signup_verify_v1_auth_signup_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/staff/accept/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept Start */
+        post: operations["accept_start_v1_auth_staff_accept_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/staff/accept/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept Verify */
+        post: operations["accept_verify_v1_auth_staff_accept_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/staff/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Invite Preview */
+        post: operations["invite_preview_v1_auth_staff_invite_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3037,6 +3141,18 @@ export interface components {
             email: string;
             /** Is Operator */
             is_operator: boolean;
+            /**
+             * Is Owner
+             * @default false
+             */
+            is_owner: boolean;
+            /**
+             * Permissions
+             * @default []
+             */
+            permissions: string[];
+            /** Staff Role */
+            staff_role?: string | null;
             /** Workspace Id */
             workspace_id: string;
             /** Workspace Name */
@@ -3193,6 +3309,15 @@ export interface components {
             total_usd: string;
             /** Total Usd 30D */
             total_usd_30d: string;
+        };
+        /** PermissionOut */
+        PermissionOut: {
+            /** Group */
+            group: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
         };
         /** PhotoConfirmIn */
         PhotoConfirmIn: {
@@ -3517,6 +3642,17 @@ export interface components {
             /** Question Index */
             question_index: number;
         };
+        /** RoleOut */
+        RoleOut: {
+            /** Description */
+            description: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Permissions */
+            permissions: string[];
+        };
         /** SceneOut */
         SceneOut: {
             /** Caption */
@@ -3804,6 +3940,110 @@ export interface components {
             /** Invite Code */
             invite_code?: string | null;
         };
+        /** StaffAcceptStartIn */
+        StaffAcceptStartIn: {
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /** Password */
+            password: string;
+            /** Token */
+            token: string;
+        };
+        /** StaffAcceptVerifyIn */
+        StaffAcceptVerifyIn: {
+            /** Code */
+            code: string;
+            /** Token */
+            token: string;
+        };
+        /** StaffInviteIn */
+        StaffInviteIn: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /**
+             * Permissions
+             * @default []
+             */
+            permissions: string[];
+            /** Role */
+            role: string;
+        };
+        /** StaffInviteOut */
+        StaffInviteOut: {
+            /** Emailed */
+            emailed: boolean;
+            /** Join Url */
+            join_url?: string | null;
+            member: components["schemas"]["StaffOut"];
+        };
+        /** StaffInvitePreview */
+        StaffInvitePreview: {
+            /** Email Hint */
+            email_hint: string;
+            /** Invited By */
+            invited_by: string;
+            /** Name */
+            name: string;
+            /** Role Label */
+            role_label: string;
+        };
+        /** StaffOut */
+        StaffOut: {
+            /** Editable */
+            editable: boolean;
+            /** Email */
+            email: string;
+            /** Id */
+            id: string;
+            /** Invite Expires At */
+            invite_expires_at?: string | null;
+            /** Invited By */
+            invited_by?: string | null;
+            /**
+             * Is You
+             * @default false
+             */
+            is_you: boolean;
+            /** Last Login At */
+            last_login_at?: string | null;
+            /** Name */
+            name: string;
+            /** Permissions */
+            permissions: string[];
+            /** Role */
+            role: string;
+            /** Role Label */
+            role_label: string;
+            /** Status */
+            status: string;
+        };
+        /** StaffPatch */
+        StaffPatch: {
+            /** Name */
+            name?: string | null;
+            /** Permissions */
+            permissions?: string[] | null;
+            /** Role */
+            role?: string | null;
+            /** Status */
+            status?: string | null;
+        };
+        /** StaffTokenIn */
+        StaffTokenIn: {
+            /** Token */
+            token: string;
+        };
         /**
          * StoryCardOut
          * @description One story in the public Latest Stories lists.
@@ -3910,6 +4150,17 @@ export interface components {
             transcript?: string | null;
             /** Video Url */
             video_url?: string | null;
+        };
+        /** TeamOut */
+        TeamOut: {
+            /** Members */
+            members: components["schemas"]["StaffOut"][];
+            /** Permissions */
+            permissions: components["schemas"]["PermissionOut"][];
+            /** Roles */
+            roles: components["schemas"]["RoleOut"][];
+            /** Your Permissions */
+            your_permissions: string[];
         };
         /** TopCustomer */
         TopCustomer: {
@@ -4996,6 +5247,177 @@ export interface operations {
             };
         };
     };
+    team_v1_admin_staff_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    invite_member_v1_admin_staff_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffInviteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffInviteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_member_v1_admin_staff__staff_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                staff_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_member_v1_admin_staff__staff_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                staff_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resend_invite_v1_admin_staff__staff_id__resend_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                staff_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffInviteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_vendor_budgets_v1_admin_vendor_budgets_get: {
         parameters: {
             query?: never;
@@ -5595,6 +6017,105 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_start_v1_auth_staff_accept_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffAcceptStartIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CodeSentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_verify_v1_auth_staff_accept_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffAcceptVerifyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    invite_preview_v1_auth_staff_invite_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffTokenIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffInvitePreview"];
                 };
             };
             /** @description Validation Error */

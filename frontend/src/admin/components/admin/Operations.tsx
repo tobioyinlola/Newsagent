@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, unwrap } from "../../api/client";
+import { useCan } from "../../lib/can";
 import { Button, Card, ErrorBox, Field, Notice, inputCls } from "../ui";
 
 const PROVIDERS = ["heygen", "synthesia", "mock"];
@@ -15,6 +16,7 @@ function Counts({ title, data }: { title: string; data: Record<string, number> |
 
 export function Operations() {
   const qc = useQueryClient();
+  const canSet = useCan()("settings.manage");
   const queue = useQuery({ queryKey: ["admin-queue"], queryFn: () => unwrap(api.GET("/v1/admin/queue")), refetchInterval: 10000 });
   const settings = useQuery({ queryKey: ["admin-settings"], queryFn: () => unwrap(api.GET("/v1/admin/settings")) });
   const [reason, setReason] = useState("");
@@ -33,6 +35,8 @@ export function Operations() {
           <div><h3 className="mb-1 text-sm font-semibold text-muted">Waiting for review</h3><p className="text-3xl font-bold tabular-nums">{q?.moderation_pending ?? 0}</p></div>
         </div>
       </Card>
+      {canSet ? (
+        <>
       <Card title="Emergency pause">
         <p className="mb-3 text-sm text-muted">Stops every paid step (avatar, rendering, transcription) immediately. Videos in progress move to "limit reached" and resume with Retry once you turn this off. Use it for a vendor incident or runaway spend.</p>
         <div className="flex flex-wrap items-end gap-3">
@@ -58,6 +62,10 @@ export function Operations() {
         </div>
         {s?.moderation_mode === "log_only" && <div className="mt-3"><Notice tone="warn">Moderation is in log-only mode: borderline content will not be held for review.</Notice></div>}
       </Card>
+        </>
+      ) : (
+        <Notice tone="info">System switches (pause, failover, moderation) can only be changed by people whose role allows it.</Notice>
+      )}
     </>
   );
 }

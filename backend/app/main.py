@@ -25,6 +25,7 @@ from app.routes import (
     presenter,
     projects,
     scenes,
+    staff,
     stories,
     system,
 )
@@ -143,6 +144,7 @@ def create_app() -> FastAPI:
         backoffice.router,
         presenter.router,
         scenes.router,
+        staff.router,
         stories.router,
         system.router,
         account.router,

@@ -35,7 +35,7 @@ from app.schemas.api import (
     SignupVerifyIn,
 )
 from app.services import email_templates as templates
-from app.services import ledger, passwords, ratelimit
+from app.services import ledger, passwords, ratelimit, rbac
 from app.services import sessions as sess
 from app.services.audit import audit
 from app.services.notifications import send_email
@@ -193,10 +193,10 @@ async def login(
     await _throttle(request, "login", email, (10, 600), (40, 600))
     user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
     ok = passwords.verify_password(body.password, user.password_hash if user else None)  # same work either way
-    if not ok or user is None:
+    if not ok or user is None or await rbac.blocked(db, email):
         raise BAD_LOGIN
-    operator = sess.is_operator_email(email)
-    ns = await sess.create_session(db, user, request, otp_verified=not operator)
+    operator = bool(await rbac.permissions_for(db, email))  # an owner, or an active team member
+    ns = await sess.create_session(db, user, request, otp_verified=not operator, operator=operator)
     if operator:  # second step: operators confirm each sign-in with an emailed code
         code = await sess.issue_code(db, email, "login", ip=ratelimit.client_ip(request))
         subject, html, text = _email("login", code)
@@ -261,7 +261,7 @@ async def password_reset(body: ResetIn, request: Request, db: AsyncSession = Dep
     user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
     row = await sess.check_code(db, email, "reset", body.code)  # always run: same work for unknown emails
     await db.commit()
-    if row is None or user is None:
+    if row is None or user is None or await rbac.blocked(db, email):
         raise BAD_CODE
     _check_password(body.new_password, email)
     user.password_hash = passwords.hash_password(body.new_password)
@@ -288,13 +288,16 @@ async def password_change(
 
 # ---------- who am I ----------
 @router.get("/me", response_model=MeOut)
-async def me(p: Principal = Depends(current_principal)) -> MeOut:
+async def me(p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> MeOut:
     return MeOut(
         email=p.user.email,
         workspace_id=p.workspace.id,
         workspace_name=p.workspace.name,
         credit_balance=p.workspace.credit_balance,
         is_operator=p.is_operator,
+        permissions=sorted(p.permissions),
+        is_owner=p.is_owner,
+        staff_role=await rbac.role_label(db, p),
     )
 
 

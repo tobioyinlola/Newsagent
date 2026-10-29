@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import Principal, operator
+from app.auth import Principal, require
 from app.db import get_session
 from app.models import Checkout, CreditTransaction, Invite, ModerationCase, Project, SystemSetting, User, Workspace
 from app.schemas.backoffice import (
@@ -32,7 +32,7 @@ from app.schemas.backoffice import (
     SignupRow,
     TopCustomer,
 )
-from app.services import sessions as sess
+from app.services import rbac
 
 router = APIRouter(prefix="/v1/admin", tags=["backoffice"])
 ZERO = Decimal("0")
@@ -79,13 +79,14 @@ class _Data:
 
 async def load(session: AsyncSession) -> _Data:
     d = _Data()
+    team = await rbac.team_emails(session)
     users = (await session.execute(select(User))).scalars().all()
     by_ws: dict[str, list[User]] = {}
     for u in users:
         by_ws.setdefault(u.workspace_id, []).append(u)
     for ws in (await session.execute(select(Workspace).where(Workspace.deleted_at.is_(None)))).scalars():
         members = by_ws.get(ws.id, [])
-        if members and all(sess.is_operator_email(u.email) for u in members):
+        if members and all(u.email.lower() in team for u in members):
             continue  # the operators' own workspace is not a customer
         if not members:
             continue
@@ -130,7 +131,7 @@ def _series(days: int, rows: list[tuple[datetime, Decimal]], money: bool) -> lis
 @router.get("/overview", response_model=Overview)
 async def overview(
     days: int = Query(30, ge=7, le=90),
-    _: Principal = Depends(operator),
+    _: Principal = Depends(require("overview.view")),
     session: AsyncSession = Depends(get_session),
 ) -> Overview:
     d = await load(session)
@@ -251,7 +252,7 @@ async def customers(
     q: str = Query("", max_length=100),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    _: Principal = Depends(operator),
+    _: Principal = Depends(require("customers.view")),
     session: AsyncSession = Depends(get_session),
 ) -> CustomerList:
     d = await load(session)
@@ -288,7 +289,7 @@ async def customers(
 
 @router.get("/customers/{workspace_id}", response_model=CustomerDetail)
 async def customer(
-    workspace_id: str, _: Principal = Depends(operator), session: AsyncSession = Depends(get_session)
+    workspace_id: str, _: Principal = Depends(require("customers.view")), session: AsyncSession = Depends(get_session)
 ) -> CustomerDetail:
     d = await load(session)
     ws = d.workspaces.get(workspace_id)
@@ -331,7 +332,9 @@ async def customer(
 
 
 @router.get("/payments", response_model=Payments)
-async def payments(_: Principal = Depends(operator), session: AsyncSession = Depends(get_session)) -> Payments:
+async def payments(
+    _: Principal = Depends(require("finance.view")), session: AsyncSession = Depends(get_session)
+) -> Payments:
     d = await load(session)
     now = datetime.now(UTC)
     items = _payment_rows(d)

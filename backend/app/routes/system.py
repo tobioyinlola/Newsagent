@@ -11,7 +11,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import Principal, current_principal, operator
+from app.auth import Principal, current_principal, require
 from app.config import get_settings
 from app.db import get_session
 from app.integrations import registry
@@ -97,7 +97,9 @@ async def list_presenters(q: str = "", gender: str = "", limit: int = 48, _: Pri
 
 
 @router.get("/v1/admin/pipeline-metrics")
-async def pipeline_metrics(_: Principal = Depends(operator), session: AsyncSession = Depends(get_session)) -> dict:
+async def pipeline_metrics(
+    _: Principal = Depends(require("overview.view")), session: AsyncSession = Depends(get_session)
+) -> dict:
     since = datetime.now(UTC) - timedelta(hours=24)
 
     async def grouped(col, *where) -> dict[str, int]:

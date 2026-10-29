@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { signOut } from "../lib/auth";
 import { CFSymbol, SecondaryLogo } from "./Logo";
 import { ConfirmDialog } from "./ui";
+import { useCan } from "../lib/can";
 import { useMe } from "./RequireOperator";
 
 const KEY = "newsagent.admin.sidebar";
@@ -26,20 +27,24 @@ const I = {
   packs: <Icon><path d="M3 8l9-5 9 5v8l-9 5-9-5z" /><path d="M3 8l9 5 9-5M12 13v8" /></Icon>,
   setup: <Icon><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" /></Icon>,
   audit: <Icon><path d="M6 3h9l4 4v14H6z" /><path d="M9 12h7M9 16h7" /></Icon>,
+  team: <Icon><circle cx="9" cy="8" r="3.5" /><path d="M2 20c0-4 3-6 7-6s7 2 7 6" /><path d="M19 8v6M16 11h6" /></Icon>,
   security: <Icon><rect x="5" y="11" width="14" height="10" /><path d="M8 11V7a4 4 0 018 0v4" /></Icon>,
   out: <Icon><path d="M9 4H4v16h5M16 8l4 4-4 4M20 12H9" /></Icon>,
 };
 
-const GROUPS: { title: string; items: [string, string, ReactNode][] }[] = [
-  { title: "Business", items: [["/", "Overview", I.overview], ["/customers", "Customers", I.customers], ["/revenue", "Revenue", I.revenue]] },
-  { title: "Operations", items: [["/operations", "Operations", I.ops], ["/review", "Review queue", I.review], ["/jobs", "Jobs", I.jobs], ["/costs", "Costs", I.costs]] },
-  { title: "Admin", items: [["/presenter", "Presenter clips", I.clips], ["/billing", "Credit packs", I.packs], ["/setup", "Setup", I.setup], ["/audit", "Audit log", I.audit]] },
-  { title: "You", items: [["/security", "Security", I.security]] },
+// [path, label, icon, the permissions that open it (any one of them); none listed = everyone on the team]
+type Item = [string, string, ReactNode, string[]];
+const GROUPS: { title: string; items: Item[] }[] = [
+  { title: "Business", items: [["/", "Overview", I.overview, ["overview.view"]], ["/customers", "Customers", I.customers, ["customers.view"]], ["/revenue", "Revenue", I.revenue, ["finance.view"]]] },
+  { title: "Operations", items: [["/operations", "Operations", I.ops, ["operations.view"]], ["/review", "Review queue", I.review, ["review.manage"]], ["/jobs", "Jobs", I.jobs, ["operations.view"]], ["/costs", "Costs", I.costs, ["finance.view"]]] },
+  { title: "Admin", items: [["/presenter", "Presenter clips", I.clips, ["presenter.manage"]], ["/billing", "Credit packs", I.packs, ["finance.view"]], ["/setup", "Setup", I.setup, ["customers.manage", "finance.view"]], ["/team", "Team", I.team, ["team.manage"]], ["/audit", "Audit log", I.audit, ["audit.view"]]] },
+  { title: "You", items: [["/security", "Security", I.security, []]] },
 ];
 
 // The back office's own shell: a collapsible sidebar (a slide-over from the right on phones).
 export function Layout() {
   const me = useMe();
+  const can = useCan();
   const nav = useNavigate();
   const loc = useLocation();
   const [collapsed, setCollapsed] = useState(readCollapsed);
@@ -82,7 +87,7 @@ export function Layout() {
           <Link to="/" className={`mb-3 hidden items-center gap-2 px-1 py-1 text-brand-green md:flex ${rail ? "justify-center" : ""}`} aria-label="Back office home">
             {rail ? <CFSymbol className="h-8 w-auto" /> : <span className="flex flex-col items-start gap-1.5"><SecondaryLogo className="h-9 w-auto" /><span className="rounded-sm bg-brand-purple px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest text-white">Back office</span></span>}
           </Link>
-          {GROUPS.map((g) => (
+          {GROUPS.map((g) => ({ ...g, items: g.items.filter(([, , , need]) => need.length === 0 || can(...need)) })).filter((g) => g.items.length > 0).map((g) => (
             <div key={g.title} className="space-y-1 pb-2">
               {!rail && <p className="px-3 pt-2 font-mono text-[11px] font-bold uppercase tracking-widest text-brand-green">{g.title}</p>}
               {rail && <div className="mx-2 border-t-2 border-stripe" aria-hidden />}
@@ -101,7 +106,7 @@ export function Layout() {
             </div>
           ))}
           <div className="mt-auto space-y-2 border-t-2 border-stripe pt-3">
-            {me.data && !rail && <p className="truncate px-3 text-sm text-white" title={me.data.email}>{me.data.email}</p>}
+            {me.data && !rail && <div className="px-3 text-sm text-white"><p className="truncate" title={me.data.email}>{me.data.email}</p>{me.data.staff_role && <p className="font-mono text-[11px] font-bold uppercase tracking-widest text-brand-green">{me.data.staff_role}</p>}</div>}
             <button type="button" onClick={() => setConfirmOut(true)} title={rail ? "Sign out" : undefined} className={`flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-bold text-brand-green hover:bg-stripe ${rail ? "justify-center" : ""}`}>
               {I.out}<span className={rail ? "sr-only" : ""}>Sign out</span>
             </button>

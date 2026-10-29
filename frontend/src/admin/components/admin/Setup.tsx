@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, unwrap } from "../../api/client";
+import { useCan } from "../../lib/can";
 import { Button, Card, ErrorBox, Field, inputCls, Notice } from "../ui";
 
 export function Setup() {
   const qc = useQueryClient();
-  const ws = useQuery({ queryKey: ["admin-ws"], queryFn: () => unwrap(api.GET("/v1/admin/workspaces")) });
-  const budgets = useQuery({ queryKey: ["admin-budgets"], queryFn: () => unwrap(api.GET("/v1/admin/vendor-budgets")) });
+  const can = useCan();
+  const ws = useQuery({ queryKey: ["admin-ws"], queryFn: () => unwrap(api.GET("/v1/admin/workspaces")), enabled: can("customers.view") });
+  const budgets = useQuery({ queryKey: ["admin-budgets"], queryFn: () => unwrap(api.GET("/v1/admin/vendor-budgets")), enabled: can("finance.view") });
   const [inv, setInv] = useState({ email: "", workspace_name: "", credits: "20", spend_cap: "50" });
   const [vb, setVb] = useState({ vendor: "heygen", limit: "100" });
   const invite = useMutation({
@@ -22,7 +24,7 @@ export function Setup() {
 
   return (
     <>
-      <Card title="Invite a business">
+      {can("customers.manage") && <Card title="Invite a business">
         <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); invite.mutate(); }}>
           <Field label="Invitee email">{(id) => <input id={id} type="email" required className={inputCls} value={inv.email} onChange={(e) => setInv({ ...inv, email: e.target.value })} />}</Field>
           <Field label="Business name">{(id) => <input id={id} required className={inputCls} value={inv.workspace_name} onChange={(e) => setInv({ ...inv, workspace_name: e.target.value })} />}</Field>
@@ -32,35 +34,35 @@ export function Setup() {
         </form>
         <ErrorBox error={invite.error} />
         {link && <div className="mt-3"><Notice tone="ok">{invite.data?.emailed ? `We emailed the invitation to ${inv.email}.` : `We could not email ${inv.email}, so send them this link yourself.`} Link (single use, valid until {invite.data ? new Date(invite.data.expires_at).toLocaleString() : ""}):<br /><code className="break-all">{link}</code></Notice></div>}
-      </Card>
+      </Card>}
 
-      <Card title="Vendor budgets (this month)">
+      {can("finance.view") && <Card title="Vendor budgets (this month)">
         <p className="mb-3 text-sm text-muted">A vendor with no budget is blocked. Operators are alerted at 80%.</p>
         <table className="mb-4 w-full text-sm"><caption className="sr-only">Vendor budgets</caption><thead><tr className="text-left text-muted"><th>Vendor</th><th>Period</th><th className="text-right">Spent</th><th className="text-right">Limit</th></tr></thead>
           <tbody>{budgets.data?.map((b) => <tr key={b.vendor + b.period} className="border-t border-line"><td className="py-1">{b.vendor}</td><td>{b.period}</td><td className="text-right">{Number(b.spent).toFixed(2)}</td><td className="text-right">{Number(b.limit).toFixed(2)}</td></tr>)}</tbody></table>
-        <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); setBudget.mutate(); }}>
+        {can("finance.manage") && <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); setBudget.mutate(); }}>
           <Field label="Vendor">{(id) => <select id={id} className={inputCls} value={vb.vendor} onChange={(e) => setVb({ ...vb, vendor: e.target.value })}>{["heygen", "renderer", "transcription", "tts", "synthesia", "mock"].map((v) => <option key={v}>{v}</option>)}</select>}</Field>
           <Field label="Monthly limit">{(id) => <input id={id} type="number" min="0" step="any" className={inputCls} value={vb.limit} onChange={(e) => setVb({ ...vb, limit: e.target.value })} />}</Field>
           <Button type="submit" variant="secondary">Set budget</Button>
-        </form>
+        </form>}
         <ErrorBox error={setBudget.error} />
-      </Card>
+      </Card>}
 
-      <Card title="Workspaces">
+      {can("customers.view") && <Card title="Workspaces">
         <ErrorBox error={ws.error ?? patch.error} />
         <ul className="divide-y divide-line">
           {ws.data?.map((w) => (
             <li key={w.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
               <span><strong>{w.name}</strong> · {Number(w.credit_balance).toFixed(2)} credits · spent {Number(w.spent_total).toFixed(2)} / cap {Number(w.spend_cap).toFixed(2)}{w.suspended && " · suspended"}{w.share_disabled && " · sharing off"}</span>
-              <span className="flex gap-2">
+              {can("customers.manage") && <span className="flex gap-2">
                 <Button variant="secondary" onClick={() => patch.mutate({ id: w.id, body: { credit_balance: String(Number(w.credit_balance) + 10) } })}>+10 credits</Button>
                 <Button variant="secondary" onClick={() => patch.mutate({ id: w.id, body: { share_disabled: !w.share_disabled } })}>{w.share_disabled ? "Enable" : "Disable"} sharing</Button>
                 <Button variant={w.suspended ? "secondary" : "danger"} onClick={() => patch.mutate({ id: w.id, body: { suspended: !w.suspended } })}>{w.suspended ? "Unsuspend" : "Suspend"}</Button>
-              </span>
+              </span>}
             </li>
           ))}
         </ul>
-      </Card>
+      </Card>}
     </>
   );
 }

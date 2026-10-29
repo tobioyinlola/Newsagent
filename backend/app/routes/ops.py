@@ -10,7 +10,7 @@ from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import Principal, current_principal, operator
+from app.auth import Principal, current_principal, require
 from app.config import VENDOR_POLICIES, get_settings
 from app.db import get_session
 from app.models import AuditLog, CreditTransaction, Job, ModerationCase, Project, SystemSetting, Take, Workspace
@@ -54,7 +54,9 @@ async def project_moderation(
 # ---------- review queue ----------
 @router.get("/v1/admin/moderation", response_model=list[ModerationCaseOut])
 async def moderation_queue(
-    status: str = "pending", _: Principal = Depends(operator), session: AsyncSession = Depends(get_session)
+    status: str = "pending",
+    _: Principal = Depends(require("review.manage")),
+    session: AsyncSession = Depends(get_session),
 ) -> list[ModerationCaseOut]:
     q = select(ModerationCase, Workspace.name).join(
         Workspace, Workspace.id == ModerationCase.workspace_id, isouter=True
@@ -73,7 +75,7 @@ async def moderation_decision(
     case_id: str,
     body: ModerationDecisionIn,
     request: Request,
-    op: Principal = Depends(operator),
+    op: Principal = Depends(require("review.manage")),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     case = await session.get(ModerationCase, case_id)
@@ -97,7 +99,9 @@ async def moderation_decision(
 
 # ---------- queue and jobs ----------
 @router.get("/v1/admin/queue", response_model=QueueOut)
-async def queue(_: Principal = Depends(operator), session: AsyncSession = Depends(get_session)) -> QueueOut:
+async def queue(
+    _: Principal = Depends(require("operations.view")), session: AsyncSession = Depends(get_session)
+) -> QueueOut:
     async def counts(col) -> dict[str, int]:
         return {k: n for k, n in (await session.execute(select(col, func.count()).group_by(col))).all()}
 
@@ -120,7 +124,7 @@ async def jobs(
     status: str | None = None,
     stage: str | None = None,
     limit: int = 100,
-    _: Principal = Depends(operator),
+    _: Principal = Depends(require("operations.view")),
     session: AsyncSession = Depends(get_session),
 ) -> list[JobOut]:
     q = (
@@ -163,7 +167,10 @@ async def jobs(
 
 @router.post("/v1/admin/projects/{project_id}/retry")
 async def operator_retry(
-    project_id: str, request: Request, op: Principal = Depends(operator), session: AsyncSession = Depends(get_session)
+    project_id: str,
+    request: Request,
+    op: Principal = Depends(require("operations.manage")),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """Restart a failed or paused project on the owner's behalf (e.g. after fixing a vendor outage)."""
     project = await session.get(Project, project_id)
@@ -234,7 +241,7 @@ async def _cost_rows(session: AsyncSession, since: datetime) -> tuple[list[CostR
 
 @router.get("/v1/admin/cost-report", response_model=CostReport)
 async def cost_report(
-    days: int = 90, _: Principal = Depends(operator), session: AsyncSession = Depends(get_session)
+    days: int = 90, _: Principal = Depends(require("finance.view")), session: AsyncSession = Depends(get_session)
 ) -> CostReport:
     rows, usd = await _cost_rows(session, datetime.now(UTC) - timedelta(days=min(max(days, 1), 3650)))
     done = [r for r in rows if r.state == "final_ready"]
@@ -255,7 +262,7 @@ async def cost_report(
 
 @router.get("/v1/admin/cost-report.csv")
 async def cost_report_csv(
-    days: int = 90, _: Principal = Depends(operator), session: AsyncSession = Depends(get_session)
+    days: int = 90, _: Principal = Depends(require("finance.view")), session: AsyncSession = Depends(get_session)
 ) -> Response:
     rows, _usd = await _cost_rows(session, datetime.now(UTC) - timedelta(days=min(max(days, 1), 3650)))
     out = io.StringIO()
@@ -298,7 +305,7 @@ async def _read_settings(session: AsyncSession) -> SettingsOut:
 
 @router.get("/v1/admin/settings", response_model=SettingsOut)
 async def get_system_settings(
-    _: Principal = Depends(operator), session: AsyncSession = Depends(get_session)
+    _: Principal = Depends(require("operations.view")), session: AsyncSession = Depends(get_session)
 ) -> SettingsOut:
     return await _read_settings(session)
 
@@ -307,7 +314,7 @@ async def get_system_settings(
 async def patch_system_settings(
     body: SettingsPatch,
     request: Request,
-    op: Principal = Depends(operator),
+    op: Principal = Depends(require("settings.manage")),
     session: AsyncSession = Depends(get_session),
 ) -> SettingsOut:
     async def put(key: str, patch: dict) -> None:
@@ -359,7 +366,7 @@ async def patch_system_settings(
 async def audit_log(
     limit: int = 100,
     action: str | None = None,
-    _: Principal = Depends(operator),
+    _: Principal = Depends(require("audit.view")),
     session: AsyncSession = Depends(get_session),
 ) -> list[AuditLog]:
     q = select(AuditLog)

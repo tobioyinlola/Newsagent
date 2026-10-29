@@ -186,3 +186,18 @@ OpenAI-compatible transcription vendor (undecided), Resend (email), Railway (hos
 - Operator-only endpoints (`/v1/admin/presenter-clips`), rate limited, every action audited, rights attestation recorded.
 - Uploaded video is verified by magic bytes, malware-scanned (fails closed) and measured by the renderer before it can be used;
   cap 150 MB; the renderer downloads it through the same allow-listed host rules as other media.
+
+## Back-office team and permissions (added)
+- Owners are the `OPERATOR_EMAILS` and always hold every permission; they can't be edited, suspended or removed from the back office.
+  Everyone else is invited from **Team** with a role (Admin, Support, Finance, Content, Viewer) or a custom list of permissions.
+  Twelve permissions (`app/services/rbac.py`) are enforced per endpoint on the server with `require("<permission>")`; the back
+  office only hides what a person can't use. `tests/test_rbac.py` and `frontend/e2e/team.spec.ts` cover it end to end.
+- Invitation: emailed one-use link (only a SHA-256 of the token is stored; 14 days), the invitee chooses a password and confirms an
+  emailed code, then signs in like any operator (password + emailed code each time, short operator sessions). The link is a POST
+  body, never a URL path, so it isn't written to access logs.
+- No privilege escalation: you can only grant permissions you hold, can't change your own access, and can't change someone who
+  holds anything you lack. Permissions are read on every request, so a change applies at once.
+- Suspend or remove signs the person out of every device immediately and blocks sign-in (and password reset). Re-inviting a removed
+  person reuses their account. A customer account can't be turned into a team member by an invitation.
+- Every invite, change, resend, removal and join is in the audit log (`staff.*`). Team members' internal workspace is not counted as
+  a customer in the back-office reports.

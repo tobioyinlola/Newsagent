@@ -2408,6 +2408,30 @@
             "title": "Is Operator",
             "type": "boolean"
           },
+          "is_owner": {
+            "default": false,
+            "title": "Is Owner",
+            "type": "boolean"
+          },
+          "permissions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          },
+          "staff_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Staff Role"
+          },
           "workspace_id": {
             "title": "Workspace Id",
             "type": "string"
@@ -2864,6 +2888,29 @@
           "items"
         ],
         "title": "Payments",
+        "type": "object"
+      },
+      "PermissionOut": {
+        "properties": {
+          "group": {
+            "title": "Group",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "group"
+        ],
+        "title": "PermissionOut",
         "type": "object"
       },
       "PhotoConfirmIn": {
@@ -3691,6 +3738,37 @@
           "question_index"
         ],
         "title": "RetakeIn",
+        "type": "object"
+      },
+      "RoleOut": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "description",
+          "permissions"
+        ],
+        "title": "RoleOut",
         "type": "object"
       },
       "SceneOut": {
@@ -4578,6 +4656,308 @@
         "title": "SignupVerifyIn",
         "type": "object"
       },
+      "StaffAcceptStartIn": {
+        "properties": {
+          "name": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Name",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          },
+          "token": {
+            "maxLength": 200,
+            "minLength": 10,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "password"
+        ],
+        "title": "StaffAcceptStartIn",
+        "type": "object"
+      },
+      "StaffAcceptVerifyIn": {
+        "properties": {
+          "code": {
+            "maxLength": 12,
+            "minLength": 4,
+            "title": "Code",
+            "type": "string"
+          },
+          "token": {
+            "maxLength": 200,
+            "minLength": 10,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "code"
+        ],
+        "title": "StaffAcceptVerifyIn",
+        "type": "object"
+      },
+      "StaffInviteIn": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Name",
+            "type": "string"
+          },
+          "permissions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          },
+          "role": {
+            "maxLength": 20,
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "role"
+        ],
+        "title": "StaffInviteIn",
+        "type": "object"
+      },
+      "StaffInviteOut": {
+        "properties": {
+          "emailed": {
+            "title": "Emailed",
+            "type": "boolean"
+          },
+          "join_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Join Url"
+          },
+          "member": {
+            "$ref": "#/components/schemas/StaffOut"
+          }
+        },
+        "required": [
+          "member",
+          "emailed"
+        ],
+        "title": "StaffInviteOut",
+        "type": "object"
+      },
+      "StaffInvitePreview": {
+        "properties": {
+          "email_hint": {
+            "title": "Email Hint",
+            "type": "string"
+          },
+          "invited_by": {
+            "title": "Invited By",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role_label": {
+            "title": "Role Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email_hint",
+          "name",
+          "role_label",
+          "invited_by"
+        ],
+        "title": "StaffInvitePreview",
+        "type": "object"
+      },
+      "StaffOut": {
+        "properties": {
+          "editable": {
+            "title": "Editable",
+            "type": "boolean"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "invite_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invite Expires At"
+          },
+          "invited_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invited By"
+          },
+          "is_you": {
+            "default": false,
+            "title": "Is You",
+            "type": "boolean"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "role_label": {
+            "title": "Role Label",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "role",
+          "role_label",
+          "permissions",
+          "status",
+          "editable"
+        ],
+        "title": "StaffOut",
+        "type": "object"
+      },
+      "StaffPatch": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "permissions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permissions"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "pattern": "^(active|suspended)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "StaffPatch",
+        "type": "object"
+      },
+      "StaffTokenIn": {
+        "properties": {
+          "token": {
+            "maxLength": 200,
+            "minLength": 10,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "StaffTokenIn",
+        "type": "object"
+      },
       "StoryCardOut": {
         "description": "One story in the public Latest Stories lists.",
         "properties": {
@@ -4884,6 +5264,46 @@
           "flags"
         ],
         "title": "TakeOut",
+        "type": "object"
+      },
+      "TeamOut": {
+        "properties": {
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/StaffOut"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "permissions": {
+            "items": {
+              "$ref": "#/components/schemas/PermissionOut"
+            },
+            "title": "Permissions",
+            "type": "array"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/RoleOut"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
+          "your_permissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Your Permissions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "roles",
+          "permissions",
+          "members",
+          "your_permissions"
+        ],
+        "title": "TeamOut",
         "type": "object"
       },
       "TopCustomer": {
@@ -6997,6 +7417,296 @@
         ]
       }
     },
+    "/v1/admin/staff": {
+      "get": {
+        "operationId": "team_v1_admin_staff_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Team",
+        "tags": [
+          "team"
+        ]
+      },
+      "post": {
+        "operationId": "invite_member_v1_admin_staff_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffInviteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffInviteOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Invite Member",
+        "tags": [
+          "team"
+        ]
+      }
+    },
+    "/v1/admin/staff/{staff_id}": {
+      "delete": {
+        "operationId": "remove_member_v1_admin_staff__staff_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "staff_id",
+            "required": true,
+            "schema": {
+              "title": "Staff Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Remove Member V1 Admin Staff  Staff Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Member",
+        "tags": [
+          "team"
+        ]
+      },
+      "patch": {
+        "operationId": "update_member_v1_admin_staff__staff_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "staff_id",
+            "required": true,
+            "schema": {
+              "title": "Staff Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Member",
+        "tags": [
+          "team"
+        ]
+      }
+    },
+    "/v1/admin/staff/{staff_id}/resend": {
+      "post": {
+        "operationId": "resend_invite_v1_admin_staff__staff_id__resend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "staff_id",
+            "required": true,
+            "schema": {
+              "title": "Staff Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffInviteOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resend Invite",
+        "tags": [
+          "team"
+        ]
+      }
+    },
     "/v1/admin/vendor-budgets": {
       "get": {
         "operationId": "list_vendor_budgets_v1_admin_vendor_budgets_get",
@@ -7936,6 +8646,129 @@
         "summary": "Signup Verify",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/v1/auth/staff/accept/start": {
+      "post": {
+        "operationId": "accept_start_v1_auth_staff_accept_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffAcceptStartIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeSentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Accept Start",
+        "tags": [
+          "team"
+        ]
+      }
+    },
+    "/v1/auth/staff/accept/verify": {
+      "post": {
+        "operationId": "accept_verify_v1_auth_staff_accept_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffAcceptVerifyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Accept Verify",
+        "tags": [
+          "team"
+        ]
+      }
+    },
+    "/v1/auth/staff/invite": {
+      "post": {
+        "operationId": "invite_preview_v1_auth_staff_invite_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffTokenIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffInvitePreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Invite Preview",
+        "tags": [
+          "team"
         ]
       }
     },
