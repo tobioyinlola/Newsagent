@@ -11,7 +11,16 @@ _maker: async_sessionmaker[AsyncSession] | None = None
 def session_maker() -> async_sessionmaker[AsyncSession]:
     global _engine, _maker
     if _maker is None:
-        _engine = create_async_engine(get_settings().database_url, pool_pre_ping=True)
+        s = get_settings()
+        opts: dict = {"pool_pre_ping": True}
+        if not s.database_url.startswith("sqlite"):  # SQLite (local tests) has no real pool to size
+            opts.update(
+                pool_size=s.db_pool_size,
+                max_overflow=s.db_max_overflow,
+                pool_timeout=s.db_pool_timeout_s,
+                pool_recycle=s.db_pool_recycle_s,
+            )
+        _engine = create_async_engine(s.database_url, **opts)
         _maker = async_sessionmaker(_engine, expire_on_commit=False)
     return _maker
 

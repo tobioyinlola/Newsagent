@@ -293,7 +293,7 @@ async def test_nobody_else_can_cancel_my_video(client, workspace, maker):
 class Lost(Queue):
     """A queue that loses every message, like a restart with an in-memory queue or a dropped broker message."""
 
-    def enqueue(self, step, payload):
+    def enqueue(self, step, payload, delay=0.0):
         return None
 
 

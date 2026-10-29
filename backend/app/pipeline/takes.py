@@ -103,6 +103,9 @@ async def process_take(take_id: str) -> None:
                     await s2.commit()
                 await _fail(take_id, e.reason, notify="limit_reached")
                 return
+            # Commit the holds now. Left open, this transaction keeps the workspace and the renderer's budget row locked for the
+            # whole processing time, and every other reservation for that vendor (all customers') would wait behind it.
+            await s.commit()
             storage = registry.get_storage()
             urls = [storage.presign_get(chunk_key(pid, take.id, int(i)), 3600) for i in sorted(take.chunks, key=int)]
             try:

@@ -3,6 +3,7 @@ import asyncio
 import httpx
 
 from app.config import VENDOR_POLICIES, get_settings
+from app.integrations.errors import ProviderError
 from app.integrations.renderer.base import (
     Analysis,
     KeyResult,
@@ -38,6 +39,15 @@ class HttpRenderer(RendererClient):
             await asyncio.sleep(delay)
             waited += delay
 
+    async def _job(self, render_id: str) -> dict:
+        """The renderer's account of one job. It keeps jobs in memory, so after a restart (a deploy) it answers 404: that job is
+        gone and must be submitted again, which a retry does. It is not a rejected request."""
+        r = await self._client.get(f"/renders/{render_id}")
+        if r.status_code == 404:
+            raise ProviderError("The renderer restarted and lost this job", "temporary", retry_after=5)
+        r.raise_for_status()
+        return r.json()
+
     async def cancel(self, render_id: str) -> None:
         try:
             await self._client.delete(f"/renders/{render_id}")
@@ -52,7 +62,7 @@ class HttpRenderer(RendererClient):
         rid = r.json()["render_id"]
         waited = 0.0
         while waited < VENDOR_POLICIES["renderer"].timeout_s:
-            st = (await self._client.get(f"/renders/{rid}")).json()
+            st = await self._job(rid)
             if st["status"] == "succeeded":
                 return KeyResult(st["result"]["key"], st["result"]["duration_s"])
             if st["status"] == "failed":
@@ -69,7 +79,7 @@ class HttpRenderer(RendererClient):
         rid = r.json()["render_id"]
         waited = 0.0
         while waited < VENDOR_POLICIES["renderer"].timeout_s:
-            st = (await self._client.get(f"/renders/{rid}")).json()
+            st = await self._job(rid)
             if st["status"] == "succeeded":
                 d = st["result"]
                 return ProcessResult(
@@ -116,7 +126,5 @@ class HttpRenderer(RendererClient):
         return r.json()["render_id"]
 
     async def status(self, render_id: str) -> RenderStatus:
-        r = await self._client.get(f"/renders/{render_id}")
-        r.raise_for_status()
-        d = r.json()
+        d = await self._job(render_id)
         return RenderStatus(d["status"], d.get("progress", 0), d.get("output_keys", []), d.get("error"))
