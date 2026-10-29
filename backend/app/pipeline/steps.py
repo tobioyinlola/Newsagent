@@ -1087,12 +1087,12 @@ def chyron_for(script: ScriptVersion, q: int) -> str:
 
 
 PRESENTER_ROLES = {  # first name -> (name shown on screen, role shown under it)
-    "marcus": ("Marcus Richard", "Lead BTN Director, CF"),
+    "marcus": ("Marcus Richard", "Business Reporter, CF News"),
 }
 
 
 def presenter_identity(project: Project) -> dict:
-    """The presenter's name box. The house presenter is Marcus Richard, Lead BTN Director, CF; another house presenter shows
+    """The presenter's name box. The house presenter is Marcus Richard, Business Reporter, CF News; another house presenter shows
     their first name as a CF presenter."""
     from app.services import presenters as pres
 
