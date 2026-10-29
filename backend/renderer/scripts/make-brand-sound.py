@@ -47,9 +47,15 @@ def whoosh(d, up=True, gain=0.5):
 def tone(freq, d, kind="pluck", gain=0.4):
     t = t_(d)
     if kind == "pluck":
-        y = (np.sin(2 * np.pi * freq * t) + 0.35 * np.sin(4 * np.pi * freq * t) + 0.15 * np.sin(6 * np.pi * freq * t)) * np.exp(-t * 7)
+        y = (
+            np.sin(2 * np.pi * freq * t) + 0.35 * np.sin(4 * np.pi * freq * t) + 0.15 * np.sin(6 * np.pi * freq * t)
+        ) * np.exp(-t * 7)
     elif kind == "bell":
-        y = (np.sin(2 * np.pi * freq * t) + 0.5 * np.sin(2 * np.pi * freq * 2.76 * t) + 0.3 * np.sin(2 * np.pi * freq * 5.4 * t)) * np.exp(-t * 3.2)
+        y = (
+            np.sin(2 * np.pi * freq * t)
+            + 0.5 * np.sin(2 * np.pi * freq * 2.76 * t)
+            + 0.3 * np.sin(2 * np.pi * freq * 5.4 * t)
+        ) * np.exp(-t * 3.2)
     elif kind == "bass":
         y = np.sin(2 * np.pi * freq * t) + 0.25 * np.sin(4 * np.pi * freq * t)
         y *= env(len(t), 0.005, 0.08)
@@ -95,7 +101,7 @@ def intro():
     ev = [(0.0, whoosh(1.0, True, 0.5)), (1.1, impact(0.8)), (1.15, tone(NOTE(84), 0.6, "bell", 0.25))]
     ev += [(1.27, tone(NOTE(72), 0.4, "pluck", 0.35)), (1.53, tone(NOTE(76), 0.4, "pluck", 0.35))]
     ev += [(1.85, whoosh(0.7, True, 0.35))]
-    for i, (at, m) in enumerate(((2.07, 67), (2.31, 71), (2.55, 74))):  # the three words
+    for at, m in ((2.07, 67), (2.31, 71), (2.55, 74)):  # the three words
         ev += [(at, tone(NOTE(m), 0.35, "pluck", 0.3)), (at, hat(0.25))]
     ev += [(2.9, tone(NOTE(79), 1.4, "bell", 0.22)), (4.15, whoosh(0.85, True, 0.6)), (4.85, impact(0.55))]
     return mix(5.0, ev)
@@ -103,7 +109,12 @@ def intro():
 
 def outro():
     beat = 0.5
-    ev = [(0.15, whoosh(0.7, True, 0.4)), (0.5, whoosh(0.7, True, 0.35)), (1.0, whoosh(0.5, True, 0.5)), (1.2, impact(0.95))]
+    ev = [
+        (0.15, whoosh(0.7, True, 0.4)),
+        (0.5, whoosh(0.7, True, 0.35)),
+        (1.0, whoosh(0.5, True, 0.5)),
+        (1.2, impact(0.95)),
+    ]
     ev += [(1.22, tone(NOTE(79), 1.0, "bell", 0.25)), (2.0, whoosh(0.9, True, 0.35))]
     start = 1.2  # the bed comes in on the address hit
     arp = [60, 64, 67, 72, 67, 64, 69, 72]  # C major / A minor colours
@@ -122,7 +133,11 @@ def outro():
     ev.append((start, tone(NOTE(48), 4.8, "pad", 0.1)))
     for i in range(5):  # the region labels
         ev.append((2.87 + i * 0.2, tone(NOTE(72 + [0, 2, 4, 7, 9][i]), 0.35, "bell", 0.22)))
-    ev += [(3.33, whoosh(0.6, False, 0.3)), (3.45, tone(NOTE(91), 1.8, "bell", 0.2)), (3.45, tone(NOTE(84), 1.8, "bell", 0.16))]
+    ev += [
+        (3.33, whoosh(0.6, False, 0.3)),
+        (3.45, tone(NOTE(91), 1.8, "bell", 0.2)),
+        (3.45, tone(NOTE(84), 1.8, "bell", 0.16)),
+    ]
     return mix(6.0, ev)
 
 

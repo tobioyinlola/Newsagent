@@ -164,8 +164,10 @@ async def anchor_inputs(session: AsyncSession, project: Project) -> dict:
 
 def published_label(now: datetime | None = None) -> str:
     """The date and time stamp on the video, news-channel style: 'OCT 29, 2026 · 10:42 AM EDT', in the channel's own time zone."""
+    from datetime import tzinfo
     from zoneinfo import ZoneInfo
 
+    tz: tzinfo
     try:
         tz = ZoneInfo(get_settings().live_timezone)
     except Exception:  # a mistyped zone must never fail a render

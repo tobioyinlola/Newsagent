@@ -134,7 +134,7 @@ describe("renderer API", () => {
     const blocked = new Promise<void>((r) => { release = r; });
     const renderFn = async () => { await blocked; };
     const processFn = async () => { throw new Error("quick job ran"); }; // fails fast: enough to prove it was not stuck behind the render
-    const server = createApp({ secret: "s3cret", renderFn, processFn: processFn as any, normalizeFn: async () => {} }).listen(0);
+    const server = createApp({ secret: "s3cret", renderFn: renderFn as any, processFn: processFn as any, normalizeFn: async () => {} }).listen(0);
     const b = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
     const h = { "x-renderer-secret": "s3cret", "content-type": "application/json" };
     try {
