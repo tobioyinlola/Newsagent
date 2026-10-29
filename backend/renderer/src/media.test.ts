@@ -43,5 +43,5 @@ describe("media analysis", () => {
     expect(fs.statSync(light).size).toBeLessThan(fs.statSync(hd).size * 0.6);
     expect(b).toMatchObject({ width: 1280, height: 720, has_audio: true });
     expect(Math.abs(b.duration_s - a.duration_s)).toBeLessThan(0.2);
-  });
+  }, 120_000); // a slow-preset x264 encode: about 8 s on a busy machine, so the default 5 s limit made it fail at random
 });
