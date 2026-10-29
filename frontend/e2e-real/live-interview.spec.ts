@@ -78,7 +78,9 @@ test("AI interview, recorded for real, merged with the answers column", async ({
   // every answer was really processed (ffmpeg), with a snapshot, and is ready to review
   await expect(page.getByRole("heading", { name: "Review your interview" })).toBeVisible({ timeout: 120_000 });
   await expect(page.locator("video[aria-label^='Your answer to question']")).toHaveCount(QUESTIONS.length);
-  await expect(page.getByLabel("How your answers appear in the video")).toHaveValue("column");
+  // the default is the founder full frame; this test is about the answers column, so choose it
+  await expect(page.getByLabel("How your answers appear in the video")).toHaveValue("full");
+  await page.getByLabel("How your answers appear in the video").selectOption("column");
   await page.getByRole("button", { name: "Make my video" }).click();
   await expect(page.getByRole("heading", { name: "Your video", exact: true })).toBeVisible({ timeout: 600_000 });
   expect(violations, "CSP violations on the interview").toEqual([]);
