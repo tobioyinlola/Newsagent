@@ -19,6 +19,7 @@ from app.integrations.errors import ProviderPending, classify
 from app.integrations.renderer.base import RenderRequest
 from app.models import Asset, BrandKit, InterviewSession, Job, Project, ScriptVersion, Take, Workspace
 from app.services import cf_news, provider_requests
+from app.services import conversation as conv
 from app.services import presenter as clip_lib
 from app.services import scene_plan as sp
 from app.services import script_polish as polish
@@ -85,31 +86,15 @@ async def approved_script(session: AsyncSession, project_id: str) -> ScriptVersi
     return script
 
 
-FEATURE_INVITE = "If you'd like your business or founder story featured on Cover Founder, get in touch with us and we'll report on it."
-
-
-def with_invite(text: str) -> str:
-    """Every video ends by inviting viewers to get featured. The invitation goes just before a closing "thank you for
-    watching" line when there is one, otherwise at the very end; a text that already invites is left alone."""
-    t = text.strip()
-    if polish.has_invite(t):  # however the writer worded it: never invite twice
-        return t
-    if not t:
-        return FEATURE_INVITE
-    head, sep, last = t.rpartition(". ")
-    if sep and "watching" in last.lower():
-        return f"{head}. {FEATURE_INVITE} {last}"
-    return f"{t} {FEATURE_INVITE}"
-
-
 def anchor_text(script: ScriptVersion) -> str:
     return " ".join(s["text"] for s in script.segments)
 
 
 def presenter_only_text(script: ScriptVersion) -> str:
-    """What the presenter says in a presenter-only video: the whole script, ending with the invitation to get featured.
-    Nothing is said twice."""
-    return with_invite(polish.remove_repeats([anchor_text(script)])[0])
+    """What the presenter says in a presenter-only video: the whole script, nothing said twice, one sign-off, no invitation (the
+    closing card on screen carries the call to action)."""
+    text = polish.strip_invites(anchor_text(script))
+    return polish.one_signoff(polish.remove_repeats([text])[0])
 
 
 def _fullframe_entries() -> dict[str, bool]:
@@ -529,11 +514,13 @@ def segment_texts(script: ScriptVersion) -> dict[str, str]:
     }
     if not out["main"] and out["explanation"]:  # a script that only has an explanation: it is the opening
         out["main"], out["explanation"] = out["explanation"], ""
-    # The invitation to get featured belongs to the closing and is said once: any the writer put earlier is dropped, and
-    # the standard one is added only when the closing has none. Then nothing is said twice anywhere in the programme.
-    for part in ("main", "explanation", "analysis"):
-        out[part] = " ".join(s for s in polish.sentences(out[part]) if not polish.is_invite(s))
-    out["outro"] = with_invite(out["outro"])
+    # The conversation is joined up here, not in the writer's words: the opening never hands over ("let's hear from ..."), because
+    # the first question welcomes the guest itself; no invitation to get featured is spoken (the closing card carries it); the
+    # programme rounds off once; and nothing is said twice anywhere.
+    out["main"] = polish.strip_passover(out["main"])
+    for part in ("main", "explanation", "analysis", "outro"):
+        out[part] = polish.strip_invites(out[part]) if out[part] else out[part]
+    out["outro"] = polish.one_signoff(out["outro"])
     order = ["main", "explanation", "analysis", "outro"]
     out = dict(zip(order, polish.remove_repeats([out[k] for k in order]), strict=True))
     return out
@@ -608,16 +595,21 @@ def needed_questions(project: Project, count: int) -> list[int]:
 
 
 def question_texts(project: Project, script: ScriptVersion, needed: list[int]) -> dict[int, str]:
-    """What the presenter says for each question, in the order they play. In the guided flow the first one hands the
-    conversation to the founder, unless the opening already did. A line that repeats anything said earlier in the programme
-    (the opening, an earlier question) is left out."""
+    """What the presenter says for each question, in the order they play. In an interview the first welcomes the guest by name
+    into the studio, and each later one opens with a short acknowledgement of the answer before it (a different line for each
+    question, and different lines from one video to the next). A line that repeats anything said earlier in the programme is left
+    out."""
     texts = segment_texts(script)
     before = [texts["main"], texts["explanation"]]
+    interview = project.flow == "guided" or getattr(project, "interview_mode", None) == "live"
+    gaps = conv.bridges(project.id or "", max(0, len(needed) - 1)) if interview else []
     out: dict[int, str] = {}
     for n, q in enumerate(needed):
         text = script.interview_questions[q]
-        if project.flow == "guided" and n == 0 and not polish.ends_with_handover(" ".join(before)):
-            text = f"Let's hear from the founder. {text}"
+        if interview and n == 0:
+            text = f"{conv.welcome(project.id or '', project.founder_name)} {text}"
+        elif interview and n > 0:
+            text = f"{gaps[n - 1]} {text}"
         fresh = polish.remove_repeats([*before, text])[-1]
         out[q] = fresh or text  # never an empty clip: a question must still be asked
         before.append(out[q])

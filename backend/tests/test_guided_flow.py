@@ -116,8 +116,15 @@ async def test_approval_needs_two_or_three_pictures_then_makes_the_video_cheaply
     assert r.status_code == 200, r.text
     await get_queue().drain()
     assert await state(client, pid) == "final_ready"
-    lead = "hear from the founder"
-    assert len([t for t in spy.texts if lead in t]) == 1  # one hand-over in the whole programme, never two
+    from app.services import conversation as conv
+
+    welcome = conv.welcome(pid, "Tobi Oyinlola")
+    assert (
+        len([t for t in spy.texts if t.startswith(welcome)]) == 1
+    )  # the guest is welcomed once, by the first question
+    assert not any(
+        "hear from the founder" in t.lower() for t in spy.texts
+    )  # and there is no generic hand-over any more
     assert len(spy.texts) == 6  # opening, a question for each of the four answers, the sign-off
     # a published story (live share link) appears in other videos' tickers; an unshared one never does
     from app.services import cf_news

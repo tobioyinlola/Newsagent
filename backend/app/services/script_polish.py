@@ -114,6 +114,49 @@ def ends_with_handover(text: str) -> bool:
     return bool(parts) and bool(_HANDOVER.search(parts[-1]))
 
 
+# The presenter passing the conversation over: "Let's hear from the founder." The question that follows opens with its own welcome.
+_PASSOVER = re.compile(r"\b(let'?s hear (from|what)|let us hear|over to|hear (it )?(directly )?from)\b", re.I)
+
+
+def strip_passover(text: str) -> str:
+    """The text without its "let's hear from ..." hand-over lines (the first question welcomes the guest itself). Never empties it."""
+    kept = [s for s in sentences(text) if not _PASSOVER.search(s)]
+    return " ".join(kept) if kept else text
+
+
+def strip_invites(text: str) -> str:
+    """The text without any invitation to get featured: the closing card on screen carries the call to action, so the presenter
+    never says it. Never empties it."""
+    kept = [s for s in sentences(text) if not is_invite(s)]
+    return " ".join(kept) if kept else text
+
+
+# Lines that round the programme off: "That's all for this edition.", "Thank you for watching.", "Have a wonderful evening."
+_SIGNOFF = re.compile(
+    r"\b(that'?s all for|thank you for watching|thanks for watching|that was cover founder|until next time|see you (next time|soon)|"
+    r"good ?night|have a (wonderful|great|good|lovely) (day|evening|night|week)|for cover founder news)\b",
+    re.I,
+)
+
+
+def one_signoff(text: str) -> str:
+    """Rounds off once. Sign-off lines that follow each other ("That was Cover Founder News. Thank you for watching.") are one
+    round-up and stay together. If the closing rounds off in two separate places, only the last round-up is kept, so the
+    closing stays the closing. Every other sentence stays in place."""
+    parts = sentences(text)
+    idx = [i for i, s in enumerate(parts) if _SIGNOFF.search(s)]
+    groups: list[list[int]] = []
+    for i in idx:
+        if groups and i == groups[-1][-1] + 1:
+            groups[-1].append(i)
+        else:
+            groups.append([i])
+    if len(groups) < 2:
+        return text
+    drop = {i for g in groups[:-1] for i in g}
+    return " ".join(s for i, s in enumerate(parts) if i not in drop)
+
+
 def remove_repeats(parts: list[str]) -> list[str]:
     """The same pieces in the same order, with every sentence that repeats an earlier one (in this piece or an earlier piece)
     taken out, and at most one invitation to get featured and one "thank you for watching" kept (the last of each, so a

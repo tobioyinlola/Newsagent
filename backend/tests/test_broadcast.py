@@ -1,15 +1,20 @@
-from app.pipeline.steps import FEATURE_INVITE, presenter_identity, with_invite
+from app.pipeline.steps import presenter_identity
 from app.services.cf_news import _ok
 
 
-def test_every_sign_off_invites_viewers_to_get_featured_once():
-    assert with_invite("That was Acme. For Cover Founder News, thank you for watching.") == (
-        f"That was Acme. {FEATURE_INVITE} For Cover Founder News, thank you for watching."
-    )
-    assert with_invite("That was Acme.") == f"That was Acme. {FEATURE_INVITE}"
-    assert with_invite("") == FEATURE_INVITE
-    once = with_invite("That was Acme.")
-    assert with_invite(once) == once
+def test_no_sign_off_invites_viewers_to_get_featured_any_more():
+    from types import SimpleNamespace
+
+    from app.pipeline import steps
+    from app.services import script_polish as polish
+
+    segs = [{"kind": "outro", "text": "That was Acme. For Cover Founder News, thank you for watching."}]
+    assert steps.segment_texts(SimpleNamespace(segments=segs))["outro"] == segs[0]["text"]  # spoken as written
+    asked = [
+        {"kind": "outro", "text": "Thanks, Ada. If you want to get featured on Cover Founder, get in touch. Goodnight."}
+    ]
+    out = steps.segment_texts(SimpleNamespace(segments=asked))["outro"]
+    assert out == "Thanks, Ada. Goodnight." and not polish.has_invite(out)  # an invitation the writer added is dropped
 
 
 def test_ticker_headlines_skip_empty_and_banned_lines():
