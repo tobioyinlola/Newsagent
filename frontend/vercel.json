@@ -9,6 +9,17 @@
       "destination": "https://backend-production-73a97.up.railway.app/v1/$1"
     },
     {
+      "source": "/latest-stories/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(facebookexternalhit|Facebot|WhatsApp|LinkedInBot|Twitterbot|Slackbot|TelegramBot|Discordbot|SkypeUriPreview|Pinterest|redditbot|Googlebot|bingbot|Applebot).*"
+        }
+      ],
+      "destination": "https://backend-production-73a97.up.railway.app/v1/public/stories/:slug/preview"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

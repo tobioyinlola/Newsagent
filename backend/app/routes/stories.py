@@ -1,10 +1,14 @@
 """Latest Stories: the public lists and pages, and the owner's control over their own story's page."""
 
+from html import escape
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import Principal, current_principal
+from app.config import get_settings
 from app.db import get_session
 from app.integrations import registry
 from app.models import Asset, Project, Workspace
@@ -95,6 +99,69 @@ async def public_story(slug: str, session: AsyncSession = Depends(get_session)) 
         "video_url": storage.presign_get(video.storage_key, stories.PUBLIC_URL_TTL_S),
         "disclosure": DISCLOSURE,
     }
+
+
+async def _listed(session: AsyncSession, slug: str) -> tuple[Project, Workspace | None, dict, list[Asset]]:
+    project = (await session.execute(select(Project).where(Project.story_slug == slug))).scalar_one_or_none()
+    gone = HTTPException(404, "This story isn't available")
+    if project is None:
+        raise gone
+    ws = await session.get(Workspace, project.workspace_id)
+    story = await stories.story_of(session, project.id)
+    if not stories.listed(project, ws) or not story:
+        raise gone
+    return project, ws, story, await _assets(session, project.id)
+
+
+@router.get("/v1/public/stories/{slug}/image", dependencies=[Depends(limit("public-story", 120, 600))])
+async def story_image(slug: str, session: AsyncSession = Depends(get_session)) -> RedirectResponse:
+    """A steady address for a story's cover picture (the stored file's own link expires), for link previews."""
+    _, _, _, assets = await _listed(session, slug)
+    thumb = next((a for a in assets if a.type == "thumbnail"), None)
+    if thumb is None:
+        raise HTTPException(404, "No picture")
+    return RedirectResponse(registry.get_storage().presign_get(thumb.storage_key, stories.PUBLIC_URL_TTL_S), 302)
+
+
+@router.get(
+    "/v1/public/stories/{slug}/preview",
+    response_class=HTMLResponse,
+    dependencies=[Depends(limit("public-story", 120, 600))],
+)
+async def story_preview(slug: str, session: AsyncSession = Depends(get_session)) -> HTMLResponse:
+    """What WhatsApp, LinkedIn, X, Facebook and Slack read to draw a link preview. The site serves this page, instead of the app,
+    to those crawlers only (see vercel.json); people always get the app."""
+    project, ws, story, assets = await _listed(session, slug)
+    base = get_settings().app_base_url.rstrip("/")
+    url = f"{base}{stories.PATH_PREFIX}{slug}"
+    title = escape(str(story.get("headline") or "Cover Founder News"), quote=True)
+    desc = escape(str(story.get("dek") or ""), quote=True)
+    has_image = any(a.type == "thumbnail" for a in assets)
+    image = f"{base}/v1/public/stories/{slug}/image"
+    tags = [
+        ("property", "og:type", "article"),
+        ("property", "og:site_name", "Cover Founder News"),
+        ("property", "og:title", title),
+        ("property", "og:description", desc),
+        ("property", "og:url", url),
+        ("name", "twitter:card", "summary_large_image" if has_image else "summary"),
+        ("name", "twitter:title", title),
+        ("name", "twitter:description", desc),
+    ]
+    if has_image:
+        tags += [
+            ("property", "og:image", image),
+            ("property", "og:image:width", "1280"),
+            ("property", "og:image:height", "720"),
+            ("name", "twitter:image", image),
+        ]
+    meta = "\n".join(f'<meta {k}="{n}" content="{v}">' for k, n, v in tags)
+    body = (
+        f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{title}</title>'
+        f'<link rel="canonical" href="{url}">\n{meta}</head>'
+        f'<body><h1>{title}</h1><p>{desc}</p><p><a href="{url}">Watch the story</a></p></body></html>'
+    )
+    return HTMLResponse(body)
 
 
 async def _owned(session: AsyncSession, project_id: str, p: Principal) -> Project:

@@ -95,3 +95,20 @@ async def test_a_video_without_a_written_story_is_not_published(client, workspac
     pub = (await client.get(f"/v1/projects/{pid}/publication", headers=OWNER)).json()
     assert pub["published"] is False and pub["slug"] is None
     assert (await client.get("/v1/public/stories")).json() == []
+
+
+async def test_link_previews_have_the_headline_summary_and_a_steady_cover_address(client, workspace):
+    pid = await finished_story(client)
+    slug = (await client.get(f"/v1/projects/{pid}/publication", headers=OWNER)).json()["slug"]
+    card = (await client.get("/v1/public/stories")).json()[0]
+    r = await client.get(f"/v1/public/stories/{slug}/preview")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/html")
+    assert f'property="og:url" content="http://localhost:5173/latest-stories/{slug}"' in r.text
+    assert f'property="og:image" content="http://localhost:5173/v1/public/stories/{slug}/image"' in r.text
+    assert 'name="twitter:card" content="summary_large_image"' in r.text
+    assert card["title"].replace("&", "&amp;").replace('"', "&quot;")[:20] in r.text
+    img = await client.get(f"/v1/public/stories/{slug}/image")
+    assert img.status_code == 302 and img.headers["location"]
+    await client.delete(f"/v1/projects/{pid}/publication", headers=OWNER)  # taken down: no preview, no picture
+    assert (await client.get(f"/v1/public/stories/{slug}/preview")).status_code == 404
+    assert (await client.get(f"/v1/public/stories/{slug}/image")).status_code == 404
