@@ -13,12 +13,15 @@ import { Button, Card, ErrorBox, Notice } from "../components/ui";
 import { streamProjectEvents } from "../lib/sse";
 import { InterviewPanel, ReviewPanel } from "../components/Interview";
 import { LiveInterviewPanel } from "../interview/LiveInterview";
+import { useMe } from "../components/Layout";
 import { stateLabel, stepIndex, stepsFor } from "../lib/states";
+import { videoTitle } from "../lib/title";
 
 export function ProjectDetail() {
   const { id = "" } = useParams();
   const qc = useQueryClient();
   const path = { params: { path: { project_id: id } } };
+  const me = useMe();
   const project = useQuery({ queryKey: ["project", id], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}", path)) });
   const state = project.data?.state;
   const script = useQuery({
@@ -59,7 +62,7 @@ export function ProjectDetail() {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Video {p.id.slice(0, 6)}</h1>
+        <h1 className="text-2xl font-bold">{videoTitle(me.data?.workspace_name, p.created_at)}</h1>
         <span className="rounded-full bg-paper px-3 py-1 text-sm" aria-live="polite">{stateLabel(p.state)}</span>
       </div>
       <Stepper labels={steps.map((s) => s.label)} current={p.state === "final_ready" ? steps.length - 1 : cur} done={p.state === "final_ready"} />

@@ -27,8 +27,10 @@ async function toInterview(page: import("@playwright/test").Page, token: string)
   await page.addInitScript((t) => { if (!sessionStorage.getItem("seeded")) { sessionStorage.setItem("seeded", "1"); localStorage.setItem("newsagent.token", t); } }, token);
   await page.goto("/projects/new-classic");
   await expect(page.getByRole("group", { name: "Your presenter" })).toBeVisible();
-  await page.getByRole("radio", { name: /Stand-in presenter \(woman\)/ }).click();
-  await expect(page.getByRole("radio", { name: /Stand-in presenter \(woman\)/ })).toHaveAttribute("aria-checked", "true");
+  // only the default presenter can be picked today; the others are shown as coming soon
+  await expect(page.getByRole("radio")).toHaveCount(1);
+  await expect(page.getByRole("radio").first()).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByText("Coming soon").first()).toBeVisible();
   await page.getByLabel("Your name").fill("Ada Obi");
   await page.getByLabel("Your role").fill("CEO, Acme Farms");
   await page.getByLabel("Paste your announcement or news script").fill(BRIEF);

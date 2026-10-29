@@ -345,6 +345,14 @@ export function InterviewRoom(p: RoomProps) {
 // After the last question: how far the checks have got, answer by answer, so the wait never looks stuck.
 const STEP_OF: Record<string, number> = { uploading: 1, processing: 2, ready: 3, needs_retake: 3, failed: 3 };
 function CheckingProgress({ indices, takes }: { indices: number[]; takes: Record<number, TakeState | undefined> }) {
+  const stillUploading = indices.some((q) => takes[q]?.status === "uploading");
+  const [slow, setSlow] = useState(false);
+  useEffect(() => { // an upload that has not finished in under a minute is stuck, not slow: say so instead of spinning forever
+    setSlow(false);
+    if (!stillUploading) return;
+    const t = window.setTimeout(() => setSlow(true), 60_000);
+    return () => window.clearTimeout(t);
+  }, [stillUploading]);
   const total = indices.length * 3;
   const done = indices.reduce((n, q) => n + (STEP_OF[takes[q]?.status ?? ""] ?? 0), 0);
   const checked = indices.filter((q) => (STEP_OF[takes[q]?.status ?? ""] ?? 0) === 3).length;
@@ -372,6 +380,7 @@ function CheckingProgress({ indices, takes }: { indices: number[]; takes: Record
         })}
       </ul>
       <p className="text-xs text-white/60">Hold on while we check your recordings. Please keep this tab open.</p>
+      {slow && <p role="alert" className="rounded-sm border border-brand-peach p-2 text-xs text-brand-peach">Uploading is taking much longer than it should. Check your internet connection and keep this tab open; your recordings are saved on this device and will keep retrying. If it doesn't move, contact support.</p>}
     </div>
   );
 }

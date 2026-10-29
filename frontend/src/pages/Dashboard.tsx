@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { Card, ErrorBox } from "../components/ui";
 import { stateLabel } from "../lib/states";
+import { videoTitle } from "../lib/title";
 
 const cta = "rounded-sm border-2 border-ink bg-brand-green px-4 py-2 text-sm font-bold text-ink hover:bg-ink hover:text-brand-green";
 
@@ -39,7 +40,7 @@ export function Dashboard() {
             {recent.map((p) => (
               <li key={p.id}>
                 <Link to={`/projects/${p.id}`} className="flex flex-wrap items-center justify-between gap-2 py-3 hover:bg-paper">
-                  <span className="font-medium">Video {p.id.slice(0, 6)} <span className="text-sm font-normal text-muted">· {new Date(p.created_at).toLocaleDateString()}</span></span>
+                  <span className="font-medium">{videoTitle(me.data?.workspace_name, p.created_at)}</span>
                   <span className="rounded-full bg-paper px-3 py-1 text-sm">{stateLabel(p.state)}</span>
                 </Link>
               </li>

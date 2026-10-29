@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, unwrap } from "../api/client";
 
-// Choose which AI presenter reads the news. The house presenters come first (the first is the default); search finds others.
-const AVAILABLE = 3; // the house presenters people can pick today; more are shown, blurred, as coming soon
-const PREVIEWED = 5;
+// The AI presenter who reads the news. Only the house default is available today (the first in the list); the next few are shown,
+// blurred, as coming soon.
+const AVAILABLE = 1;
+const PREVIEWED = 3;
 
 export function PresenterPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
   const list = useQuery({
@@ -18,7 +19,7 @@ export function PresenterPicker({ value, onChange }: { value: string; onChange: 
   return (
     <fieldset className="space-y-2 rounded-md border-2 border-ink p-3">
       <legend className="px-1 text-sm font-semibold">Your presenter</legend>
-      <p className="text-sm text-muted">Our news-desk presenter is selected for you. Pick another if you prefer.</p>
+      <p className="text-sm text-muted">Our news-desk presenter reads your story. More presenters are coming soon.</p>
       {list.isError && <p className="text-sm text-muted">The presenter list isn't available right now. The default presenter will be used.</p>}
       <div role="radiogroup" aria-label="Presenters" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {ready.map((p, i) => {
