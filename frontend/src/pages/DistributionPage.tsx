@@ -82,9 +82,6 @@ function OutletMarquee() {
         <LogoRow outlets={OUTLETS_TOP} />
         <LogoRow outlets={OUTLETS_BOTTOM} reverse />
       </div>
-      <p className="mx-auto mt-6 max-w-3xl text-center text-xs text-white/50">
-        Examples of the outlets distribution networks reach. Logos belong to their owners and are shown for illustration only: they don't mean an outlet endorses Cover Founder or has agreed to run your story.
-      </p>
     </section>
   );
 }
