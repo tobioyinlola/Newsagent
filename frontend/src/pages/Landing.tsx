@@ -44,6 +44,18 @@ export function HeroArt() {
   );
 }
 
+// The home page's hero picture: a real TV studio with the Cover Founder set. The desk sits in the middle of the picture, so it stays
+// centred at every width; a light wash (darker at the top and bottom, and behind the headline) keeps the text readable.
+export function HeroPhoto() {
+  return (
+    <div aria-hidden="true" className="absolute inset-0">
+      <img src="/hero-studio.jpg" alt="" width={1920} height={1071} fetchPriority="high" decoding="async" className="h-full w-full object-cover" style={{ objectPosition: "57% 46%" }} />
+      <div className="absolute inset-0 bg-ink/25" />
+      <div className="absolute inset-0 bg-gradient-to-b from-ink/75 via-ink/10 to-ink/90" />
+    </div>
+  );
+}
+
 export function BannerArt() {
   return (
     <svg viewBox="0 0 1200 420" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" aria-hidden="true">
@@ -565,8 +577,8 @@ export function Landing() {
     <SiteShell>
       <main>
         <section className="cf-grain relative overflow-hidden px-4 pb-16 pt-16 md:px-8 md:pt-24">
-          <HeroArt />
-          <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(25,26,48,0.88)_0%,rgba(25,26,48,0.55)_45%,transparent_75%)]" />
+          <HeroPhoto />
+          <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(25,26,48,0.72)_0%,rgba(25,26,48,0.4)_45%,transparent_72%)]" />
           <div className="relative z-10 mx-auto max-w-4xl text-center">
             <p className="inline-block rounded-sm border border-white/20 bg-ink/70 px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest text-white"><span className="text-brand-green" aria-hidden="true">● </span>AI newsroom for businesses</p>
             <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">AI newsroom for businesses.<br /><span className="text-brand-green">Press Creation &amp; Distribution</span></h1>
