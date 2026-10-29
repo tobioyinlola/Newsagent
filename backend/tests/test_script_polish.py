@@ -82,7 +82,7 @@ def test_only_one_thank_you_for_watching():
 
 def test_the_standard_sign_off_is_just_the_sign_off():
     t = steps.segment_texts(script([{"kind": "outro", "text": presenters.STANDARD_OUTRO}]))
-    assert t["outro"] == "That was Cover Founder News. Thank you for watching."
+    assert t["outro"] == presenters.STANDARD_OUTRO
 
 
 def test_the_opening_does_not_hand_over():

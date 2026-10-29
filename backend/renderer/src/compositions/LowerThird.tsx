@@ -31,13 +31,13 @@ export const LowerThird: React.FC<{ name?: string; title?: string; location?: st
         </div>
       ) : null}
       {headline ? (
-        <div style={{ display: "flex", alignItems: "stretch", height: barH, opacity: barIn, transform: `scaleX(${0.85 + 0.15 * barIn})`, transformOrigin: "left center" }}>
+        <div style={{ display: "flex", alignItems: "stretch", minHeight: barH, opacity: barIn, transform: `scaleX(${0.85 + 0.15 * barIn})`, transformOrigin: "left center" }}>
           <div style={{ background: CF.navy, display: "flex", alignItems: "center", gap: 12 * u, padding: `0 ${20 * u}px`, borderBottom: `${6 * u}px solid ${CF.green}` }}>
             <CFSymbol height={barH * 0.56} />
             <span style={{ color: CF.green, fontWeight: 800, fontSize: 26 * u, letterSpacing: 2 * u }}>NEWS</span>
           </div>
-          <div style={{ flex: 1, background: CF.white, display: "flex", alignItems: "center", padding: `0 ${26 * u}px`, borderBottom: `${6 * u}px solid ${CF.green}`, overflow: "hidden" }}>
-            <span style={{ color: CF.ink, fontWeight: 800, fontSize: (portrait ? 34 : 40) * u, lineHeight: 1.05, textTransform: "uppercase", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{headline}</span>
+          <div style={{ flex: 1, background: CF.white, display: "flex", alignItems: "center", padding: `${12 * u}px ${26 * u}px`, borderBottom: `${6 * u}px solid ${CF.green}`, overflow: "hidden" }}>
+            <span style={{ color: CF.ink, fontWeight: 800, fontSize: (portrait ? 34 : 40) * u, lineHeight: 1.2, textTransform: "uppercase", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{headline}</span>
           </div>
         </div>
       ) : null}

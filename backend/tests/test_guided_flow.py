@@ -8,6 +8,7 @@ from app.integrations import registry
 from app.integrations.avatar.mock import MockAvatarProvider
 from app.models import Asset, Job, Project, ScriptVersion, Workspace
 from app.pipeline.queue import get_queue
+from app.services import presenters
 from tests.conftest import OWNER, VIDEO
 from tests.helpers import record
 from tests.test_broll import add_image
@@ -61,9 +62,7 @@ async def test_finishing_the_interview_writes_the_story_for_review(client, works
     assert str(datetime.now(UTC).year) in story["dateline"] and story["about"]
     assert story["contact"]["email"] and "company" in story["contact"]
     script = (await client.get(f"/v1/projects/{pid}/script", headers=OWNER)).json()
-    assert (
-        script["segments"][-1]["kind"] == "outro" and len(script["segments"][-1]["text"].split()) >= 40
-    )  # a real sign-off, not one line
+    assert script["segments"][-1]["kind"] == "outro" and script["segments"][-1]["text"] == presenters.STANDARD_OUTRO
     assert len(script["interview_questions"]) == 4 and not script["approved"] and script["story"]["headline"]
     async with maker() as s:  # nothing from the presenter vendor yet: the owner reviews the story first
         stages = {j.stage for j in (await s.execute(select(Job).where(Job.project_id == pid))).scalars()}

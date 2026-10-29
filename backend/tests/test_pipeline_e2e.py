@@ -138,3 +138,23 @@ async def test_vendor_failure_retries_then_fails_retryable(client, workspace, ma
 async def test_admin_requires_operator(client, workspace):
     r = await client.post("/v1/admin/invites", json={"email": "a@b.example.com", "workspace_name": "X"}, headers=OWNER)
     assert r.status_code == 403
+
+
+async def test_a_finished_video_can_be_deleted_with_everything_that_belongs_to_it(client, workspace, maker):
+    from app.models import ProviderRequest
+
+    pid, script = await _to_ready(client)
+    body = {k: script[k] for k in ("segments", "ticker_lines", "lower_thirds", "interview_questions")}
+    body["segments"] = [{"kind": "intro", "text": "Tonight we feature Acme, a farm marketplace."}]
+    await client.put(f"/v1/projects/{pid}/script", json=body, headers=OWNER)
+    await client.post(f"/v1/projects/{pid}/script/approve", headers=OWNER)
+    await get_queue().drain()
+    async with (
+        maker() as s
+    ):  # the vendor-request rows point at the project: leaving them behind blocks the delete in Postgres
+        s.add(ProviderRequest(project_id=pid, provider="heygen", slot="clip", request_hash="h"))
+        await s.commit()
+    assert (await client.delete(f"/v1/projects/{pid}", headers=OWNER)).status_code == 200
+    async with maker() as s:
+        assert not (await s.execute(select(ProviderRequest).where(ProviderRequest.project_id == pid))).scalars().first()
+        assert await s.get(Project, pid) is None
