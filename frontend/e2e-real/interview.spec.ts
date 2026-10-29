@@ -151,8 +151,20 @@ test("founder records on a throttled 4G phone, survives a dropped connection, an
   expect(info.streams.some((s) => s.codec_type === "audio")).toBe(true);
   expect(Number(info.format.duration)).toBeGreaterThan(4 * QUESTIONS.length); // anchor + questions + answers + outro
   console.log(`final video: ${info.format.duration}s, ${(buf.length / 1024).toFixed(0)} KB`);
-  const vertical = items.find((i) => i.type === "render" && i.format === "9x16")!;
-  expect(vertical).toBeTruthy();
+  // vertical 9:16 is optional (RENDER_VERTICAL), off by default
+  expect(items.find((i) => i.type === "render" && i.format === "9x16")).toBeUndefined();
+  // the light download: the same video, a smaller file, made from the HD one
+  const light = items.find((i) => i.type === "render_light" && i.format === "16x9")!;
+  expect(light).toBeTruthy();
+  const lightBuf = await (await request.get(light.url)).body();
+  const lightTmp = path.join(os.tmpdir(), `e2e-light-${Date.now()}.mp4`);
+  fs.writeFileSync(lightTmp, lightBuf);
+  const lightInfo = probe(lightTmp);
+  expect(lightInfo.streams.find((s) => s.codec_type === "video")).toMatchObject({ width: 1920, height: 1080 });
+  expect(lightInfo.streams.some((s) => s.codec_type === "audio")).toBe(true);
+  expect(Math.abs(Number(lightInfo.format.duration) - Number(info.format.duration))).toBeLessThan(0.5);
+  expect(lightBuf.length).toBeLessThan(buf.length);
+  console.log(`light video: ${(lightBuf.length / 1024).toFixed(0)} KB (HD ${(buf.length / 1024).toFixed(0)} KB)`);
   const costs = await (await request.get(`${API}/v1/projects/${id}/costs`, { headers: OWNER })).json();
   expect(costs.lines.map((l: { stage: string }) => l.stage)).toEqual(expect.arrayContaining(["anchor_render", "question_clips", "process_take", "merge_render"]));
 });

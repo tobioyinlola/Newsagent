@@ -25,6 +25,22 @@ async def test_downloads_signed_urls_and_disclosure(client, workspace):
     assert all(i["expires_in_s"] <= 900 and i["url"] for i in d["items"])
 
 
+async def test_every_video_is_offered_as_hd_and_light_and_the_light_one_is_made_from_the_hd_file(client, workspace):
+    from app.integrations import registry
+
+    pid = await make_final_ready(client)
+    d = (await client.get(f"/v1/projects/{pid}/downloads", headers=OWNER)).json()
+    names = {(i["type"], i["format"]): i["filename"] for i in d["items"]}
+    assert names[("render", "16x9")] == "video-16x9.mp4"
+    assert names[("render_light", "16x9")] == "video-16x9-light.mp4"
+    # the renderer is told to derive the light file from the HD one (it follows it in the list), never to render again
+    req = [r for r in registry.get_renderer().requests if r.output_prefix.endswith("/final")][-1]
+    videos = [o for o in req.outputs if o["kind"] == "video"]
+    assert [o.get("variant") for o in videos][:2] == [None, "light"] and videos[0]["format"] == videos[1][
+        "format"
+    ] == "16x9"
+
+
 async def test_downloads_are_private_to_workspace(client, workspace, maker):
     from app.models import User, Workspace
 

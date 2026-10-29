@@ -3716,7 +3716,9 @@ export interface components {
             /** Email */
             email?: string | null;
             /** Industry */
-            industry?: ("energy" | "industrials" | "consumer" | "agriculture" | "health_care" | "financials" | "real_estate" | "technology" | "government" | "entertainment" | "education") | null;
+            industry?: ("energy" | "industrials" | "consumer" | "agriculture" | "health_care" | "financials" | "real_estate" | "technology" | "government" | "entertainment" | "education" | "other") | null;
+            /** Industry Other */
+            industry_other?: string | null;
             /** Invite Code */
             invite_code?: string | null;
             /** Password */

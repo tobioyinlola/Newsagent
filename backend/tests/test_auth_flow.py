@@ -499,7 +499,12 @@ async def test_a_business_can_sign_up_on_its_own_and_must_verify_its_emailed_cod
         "/v1/auth/signup/start",
         json={"email": email, "business_name": "NewBiz Ltd", "password": PW, **no_industry, "industry": "mining"},
     )
-    assert r.status_code == 422  # one of the eleven sectors
+    assert r.status_code == 422  # one of the listed sectors
+    r = await client.post(
+        "/v1/auth/signup/start",
+        json={"email": email, "business_name": "NewBiz Ltd", "password": PW, **no_industry, "industry": "other"},
+    )
+    assert r.status_code == 422  # "Others" needs the business to say what it is
     r = await client.post(
         "/v1/auth/signup/start", json={"email": email, "business_name": "NewBiz Ltd", "password": PW, **place}
     )
@@ -539,3 +544,30 @@ async def test_open_sign_up_can_be_switched_off_and_needs_a_business_name(client
         },
     )
     assert r.status_code == 403
+
+
+async def test_a_business_that_picks_others_says_which_industry_and_it_is_kept(client, workspace, maker):
+    from app.models import Workspace
+
+    email = "owner@marine.example.com"
+    body = {"email": email, "business_name": "Marine Co", "password": PW, "city": "Accra", "country": "Ghana"}
+    r = await client.post(
+        "/v1/auth/signup/start", json={**body, "industry": "other", "industry_other": "Marine salvage"}
+    )
+    assert r.status_code == 200
+    r = await client.post("/v1/auth/signup/verify", json={"email": email, "code": last_code(email)})
+    assert r.status_code == 200
+    async with maker() as db:
+        ws = (await db.execute(select(Workspace).where(Workspace.name == "Marine Co"))).scalar_one()
+        assert (ws.industry, ws.industry_other) == ("other", "Marine salvage")
+    # a listed industry never carries stray free text
+    email2 = "owner@farm.example.com"
+    r = await client.post(
+        "/v1/auth/signup/start",
+        json={**body, "email": email2, "business_name": "Farm Co", "industry": "agriculture", "industry_other": "x"},
+    )
+    assert r.status_code == 200
+    await client.post("/v1/auth/signup/verify", json={"email": email2, "code": last_code(email2)})
+    async with maker() as db:
+        ws = (await db.execute(select(Workspace).where(Workspace.name == "Farm Co"))).scalar_one()
+        assert (ws.industry, ws.industry_other) == ("agriculture", None)

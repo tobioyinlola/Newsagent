@@ -70,8 +70,14 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await expect(page.getByLabel("Outro")).toHaveValue(/For Cover Founder News, thank you for watching\.$/); // a full sign-off, not one line
   await expect(page.getByLabel(/Interview question/)).toHaveCount(0); // the questions are fixed once the answers are recorded
   await expect(page.getByRole("button", { name: "Make my video" })).toBeEnabled(); // pictures are optional
-  await page.getByLabel("Choose pictures").setInputFiles([{ name: "one.png", mimeType: "image/png", buffer: PNG }, { name: "two.png", mimeType: "image/png", buffer: PNG }]);
+  const sample = (process.env.SNAPSHOT_PICS ?? "").split(",").filter(Boolean); // optional real pictures, for a visual check
+  await page.getByLabel("Choose pictures").setInputFiles(sample.length >= 2 ? sample.slice(0, 2) : [{ name: "one.png", mimeType: "image/png", buffer: PNG }, { name: "two.png", mimeType: "image/png", buffer: PNG }]);
   await expect(page.getByAltText("Your picture")).toHaveCount(2, { timeout: 20_000 });
+  // the pictures just uploaded also appear inside the press release, between its paragraphs
+  const release = page.locator("article");
+  await expect(release.getByRole("figure")).toHaveCount(2);
+  await expect(release.locator("figure img").first()).toBeVisible();
+  if (process.env.SNAPSHOT_OUT) await release.screenshot({ path: process.env.SNAPSHOT_OUT });
   await expect(page.getByRole("button", { name: "Make my video" })).toBeEnabled();
   const claims = page.getByRole("group", { name: "Confirm these claims are accurate" });
   if (await claims.count()) {

@@ -167,7 +167,7 @@ async def export_workspace(session: AsyncSession, ws: Workspace, user: User) -> 
                 "files": [
                     {"type": a.type, "format": a.format, "download_url": storage.presign_get(a.storage_key, 3600)}
                     for a in assets
-                    if a.type in {"render", "thumbnail", "caption", "preview"}
+                    if a.type in {"render", "render_light", "thumbnail", "caption", "preview"}
                 ],
             }
         )

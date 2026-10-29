@@ -6,16 +6,16 @@ import os from "node:os";
 import path from "node:path";
 import { NewsProps, defaultProps } from "../compositions/types";
 import { assertEvenScale, compositionName, renderOne, renderThumbnail } from "../render";
-import { Analysis, analyzeUrl, normalizeAudio } from "../media";
+import { Analysis, analyzeUrl, makeLight, normalizeAudio } from "../media";
 import { chromaKey } from "../chromakey";
 import { processTake } from "../process";
 import { putFile } from "./storage";
 import { localizeMedia } from "./localize";
 
 type Job = { status: "queued" | "running" | "succeeded" | "failed"; progress: number; output_keys: string[]; error: string | null; result?: unknown; cancel?: () => void; cancelled?: boolean; endedAt?: number };
-type Output = { kind?: "video" | "thumbnail"; name?: string; scale?: number; format: "16x9" | "9x16"; width: number; height: number };
+type Output = { kind?: "video" | "thumbnail"; variant?: "light"; name?: string; scale?: number; format: "16x9" | "9x16"; width: number; height: number };
 
-export function createApp(opts: { maxQueue?: number; secret: string; maxConcurrent?: number; maxLight?: number; jobTtlMs?: number; processFn?: typeof processTake; keyFn?: typeof chromaKey; renderFn?: typeof renderOne; thumbFn?: typeof renderThumbnail; analyzeFn?: (url: string) => Promise<Analysis>; normalizeFn?: (file: string) => Promise<void> }) {
+export function createApp(opts: { maxQueue?: number; secret: string; maxConcurrent?: number; maxLight?: number; jobTtlMs?: number; processFn?: typeof processTake; keyFn?: typeof chromaKey; renderFn?: typeof renderOne; thumbFn?: typeof renderThumbnail; analyzeFn?: (url: string) => Promise<Analysis>; normalizeFn?: (file: string) => Promise<void>; lightFn?: (input: string, output: string) => Promise<void> }) {
   const app = express();
   app.use(express.json({ limit: "1mb" }));
   const jobs = new Map<string, Job>();
@@ -31,6 +31,7 @@ export function createApp(opts: { maxQueue?: number; secret: string; maxConcurre
   const processFile = opts.processFn ?? processTake;
   const keyOut = opts.keyFn ?? chromaKey;
   const normalize = opts.normalizeFn ?? normalizeAudio;
+  const makeLightFile = opts.lightFn ?? makeLight;
 
   const pump = (lane: Lane) => {
     while (lane.running < lane.max && lane.queue.length) {
@@ -110,18 +111,24 @@ export function createApp(opts: { maxQueue?: number; secret: string; maxConcurre
         mediaDirs.set(id, mediaDir);
         const port = Number(process.env.PORT || 4000);
         const local = await localizeMedia(merged, mediaDir, (f) => `http://127.0.0.1:${port}/media/${id}/${f}`);
+        const hd: Record<string, string> = {}; // each format's finished HD file, which its light version is made from
         for (const [i, o] of outputs.entries()) {
           const thumb = o.kind === "thumbnail";
           const base = o.name ?? o.format;
           if (!/^[a-z0-9x_-]+$/i.test(base)) throw new Error("invalid output name");
           const file = path.join(dir, `${base}.${thumb ? "png" : "mp4"}`);
           if (thumb) await renderThumb(o.format, local, file, composition);
-          else {
+          else if (o.variant === "light") {
+            const source = hd[o.format];
+            if (!source) throw new Error("a light version needs its HD version listed before it");
+            await makeLightFile(source, file); // a re-encode of the HD file: no second render
+          } else {
             assertEvenScale(o.width, o.height, o.scale ?? 1);
             if (job.cancelled) throw new Error("cancelled");
             await render({ composition, format: o.format, props: local, outFile: file, scale: o.scale, cancelSignal, onProgress: (p) => { job.progress = (i + p) / outputs.length; } });
           }
-          if (!thumb && o.name !== "preview") await normalize(file); // preview skips the extra pass
+          if (!thumb && o.name !== "preview" && o.variant !== "light") await normalize(file); // preview skips the extra pass
+          if (!thumb && o.variant !== "light" && o.name !== "preview") hd[o.format] = file;
           const key = `${output_prefix}/${base}.${thumb ? "png" : "mp4"}`;
           await putFile(key, file);
           job.output_keys.push(key);

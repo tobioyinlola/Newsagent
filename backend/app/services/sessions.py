@@ -49,6 +49,7 @@ async def issue_code(
     city: str | None = None,
     country: str | None = None,
     industry: str | None = None,
+    industry_other: str | None = None,
 ) -> str:
     """Create a fresh code. Codes older than a minute stop working; one requested seconds ago (a double click, a quick resend) still does,
     so the code in the first email the person opens is never the one that was just cancelled."""
@@ -77,6 +78,7 @@ async def issue_code(
             city=city,
             country=country,
             industry=industry,
+            industry_other=industry_other,
             expires_at=now + timedelta(minutes=get_settings().otp_ttl_minutes),
         )
     )

@@ -58,7 +58,7 @@ class JsonScriptLLM(ScriptLLM):
             "ticker_lines [str], lower_thirds [{title,subtitle}], interview_questions [str]. "
             "interview_questions: exactly 4 short, open questions (each under 25 words, never yes/no) that a "
             "presenter would ask the founder about THIS announcement, each answerable in about 40 seconds, "
-            "ordered from the story to the vision; address the founder directly, do not name them in the questions. "
+            "ordered from the story to the vision; no two questions may ask the same thing; address the founder directly, do not name them in the questions. "
             f"Tone: {tone}. Facts: {json.dumps(facts)}"
         )
         draft = ScriptDraft.model_validate(raw)
@@ -87,7 +87,7 @@ class JsonScriptLLM(ScriptLLM):
             "aloud the way a presenter would, such as 'acme dot com'; if not, say to search for the company by name. Never read out a "
             "full URL with slashes. Before the final sign-off, always invite viewers who want their business or founder story featured on Cover Founder to get in touch. End with a sign-off for Cover Founder News), chyrons [str] (exactly one per interview answer below, in the same order: a news-channel headline bar for while that answer plays, in the form 'SURNAME: WHAT THEY SAID IN A FEW WORDS', under 60 characters, drawn only from that answer), ticker_lines (2 or 3 short strings), lower_thirds "
             "[{title, subtitle}] (one, short), unverified [str] (claims the founder made that the facts do not support; the story must "
-            "hedge them with 'says' or 'the company reports'). Use only the facts and the founder's own words below; never invent "
+            "hedge them with 'says' or 'the company reports'). The presenter's opening, the interview questions and the outro are heard one after the other as one programme, so never say the same sentence or idea twice across them: the opening ends by handing over to the founder (and only the opening does), the outro never hands over again, and the invitation to get featured and the thank-you each appear once, in the outro. Use only the facts and the founder's own words below; never invent "
             "numbers, names or quotes. "
             f"Announcement type: {announcement_type}. Facts: {json.dumps(facts)}\nInterview:\n{said}"
         )

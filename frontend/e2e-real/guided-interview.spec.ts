@@ -52,9 +52,9 @@ test("guided flow, recorded for real, merged into the final video", async ({ bro
   }
   await expect(page.getByRole("heading", { name: "Review your interview" })).toBeVisible({ timeout: 120_000 });
   await shot("4-review-answers");
-  await page.getByRole("button", { name: "Write my story" }).click();
+  await page.getByRole("button", { name: "Produce my story" }).click();
 
-  await expect(page.getByRole("heading", { name: "Your news story" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Your press release" })).toBeVisible({ timeout: 30_000 });
   const pics: { name: string; mimeType: string; buffer: Buffer }[] = [];
   for (const [i, color] of ["0x0f3f86", "0x1c8c5a"].entries()) {
     const f = path.join(os.tmpdir(), `pic-${Date.now()}-${i}.png`);

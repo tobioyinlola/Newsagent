@@ -21,6 +21,7 @@ from app.models import Asset, BrandKit, InterviewSession, Job, Project, ScriptVe
 from app.services import cf_news, provider_requests
 from app.services import presenter as clip_lib
 from app.services import scene_plan as sp
+from app.services import script_polish as polish
 from app.services import state_machine as sm
 from app.services.captions import build_srt
 from app.services.claims import detect_claims
@@ -31,9 +32,14 @@ from app.services.spend_guard import LimitReached, SpendGuard
 
 log = logging.getLogger("pipeline")
 
+# Each video is delivered twice: HD (the render as made) and Light (the same video re-encoded to a much smaller file by the
+# renderer's ffmpeg, from the HD file: no second render, and nothing to do with the presenter vendor). A light entry must come
+# straight after the HD entry it is made from.
 FORMATS = [
     {"kind": "video", "format": "16x9", "width": 1920, "height": 1080},
+    {"kind": "video", "format": "16x9", "name": "16x9-light", "variant": "light", "width": 1920, "height": 1080},
     {"kind": "video", "format": "9x16", "width": 1080, "height": 1920},
+    {"kind": "video", "format": "9x16", "name": "9x16-light", "variant": "light", "width": 1080, "height": 1920},
     {"kind": "thumbnail", "format": "16x9", "name": "thumbnail", "width": 1920, "height": 1080},
 ]
 VERTICAL = "9x16"
@@ -86,7 +92,7 @@ def with_invite(text: str) -> str:
     """Every video ends by inviting viewers to get featured. The invitation goes just before a closing "thank you for
     watching" line when there is one, otherwise at the very end; a text that already invites is left alone."""
     t = text.strip()
-    if "featured on cover founder" in t.lower():
+    if polish.has_invite(t):  # however the writer worded it: never invite twice
         return t
     if not t:
         return FEATURE_INVITE
@@ -101,8 +107,9 @@ def anchor_text(script: ScriptVersion) -> str:
 
 
 def presenter_only_text(script: ScriptVersion) -> str:
-    """What the presenter says in a presenter-only video: the whole script, ending with the invitation to get featured."""
-    return with_invite(anchor_text(script))
+    """What the presenter says in a presenter-only video: the whole script, ending with the invitation to get featured.
+    Nothing is said twice."""
+    return with_invite(polish.remove_repeats([anchor_text(script)])[0])
 
 
 def _fullframe_entries() -> dict[str, bool]:
@@ -518,10 +525,17 @@ def segment_texts(script: ScriptVersion) -> dict[str, str]:
         "main": join(lambda k: k != "outro" and k not in EXTRA_KINDS),
         "explanation": join(lambda k: k == "explanation"),
         "analysis": join(lambda k: k == "analysis"),
-        "outro": with_invite(join(lambda k: k == "outro")),  # every video signs off with the invitation to get featured
+        "outro": join(lambda k: k == "outro"),
     }
     if not out["main"] and out["explanation"]:  # a script that only has an explanation: it is the opening
         out["main"], out["explanation"] = out["explanation"], ""
+    # The invitation to get featured belongs to the closing and is said once: any the writer put earlier is dropped, and
+    # the standard one is added only when the closing has none. Then nothing is said twice anywhere in the programme.
+    for part in ("main", "explanation", "analysis"):
+        out[part] = " ".join(s for s in polish.sentences(out[part]) if not polish.is_invite(s))
+    out["outro"] = with_invite(out["outro"])
+    order = ["main", "explanation", "analysis", "outro"]
+    out = dict(zip(order, polish.remove_repeats([out[k] for k in order]), strict=True))
     return out
 
 
@@ -590,21 +604,35 @@ def needed_questions(project: Project, count: int) -> list[int]:
     if not plan:
         return list(range(count))
     include = {a["question_index"] for a in plan["answers"] if a.get("include", True)}
-    return [q for q in plan.get("order", range(count)) if q in include and q < count]
+    return list(dict.fromkeys(q for q in plan.get("order", range(count)) if q in include and q < count))
+
+
+def question_texts(project: Project, script: ScriptVersion, needed: list[int]) -> dict[int, str]:
+    """What the presenter says for each question, in the order they play. In the guided flow the first one hands the
+    conversation to the founder, unless the opening already did. A line that repeats anything said earlier in the programme
+    (the opening, an earlier question) is left out."""
+    texts = segment_texts(script)
+    before = [texts["main"], texts["explanation"]]
+    out: dict[int, str] = {}
+    for n, q in enumerate(needed):
+        text = script.interview_questions[q]
+        if project.flow == "guided" and n == 0 and not polish.ends_with_handover(" ".join(before)):
+            text = f"Let's hear from the founder. {text}"
+        fresh = polish.remove_repeats([*before, text])[-1]
+        out[q] = fresh or text  # never an empty clip: a question must still be asked
+        before.append(out[q])
+    return out
 
 
 def question_text(project: Project, script: ScriptVersion, q: int, needed: list[int]) -> str:
-    """What the presenter says for a question. In the guided flow the first one hands the conversation to the founder."""
-    text = script.interview_questions[q]
-    if project.flow == "guided" and needed and q == needed[0]:
-        return f"Let's hear from the founder. {text}"
-    return text
+    return question_texts(project, script, needed)[q]
 
 
 async def question_clips(session: AsyncSession, project: Project, guard: SpendGuard) -> StepOutcome:
     """One anchor clip per featured interview question (stage 8). Idempotent per question."""
     script = await approved_script(session, project.id)
     needed = needed_questions(project, len(script.interview_questions))
+    spoken = question_texts(project, script, needed)
     total = await _paid_clips(
         session,
         project,
@@ -613,7 +641,7 @@ async def question_clips(session: AsyncSession, project: Project, guard: SpendGu
             dict(
                 atype="question_clip",
                 fmt=f"q{i}",
-                text=question_text(project, script, i, needed),
+                text=spoken[i],
                 key=f"projects/{project.id}/question-{i}.{clip_ext(project)}",
             )
             for i in needed
@@ -711,12 +739,14 @@ async def _record_outputs(session: AsyncSession, project: Project, status) -> di
     if not any(o["format"] == VERTICAL for o in made):  # an older vertical file no longer matches this video
         for old in (
             await session.execute(
-                select(Asset).where(Asset.project_id == project.id, Asset.type == "render", Asset.format == VERTICAL)
+                select(Asset).where(
+                    Asset.project_id == project.id, Asset.type.in_(["render", "render_light"]), Asset.format == VERTICAL
+                )
             )
         ).scalars():
             await session.delete(old)
     for o, key in zip(made, status.output_keys, strict=False):
-        atype = "thumbnail" if o["kind"] == "thumbnail" else "render"
+        atype = "thumbnail" if o["kind"] == "thumbnail" else "render_light" if o.get("variant") == "light" else "render"
         for old in (  # a re-render replaces the previous version in place (same storage key)
             await session.execute(
                 select(Asset).where(Asset.project_id == project.id, Asset.type == atype, Asset.format == o["format"])

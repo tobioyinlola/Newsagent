@@ -7,6 +7,7 @@ import { FullFrameAnchor } from "./FullFrameAnchor";
 import { NewsDesk, SOFT_TOP, StudioProvider } from "./NewsSet";
 import { CF, Fonts, MONO, SANS } from "./theme";
 import { LowerThird } from "./LowerThird";
+import { SceneEdge, useEdgeVolume } from "./SceneEdge";
 
 export type Scene =
   | { type: "anchor" | "question"; src: string; seconds: number; headline?: string }
@@ -65,12 +66,14 @@ export const defaultMergeProps: MergeProps = {
 
 const url = (s: string) => (s.startsWith("http") ? s : staticFile(s));
 
-const AnchorShot: React.FC<{ src: string; muted?: boolean; height: string; fullFrame?: boolean }> = ({ src, muted, height, fullFrame }) =>
-  fullFrame ? (
-    <OffthreadVideo src={url(src)} muted={muted} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 22%" }} />
+const AnchorShot: React.FC<{ src: string; muted?: boolean; height: string; fullFrame?: boolean }> = ({ src, muted, height, fullFrame }) => {
+  const volume = useEdgeVolume();
+  return fullFrame ? (
+    <OffthreadVideo src={url(src)} muted={muted} volume={volume} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 22%" }} />
   ) : (
-    <OffthreadVideo src={url(src)} transparent muted={muted} style={{ height, objectFit: "contain", ...SOFT_TOP }} />
+    <OffthreadVideo src={url(src)} transparent muted={muted} volume={volume} style={{ height, objectFit: "contain", ...SOFT_TOP }} />
   );
+};
 
 const AnchorScene: React.FC<{ src: string; portrait: boolean; fullFrame?: boolean; covers?: boolean }> = ({ src, portrait, fullFrame, covers }) =>
   fullFrame ? (
@@ -160,12 +163,13 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
   const ltIn = interpolate(frame, [fps * 0.5, fps * 1], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const ltOut = interpolate(frame, [fps * 4, fps * 4.5], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
+  const volume = useEdgeVolume();
   const founder = scene.src ? (
-    <OffthreadVideo src={url(scene.src)} startFrom={Math.round((scene.startFromSeconds ?? 0) * fps)} style={{ width: "100%", height: "100%", objectFit: layout === "pip" ? "contain" : "cover", objectPosition: layout === "column" ? "50% 28%" : "50% 50%" }} />
+    <OffthreadVideo src={url(scene.src)} startFrom={Math.round((scene.startFromSeconds ?? 0) * fps)} volume={volume} style={{ width: "100%", height: "100%", objectFit: layout === "pip" ? "contain" : "cover", objectPosition: layout === "column" ? "50% 28%" : "50% 50%" }} />
   ) : (
     <>
       {scene.photoSrc ? <Img src={url(scene.photoSrc)} style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : null}
-      {scene.audioSrc ? <Audio src={url(scene.audioSrc)} startFrom={Math.round((scene.startFromSeconds ?? 0) * fps)} /> : null}
+      {scene.audioSrc ? <Audio src={url(scene.audioSrc)} startFrom={Math.round((scene.startFromSeconds ?? 0) * fps)} volume={volume} /> : null}
     </>
   );
   // Anchor "listening": the question clip frozen on its first frame and muted.
@@ -246,7 +250,9 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
       <Series>
         {p.scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={Math.max(1, Math.round(s.seconds * fps))}>
+            <SceneEdge>
             {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} fullFrame={p.anchorFullFrame} /> : s.type === "clip" ? <ClipScene src={s.src} /> : s.type === "broll" ? <BrollScene scene={s} /> : <><AnchorScene src={s.src} portrait={portrait} fullFrame={p.anchorFullFrame} covers={p.anchorCovers} /><LowerThird name={p.presenter?.name} title={p.presenter?.title} headline={s.headline ?? p.headline} /></>}
+            </SceneEdge>
           </Series.Sequence>
         ))}
       </Series>

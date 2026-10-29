@@ -19,7 +19,16 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 }
 
 // The written announcement and the separate, scroll-stopping social post. `compact` is the preview before the video is made.
+// Pictures the owner uploaded for the story, spread through the text: with N pictures and P paragraphs, picture i follows
+// paragraph floor((i + 1) * P / (N + 1)). The same list the upload box edits, so a new picture appears here at once.
+export function placePictures<T>(paragraphs: string[], pictures: T[]): { after: number; picture: T }[] {
+  const p = paragraphs.length;
+  return pictures.map((picture, i) => ({ after: Math.max(1, Math.floor(((i + 1) * p) / (pictures.length + 1))), picture }));
+}
+
 export function StoryCopy({ projectId, compact = false }: { projectId: string; compact?: boolean }) {
+  const broll = useQuery({ queryKey: ["broll", projectId], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/broll", { params: { path: { project_id: projectId } } })), retry: false });
+  const pictures = (broll.data?.items ?? []).map((i) => ({ url: broll.data?.candidates.find((c) => c.key === i.key)?.url ?? "", caption: i.caption })).filter((x) => x.url);
   const q = useQuery({ queryKey: ["story", projectId], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/story", { params: { path: { project_id: projectId } } })) as Promise<Story>, retry: false });
   if (q.isError) return compact ? null : <ErrorBox error={q.error} />;
   const s = q.data;
@@ -31,7 +40,21 @@ export function StoryCopy({ projectId, compact = false }: { projectId: string; c
           <p className="text-xs font-bold uppercase tracking-widest text-muted">For immediate release</p>
           <h3 className="text-xl font-bold italic">{s.headline}</h3>
           <p className="font-semibold italic text-muted">{s.dek}</p>
-          {body(s).map((p, i) => <p key={i} className="text-sm">{i === 0 && s.dateline ? <><strong className="italic">{s.dateline}</strong>{p.slice(s.dateline.length)}</> : p}</p>)}
+          {(() => {
+            const paras = body(s);
+            const at = placePictures(paras, pictures);
+            return paras.map((p, i) => (
+              <div key={i} className="space-y-3">
+                <p className="text-sm">{i === 0 && s.dateline ? <><strong className="italic">{s.dateline}</strong>{p.slice(s.dateline.length)}</> : p}</p>
+                {at.filter((x) => x.after === i + 1).map((x) => (
+                  <figure key={x.picture.url} className="my-1">
+                    <img src={x.picture.url} alt={x.picture.caption || "Picture for the story"} className="max-h-80 w-full rounded-sm border border-line object-cover" loading="lazy" />
+                    {x.picture.caption && <figcaption className="mt-1 text-xs italic text-muted">{x.picture.caption}</figcaption>}
+                  </figure>
+                ))}
+              </div>
+            ));
+          })()}
           {s.about && (
             <section className="space-y-1">
               <h4 className="font-bold italic">About {s.company}</h4>

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { analyzeFile, normalizeAudio } from "./media";
+import { analyzeFile, makeLight, normalizeAudio } from "./media";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "media-test-"));
 function make(name: string, audioFilter: string, seconds = 3) {
@@ -32,5 +32,16 @@ describe("media analysis", () => {
     const f = path.join(dir, "silent.mp4");
     execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=red:s=160x90:r=30:d=1", "-c:v", "libx264", "-pix_fmt", "yuv420p", f]);
     expect((await analyzeFile(f)).has_audio).toBe(false);
+  });
+  it("makes a light version that is much smaller with the same length, picture size and sound", async () => {
+    const hd = path.join(dir, "hd.mp4");
+    // a busy 1280x720 picture encoded at a high bitrate, like a finished HD render
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=s=1280x720:r=30:d=4", "-f", "lavfi", "-i", "sine=frequency=440:d=4", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", hd]);
+    const light = path.join(dir, "light.mp4");
+    await makeLight(hd, light);
+    const [a, b] = [await analyzeFile(hd), await analyzeFile(light)];
+    expect(fs.statSync(light).size).toBeLessThan(fs.statSync(hd).size * 0.6);
+    expect(b).toMatchObject({ width: 1280, height: 720, has_audio: true });
+    expect(Math.abs(b.duration_s - a.duration_s)).toBeLessThan(0.2);
   });
 });

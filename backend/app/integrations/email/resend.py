@@ -1,7 +1,11 @@
+import logging
+
 import httpx
 
 from app.config import VENDOR_POLICIES, get_settings
 from app.integrations.email.base import EmailProvider
+
+log = logging.getLogger("resend")
 
 
 class ResendEmail(EmailProvider):
@@ -26,4 +30,8 @@ class ResendEmail(EmailProvider):
                 base_url="https://api.resend.com", headers=self._headers, timeout=VENDOR_POLICIES["email"].timeout_s
             ) as c:
                 r = await c.post("/emails", json=body)
+        if (
+            r.status_code >= 400
+        ):  # Resend says why (unverified domain, restricted key, ...) in the body; the status line alone does not
+            log.error("resend refused an email (%s) from %s: %s", r.status_code, self._from, r.text[:400])
         r.raise_for_status()

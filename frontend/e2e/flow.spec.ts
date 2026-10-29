@@ -63,7 +63,7 @@ test("invite to shared video", async ({ page, browser }) => {
   // --- render completes (mock vendors), live status
   await expect(fp.getByRole("heading", { name: "Your video", exact: true })).toBeVisible({ timeout: 60_000 });
   await expect(fp.getByText("AI-generated anchor").first()).toBeVisible();
-  await expect(fp.getByRole("link", { name: "Download" })).toHaveCount(3); // widescreen, thumbnail, captions (vertical only with RENDER_VERTICAL)
+  await expect(fp.getByRole("link", { name: "Download" })).toHaveCount(4); // widescreen HD, widescreen light, thumbnail, captions (vertical only with RENDER_VERTICAL)
   await expect(fp.getByRole("heading", { name: "Suggested captions" })).toBeVisible();
   await expect(fp.locator("pre").first()).toContainText("AI-generated anchor");
 

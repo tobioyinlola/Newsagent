@@ -52,6 +52,13 @@ export async function normalizeAudio(file: string): Promise<void> {
   fs.renameSync(tmp, file);
 }
 
+// The "light" download: the same video and sound, re-encoded for a much smaller file. Same picture size and frame rate; a
+// constant-quality encode (CRF 24, slow preset) with a bitrate ceiling, which keeps a talking-head broadcast looking the same
+// to the eye at a fraction of the bytes. Made from the finished HD file (already loudness-normalised), never from a new render.
+export async function makeLight(input: string, output: string): Promise<void> {
+  await run("ffmpeg", ["-y", "-i", input, "-c:v", "libx264", "-preset", "slow", "-profile:v", "high", "-crf", "24", "-maxrate", "4M", "-bufsize", "8M", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", output], { maxBuffer: 64 * 1024 * 1024 });
+}
+
 export async function analyzeUrl(url: string): Promise<Analysis> {
   assertAllowedUrl(url);
   const res = await fetch(url);

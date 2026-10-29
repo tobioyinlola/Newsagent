@@ -1,6 +1,7 @@
 import React from "react";
 import { AbsoluteFill, OffthreadVideo, useVideoConfig } from "remotion";
 import { mediaUrl } from "./ClipScene";
+import { useEdgeVolume } from "./SceneEdge";
 import { CF, MONO, SANS } from "./theme";
 
 // A presenter video that already contains its whole studio (the vendor animated a photo of the set), so it fills the frame.
@@ -26,11 +27,12 @@ const useFit = () => {
 };
 
 export const FullFrameAnchor: React.FC<{ src: string; muted?: boolean; covers?: boolean }> = ({ src, muted, covers = true }) => {
+  const volume = useEdgeVolume();
   const { s, ox, oy } = useFit();
   const at = (r: { x: number; y: number; w: number; h: number }) => ({ left: ox + r.x * s, top: oy + r.y * s, width: r.w * s, height: r.h * s });
   return (
     <AbsoluteFill style={{ background: "#0f3f86" }}>
-      <OffthreadVideo src={mediaUrl(src)} muted={muted} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      <OffthreadVideo src={mediaUrl(src)} muted={muted} volume={volume} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
       {covers && REFLECTIONS.map((r, i) => (
         <div key={i} style={{ position: "absolute", ...at(r), borderRadius: 14 * s, backdropFilter: `blur(${16 * s}px)`, background: "rgba(150,185,235,0.35)" }} />
       ))}

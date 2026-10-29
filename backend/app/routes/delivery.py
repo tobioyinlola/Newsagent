@@ -52,6 +52,7 @@ async def _assets(session: AsyncSession, project_id: str) -> list[Asset]:
 def _filename(a: Asset) -> str:
     return {
         "render": f"video-{a.format}.mp4",
+        "render_light": f"video-{a.format}-light.mp4",
         "preview": "preview.mp4",
         "thumbnail": "thumbnail.png",
         "caption": "captions.srt",
@@ -102,7 +103,7 @@ async def downloads(
             expires_in_s=SIGNED_URL_TTL_S,
         )
         for a in await _assets(session, project_id)
-        if a.type in {"render", "preview", "thumbnail", "caption"}
+        if a.type in {"render", "render_light", "preview", "thumbnail", "caption"}
         and (project.state == "final_ready" or a.type == "preview")
     ]
     return DownloadsOut(items=items, disclosure=DISCLOSURE)

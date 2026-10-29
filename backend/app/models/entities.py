@@ -30,6 +30,9 @@ class Workspace(Base, TimestampMixin):
     industry: Mapped[str | None] = mapped_column(
         String(30), nullable=True
     )  # one of services/industries.py, chosen at sign-up
+    industry_other: Mapped[str | None] = mapped_column(
+        String(100), nullable=True
+    )  # the business's own words for "other"
     plan: Mapped[str] = mapped_column(String(50), default="pilot")
     brand_kit_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     credit_balance: Mapped[Decimal] = mapped_column(Money, default=Decimal("0"))
@@ -411,6 +414,7 @@ class AuthCode(Base, TimestampMixin):
     city: Mapped[str | None] = mapped_column(String(120), nullable=True)  # sign-up: held until the code is verified
     country: Mapped[str | None] = mapped_column(String(120), nullable=True)
     industry: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    industry_other: Mapped[str | None] = mapped_column(String(100), nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

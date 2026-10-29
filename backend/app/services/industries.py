@@ -14,6 +14,7 @@ Industry = Literal[
     "government",
     "entertainment",
     "education",
+    "other",
 ]
 
 INDUSTRIES: dict[str, tuple[str, str]] = {
@@ -34,4 +35,5 @@ INDUSTRIES: dict[str, tuple[str, str]] = {
     "government": ("Government", "Politics and public institutions"),
     "entertainment": ("Entertainment", "Arts, music and sports"),
     "education": ("Education", "Schools, universities and learning"),
+    "other": ("Others", "Anything not listed above: the business says what it is"),
 }
