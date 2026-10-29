@@ -257,6 +257,42 @@ class CaptionsOut(BaseModel):
     has_active_share: bool
 
 
+class StoryCardOut(BaseModel):
+    """One story in the public Latest Stories lists."""
+
+    slug: str
+    title: str
+    summary: str
+    company: str
+    industry: str | None
+    published_at: datetime
+    duration_s: float | None
+    thumbnail_url: str | None
+
+
+class StoryPictureOut(BaseModel):
+    url: str
+    caption: str = ""
+
+
+class StoryPageOut(StoryCardOut):
+    """A public story page: the video and the press release. The media contact is never included."""
+
+    dateline: str | None
+    sections: list[dict]
+    about: str
+    pictures: list[StoryPictureOut]
+    video_url: str
+    disclosure: str
+
+
+class PublicationOut(BaseModel):
+    published: bool
+    slug: str | None
+    path: str | None  # the address on the site, e.g. /latest-stories/acme-raises-a-round-1a2b3c
+    published_at: datetime | None
+
+
 class ShareCreated(BaseModel):
     url: str
 

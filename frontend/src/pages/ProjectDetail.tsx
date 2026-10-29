@@ -33,7 +33,7 @@ export function ProjectDetail() {
   const nav = useNavigate();
   const del = useMutation({
     mutationFn: () => unwrap(api.DELETE("/v1/projects/{project_id}", path)),
-    onSuccess: () => { qc.removeQueries({ queryKey: ["project", id] }); qc.invalidateQueries({ queryKey: ["projects"] }); nav("/projects"); },
+    onSuccess: () => { qc.removeQueries({ queryKey: ["project", id] }); qc.invalidateQueries({ queryKey: ["projects"] }); nav("/ai-newsroom/videos"); },
   });
   const moderation = useQuery({
     queryKey: ["moderation", id],

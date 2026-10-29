@@ -753,9 +753,11 @@ async def _record_outputs(session: AsyncSession, project: Project, status) -> di
             )
         ).scalars():
             await session.delete(old)
-        session.add(Asset(project_id=project.id, type=atype, storage_key=key, format=o["format"]))
+        duration = None
         if o["kind"] == "video":
             analyses[key] = asdict(await renderer.analyze(registry.get_storage().presign_get(key)))
+            duration = Decimal(str(round(analyses[key]["duration_s"], 2)))  # the story page shows how long the video is
+        session.add(Asset(project_id=project.id, type=atype, storage_key=key, format=o["format"], duration=duration))
     return analyses
 
 

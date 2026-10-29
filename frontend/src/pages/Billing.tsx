@@ -60,7 +60,7 @@ export function Billing() {
         {usage.data && usage.data.lines.length ? (
           <table className="w-full text-sm"><caption className="sr-only">Usage by video and step</caption>
             <thead><tr className="text-left text-muted"><th className="py-1">Video</th><th>Step</th><th className="text-right">Credits</th></tr></thead>
-            <tbody>{usage.data.lines.map((l, i) => <tr key={i} className="border-t border-line"><td className="py-1">{l.project_id ? <Link className="underline" to={`/projects/${l.project_id}`}>{l.project_id.slice(0, 6)}</Link> : "-"}</td><td>{l.stage ?? "-"}</td><td className="text-right tabular-nums">{Number(l.credits).toFixed(4)}</td></tr>)}
+            <tbody>{usage.data.lines.map((l, i) => <tr key={i} className="border-t border-line"><td className="py-1">{l.project_id ? <Link className="underline" to={`/ai-newsroom/${l.project_id}`}>{l.project_id.slice(0, 6)}</Link> : "-"}</td><td>{l.stage ?? "-"}</td><td className="text-right tabular-nums">{Number(l.credits).toFixed(4)}</td></tr>)}
               <tr className="border-t border-ink font-semibold"><td className="py-1" colSpan={2}>Total for {usage.data.month}</td><td className="text-right tabular-nums">{Number(usage.data.total_credits).toFixed(4)}</td></tr></tbody></table>
         ) : <p className="text-muted">No usage in {month}.</p>}
       </Card>

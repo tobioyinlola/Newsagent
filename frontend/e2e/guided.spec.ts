@@ -25,7 +25,7 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await page.addInitScript((t) => localStorage.setItem("newsagent.token", t), token);
 
   // 1. details: the kind of announcement, the key facts, who is presenting (the default is already chosen), no brand kit
-  await page.goto("/projects/new");
+  await page.goto("/ai-newsroom/new");
   await expect(page.getByRole("heading", { name: "Tell us about your announcement" })).toBeVisible();
   await expect(page.getByRole("radio", { name: /\(default\)/ })).toHaveAttribute("aria-checked", "true");
   await page.getByRole("radio", { name: /Funding round/ }).click();
@@ -93,4 +93,43 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await expect(page.getByRole("heading", { name: "Social post" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy the social post" })).toBeVisible();
   await expect(page.getByText("AI-generated anchor").first()).toBeVisible();
+
+  // 6. the story is published on Latest Stories automatically, and the link replaces the old private share link
+  const box = page.getByLabel("Link to your published story");
+  await expect(box).toBeVisible();
+  const storyUrl = await box.inputValue();
+  expect(storyUrl).toMatch(/\/latest-stories\/[a-z0-9-]+-[0-9a-f]{6}$/);
+  await expect(page.getByRole("button", { name: "Create share link" })).toHaveCount(0);
+  const slug = new URL(storyUrl).pathname;
+
+  const visitor = await (await page.context().browser()!.newContext()).newPage(); // someone not signed in
+  await visitor.goto("/");
+  const row = visitor.getByRole("region", { name: "Latest stories" }); // the row on the home page, between the numbers and the use cases
+  await expect(row.getByRole("link").first()).toBeVisible({ timeout: 20_000 });
+  const shots = process.env.SNAPSHOT_DIR; // optional, for a visual check
+  if (shots) { await visitor.setViewportSize({ width: 1280, height: 900 }); await row.scrollIntoViewIfNeeded(); await visitor.screenshot({ path: `${shots}/home-row.png` }); }
+  await visitor.goto("/latest-stories");
+  await expect(visitor.getByRole("heading", { name: "Latest stories", level: 1 })).toBeVisible();
+  if (shots) await visitor.screenshot({ path: `${shots}/latest-stories.png`, fullPage: true });
+  await visitor.getByRole("link", { name: /^Watch:/ }).click();
+  await expect(visitor).toHaveURL(new RegExp(`${slug}$`));
+  const video = visitor.getByLabel(/^Video:/);
+  await expect(video).toHaveAttribute("src", /.+/);
+  expect(await video.evaluate((v: HTMLVideoElement) => v.autoplay && v.muted && v.controls)).toBe(true); // autoplays (muted), with controls
+  await expect(visitor.getByText("For immediate release")).toBeVisible();
+  await expect(visitor.locator("article figure")).toHaveCount(2); // the pictures the owner uploaded sit inside the press release
+  await expect(visitor.getByText("Media Contact")).toHaveCount(0); // the contact details are never public
+  await expect(visitor.getByText("AI-generated anchor").first()).toBeVisible();
+  if (shots) await visitor.screenshot({ path: `${shots}/story-page.png`, fullPage: true });
+
+  // taking it down removes the page
+  await page.getByRole("button", { name: "Take it down" }).click();
+  await expect(page.getByRole("button", { name: "Publish it again" })).toBeVisible();
+  await visitor.reload();
+  await expect(visitor.getByText("This story isn't available.")).toBeVisible();
+  await page.getByRole("button", { name: "Publish it again" }).click();
+  await expect(page.getByLabel("Link to your published story")).toHaveValue(storyUrl);
+  await visitor.reload();
+  await expect(visitor.getByRole("video")).toHaveCount(0).catch(() => undefined);
+  await expect(visitor.getByText("For immediate release")).toBeVisible();
 });

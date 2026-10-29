@@ -1715,6 +1715,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{project_id}/publication": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Publication
+         * @description Where this video's story is published. A finished video that was never published (made before Latest Stories) is
+         *     published the first time its owner looks.
+         */
+        get: operations["publication_v1_projects__project_id__publication_get"];
+        put?: never;
+        /** Republish */
+        post: operations["republish_v1_projects__project_id__publication_post"];
+        /** Take Down */
+        delete: operations["take_down_v1_projects__project_id__publication_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{project_id}/retry": {
         parameters: {
             query?: never;
@@ -1949,6 +1972,43 @@ export interface paths {
          * @description Live numbers for the public site: videos finished, and how often shared videos have been opened.
          */
         get: operations["public_stats_v1_public_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/stories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public Stories
+         * @description The newest published stories, for the Latest Stories page and the home page row (no sign-in needed).
+         */
+        get: operations["public_stories_v1_public_stories_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/stories/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public Story */
+        get: operations["public_story_v1_public_stories__slug__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3396,6 +3456,17 @@ export interface components {
             /** Voice Accent */
             voice_accent: string;
         };
+        /** PublicationOut */
+        PublicationOut: {
+            /** Path */
+            path: string | null;
+            /** Published */
+            published: boolean;
+            /** Published At */
+            published_at: string | null;
+            /** Slug */
+            slug: string | null;
+        };
         /** QueueOut */
         QueueOut: {
             /** Jobs */
@@ -3732,6 +3803,80 @@ export interface components {
             email?: string | null;
             /** Invite Code */
             invite_code?: string | null;
+        };
+        /**
+         * StoryCardOut
+         * @description One story in the public Latest Stories lists.
+         */
+        StoryCardOut: {
+            /** Company */
+            company: string;
+            /** Duration S */
+            duration_s: number | null;
+            /** Industry */
+            industry: string | null;
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Slug */
+            slug: string;
+            /** Summary */
+            summary: string;
+            /** Thumbnail Url */
+            thumbnail_url: string | null;
+            /** Title */
+            title: string;
+        };
+        /**
+         * StoryPageOut
+         * @description A public story page: the video and the press release. The media contact is never included.
+         */
+        StoryPageOut: {
+            /** About */
+            about: string;
+            /** Company */
+            company: string;
+            /** Dateline */
+            dateline: string | null;
+            /** Disclosure */
+            disclosure: string;
+            /** Duration S */
+            duration_s: number | null;
+            /** Industry */
+            industry: string | null;
+            /** Pictures */
+            pictures: components["schemas"]["StoryPictureOut"][];
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Sections */
+            sections: {
+                [key: string]: unknown;
+            }[];
+            /** Slug */
+            slug: string;
+            /** Summary */
+            summary: string;
+            /** Thumbnail Url */
+            thumbnail_url: string | null;
+            /** Title */
+            title: string;
+            /** Video Url */
+            video_url: string;
+        };
+        /** StoryPictureOut */
+        StoryPictureOut: {
+            /**
+             * Caption
+             * @default
+             */
+            caption: string;
+            /** Url */
+            url: string;
         };
         /** TakeOut */
         TakeOut: {
@@ -7556,6 +7701,105 @@ export interface operations {
             };
         };
     };
+    publication_v1_projects__project_id__publication_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    republish_v1_projects__project_id__publication_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    take_down_v1_projects__project_id__publication_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     retry_v1_projects__project_id__retry_post: {
         parameters: {
             query?: never;
@@ -8042,6 +8286,69 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    public_stories_v1_public_stories_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryCardOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_story_v1_public_stories__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryPageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -105,7 +105,7 @@ export function Layout() {
           </Link>
 
           {item("/dashboard", "Dashboard", ICONS.home)}
-          {item("/projects", "Videos", ICONS.videos)}
+          {item("/ai-newsroom/videos", "Videos", ICONS.videos)}
           {item("/brand", "Brand kit", ICONS.brand)}
           {item("/billing", "Credits", ICONS.credits)}
           {item("/account", "Your data", ICONS.data)}

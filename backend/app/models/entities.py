@@ -119,6 +119,10 @@ class Project(Base, TimestampMixin):
     # "guided": details -> AI interview -> written story -> video. "classic": the original script-first flow.
     flow: Mapped[str] = mapped_column(String(10), default="classic")
     announcement_type: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    # The public page on Latest Stories. The slug is made once and kept, so the link never changes; published_at is empty while the
+    # owner has taken the story down.
+    story_slug: Mapped[str | None] = mapped_column(String(160), unique=True, index=True, nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
 
     brief: Mapped["Brief | None"] = relationship(uselist=False, lazy="selectin")
 

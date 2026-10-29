@@ -20,7 +20,7 @@ export function NewProjectClassic() {
       await unwrap(api.POST("/v1/projects/{project_id}/script/generate", { params: { path: { project_id: p.id } } }));
       return p;
     },
-    onSuccess: (p) => nav(`/projects/${p.id}`),
+    onSuccess: (p) => nav(`/ai-newsroom/${p.id}`),
   });
   return (
     <Card title="New video">

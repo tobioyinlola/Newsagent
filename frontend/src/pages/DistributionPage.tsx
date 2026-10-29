@@ -152,7 +152,7 @@ export function DistributionPage() {
           <div className="cf-grain relative mx-auto mb-10 h-40 max-w-4xl overflow-hidden rounded-sm"><CardArt variant="story" /></div>
           <h2 className="text-3xl text-white md:text-5xl">Be first on the wire.</h2>
           <p className="mx-auto mt-3 max-w-xl text-white/70">Join the distribution waitlist, and make your news segment in the meantime.</p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3"><Cta href={WAITLIST} primary>Join the waitlist</Cta>{signedIn ? <Cta to="/projects/new">Make a video</Cta> : <Cta to="/newsroom">See the AI Newsroom</Cta>}</div>
+          <div className="mt-8 flex flex-wrap justify-center gap-3"><Cta href={WAITLIST} primary>Join the waitlist</Cta>{signedIn ? <Cta to="/ai-newsroom/new">Make a video</Cta> : <Cta to="/ai-newsroom">See the AI Newsroom</Cta>}</div>
         </section>
       </main>
     </SiteShell>

@@ -66,7 +66,7 @@ test("founder records on a throttled 4G phone, survives a dropped connection, an
   const ownerCtx = await browser.newContext();
   await ownerCtx.addInitScript((t) => localStorage.setItem("newsagent.token", t), `dev:${OWNER_EMAIL}`);
   const owner = await ownerCtx.newPage();
-  await owner.goto(`/projects/${id}`);
+  await owner.goto(`/ai-newsroom/${id}`);
   await expect(owner.getByRole("heading", { name: "Founder interview" })).toBeVisible();
   await owner.getByLabel("Founder's name").fill("Ada Obi");
   await owner.getByLabel("Title (shown on screen)").fill("CEO, Acme Farms");

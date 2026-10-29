@@ -25,7 +25,7 @@ const BRIEF = "Acme Farms helps smallholder farmers sell their produce to verifi
 
 async function toInterview(page: import("@playwright/test").Page, token: string) {
   await page.addInitScript((t) => { if (!sessionStorage.getItem("seeded")) { sessionStorage.setItem("seeded", "1"); localStorage.setItem("newsagent.token", t); } }, token);
-  await page.goto("/projects/new-classic");
+  await page.goto("/ai-newsroom/new-classic");
   await expect(page.getByRole("group", { name: "Your presenter" })).toBeVisible();
   // only the default presenter can be picked today; the others are shown as coming soon
   await expect(page.getByRole("radio")).toHaveCount(1);
@@ -107,7 +107,7 @@ test("AI interview: understands the announcement, interviews on camera, then mak
   await expect(page.getByText("You have changes waiting.")).toBeVisible();
   page.once("dialog", (d) => void d.accept());
   await page.getByRole("button", { name: "Apply changes" }).click();
-  const projectId = /projects\/([0-9a-f]+)/.exec(page.url())![1];
+  const projectId = /ai-newsroom\/([0-9a-f]+)/.exec(page.url())![1];
   await expect.poll(async () => {
     const st = (await (await request.get(`${API}/v1/projects/${projectId}`, { headers: auth })).json()).state;
     const types = st === "final_ready" ? ((await (await request.get(`${API}/v1/projects/${projectId}/scenes`, { headers: auth })).json()).scenes as { type: string }[]).map((x) => x.type) : [];

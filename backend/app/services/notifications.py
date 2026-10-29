@@ -71,7 +71,7 @@ async def notify_owners(project_id: str, kind: str) -> None:
                 .scalars()
                 .all()
             )
-        link = f"{get_settings().app_base_url}/projects/{project_id}"
+        link = f"{get_settings().app_base_url}/ai-newsroom/{project_id}"
         for to in emails:
             await send_email(to, subject, body, link=("Open your project", link))
     except Exception:  # noqa: BLE001

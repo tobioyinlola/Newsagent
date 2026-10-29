@@ -34,7 +34,7 @@ test("the website field in the details step takes anything, or nothing", async (
   const mail = await (await request.get("http://localhost:8000/v1/dev/last-email", { params: { to: email } })).json();
   const s = await (await request.post("http://localhost:8000/v1/auth/signup/verify", { data: { email, code: /\b(\d{6})\b/.exec(mail.text)![1] } })).json();
   await page.addInitScript((t) => localStorage.setItem("newsagent.token", t), s.token);
-  await page.goto("/projects/new");
+  await page.goto("/ai-newsroom/new");
   const site = page.getByLabel("Website (optional)");
   await site.fill("mybusiness.com");
   await expect(site).toHaveJSProperty("validity.valid", true); // no browser URL check on this optional field

@@ -28,7 +28,7 @@ test("guided flow, recorded for real, merged into the final video", async ({ bro
   const page = await ctx.newPage();
   const shot = async (name: string) => { if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `${name}.png`), fullPage: true }); };
 
-  await page.goto("/projects/new");
+  await page.goto("/ai-newsroom/new");
   await page.getByRole("radio", { name: /Funding round/ }).click();
   await page.getByLabel("Tell us the key details").fill("Minicor, a San Francisco startup, raised a $3.8M seed round led by IA Ventures. It lets developers turn desktop workflows in old software into API endpoints, so AI tools can work with systems that have no modern API. The two co-founders, Saheed Akinbile and Faizaan Chishtie, met at university and applied to Y Combinator several times before they were accepted.");
   await page.getByLabel("Your name").fill("Saheed Akinbile");
@@ -73,7 +73,7 @@ test("guided flow, recorded for real, merged into the final video", async ({ bro
   await expect(page.getByRole("heading", { name: "Social post" })).toBeVisible();
   await shot("6-ready");
 
-  const pid = /projects\/([0-9a-f]+)/.exec(page.url())![1];
+  const pid = /ai-newsroom\/([0-9a-f]+)/.exec(page.url())![1];
   const items = (await (await ctx.request.get(`${API}/v1/projects/${pid}/downloads`, { headers: bearer(OWNER_EMAIL) })).json()).items as { type: string; format: string | null; url: string }[];
   const file = items.find((i) => i.type === "render" && i.format === "16x9")!;
   const out = path.join(SHOTS || os.tmpdir(), "guided-final-16x9.mp4");

@@ -59,7 +59,7 @@ async def test_full_mock_pipeline_run(client, workspace, maker, monkeypatch, ver
     assert {a["type"] for a in data["assets"]} >= {"anchor", "preview", "render", "thumbnail", "caption"}
     sent = registry.get_email().sent
     assert {m["to"] for m in sent} == {"owner@acme.test", "ops@example.com"}
-    assert {m["subject"] for m in sent} == {"Your video is ready"} and "/projects/" in sent[0]["text"]
+    assert {m["subject"] for m in sent} == {"Your video is ready"} and "/ai-newsroom/" in sent[0]["text"]
     assert Decimal(data["cost_total"]) > 0
 
     async with maker() as s:
