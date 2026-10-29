@@ -269,7 +269,7 @@ function HowItWorks() {
 }
 
 function Distribution() {
-  const regions = ["United States", "Canada", "Europe", "East Africa", "Nigeria", "More regions"];
+  const regions = ["United States", "Canada", "United Kingdom", "Nigeria", "Kenya", "More countries"];
   return (
     <section id="distribution" className="border-t border-white/10 bg-ink px-4 py-20 md:px-8">
       <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
@@ -341,7 +341,7 @@ const FAQ: { group: string; items: [string, string][] }[] = [
   ] },
   { group: "Credits & access", items: [
     ["How does pricing work?", "You buy a pack of credits and spend them as you make videos. There's no subscription, and a step that fails is never charged."],
-    ["What is distribution?", "Coming soon: placing your segment and story with audiences in the regions you choose (North America, Europe, Africa, South America, Asia-Pacific, the Middle East), paid per region in credits."],
+    ["What is distribution?", "Coming soon: placing your segment and story with audiences in the regions you choose (the United States, Canada, the United Kingdom, Nigeria and Kenya to start), paid per region in credits."],
     ["Who can sign up?", "Anyone can. Press “Publish your free story!”, enter your business name and email, and confirm the 6-digit code we email you. Invitations from our team still work too."],
     ["Who owns the video?", "You do. Download it, post it anywhere, or share a private link."],
   ] },
@@ -463,7 +463,7 @@ function MobileMenu({ open, onClose, signedIn }: { open: boolean; onClose: () =>
 
 // The home page's at-a-glance numbers. Videos and impressions are live (impressions = times a shared video was opened).
 export const CHANNELS = ["YouTube", "LinkedIn", "X", "Instagram", "TikTok", "Facebook"];
-export const GEOGRAPHY: [string, string[]][] = [["North America", ["United States", "Canada"]], ["Europe", []], ["East Africa", []], ["Nigeria", []]];
+export const GEOGRAPHY: [string, string[]][] = [["United States", []], ["Canada", []], ["United Kingdom", []], ["Nigeria", []], ["Kenya", []]];
 export function StatsStrip() {
   const stats = useQuery({ queryKey: ["public-stats"], queryFn: () => unwrap(api.GET("/v1/public/stats")), retry: false, staleTime: 300000 });
   const d = stats.data as { videos?: number; impressions?: number } | undefined;

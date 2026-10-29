@@ -10,9 +10,9 @@ const WAITLIST = `${CONTACT}%20-%20distribution`;
 const REGIONS: { name: string; places: string; outlets: string[] }[] = [
   { name: "United States", places: "National and state outlets", outlets: ["Business & finance", "Technology", "Startups & VC", "Local news"] },
   { name: "Canada", places: "National and provincial outlets", outlets: ["Business", "Technology", "Regional news"] },
-  { name: "Europe", places: "UK and EU markets", outlets: ["Business & finance", "Technology", "Trade press"] },
-  { name: "East Africa", places: "Kenya, Uganda, Tanzania, Rwanda", outlets: ["Business", "Tech & startups", "Regional news"] },
+  { name: "United Kingdom", places: "National and regional outlets", outlets: ["Business & finance", "Technology", "Trade press"] },
   { name: "Nigeria", places: "Lagos, Abuja and national", outlets: ["Business & finance", "Tech & startups", "National news"] },
+  { name: "Kenya", places: "Nairobi and national", outlets: ["Business", "Tech & startups", "National news"] },
 ];
 
 const CATEGORIES: [string, string][] = [
@@ -34,12 +34,12 @@ const QUESTIONS: [string, string][] = [
   ["When can I use distribution?", "It's launching soon. Join the waitlist and we'll let you know first; you can make your video and story today."],
   ["How is it priced?", "With the same credits you use for videos. Each package shows its credits before you confirm, and nothing is charged until you do."],
   ["What gets distributed?", "Your news segment (video) and your written story, with your headline, links and social copy."],
-  ["Which regions can I pick?", "United States, Canada, Europe, East Africa and Nigeria to start, with more to follow."],
+  ["Which regions can I pick?", "United States, Canada, United Kingdom, Nigeria and Kenya to start, with more to follow."],
   ["Will I see where it ran?", "Yes. Every distribution comes with a placement report listing where your story appeared."],
 ];
 
 function ReportMock() {
-  const rows: [string, string, string][] = [["Business daily", "United States", "PUBLISHED"], ["Tech weekly", "Canada", "PUBLISHED"], ["Startup wire", "Nigeria", "PUBLISHED"], ["Finance desk", "Europe", "SCHEDULED"], ["Founders' digest", "East Africa", "SCHEDULED"]];
+  const rows: [string, string, string][] = [["Business daily", "United States", "PUBLISHED"], ["Tech weekly", "Canada", "PUBLISHED"], ["Startup wire", "Nigeria", "PUBLISHED"], ["Finance desk", "United Kingdom", "SCHEDULED"], ["Founders' digest", "Kenya", "SCHEDULED"]];
   return (
     <Panel title="Placement report · sample" right={<span className="text-brand-green">● LIVE</span>} className="w-full max-w-md">
       <ul className="space-y-1.5">
@@ -65,7 +65,7 @@ export function DistributionPage() {
             <div>
               <p className="inline-block rounded-sm border border-brand-peach bg-ink/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-brand-peach">Distribution · launching soon</p>
               <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">Your news, across <span className="text-brand-green">25K+ media platforms.</span></h1>
-              <p className="mt-5 max-w-xl text-lg text-white/85">Send your news segment and written story to business, technology and regional outlets in the United States, Canada, Europe, East Africa and Nigeria. Pay with credits; get a report of where it ran.</p>
+              <p className="mt-5 max-w-xl text-lg text-white/85">Send your news segment and written story to business, technology and regional outlets in the United States, Canada, the United Kingdom, Nigeria and Kenya. Pay with credits; get a report of where it ran.</p>
               <div className="mt-8 flex flex-wrap gap-3"><Cta href={WAITLIST} primary>Join the waitlist</Cta><Cta href="#coverage">See coverage</Cta></div>
             </div>
             <div className="flex justify-center"><ReportMock /></div>
@@ -74,7 +74,7 @@ export function DistributionPage() {
 
         <section aria-label="Distribution in numbers" className="border-y border-white/10 bg-ink px-4 py-10 md:px-8">
           <div className="mx-auto grid max-w-6xl grid-cols-2 gap-y-6 md:grid-cols-4">
-            {[["25K+", "Media platforms"], ["5", "Launch regions"], [String(CHANNELS.length), "Social & video channels"], ["1", "Credit wallet"]].map(([v, l]) => (
+            {[["25K+", "Media platforms"], ["5", "Launch countries"], [String(CHANNELS.length), "Social & video channels"], ["1", "Credit wallet"]].map(([v, l]) => (
               <div key={l} className="px-2"><p className="text-4xl font-bold text-white md:text-5xl">{v}</p><p className="mt-1 text-xs font-bold uppercase tracking-wider text-brand-green">{l}</p></div>
             ))}
           </div>

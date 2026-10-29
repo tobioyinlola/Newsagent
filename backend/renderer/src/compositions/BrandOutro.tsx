@@ -8,7 +8,7 @@ export { OUTRO_SECONDS };
 
 const ease = Easing.bezier(0.22, 1, 0.36, 1);
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
-const REGIONS = ["United States", "Canada", "Europe", "East Africa", "Nigeria"];
+const REGIONS = ["United States", "Canada", "United Kingdom", "Nigeria", "Kenya"];
 
 export const BrandOutro: React.FC = () => {
   const frame = useCurrentFrame();
