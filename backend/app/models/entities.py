@@ -38,7 +38,6 @@ class Workspace(Base, TimestampMixin):
     credit_balance: Mapped[Decimal] = mapped_column(Money, default=Decimal("0"))
     spend_cap: Mapped[Decimal] = mapped_column(Money, default=Decimal("0"))  # lifetime/period cap
     spent_total: Mapped[Decimal] = mapped_column(Money, default=Decimal("0"))
-    max_videos_per_day: Mapped[int] = mapped_column(Integer, default=3)
     max_video_seconds: Mapped[int] = mapped_column(Integer, default=300)
     suspended: Mapped[bool] = mapped_column(Boolean, default=False)
     share_disabled: Mapped[bool] = mapped_column(Boolean, default=False)

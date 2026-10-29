@@ -150,10 +150,6 @@
             "title": "Low Balance Threshold",
             "type": "string"
           },
-          "max_videos_per_day": {
-            "title": "Max Videos Per Day",
-            "type": "integer"
-          },
           "spend_cap": {
             "title": "Spend Cap",
             "type": "string"
@@ -167,8 +163,7 @@
           "credit_balance",
           "spend_cap",
           "spent_total",
-          "low_balance_threshold",
-          "max_videos_per_day"
+          "low_balance_threshold"
         ],
         "title": "BillingSummary",
         "type": "object"
@@ -5670,10 +5665,6 @@
             "title": "Max Video Seconds",
             "type": "integer"
           },
-          "max_videos_per_day": {
-            "title": "Max Videos Per Day",
-            "type": "integer"
-          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -5701,7 +5692,6 @@
           "credit_balance",
           "spend_cap",
           "spent_total",
-          "max_videos_per_day",
           "max_video_seconds",
           "suspended",
           "share_disabled"
@@ -5735,17 +5725,6 @@
               }
             ],
             "title": "Max Video Seconds"
-          },
-          "max_videos_per_day": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Max Videos Per Day"
           },
           "share_disabled": {
             "anyOf": [

@@ -172,3 +172,19 @@ async def test_the_packs_on_sale_are_public_for_the_landing_page(client, workspa
 async def test_public_stats_count_finished_videos_and_shared_video_views(client, workspace):
     r = await client.get("/v1/public/stats")
     assert r.status_code == 200 and set(r.json()) == {"videos", "impressions"}
+
+
+async def test_there_is_no_daily_video_limit(client, workspace):
+    """A workspace can approve as many scripts in a day as its credits, spend cap and vendor budgets allow."""
+    from tests.conftest import OWNER
+    from tests.helpers import BRIEF
+
+    for _ in range(6):  # the old limit was 3 a day
+        pid = (await client.post("/v1/projects", json=BRIEF, headers=OWNER)).json()["id"]
+        script = (await client.post(f"/v1/projects/{pid}/script/generate", headers=OWNER)).json()
+        body = {k: script[k] for k in ("segments", "ticker_lines", "lower_thirds", "interview_questions")}
+        await client.put(f"/v1/projects/{pid}/script", json=body, headers=OWNER)
+        r = await client.post(f"/v1/projects/{pid}/script/approve", headers=OWNER)
+        assert r.status_code == 200, r.text
+    summary = await client.get("/v1/billing/summary", headers=OWNER)
+    assert summary.status_code == 200 and "max_videos_per_day" not in summary.json()
