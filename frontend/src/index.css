@@ -64,5 +64,13 @@ html { font-family: var(--font-sans); color: var(--color-navy); background: #fff
 .cf-ticker { animation: cf-ticker 40s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .cf-ticker { animation: none; } }
 
+/* Outlet logos on the distribution page: two rows that glide in opposite directions, pausing under the pointer or keyboard focus */
+@keyframes cf-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes cf-marquee-rev { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+.cf-marquee { animation: cf-marquee 110s linear infinite; }
+.cf-marquee-rev { animation: cf-marquee-rev 120s linear infinite; }
+.cf-marquee-wrap:hover .cf-marquee, .cf-marquee-wrap:hover .cf-marquee-rev, .cf-marquee-wrap:focus-within .cf-marquee, .cf-marquee-wrap:focus-within .cf-marquee-rev { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .cf-marquee, .cf-marquee-rev { animation: none; } }
+
 /* Latest Stories hero: the active segment fills over the time the slide stays up */
 @keyframes cf-fill { from { width: 0%; } to { width: 100%; } }
