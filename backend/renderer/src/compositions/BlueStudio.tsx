@@ -26,14 +26,8 @@ const Screen: React.FC<{ x: number; y: number; w: number; h: number; side: "left
         background: "linear-gradient(180deg,#eaf1ff 0%,#9db8ec 55%,#3a5fb0 100%)", border: `${5 * s}px solid #dfe9fb`, boxShadow: `0 0 ${50 * s}px rgba(120,170,255,0.55)`, overflow: "hidden",
       }}
     >
-      {/* blurred city bars behind the banner */}
+      {/* blurred city bars: a lit glass screen, with no words on it */}
       <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(90deg, rgba(20,50,120,.25) 0 14%, rgba(255,255,255,.12) 14% 20%)", filter: `blur(${3 * s}px)` }} />
-      <div style={{ position: "absolute", left: 0, right: 0, top: "26%", transform: "skewX(-8deg)", margin: "0 5%", background: CF.peach, color: CF.ink, fontFamily: MONO, fontWeight: 700, fontSize: 64 * s, letterSpacing: 2 * s, textAlign: "center", padding: `${10 * s}px 0`, opacity: pulse }}>
-        FEATURED
-      </div>
-      <div style={{ position: "absolute", left: "12%", right: "5%", top: "26%", marginTop: 108 * s, transform: "skewX(-8deg)", background: "#0f3f86", color: "#fff", fontFamily: SANS, fontWeight: 700, fontSize: 40 * s, textAlign: "center", padding: `${8 * s}px 0` }}>
-        STARTUP NEWS
-      </div>
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "14%", background: "rgba(10,30,80,.55)" }} />
     </div>
   );

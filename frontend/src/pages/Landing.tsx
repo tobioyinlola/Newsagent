@@ -44,19 +44,22 @@ export function HeroArt() {
   );
 }
 
-export function BannerArt() {
+// The home page's hero picture: a real TV studio with the Cover Founder set. The desk sits in the middle of the picture, so it stays
+// centred at every width; a light wash (darker at the top and bottom, and behind the headline) keeps the text readable.
+export function HeroPhoto() {
   return (
-    <svg viewBox="0 0 1200 420" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" aria-hidden="true">
-      <rect width="1200" height="420" fill={P.aqua} />
-      <Cloud x={160} y={90} s={1.1} /><Cloud x={1040} y={110} s={1.3} />
-      <circle cx="600" cy="250" r="160" fill={P.peach} />
-      {[P.red, P.peach, P.green, P.purple].map((c, i) => (
-        <path key={c} d={`M0 ${300 + i * 26} Q600 ${200 + i * 30} 1200 ${300 + i * 26} L1200 420 L0 420 Z`} fill={c} />
-      ))}
-      <path d="M0 420 L0 300 L140 210 L240 270 L330 190 L420 300 L0 420 Z M1200 420 L1200 290 L1070 200 L980 260 L880 180 L780 300 L1200 420 Z" fill={P.cream} opacity="0.95" />
-      <rect x="586" y="300" width="28" height="70" rx="6" fill={P.ink} /><circle cx="600" cy="288" r="14" fill={P.ink} />
-    </svg>
+    <div aria-hidden="true" className="absolute inset-0">
+      <img src="/hero-studio.jpg" alt="" width={1920} height={1071} fetchPriority="high" decoding="async" className="h-full w-full object-cover" style={{ objectPosition: "57% 46%" }} />
+      <div className="absolute inset-0 bg-ink/25" />
+      <div className="absolute inset-0 bg-gradient-to-b from-ink/75 via-ink/10 to-ink/90" />
+    </div>
   );
+}
+
+// The picture under "A newsroom for businesses, without the newsroom": a studio microphone. The crop keeps the whole microphone
+// (the top of the picture) in view in the wide, short frame.
+export function BannerPhoto() {
+  return <img src="/banner-microphone.jpg" alt="A studio microphone on a boom arm in a dim blue recording room" width={1600} height={900} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: "50% 12%" }} />;
 }
 
 export function CardArt({ variant }: { variant: "video" | "story" }) {
@@ -222,7 +225,7 @@ function Banner() {
         <p className="mx-auto mt-4 max-w-2xl text-white/70">You bring the news and twenty minutes. We bring the presenter, the questions, the writer, the edit and the graphics, and label every AI-generated presenter clearly.</p>
         <div className="mt-6 flex justify-center gap-3"><Cta to="/signup" primary>Get started</Cta><Cta href="#pricing">See pricing</Cta></div>
       </div>
-      <div className="cf-grain relative mx-auto mt-12 h-64 max-w-6xl overflow-hidden md:h-96"><BannerArt /></div>
+      <div className="relative mx-auto mt-12 h-64 max-w-6xl overflow-hidden bg-ink md:h-96"><BannerPhoto /></div>
       <div className="mx-auto grid max-w-6xl grid-cols-2 border border-t-0 border-white/10 md:grid-cols-4">
         {facts.map(([n, t], i) => (
           <div key={t} className={`p-6 ${i % 2 === 0 ? "border-r border-white/10" : "md:border-r md:border-white/10"} ${i < 2 ? "border-b border-white/10 md:border-b-0" : ""}`}>
@@ -565,8 +568,8 @@ export function Landing() {
     <SiteShell>
       <main>
         <section className="cf-grain relative overflow-hidden px-4 pb-16 pt-16 md:px-8 md:pt-24">
-          <HeroArt />
-          <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(25,26,48,0.88)_0%,rgba(25,26,48,0.55)_45%,transparent_75%)]" />
+          <HeroPhoto />
+          <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(25,26,48,0.72)_0%,rgba(25,26,48,0.4)_45%,transparent_72%)]" />
           <div className="relative z-10 mx-auto max-w-4xl text-center">
             <p className="inline-block rounded-sm border border-white/20 bg-ink/70 px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest text-white"><span className="text-brand-green" aria-hidden="true">● </span>AI newsroom for businesses</p>
             <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">AI newsroom for businesses.<br /><span className="text-brand-green">Press Creation &amp; Distribution</span></h1>

@@ -22,6 +22,14 @@ export function StoryPage() {
     setSilent(false);
     v.play().catch(() => { v.muted = true; setSilent(true); void v.play().catch(() => undefined); });
   }, [q.data?.video_url]);
+  // If the browser did start it muted, the visitor's first touch, tap or key anywhere on the page turns the sound on.
+  useEffect(() => {
+    if (!silent) return;
+    const on = () => { const v = video.current; if (v) { v.muted = false; v.volume = 1; } setSilent(false); };
+    const events = ["pointerdown", "keydown", "touchstart"] as const;
+    events.forEach((e) => window.addEventListener(e, on, { once: true }));
+    return () => events.forEach((e) => window.removeEventListener(e, on));
+  }, [silent]);
   const soundOn = () => { const v = video.current; if (!v) return; v.muted = false; v.volume = 1; setSilent(false); void v.play().catch(() => undefined); };
   const s = q.data;
   return (

@@ -6146,6 +6146,58 @@
         ]
       }
     },
+    "/v1/admin/covers/refresh": {
+      "post": {
+        "description": "Give finished videos made before covers showed the guest a cover from the guest's first answer (it also runs once at\nstart-up). Safe to repeat: videos already done are skipped. No presenter clips or renders are made.",
+        "operationId": "refresh_covers_v1_admin_covers_refresh_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Refresh Covers V1 Admin Covers Refresh Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Refresh Covers",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
     "/v1/admin/customers": {
       "get": {
         "operationId": "customers_v1_admin_customers_get",

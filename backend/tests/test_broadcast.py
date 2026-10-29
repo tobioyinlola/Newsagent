@@ -30,7 +30,7 @@ def test_the_house_presenter_is_marcus_richard_lead_btn_director(monkeypatch):
         get_settings(), "heygen_featured_presenters", "look1|Marcus, news desk|male;look2|Elena, news desk|female"
     )
     p = Project(anchor_id="look1")
-    assert presenter_identity(p) == {"name": "Marcus Richard", "title": "Lead BTN Director, CF"}
+    assert presenter_identity(p) == {"name": "Marcus Richard", "title": "Business Reporter, CF News"}
     assert presenter_identity(Project(anchor_id="look2")) == {"name": "Elena", "title": "Presenter, CF"}
 
 
