@@ -95,7 +95,7 @@ export function ProjectDetail() {
       {p.state === "interviewing" && <LiveInterviewPanel projectId={id} founderName={p.founder_name} founderTitle={p.founder_title} guided={guided} />}
       {["script_approved", "rendering_anchor", "anchor_ready"].includes(p.state) && (
         <Card title={guided || live ? "Creating your AI presenter" : p.interview_enabled ? "Preparing your interview" : "Making your video"}>
-          <p aria-busy="true">{guided || live ? "Your story is approved. We’re creating the AI presenter and will weave your answers into the video. " : ""}This usually takes a few minutes. You can leave this page; we'll email you when it is ready.</p>
+          <p aria-busy="true">{guided || live ? "This can take 10 to 15 minutes to finish, depending on your internet speed. You can continue your work, but do not close this window. Once the video is ready, we will send you an email. It will also be waiting on your dashboard and will show ‘Ready’." : "This usually takes a few minutes. You can leave this page; we'll email you when it is ready."}</p>
         </Card>
       )}
       {p.state === "awaiting_founder" && <InterviewPanel projectId={id} />}
