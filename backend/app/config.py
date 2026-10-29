@@ -68,6 +68,7 @@ class Settings(BaseSettings):
     synthesia_api_key: str = ""
     transcription_api_key: str = ""
     email_api_key: str = ""
+    email_reply_to: str = ""  # optional: a monitored mailbox; replies from people (and a real, answered address) help mail land in the inbox
     email_from: str = "Newsroom <no-reply@localhost>"
     storage_endpoint: str = "http://localhost:9000"
     storage_bucket: str = "newsagent"

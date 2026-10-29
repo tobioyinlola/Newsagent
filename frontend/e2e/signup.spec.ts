@@ -7,8 +7,10 @@ test("open sign-up: business name, email, password, emailed code, dashboard", as
   await page.getByRole("link", { name: "Publish your free story!" }).first().click();
   await expect(page.getByRole("heading", { name: "Publish your story free" })).toBeVisible();
   await page.getByLabel("Business name").fill("NewBiz Ltd");
-  await page.getByLabel("City").fill("Lagos");
-  await page.getByLabel("Country").fill("Nigeria");
+  await page.getByLabel("Country").fill("Nigeri"); // pick from the list rather than typing it all
+  await page.getByRole("option", { name: "Nigeria" }).click();
+  await page.getByLabel("City").fill("Lago");
+  await page.getByRole("option", { name: "Lagos", exact: true }).first().click();
   await page.getByLabel("Industry").selectOption("technology");
   await page.getByLabel("Work email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill("correct horse battery");

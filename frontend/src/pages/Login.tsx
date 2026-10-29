@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { api, type Schemas, unwrap } from "../api/client";
+import { Combobox } from "../components/Combobox";
 import { Button, Card, ErrorBox, Field, inputCls, Notice, Toast } from "../components/ui";
 import { Logo } from "../components/Logo";
 import { getToken, setToken } from "../lib/auth";
@@ -96,6 +97,14 @@ export function Signup() {
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [industry, setIndustry] = useState("");
+  const [countries, setCountries] = useState<{ code: string; name: string }[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
+  useEffect(() => { fetch("/geo/countries.json").then((r) => r.json()).then(setCountries).catch(() => setCountries([])); }, []);
+  const countryCode = countries.find((c) => c.name === country)?.code;
+  useEffect(() => { // the cities of the country that was picked (one small file each); any city can still be typed
+    setCities([]);
+    if (countryCode) fetch(`/geo/${countryCode}.json`).then((r) => (r.ok ? r.json() : [])).then(setCities).catch(() => setCities([]));
+  }, [countryCode]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -148,8 +157,8 @@ export function Signup() {
                 <p>Create a free workspace for your business. We'll email you a 6-digit code to confirm your email before you get in.</p>
                 <Field label="Business name">{(id) => <input id={id} required minLength={2} maxLength={200} autoComplete="organization" className={inputCls} value={business} onChange={(e) => setBusiness(e.target.value)} />}</Field>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="City">{(id) => <input id={id} required minLength={2} maxLength={120} autoComplete="address-level2" className={inputCls} value={city} onChange={(e) => setCity(e.target.value)} />}</Field>
-                  <Field label="Country">{(id) => <input id={id} required minLength={2} maxLength={120} autoComplete="country-name" className={inputCls} value={country} onChange={(e) => setCountry(e.target.value)} />}</Field>
+                  <Field label="Country">{(id) => <Combobox id={id} required strict autoComplete="country-name" placeholder="Start typing, or pick" options={countries.map((c) => c.name)} value={country} onChange={(v) => { setCountry(v); if (v !== country) setCity(""); }} />}</Field>
+                  <Field label="City">{(id) => <Combobox id={id} required autoComplete="address-level2" placeholder={country ? "Start typing, or pick" : "Pick a country first"} options={cities} value={city} onChange={setCity} />}</Field>
                 </div>
                 <Field label="Industry">{(id) => (
                   <select id={id} required className={inputCls} value={industry} onChange={(e) => setIndustry(e.target.value)}>
