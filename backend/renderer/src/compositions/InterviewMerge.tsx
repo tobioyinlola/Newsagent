@@ -246,7 +246,9 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
     <StudioProvider studio={p.studio}>
     <AbsoluteFill style={{ fontFamily: SANS, background: CF.ink }}>
       <Fonts />
-      <Backdrop />
+      {/* Behind the scenes: nothing but plain ink when the presenter video brings its own studio, so no set can ever show through
+          at a cut, a hold or around a narrow picture. Our own illustrated set is only for a presenter who needs one. */}
+      {p.anchorFullFrame ? <AbsoluteFill style={{ background: CF.ink }} /> : <Backdrop />}
       <Series>
         {p.scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={Math.max(1, Math.round(s.seconds * fps))}>

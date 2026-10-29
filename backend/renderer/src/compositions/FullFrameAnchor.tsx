@@ -39,8 +39,6 @@ export const FullFrameAnchor: React.FC<{ src: string; muted?: boolean; covers?: 
       {covers && SCREENS.map((r, i) => (
         <div key={i} style={{ position: "absolute", ...at(r), overflow: "hidden", background: "linear-gradient(180deg,#eaf1ff 0%,#9db8ec 55%,#3a5fb0 100%)", border: `${3 * s}px solid #dfe9fb` }}>
           <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(90deg, rgba(20,50,120,.22) 0 14%, rgba(255,255,255,.12) 14% 20%)" }} />
-          <div style={{ position: "absolute", left: "6%", right: "6%", top: "24%", transform: "skewX(-8deg)", background: CF.peach, color: CF.ink, fontFamily: MONO, fontWeight: 700, fontSize: r.h * s * 0.2, letterSpacing: 2 * s, textAlign: "center", padding: `${r.h * s * 0.03}px 0` }}>FEATURED</div>
-          <div style={{ position: "absolute", left: "14%", right: "6%", top: "55%", transform: "skewX(-8deg)", background: "#0f3f86", color: "#fff", fontFamily: SANS, fontWeight: 700, fontSize: r.h * s * 0.13, textAlign: "center", padding: `${r.h * s * 0.025}px 0` }}>STARTUP NEWS</div>
         </div>
       ))}
     </AbsoluteFill>
