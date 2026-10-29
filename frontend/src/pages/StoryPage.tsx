@@ -12,7 +12,17 @@ export function StoryPage() {
   const more = useStories(12);
   const video = useRef<HTMLVideoElement>(null);
   const [copied, setCopied] = useState(false);
-  useEffect(() => { void video.current?.play().catch(() => undefined); }, [q.data?.video_url]); // autoplay (muted, as browsers require); controls are on
+  const [silent, setSilent] = useState(false); // the browser only allowed it to start muted
+  // Autoplay with sound. Arriving from a click on a story card counts as the visitor's go-ahead, so this normally just plays; if
+  // the browser refuses (a link opened straight into the page), play muted instead and offer a one-tap "Turn sound on".
+  useEffect(() => {
+    const v = video.current;
+    if (!v) return;
+    v.muted = false;
+    setSilent(false);
+    v.play().catch(() => { v.muted = true; setSilent(true); void v.play().catch(() => undefined); });
+  }, [q.data?.video_url]);
+  const soundOn = () => { const v = video.current; if (!v) return; v.muted = false; v.volume = 1; setSilent(false); void v.play().catch(() => undefined); };
   const s = q.data;
   return (
     <SiteShell>
@@ -30,9 +40,12 @@ export function StoryPage() {
           {s && (
             <>
               <div className="mt-4 overflow-hidden rounded-sm border border-white/15 bg-black">
-                <video ref={video} key={s.video_url} src={s.video_url} poster={s.thumbnail_url ?? undefined} controls autoPlay muted playsInline preload="auto" className="aspect-video w-full bg-black" aria-label={`Video: ${s.title}`} />
+                <video ref={video} key={s.video_url} src={s.video_url} poster={s.thumbnail_url ?? undefined} controls autoPlay playsInline preload="auto" onVolumeChange={(e) => { if (!e.currentTarget.muted) setSilent(false); }} className="aspect-video w-full bg-black" aria-label={`Video: ${s.title}`} />
               </div>
-              <p className="mt-2 text-xs text-white/60">Playing without sound; use the volume control to turn it on. {s.disclosure}</p>
+              <p className="mt-2 text-xs text-white/60">
+                {silent && <button type="button" className="mr-2 rounded-sm bg-brand-green px-2 py-1 font-bold text-ink" onClick={soundOn}>Turn sound on</button>}
+                {silent ? "Your browser started it without sound. " : ""}{s.disclosure}
+              </p>
               <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/70">
                 <span className="font-semibold text-white">{s.company}</span>
                 {s.industry && <span>· {s.industry}</span>}

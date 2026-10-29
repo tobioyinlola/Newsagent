@@ -375,3 +375,19 @@ async def audit_log(
     return list(
         (await session.execute(q.order_by(AuditLog.created_at.desc()).limit(min(max(limit, 1), 500)))).scalars().all()
     )
+
+
+@router.post("/v1/admin/covers/refresh")
+async def refresh_covers(
+    request: Request,
+    op: Principal = Depends(require("operations.manage")),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Give finished videos made before covers showed the guest a cover from the guest's first answer (it also runs once at
+    start-up). Safe to repeat: videos already done are skipped. No presenter clips or renders are made."""
+    from app.services import thumbnails
+
+    out = await thumbnails.refresh_all(limit=50)
+    audit(session, op.user.email, "covers.refresh", detail=out, request=request)
+    await session.commit()
+    return out
