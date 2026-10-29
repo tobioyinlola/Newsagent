@@ -19,7 +19,7 @@ from app.schemas.api import (
     ScriptOut,
     ScriptUpdate,
 )
-from app.services import credits, moderation_flow, presenters, privacy
+from app.services import credits, moderation_flow, presenters
 from app.services import interview as iv
 from app.services import progress as progress_svc
 from app.services import state_machine as sm
@@ -365,19 +365,3 @@ async def cancel(
     project.failure_retryable = True
     await session.commit()
     return await _out(session, project)
-
-
-IN_FLIGHT = privacy.IN_FLIGHT
-
-
-@router.delete("/{project_id}")
-async def delete_project(
-    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
-) -> dict:
-    """Owner can delete a project at any time it isn't mid-render. Removes files and all records."""
-    project = await _owned(session, project_id, p)
-    if project.state in IN_FLIGHT:
-        raise HTTPException(409, "This video is being made. Delete it once it finishes or fails.")
-    await privacy.purge_project(session, project)
-    await session.commit()
-    return {"ok": True}

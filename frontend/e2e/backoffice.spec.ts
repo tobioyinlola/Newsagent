@@ -191,3 +191,15 @@ test("a customer cannot reach the presenter clips", async ({ request }) => {
   const c = await customer(request, "Gamma Co");
   expect((await request.get(`${API}/v1/admin/presenter-clips`, { headers: c.headers })).status()).toBe(403);
 });
+
+test("operators delete a customer's video from the back office; customers can't", async ({ page, request }) => {
+  const a = await customer(request, "Delete Me Co");
+  const p = await ok<{ id: string }>(await request.post(`${API}/v1/projects`, { headers: a.headers, data: { brief_text: "Delete Me Co sells tea to offices across Lagos." } }));
+  expect((await request.delete(`${API}/v1/projects/${p.id}`, { headers: a.headers })).status()).toBe(405);
+  await asOperator(page);
+  await page.goto(`/admin/customers/${a.workspace}`);
+  await expect(page.getByRole("cell", { name: p.id.slice(0, 6) })).toBeVisible();
+  page.on("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: "Delete video" }).click();
+  await expect(page.getByText("No videos yet.")).toBeVisible();
+});

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import Principal, require
 from app.config import get_settings
 from app.db import get_session
-from app.models import Invite, VendorBudget, Workspace
+from app.models import Invite, Project, VendorBudget, Workspace
 from app.schemas.api import (
     InviteCreate,
     InviteOut,
@@ -20,7 +20,7 @@ from app.schemas.api import (
     WorkspacePatch,
 )
 from app.services import email_templates as templates
-from app.services import ledger
+from app.services import ledger, privacy, stories
 from app.services.audit import audit
 from app.services.notifications import send_email
 from app.services.spend_guard import ensure_vendor_budget
@@ -175,3 +175,68 @@ async def add_credits(
     )
     await session.commit()
     return {"ok": True, "duplicate": False, "balance": str(ws.credit_balance)}
+
+
+async def _project(session: AsyncSession, project_id: str) -> Project:
+    project = await session.get(Project, project_id)
+    if project is None:
+        raise HTTPException(404, "Video not found")
+    return project
+
+
+@router.delete("/projects/{project_id}")
+async def delete_video(
+    project_id: str,
+    request: Request,
+    op: Principal = Depends(require("content.manage")),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Delete a customer's video: its files and every record that belongs to it. Customers can't do this themselves."""
+    project = await _project(session, project_id)
+    if project.state in privacy.IN_FLIGHT:
+        raise HTTPException(409, "This video is being made. Delete it once it finishes or fails.")
+    detail = {"workspace": project.workspace_id, "state": project.state, "slug": project.story_slug}
+    await privacy.purge_project(session, project)
+    audit(
+        session,
+        op.user.email,
+        "video.delete",
+        target_type="project",
+        target_id=project_id,
+        detail=detail,
+        request=request,
+    )
+    await session.commit()
+    return {"ok": True}
+
+
+@router.delete("/projects/{project_id}/publication")
+async def take_story_down(
+    project_id: str,
+    request: Request,
+    op: Principal = Depends(require("content.manage")),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Take a story off Latest Stories (its page stops working). The video itself stays."""
+    project = await _project(session, project_id)
+    stories.unpublish(project)
+    audit(session, op.user.email, "story.take_down", target_type="project", target_id=project_id, request=request)
+    await session.commit()
+    return {"published": False, "slug": project.story_slug}
+
+
+@router.post("/projects/{project_id}/publication")
+async def put_story_back(
+    project_id: str,
+    request: Request,
+    op: Principal = Depends(require("content.manage")),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    project = await _project(session, project_id)
+    if project.state != "final_ready":
+        raise HTTPException(409, "A story can be published once the video is ready.")
+    if not await stories.publish(session, project, force=True):
+        raise HTTPException(409, "This story can't be published right now.")
+    audit(session, op.user.email, "story.publish", target_type="project", target_id=project_id, request=request)
+    await session.commit()
+    return {"published": True, "slug": project.story_slug}

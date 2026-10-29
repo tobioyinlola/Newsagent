@@ -192,27 +192,3 @@ async def publication(
         await session.commit()
     ws = await session.get(Workspace, project.workspace_id)
     return _out(project, stories.listed(project, ws))
-
-
-@router.post("/v1/projects/{project_id}/publication", response_model=PublicationOut)
-async def republish(
-    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
-) -> PublicationOut:
-    project = await _owned(session, project_id, p)
-    if project.state != "final_ready":
-        raise HTTPException(409, "Your story can be published once the video is ready.")
-    if not await stories.publish(session, project, force=True):
-        raise HTTPException(409, "This story can't be published right now.")
-    await session.commit()
-    ws = await session.get(Workspace, project.workspace_id)
-    return _out(project, stories.listed(project, ws))
-
-
-@router.delete("/v1/projects/{project_id}/publication", response_model=PublicationOut)
-async def take_down(
-    project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
-) -> PublicationOut:
-    project = await _owned(session, project_id, p)
-    stories.unpublish(project)
-    await session.commit()
-    return _out(project, False)

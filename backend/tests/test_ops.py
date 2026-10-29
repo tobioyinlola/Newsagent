@@ -10,7 +10,7 @@ from app.config import get_settings
 from app.integrations import registry
 from app.models import Asset, Workspace
 from app.services import ratelimit
-from tests.conftest import OWNER
+from tests.conftest import OPS, OWNER
 from tests.helpers import make_final_ready
 
 
@@ -103,7 +103,8 @@ async def test_owner_can_delete_finished_project_and_files(client, workspace, ma
         keys = [a.storage_key for a in (await s.execute(select(Asset).where(Asset.project_id == pid))).scalars()]
     assert keys and all([await registry.get_storage().exists(k) for k in keys if "anchor" not in k])
     token = (await client.post(f"/v1/projects/{pid}/share", headers=OWNER)).json()["url"].rsplit("/s/", 1)[1]
-    assert (await client.delete(f"/v1/projects/{pid}", headers=OWNER)).status_code == 200
+    assert (await client.delete(f"/v1/projects/{pid}", headers=OWNER)).status_code == 405  # customers can't delete
+    assert (await client.delete(f"/v1/admin/projects/{pid}", headers=OPS)).status_code == 200
     assert (await client.get(f"/v1/projects/{pid}", headers=OWNER)).status_code == 404
     assert (await client.get(f"/v1/share/{token}")).status_code == 404
     assert not any([await registry.get_storage().exists(k) for k in keys if "anchor" not in k])
@@ -123,4 +124,4 @@ async def test_cannot_delete_in_flight_project(client, workspace, maker):
     async with maker() as s:
         (await s.get(Project, pid)).state = "rendering_anchor"
         await s.commit()
-    assert (await client.delete(f"/v1/projects/{pid}", headers=OWNER)).status_code == 409
+    assert (await client.delete(f"/v1/admin/projects/{pid}", headers=OPS)).status_code == 409

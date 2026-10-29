@@ -6,7 +6,7 @@ from sqlalchemy import select
 from app.integrations import registry
 from app.models import Asset, Job, Project, Workspace
 from app.pipeline.queue import get_queue
-from tests.conftest import OWNER, VIDEO
+from tests.conftest import OPS, OWNER, VIDEO
 
 BRIEF = {"brief_text": "Acme helps farmers sell produce online. We have 5,000 users and we are the first of our kind."}
 
@@ -154,7 +154,7 @@ async def test_a_finished_video_can_be_deleted_with_everything_that_belongs_to_i
     ):  # the vendor-request rows point at the project: leaving them behind blocks the delete in Postgres
         s.add(ProviderRequest(project_id=pid, provider="heygen", slot="clip", request_hash="h"))
         await s.commit()
-    assert (await client.delete(f"/v1/projects/{pid}", headers=OWNER)).status_code == 200
+    assert (await client.delete(f"/v1/admin/projects/{pid}", headers=OPS)).status_code == 200
     async with maker() as s:
         assert not (await s.execute(select(ProviderRequest).where(ProviderRequest.project_id == pid))).scalars().first()
         assert await s.get(Project, pid) is None

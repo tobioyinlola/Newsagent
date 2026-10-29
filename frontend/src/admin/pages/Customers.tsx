@@ -1,8 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { Stat } from "../components/Charts";
+import { useCan } from "../lib/can";
 import { Button, Card, ErrorBox, inputCls } from "../components/ui";
 import { ago, date, num, usd } from "../lib/format";
 
@@ -54,6 +55,13 @@ export function Customers() {
 export function CustomerDetail() {
   const { id = "" } = useParams();
   const q = useQuery({ queryKey: ["customer", id], queryFn: () => unwrap(api.GET("/v1/admin/customers/{workspace_id}", { params: { path: { workspace_id: id } } })) });
+  const qc = useQueryClient();
+  const can = useCan();
+  const refresh = () => qc.invalidateQueries({ queryKey: ["customer", id] });
+  const path = (project_id: string) => ({ params: { path: { project_id } } });
+  const del = useMutation({ mutationFn: (pid: string) => unwrap(api.DELETE("/v1/admin/projects/{project_id}", path(pid))), onSuccess: refresh });
+  const takeDown = useMutation({ mutationFn: (pid: string) => unwrap(api.DELETE("/v1/admin/projects/{project_id}/publication", path(pid))), onSuccess: refresh });
+  const putBack = useMutation({ mutationFn: (pid: string) => unwrap(api.POST("/v1/admin/projects/{project_id}/publication", path(pid))), onSuccess: refresh });
   if (q.isLoading) return <p aria-busy="true">Loading…</p>;
   if (q.error || !q.data) return <><Link className="underline" to="/customers">← Customers</Link><ErrorBox error={q.error ?? new Error("Not found")} /></>;
   const c = q.data;
@@ -81,10 +89,17 @@ export function CustomerDetail() {
       <Card title="Videos">
         {c.projects.length === 0 ? <p className="text-sm text-muted">No videos yet.</p> : (
           <table className="w-full text-sm"><caption className="sr-only">Videos</caption>
-            <thead><tr className="text-left text-muted"><th className="py-1">Video</th><th>Stage</th><th>Interview</th><th>Started</th><th>Finished</th><th className="text-right">Vendor cost</th></tr></thead>
-            <tbody>{c.projects.map((p) => <tr key={p.id} className="border-t border-line"><td className="py-1.5 font-mono">{p.id.slice(0, 6)}</td><td className="capitalize">{p.state.replace(/_/g, " ")}</td><td>{p.interview === "none" ? "—" : p.interview === "live" ? "AI interview" : "link"}</td><td>{ago(p.created_at)}</td><td>{p.completed_at ? date(p.completed_at) : "—"}</td><td className="text-right tabular-nums">{usd(p.cost_usd)}</td></tr>)}</tbody>
+            <thead><tr className="text-left text-muted"><th className="py-1">Video</th><th>Stage</th><th>Interview</th><th>Started</th><th>Finished</th><th className="text-right">Vendor cost</th>{can("content.manage") && <th className="text-right">Actions</th>}</tr></thead>
+            <tbody>{c.projects.map((p) => <tr key={p.id} className="border-t border-line"><td className="py-1.5 font-mono">{p.id.slice(0, 6)}</td><td className="capitalize">{p.state.replace(/_/g, " ")}</td><td>{p.interview === "none" ? "—" : p.interview === "live" ? "AI interview" : "link"}</td><td>{ago(p.created_at)}</td><td>{p.completed_at ? date(p.completed_at) : "—"}</td><td className="text-right tabular-nums">{usd(p.cost_usd)}</td>{can("content.manage") && (
+              <td className="space-x-2 whitespace-nowrap text-right">
+                {p.state === "final_ready" && (p.published
+                  ? <Button variant="secondary" disabled={takeDown.isPending} onClick={() => { if (confirm("Take this story off Latest Stories? The video stays.")) takeDown.mutate(p.id); }}>Take story down</Button>
+                  : <Button variant="secondary" disabled={putBack.isPending} onClick={() => putBack.mutate(p.id)}>Publish story</Button>)}
+                <Button variant="danger" disabled={del.isPending} onClick={() => { if (confirm("Delete this video and all its files? This can't be undone.")) del.mutate(p.id); }}>Delete video</Button>
+              </td>)}</tr>)}</tbody>
           </table>
         )}
+        <ErrorBox error={del.error ?? takeDown.error ?? putBack.error} />
       </Card>
       <Card title="Payments">
         {c.payments.length === 0 ? <p className="text-sm text-muted">No payments yet.</p> : (

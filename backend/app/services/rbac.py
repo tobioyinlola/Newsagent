@@ -35,6 +35,7 @@ PERMISSIONS: tuple[Perm, ...] = (
     Perm("operations.manage", "Retry failed videos", "Operations"),
     Perm("settings.manage", "Change system switches and limits", "Operations"),
     Perm("presenter.manage", "Manage the presenter clip library", "Content"),
+    Perm("content.manage", "Delete videos and take stories down or put them back", "Content"),
     Perm("audit.view", "See the audit log", "Security"),
     Perm("team.manage", "Invite and manage the back-office team", "Security"),
 )
@@ -68,8 +69,8 @@ ROLES: tuple[Role, ...] = (
     Role(
         "content",
         "Content",
-        "The presenter clip library and the review queue.",
-        frozenset({"overview.view", "presenter.manage", "review.manage"}),
+        "The presenter clip library, the review queue, and deleting videos or taking stories down.",
+        frozenset({"overview.view", "presenter.manage", "review.manage", "content.manage"}),
     ),
     Role(
         "viewer",

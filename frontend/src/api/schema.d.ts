@@ -356,6 +356,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/projects/{project_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Video
+         * @description Delete a customer's video: its files and every record that belongs to it. Customers can't do this themselves.
+         */
+        delete: operations["delete_video_v1_admin_projects__project_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/projects/{project_id}/publication": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Put Story Back */
+        post: operations["put_story_back_v1_admin_projects__project_id__publication_post"];
+        /**
+         * Take Story Down
+         * @description Take a story off Latest Stories (its page stops working). The video itself stays.
+         */
+        delete: operations["take_story_down_v1_admin_projects__project_id__publication_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/projects/{project_id}/retry": {
         parameters: {
             query?: never;
@@ -1462,11 +1503,7 @@ export interface paths {
         get: operations["get_project_v1_projects__project_id__get"];
         put?: never;
         post?: never;
-        /**
-         * Delete Project
-         * @description Owner can delete a project at any time it isn't mid-render. Removes files and all records.
-         */
-        delete: operations["delete_project_v1_projects__project_id__delete"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1822,10 +1859,8 @@ export interface paths {
          */
         get: operations["publication_v1_projects__project_id__publication_get"];
         put?: never;
-        /** Republish */
-        post: operations["republish_v1_projects__project_id__publication_post"];
-        /** Take Down */
-        delete: operations["take_down_v1_projects__project_id__publication_delete"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2102,6 +2137,47 @@ export interface paths {
         };
         /** Public Story */
         get: operations["public_story_v1_public_stories__slug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/stories/{slug}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Story Image
+         * @description A steady address for a story's cover picture (the stored file's own link expires), for link previews.
+         */
+        get: operations["story_image_v1_public_stories__slug__image_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/stories/{slug}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Story Preview
+         * @description What WhatsApp, LinkedIn, X, Facebook and Slack read to draw a link preview. The site serves this page, instead of the app,
+         *     to those crawlers only (see vercel.json); people always get the app.
+         */
+        get: operations["story_preview_v1_public_stories__slug__preview_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2675,6 +2751,11 @@ export interface components {
             id: string;
             /** Interview */
             interview: string;
+            /**
+             * Published
+             * @default false
+             */
+            published: boolean;
             /** State */
             state: string;
         };
@@ -5003,6 +5084,111 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PresenterClipOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_video_v1_admin_projects__project_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_story_back_v1_admin_projects__project_id__publication_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    take_story_down_v1_admin_projects__project_id__publication_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -7359,41 +7545,6 @@ export interface operations {
             };
         };
     };
-    delete_project_v1_projects__project_id__delete: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                project_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     get_broll_v1_projects__project_id__broll_get: {
         parameters: {
             query?: never;
@@ -8156,72 +8307,6 @@ export interface operations {
             };
         };
     };
-    republish_v1_projects__project_id__publication_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                project_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PublicationOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    take_down_v1_projects__project_id__publication_delete: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                project_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PublicationOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     retry_v1_projects__project_id__retry_post: {
         parameters: {
             query?: never;
@@ -8762,6 +8847,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StoryPageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    story_image_v1_public_stories__slug__image_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    story_preview_v1_public_stories__slug__preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
                 };
             };
             /** @description Validation Error */
