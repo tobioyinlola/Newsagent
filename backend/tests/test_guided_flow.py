@@ -8,7 +8,7 @@ from app.integrations import registry
 from app.integrations.avatar.mock import MockAvatarProvider
 from app.models import Asset, Job, Project, ScriptVersion, Workspace
 from app.pipeline.queue import get_queue
-from tests.conftest import OWNER
+from tests.conftest import OWNER, VIDEO
 from tests.helpers import record
 from tests.test_broll import add_image
 from tests.test_live_interview import start, state
@@ -43,7 +43,7 @@ async def test_details_open_the_interview_and_spend_nothing(client, workspace, m
     assert p["state"] == "interviewing" and p["flow"] == "guided" and p["announcement_type"] == "funding_round"
     async with maker() as s:
         assert (await s.execute(select(Job).where(Job.project_id == pid))).scalars().all() == []
-        assert (await s.get(Workspace, workspace)).credit_balance == Decimal("10")
+        assert (await s.get(Workspace, workspace)).credit_balance == Decimal("10") - VIDEO
         plan = (await s.execute(select(ScriptVersion).where(ScriptVersion.project_id == pid))).scalars().one()
         assert plan.approved and len(plan.interview_questions) == 4
 

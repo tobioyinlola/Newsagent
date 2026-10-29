@@ -6,7 +6,7 @@ from sqlalchemy import select
 from app.integrations import registry
 from app.models import Asset, Job, Project, Workspace
 from app.pipeline.queue import get_queue
-from tests.conftest import OPS, OWNER
+from tests.conftest import OWNER, VIDEO
 
 BRIEF = {"brief_text": "Acme helps farmers sell produce online. We have 5,000 users and we are the first of our kind."}
 
@@ -67,7 +67,7 @@ async def test_full_mock_pipeline_run(client, workspace, maker, monkeypatch, ver
         assert {j.stage for j in jobs} == {"anchor_render", "preview_render", "final_render"}
         assert all(j.status == "succeeded" and j.attempts == 1 for j in jobs)
         ws = await s.get(Workspace, workspace)
-        assert ws.credit_balance == Decimal("10") - Decimal(data["cost_total"])
+        assert ws.credit_balance == Decimal("10") - VIDEO - Decimal(data["cost_total"])
         job = next(j for j in jobs if j.stage == "final_render")
         # hard rule 2: disclosures are always in the render props
         assert job.result["props"]["disclosures"] == {"tag": "Featured", "anchor": "AI-generated anchor"}
@@ -89,10 +89,10 @@ async def test_rerun_is_idempotent_and_does_not_double_charge(client, workspace,
         assert (await s.get(Workspace, workspace)).credit_balance == before
 
 
-async def test_limit_reached_state_and_resume(client, workspace, maker):
-    async with maker() as s:
-        (await s.get(Workspace, workspace)).credit_balance = Decimal("0")
-        await s.commit()
+async def test_limit_reached_state_and_resume(client, workspace, maker, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "credit_markup", "1000")  # the steps now cost more than the workspace holds
     pid, script = await _to_ready(client)
     body = {k: script[k] for k in ("segments", "ticker_lines", "lower_thirds", "interview_questions")}
     body["segments"] = [{"kind": "intro", "text": "Tonight we feature Acme."}]
@@ -102,8 +102,7 @@ async def test_limit_reached_state_and_resume(client, workspace, maker):
     data = (await client.get(f"/v1/projects/{pid}", headers=OWNER)).json()
     assert data["state"] == "limit_reached" and Decimal(data["cost_total"]) == 0
 
-    r = await client.patch(f"/v1/admin/workspaces/{workspace}", json={"credit_balance": "5"}, headers=OPS)
-    assert r.status_code == 200
+    monkeypatch.setattr(get_settings(), "credit_markup", "1")  # affordable again
     await client.post(f"/v1/projects/{pid}/retry", headers=OWNER)
     await get_queue().drain()
     assert (await client.get(f"/v1/projects/{pid}", headers=OWNER)).json()["state"] == "final_ready"
@@ -131,7 +130,7 @@ async def test_vendor_failure_retries_then_fails_retryable(client, workspace, ma
     assert data["state"] == "failed" and data["failure_retryable"] is True
     assert calls["n"] == 3
     async with maker() as s:  # failed attempts cost nothing
-        assert (await s.get(Workspace, workspace)).credit_balance == Decimal("10")
+        assert (await s.get(Workspace, workspace)).credit_balance == Decimal("10") - VIDEO
         assert (await s.get(Project, pid)).cost_total == 0
         assert (await s.execute(select(Asset).where(Asset.project_id == pid))).first() is None
 

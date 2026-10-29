@@ -92,7 +92,9 @@ async def test_signup_needs_the_emailed_code_and_then_signs_you_in(client, works
     s = (await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": last_code(NEW)})).json()
     assert s["token"].startswith("nas_") and s["otp_required"] is False
     me = (await client.get("/v1/me", headers=bearer(s["token"]))).json()
-    assert me["email"] == NEW and me["workspace_name"] == "NewCo" and float(me["credit_balance"]) == 5.0
+    assert (
+        me["email"] == NEW and me["workspace_name"] == "NewCo" and float(me["credit_balance"]) == 5.0
+    )  # what the invitation gave
     async with maker() as db:
         u = (await db.execute(select(User).where(User.email == NEW))).scalar_one()
         assert u.password_hash.startswith("scrypt$") and PW not in u.password_hash and u.last_login_at is not None
@@ -515,7 +517,9 @@ async def test_a_business_can_sign_up_on_its_own_and_must_verify_its_emailed_cod
     r = await client.post("/v1/auth/signup/verify", json={"email": email, "code": code})
     assert r.status_code == 200 and r.json()["token"]
     me = (await client.get("/v1/me", headers=bearer(r.json()["token"]))).json()
-    assert me["email"] == email and me["workspace_name"] == "NewBiz Ltd" and float(me["credit_balance"]) == 5.0
+    assert (
+        me["email"] == email and me["workspace_name"] == "NewBiz Ltd" and float(me["credit_balance"]) == 1.0
+    )  # the free first video
     async with maker() as db:
         ws = (await db.execute(select(Workspace).where(Workspace.name == "NewBiz Ltd"))).scalar_one()
         assert (ws.city, ws.country, ws.industry) == ("Lagos", "Nigeria", "technology")

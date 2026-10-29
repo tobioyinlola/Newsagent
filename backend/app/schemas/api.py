@@ -508,18 +508,10 @@ class PhotoConfirmIn(BaseModel):
 
 
 # ---------- billing ----------
-class PackOut(BaseModel):
-    id: str
-    name: str
-    credits: Decimal
-    price_usd: Decimal
-    model_config = {"from_attributes": True}
-
-
-class PackIn(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-    credits: Decimal = Field(gt=0)
-    price_usd: Decimal = Field(ge=0)
+class CreditOptionOut(BaseModel):
+    amount_usd: Decimal
+    credits: Decimal  # what the payment buys: amount / the price of a credit
+    videos: int  # whole videos those credits pay for
 
 
 class BillingSummary(BaseModel):
@@ -527,10 +519,13 @@ class BillingSummary(BaseModel):
     spend_cap: Decimal
     spent_total: Decimal
     low_balance_threshold: Decimal
+    credits_per_video: Decimal
+    usd_per_credit: Decimal
+    videos_left: int  # whole videos the balance pays for
 
 
 class CheckoutIn(BaseModel):
-    pack_id: str
+    amount_usd: Decimal  # one of the purchase options (GET /v1/billing/options)
 
 
 class CheckoutOut(BaseModel):
@@ -566,10 +561,6 @@ class ManualCreditsIn(BaseModel):
     credits: Decimal = Field(gt=0)
     ref: str = Field(min_length=1, max_length=100)  # e.g. the invoice or bank transfer reference
     note: str = Field(default="", max_length=300)
-
-
-class PackPatch(BaseModel):
-    active: bool
 
 
 # ---------- operator console ----------

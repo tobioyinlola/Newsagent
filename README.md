@@ -86,7 +86,7 @@ Local real-stack run (real ffmpeg + Remotion, mocked HeyGen/Whisper/email):
 
 ## Operating it (Phase 3)
 - **Back office** (`frontend/src/admin/`, served by the customer app's site under `/admin`, set `ADMIN_BASE_URL`): business overview, customers, payments and
-  revenue, queue and jobs, review queue, costs and margin, credit packs, failover and an emergency pause, audit log. It is not
+  revenue, queue and jobs, review queue, costs and margin, credits, failover and an emergency pause, audit log. It is not
   part of the customer app, and the API refuses `/v1/admin*` calls from the customer app's origin. Operators sign in with
   password plus emailed code. **Credits** page for customers: balance, test checkout, usage statements, history. **Your data**: export or delete.
 - Billing: append-only credit ledger; payments via a provider-neutral signed webhook (a real provider adapter is still to be chosen).

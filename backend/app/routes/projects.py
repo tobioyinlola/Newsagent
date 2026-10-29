@@ -19,8 +19,8 @@ from app.schemas.api import (
     ScriptOut,
     ScriptUpdate,
 )
+from app.services import credits, moderation_flow, presenters, privacy
 from app.services import interview as iv
-from app.services import moderation_flow, presenters, privacy
 from app.services import progress as progress_svc
 from app.services import state_machine as sm
 from app.services.audit import audit
@@ -104,6 +104,22 @@ async def create_project(
     )
     session.add(project)
     await session.flush()
+    try:  # starting a video takes its price in credits (the first one is free: a new workspace starts with one credit)
+        await credits.charge_video(session, p.workspace.id, project)
+    except credits.InsufficientCredits as e:
+        await session.rollback()
+        raise HTTPException(
+            402,
+            {
+                "error": "insufficient_credits",
+                "message": "You're out of credits. Buy credits to create more videos.",
+                "credits_needed": str(e.needed),
+                "credit_balance": str(e.balance),
+            },
+        ) from e
+    except credits.SpendCapReached as e:
+        await session.rollback()
+        raise HTTPException(402, {"error": "spend_cap", "message": "Your workspace's spend cap is reached."}) from e
     session.add(Brief(project_id=project.id, raw_text=body.brief_text, website_url=body.website_url))
     await session.commit()
     return await _out(session, project)

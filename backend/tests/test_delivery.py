@@ -4,7 +4,7 @@ import pytest
 
 from app.routes import delivery
 from app.services.captions import DISCLOSURE, build_srt
-from tests.conftest import OPS, OWNER
+from tests.conftest import OPS, OWNER, VIDEO
 from tests.helpers import make_final_ready
 
 
@@ -123,13 +123,11 @@ async def test_list_projects(client, workspace):
     assert [p["id"] for p in (await client.get("/v1/projects", headers=OWNER)).json()] == [pid]
 
 
-async def test_failure_and_limit_emails_are_plain_language(client, workspace, maker):
+async def test_failure_and_limit_emails_are_plain_language(client, workspace, maker, monkeypatch):
+    from app.config import get_settings
     from app.integrations import registry
-    from app.models import Workspace
 
-    async with maker() as s:
-        (await s.get(Workspace, workspace)).credit_balance = Decimal("0")
-        await s.commit()
+    monkeypatch.setattr(get_settings(), "credit_markup", "1000")  # the steps now cost more than the workspace holds
     await make_final_ready(client)
     subjects = {m["subject"] for m in registry.get_email().sent}
     assert subjects == {"Your video is paused: limit reached"}
@@ -165,7 +163,7 @@ async def test_real_network_names_blocked_before_any_spend(client, workspace, ma
     r = await client.post(f"/v1/projects/{pid}/script/approve", headers=OWNER)
     assert r.status_code == 422 and r.json()["detail"]["terms"] == ["cnn"]
     async with maker() as s:
-        assert (await s.get(Workspace, workspace)).credit_balance == Decimal("10")
+        assert (await s.get(Workspace, workspace)).credit_balance == Decimal("10") - VIDEO
 
 
 async def test_get_script_and_admin_listings(client, workspace):

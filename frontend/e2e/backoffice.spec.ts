@@ -31,10 +31,9 @@ async function asOperator(page: Page) {
 
 test("the overview shows sign-ups, who is paying and how videos are doing", async ({ page, request }) => {
   for (const vendor of ["mock", "renderer"]) await ok(await request.put(`${API}/v1/admin/vendor-budgets`, { headers: OPS, data: { vendor, limit: "1000" } }));
-  const pack = await ok<{ id: string }>(await request.post(`${API}/v1/admin/packs`, { headers: OPS, data: { name: "Back office pack", credits: "30", price_usd: "29" } }));
   const a = await customer(request, "Acme Farms");
   await customer(request, "Beta Pay");
-  const co = await ok<{ checkout_id: string }>(await request.post(`${API}/v1/billing/checkout`, { headers: a.headers, data: { pack_id: pack.id } }));
+  const co = await ok<{ checkout_id: string }>(await request.post(`${API}/v1/billing/checkout`, { headers: a.headers, data: { amount_usd: "50" } }));
   await ok(await request.post(`${API}/v1/billing/dev/pay/${co.checkout_id}`, { headers: a.headers }));
   await ok(await request.post(`${API}/v1/projects`, { headers: a.headers, data: { brief_text: "Acme Farms helps farmers sell produce online across Ghana." } }));
 
@@ -43,7 +42,7 @@ test("the overview shows sign-ups, who is paying and how videos are doing", asyn
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   const figures = page.getByLabel("Key figures");
   await expect(figures.getByText("Paying companies")).toBeVisible();
-  await expect(figures.getByText("$29").first()).toBeVisible(); // revenue
+  await expect(figures.getByText("$50").first()).toBeVisible(); // revenue
   const latest = page.getByRole("table", { name: "Latest sign-ups" });
   await expect(latest.getByRole("row", { name: /Acme Farms.*Paying/ })).toBeVisible();
   await expect(latest.getByRole("row", { name: /Beta Pay.*Not yet/ })).toBeVisible();
@@ -162,7 +161,7 @@ test("the sidebar collapses to icons and remembers it", async ({ page }) => {
   await expect(page).toHaveURL(/\/admin\/customers/);
 });
 
-test("operators upload presenter clips, see them listed, switch them off and delete them", async ({ page, request }) => {
+test("operators upload presenter clips, see them listed, switch them off and delete them", async ({ page }) => {
   const mp4 = path.join(os.tmpdir(), `presenter-${Date.now()}.mp4`);
   execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=s=1280x720:r=30:d=6", "-f", "lavfi", "-i", "sine=frequency=440:d=6", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", mp4]);
   await asOperator(page);

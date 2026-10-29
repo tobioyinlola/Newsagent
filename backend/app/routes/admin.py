@@ -9,14 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import Principal, require
 from app.config import get_settings
 from app.db import get_session
-from app.models import CreditPack, Invite, VendorBudget, Workspace
+from app.models import Invite, VendorBudget, Workspace
 from app.schemas.api import (
     InviteCreate,
     InviteOut,
     ManualCreditsIn,
-    PackIn,
-    PackOut,
-    PackPatch,
     VendorBudgetOut,
     VendorBudgetSet,
     WorkspaceAdminOut,
@@ -143,61 +140,6 @@ async def list_vendor_budgets(
 ) -> list[VendorBudget]:
     rows = await session.execute(select(VendorBudget).order_by(VendorBudget.period.desc(), VendorBudget.vendor))
     return list(rows.scalars().all())
-
-
-@router.get("/packs", response_model=list[PackOut])
-async def admin_packs(
-    _: Principal = Depends(require("finance.view")), session: AsyncSession = Depends(get_session)
-) -> list[CreditPack]:
-    return list((await session.execute(select(CreditPack).order_by(CreditPack.price_usd))).scalars().all())
-
-
-@router.post("/packs", response_model=PackOut)
-async def create_pack(
-    body: PackIn,
-    request: Request,
-    op: Principal = Depends(require("finance.manage")),
-    session: AsyncSession = Depends(get_session),
-) -> CreditPack:
-    pack = CreditPack(name=body.name, credits=body.credits, price_usd=body.price_usd)
-    session.add(pack)
-    await session.flush()
-    audit(
-        session,
-        op.user.email,
-        "pack.create",
-        target_type="pack",
-        target_id=pack.id,
-        detail={"credits": str(body.credits), "price_usd": str(body.price_usd)},
-        request=request,
-    )
-    await session.commit()
-    return pack
-
-
-@router.patch("/packs/{pack_id}")
-async def patch_pack(
-    pack_id: str,
-    body: PackPatch,
-    request: Request,
-    op: Principal = Depends(require("finance.manage")),
-    session: AsyncSession = Depends(get_session),
-) -> dict:
-    pack = await session.get(CreditPack, pack_id)
-    if pack is None:
-        raise HTTPException(404, "Pack not found")
-    pack.active = body.active
-    audit(
-        session,
-        op.user.email,
-        "pack.update",
-        target_type="pack",
-        target_id=pack_id,
-        detail={"active": body.active},
-        request=request,
-    )
-    await session.commit()
-    return {"ok": True}
 
 
 @router.post("/workspaces/{workspace_id}/credits")

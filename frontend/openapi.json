@@ -146,6 +146,10 @@
             "title": "Credit Balance",
             "type": "string"
           },
+          "credits_per_video": {
+            "title": "Credits Per Video",
+            "type": "string"
+          },
           "low_balance_threshold": {
             "title": "Low Balance Threshold",
             "type": "string"
@@ -157,13 +161,24 @@
           "spent_total": {
             "title": "Spent Total",
             "type": "string"
+          },
+          "usd_per_credit": {
+            "title": "Usd Per Credit",
+            "type": "string"
+          },
+          "videos_left": {
+            "title": "Videos Left",
+            "type": "integer"
           }
         },
         "required": [
           "credit_balance",
           "spend_cap",
           "spent_total",
-          "low_balance_threshold"
+          "low_balance_threshold",
+          "credits_per_video",
+          "usd_per_credit",
+          "videos_left"
         ],
         "title": "BillingSummary",
         "type": "object"
@@ -767,13 +782,20 @@
       },
       "CheckoutIn": {
         "properties": {
-          "pack_id": {
-            "title": "Pack Id",
-            "type": "string"
+          "amount_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Amount Usd"
           }
         },
         "required": [
-          "pack_id"
+          "amount_usd"
         ],
         "title": "CheckoutIn",
         "type": "object"
@@ -1100,6 +1122,29 @@
           "lines"
         ],
         "title": "CostsOut",
+        "type": "object"
+      },
+      "CreditOptionOut": {
+        "properties": {
+          "amount_usd": {
+            "title": "Amount Usd",
+            "type": "string"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "string"
+          },
+          "videos": {
+            "title": "Videos",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "amount_usd",
+          "credits",
+          "videos"
+        ],
+        "title": "CreditOptionOut",
         "type": "object"
       },
       "CustomerDetail": {
@@ -2659,88 +2704,6 @@
           "top_customers"
         ],
         "title": "Overview",
-        "type": "object"
-      },
-      "PackIn": {
-        "properties": {
-          "credits": {
-            "anyOf": [
-              {
-                "exclusiveMinimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "string"
-              }
-            ],
-            "title": "Credits"
-          },
-          "name": {
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Name",
-            "type": "string"
-          },
-          "price_usd": {
-            "anyOf": [
-              {
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "string"
-              }
-            ],
-            "title": "Price Usd"
-          }
-        },
-        "required": [
-          "name",
-          "credits",
-          "price_usd"
-        ],
-        "title": "PackIn",
-        "type": "object"
-      },
-      "PackOut": {
-        "properties": {
-          "credits": {
-            "title": "Credits",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "price_usd": {
-            "title": "Price Usd",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "credits",
-          "price_usd"
-        ],
-        "title": "PackOut",
-        "type": "object"
-      },
-      "PackPatch": {
-        "properties": {
-          "active": {
-            "title": "Active",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "active"
-        ],
-        "title": "PackPatch",
         "type": "object"
       },
       "PayingCompany": {
@@ -6666,186 +6629,6 @@
         ]
       }
     },
-    "/v1/admin/packs": {
-      "get": {
-        "operationId": "admin_packs_v1_admin_packs_get",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/PackOut"
-                  },
-                  "title": "Response Admin Packs V1 Admin Packs Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Admin Packs",
-        "tags": [
-          "admin"
-        ]
-      },
-      "post": {
-        "operationId": "create_pack_v1_admin_packs_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PackIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PackOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Create Pack",
-        "tags": [
-          "admin"
-        ]
-      }
-    },
-    "/v1/admin/packs/{pack_id}": {
-      "patch": {
-        "operationId": "patch_pack_v1_admin_packs__pack_id__patch",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "pack_id",
-            "required": true,
-            "schema": {
-              "title": "Pack Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PackPatch"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Patch Pack V1 Admin Packs  Pack Id  Patch",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Patch Pack",
-        "tags": [
-          "admin"
-        ]
-      }
-    },
     "/v1/admin/payments": {
       "get": {
         "operationId": "payments_v1_admin_payments_get",
@@ -8986,9 +8769,10 @@
         ]
       }
     },
-    "/v1/billing/packs": {
+    "/v1/billing/options": {
       "get": {
-        "operationId": "packs_v1_billing_packs_get",
+        "description": "What can be bought: fixed amounts, each with the credits it gives.",
+        "operationId": "options_v1_billing_options_get",
         "parameters": [
           {
             "in": "header",
@@ -9013,9 +8797,9 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/PackOut"
+                    "$ref": "#/components/schemas/CreditOptionOut"
                   },
-                  "title": "Response Packs V1 Billing Packs Get",
+                  "title": "Response Options V1 Billing Options Get",
                   "type": "array"
                 }
               }
@@ -9033,7 +8817,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Packs",
+        "summary": "Options",
         "tags": [
           "billing"
         ]
@@ -13264,19 +13048,19 @@
         ]
       }
     },
-    "/v1/public/packs": {
+    "/v1/public/credit-options": {
       "get": {
-        "description": "The credit packs on sale, for the public pricing section of the landing page (no sign-in needed).",
-        "operationId": "public_packs_v1_public_packs_get",
+        "description": "The same, for the public pricing section of the landing page (no sign-in needed).",
+        "operationId": "public_options_v1_public_credit_options_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/PackOut"
+                    "$ref": "#/components/schemas/CreditOptionOut"
                   },
-                  "title": "Response Public Packs V1 Public Packs Get",
+                  "title": "Response Public Options V1 Public Credit Options Get",
                   "type": "array"
                 }
               }
@@ -13284,7 +13068,7 @@
             "description": "Successful Response"
           }
         },
-        "summary": "Public Packs",
+        "summary": "Public Options",
         "tags": [
           "billing"
         ]

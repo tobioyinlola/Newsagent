@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
+import { OutOfCredits } from "./OutOfCredits";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { signOut } from "../lib/auth";
@@ -147,6 +148,7 @@ export function Layout() {
         <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
           <DemoBanner />
           <Outlet />
+          <OutOfCredits />
         </div>
       </main>
     </div>

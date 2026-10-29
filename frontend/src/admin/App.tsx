@@ -54,7 +54,7 @@ export function App() {
           <Route path="/jobs" element={<Guard any={["operations.view"]}><Page title="Jobs"><JobsTab /></Page></Guard>} />
           <Route path="/costs" element={<Guard any={["finance.view"]}><Page title="Costs"><Costs /></Page></Guard>} />
           <Route path="/presenter" element={<Guard any={["presenter.manage"]}><Presenter /></Guard>} />
-          <Route path="/billing" element={<Guard any={["finance.view"]}><Page title="Credit packs and payments"><BillingAdmin /></Page></Guard>} />
+          <Route path="/billing" element={<Guard any={["finance.view"]}><Page title="Credits and payments"><BillingAdmin /></Page></Guard>} />
           <Route path="/setup" element={<Guard any={["customers.manage", "finance.view"]}><Page title="Setup"><Setup /></Page></Guard>} />
           <Route path="/team" element={<Guard any={["team.manage"]}><TeamPage /></Guard>} />
           <Route path="/audit" element={<Guard any={["audit.view"]}><Page title="Audit log"><Audit /></Page></Guard>} />

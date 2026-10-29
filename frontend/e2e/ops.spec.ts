@@ -23,11 +23,11 @@ async function redeem(request: APIRequestContext, code: string, email: string) {
 
 let n = 0;
 // each test gets its own owner so they never collide on the shared database
-async function setup(request: APIRequestContext) {
+async function setup(request: APIRequestContext, credits = "20") {
   const OWNER_EMAIL = `pilot${Date.now()}${n++}@startup.example.com`;
   for (const vendor of ["mock", "renderer", "transcription"]) await ok(await request.put(`${API}/v1/admin/vendor-budgets`, { headers: OPS, data: { vendor, limit: "1000" } }));
   const OWNER = bearer(OWNER_EMAIL);
-  const inv = await ok<{ code: string; workspace_id: string }>(await request.post(`${API}/v1/admin/invites`, { headers: OPS, data: { email: OWNER_EMAIL, workspace_name: "Pilot Co", credits: "20", spend_cap: "500" } }));
+  const inv = await ok<{ code: string; workspace_id: string }>(await request.post(`${API}/v1/admin/invites`, { headers: OPS, data: { email: OWNER_EMAIL, workspace_name: "Pilot Co", credits, spend_cap: "500" } }));
   await redeem(request, inv.code, OWNER_EMAIL);
   return { workspace: inv.workspace_id, email: OWNER_EMAIL, OWNER };
 }
@@ -58,20 +58,36 @@ test("moderation holds risky content; once an operator approves it the owner con
   await expect(owner.getByRole("heading", { name: "Your video" })).toBeVisible({ timeout: 60_000 });
 });
 
+test("the one free video is used, then starting another asks them to buy credits", async ({ browser, request }) => {
+  const { email, OWNER } = await setup(request, "1");
+  await ok(await request.post(`${API}/v1/projects`, { headers: OWNER, data: { brief_text: "Pilot Co sells solar lamps to market traders in Kumasi." } }));
+  const second = await request.post(`${API}/v1/projects`, { headers: OWNER, data: { brief_text: "Pilot Co opens a second shop in Accra this spring." } });
+  expect(second.status()).toBe(402);
+  const ctx = await browser.newContext();
+  await ctx.addInitScript((t) => localStorage.setItem("newsagent.token", t), `dev:${email}`);
+  const page = await ctx.newPage();
+  await page.goto("/ai-newsroom/new");
+  const dialog = page.getByRole("dialog", { name: "You're out of credits" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("link", { name: "Buy credits" }).click();
+  await expect(page).toHaveURL(/\/billing/);
+  await expect(page.getByRole("button", { name: "Buy $10.00 of credits" })).toBeVisible();
+  for (const amount of ["$50.00", "$100.00", "$200.00"]) await expect(page.getByRole("button", { name: `Buy ${amount} of credits` })).toBeVisible();
+});
+
 test("owner buys credits through checkout", async ({ browser, request }) => {
   const { workspace: wid, email: OWNER_EMAIL } = await setup(request);
-  await ok(await request.post(`${API}/v1/admin/packs`, { headers: OPS, data: { name: "Starter", credits: "30", price_usd: "29" } }));
 
   const ownerCtx = await browser.newContext();
   await ownerCtx.addInitScript((t) => localStorage.setItem("newsagent.token", t), `dev:${OWNER_EMAIL}`);
   const owner = await ownerCtx.newPage();
   await owner.goto("/billing");
   await expect(owner.getByLabel("Credit balance")).toContainText("20.00");
-  await owner.getByRole("button", { name: "Buy Starter" }).click();
+  await owner.getByRole("button", { name: "Buy $10.00 of credits" }).click();
   await expect(owner.getByText("This is a test checkout")).toBeVisible();
   await owner.getByRole("button", { name: "Pay now (test)" }).click();
   await expect(owner.getByText("Payment received")).toBeVisible();
-  await expect(owner.getByLabel("Credit balance")).toContainText("50.00");
+  await expect(owner.getByLabel("Credit balance")).toContainText("23.70");
   await expect(owner.getByRole("cell", { name: /Purchase/ })).toBeVisible();
 
   expect(wid).toBeTruthy();

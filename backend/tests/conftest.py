@@ -59,5 +59,15 @@ async def client(maker):
         yield c
 
 
+VIDEO = Decimal("1")  # what starting a video costs in credits
 OWNER = {"Authorization": "Bearer dev:owner@acme.test"}
 OPS = {"Authorization": "Bearer dev:ops@example.com"}
+
+
+@pytest.fixture(autouse=True)
+def usage_accounting(monkeypatch):
+    """The shipped setting takes nothing from the customer while a video is made (its flat price is charged once, when it starts).
+    The step-by-step accounting is still supported and tested, so tests run with markup 1 unless one sets another."""
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "credit_markup", "1")

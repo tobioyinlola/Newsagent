@@ -222,7 +222,8 @@ async def _cost_rows(session: AsyncSession, since: datetime) -> tuple[list[CostR
             d = by_project[pid]
             d["cost"] += Decimal(cost or 0)
             d["credits"] += -Decimal(amount or 0)
-            d["vendors"][vendor or "unknown"] = Decimal(cost or 0)
+            if vendor:  # the video's own price (no vendor) counts as credits charged, not as vendor cost
+                d["vendors"][vendor] = Decimal(cost or 0)
     out = [
         CostRow(
             project_id=p.id,

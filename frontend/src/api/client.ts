@@ -43,5 +43,8 @@ export async function unwrap<T>(p: Promise<{ data?: T; error?: unknown; response
       location.assign("/login?expired=1");
     }
   }
+  if (response.status === 402 && (detail as { error?: string } | undefined)?.error === "insufficient_credits") {
+    window.dispatchEvent(new CustomEvent("cf:out-of-credits")); // the app shows the "buy credits" popup
+  }
   throw new ApiError(response.status, message, detail);
 }
