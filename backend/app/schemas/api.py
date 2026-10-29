@@ -167,7 +167,6 @@ class InviteOut(BaseModel):
 class WorkspacePatch(BaseModel):
     credit_balance: Decimal | None = None
     spend_cap: Decimal | None = None
-    max_videos_per_day: int | None = None
     max_video_seconds: int | None = None
     suspended: bool | None = None
     share_disabled: bool | None = None
@@ -329,7 +328,6 @@ class WorkspaceAdminOut(BaseModel):
     credit_balance: Decimal
     spend_cap: Decimal
     spent_total: Decimal
-    max_videos_per_day: int
     max_video_seconds: int
     suspended: bool
     share_disabled: bool
@@ -529,7 +527,6 @@ class BillingSummary(BaseModel):
     spend_cap: Decimal
     spent_total: Decimal
     low_balance_threshold: Decimal
-    max_videos_per_day: int
 
 
 class CheckoutIn(BaseModel):

@@ -33,7 +33,7 @@ export function Billing() {
       <Card title="Your balance">
         <p className="text-4xl font-extrabold tabular-nums" aria-label="Credit balance">{s ? Number(s.credit_balance).toFixed(2) : "…"} <span className="text-lg font-medium text-muted">credits</span></p>
         {low && <div className="mt-3"><Notice tone="warn">You're running low. Add credits so your next video isn't paused.</Notice></div>}
-        {s && <p className="mt-2 text-sm text-muted">Up to {s.max_videos_per_day} videos a day. A typical video uses a few credits; every video shows its cost on the project page.</p>}
+        {s && <p className="mt-2 text-sm text-muted">A typical video uses a few credits; every video shows its cost on the project page.</p>}
       </Card>
       <Card title="Add credits">
         {manual ? <p className="text-muted">Credits are added by our team. Contact us with the amount you need and we'll top up your workspace.</p> : packs.data?.length ? (

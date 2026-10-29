@@ -68,7 +68,6 @@ async def summary(p: Principal = Depends(current_principal)) -> BillingSummary:
         spend_cap=w.spend_cap,
         spent_total=w.spent_total,
         low_balance_threshold=Decimal(get_settings().low_balance_threshold),
-        max_videos_per_day=w.max_videos_per_day,
     )
 
 

@@ -1,8 +1,8 @@
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import Principal, current_principal
@@ -271,17 +271,6 @@ async def approve_script(
     words = sum(len(s["text"].split()) for s in sv.segments)
     if words / WORDS_PER_SECOND > ws.max_video_seconds:
         raise HTTPException(422, "Script is longer than your plan allows")
-    since = datetime.now(UTC) - timedelta(days=1)
-    today = (
-        await session.execute(
-            select(func.count(func.distinct(ScriptVersion.project_id)))
-            .select_from(ScriptVersion)
-            .join(Project, Project.id == ScriptVersion.project_id)
-            .where(Project.workspace_id == ws.id, ScriptVersion.approved_at >= since)
-        )
-    ).scalar_one()
-    if today >= ws.max_videos_per_day:
-        raise HTTPException(429, "Daily video limit reached")
     with_interview = True if guided_flow else bool(body and body.with_interview)
     if with_interview and not (1 <= len(sv.interview_questions) <= iv.MAX_QUESTIONS):
         raise HTTPException(

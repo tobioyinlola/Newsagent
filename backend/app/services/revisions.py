@@ -100,7 +100,7 @@ async def revise_narration(
         claim_flags=flags,
         approved=True,
         approved_by=prev.approved_by,
-        approved_at=prev.approved_at or datetime.now(UTC),  # a revision is not a new video for the daily limit
+        approved_at=prev.approved_at or datetime.now(UTC),
     )
     session.add(sv)
     return sv

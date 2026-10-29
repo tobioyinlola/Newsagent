@@ -2288,8 +2288,6 @@ export interface components {
             credit_balance: string;
             /** Low Balance Threshold */
             low_balance_threshold: string;
-            /** Max Videos Per Day */
-            max_videos_per_day: number;
             /** Spend Cap */
             spend_cap: string;
             /** Spent Total */
@@ -4306,8 +4304,6 @@ export interface components {
             id: string;
             /** Max Video Seconds */
             max_video_seconds: number;
-            /** Max Videos Per Day */
-            max_videos_per_day: number;
             /** Name */
             name: string;
             /** Share Disabled */
@@ -4325,8 +4321,6 @@ export interface components {
             credit_balance?: number | string | null;
             /** Max Video Seconds */
             max_video_seconds?: number | null;
-            /** Max Videos Per Day */
-            max_videos_per_day?: number | null;
             /** Share Disabled */
             share_disabled?: boolean | null;
             /** Spend Cap */
