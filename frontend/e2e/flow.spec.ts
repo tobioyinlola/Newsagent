@@ -45,7 +45,7 @@ test("invite to shared video", async ({ page, browser }) => {
   // --- brief -> script
   await fp.getByRole("link", { name: "Videos" }).click();
   await fp.getByRole("link", { name: "New video" }).click();
-  await fp.goto("/projects/new-classic"); // the original script-first journey; the guided one has its own test
+  await fp.goto("/ai-newsroom/new-classic"); // the original script-first journey; the guided one has its own test
   await fp.getByLabel("Paste your announcement or news script").fill("Acme Farms helps farmers sell produce online. We have 5,000 users and we are the first of our kind in Ghana.");
   await fp.getByLabel("Your name").fill("Ada Obi");
   await fp.getByRole("button", { name: "Read it and write my script" }).click();
@@ -67,16 +67,9 @@ test("invite to shared video", async ({ page, browser }) => {
   await expect(fp.getByRole("heading", { name: "Suggested captions" })).toBeVisible();
   await expect(fp.locator("pre").first()).toContainText("AI-generated anchor");
 
-  // --- share and revoke
-  await fp.getByRole("button", { name: "Create share link" }).click();
-  const shareUrl = await fp.getByLabel("Share link").inputValue();
-  const viewer = await browser.newPage();
-  await viewer.goto(shareUrl.replace(/^https?:\/\/[^/]+/, "http://localhost:5173"));
-  await expect(viewer.getByRole("heading", { name: "Acme Farms", exact: true })).toBeVisible();
-  await expect(viewer.getByText("AI-generated anchor").first()).toBeVisible();
-  await fp.getByRole("button", { name: "Revoke all links" }).click();
-  await viewer.reload();
-  await expect(viewer.getByText("This link is no longer available.")).toBeVisible();
+  // --- the original script-first video has no written story, so there is nothing to publish on Latest Stories
+  await expect(fp.getByRole("heading", { name: "Your story on Cover Founder" })).toBeVisible();
+  await expect(fp.getByText("has no written story")).toBeVisible();
 
   // --- owner deletes the video; it disappears from the list
   fp.on("dialog", (d) => d.accept());
@@ -125,7 +118,7 @@ test("sign up with a password, verify the emailed code, sign out, sign back in, 
 
 test("an expired session sends you back to sign in", async ({ page }) => {
   await page.addInitScript(() => { if (!sessionStorage.getItem("seeded")) { sessionStorage.setItem("seeded", "1"); localStorage.setItem("newsagent.token", "nas_expired-or-revoked"); } });
-  await page.goto("/projects");
+  await page.goto("/ai-newsroom/videos");
   await expect(page).toHaveURL(/\/login\?expired=1/);
   await expect(page.getByText(/after an hour without activity/)).toBeVisible();
 });

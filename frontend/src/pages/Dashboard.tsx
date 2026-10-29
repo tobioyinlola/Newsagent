@@ -18,7 +18,7 @@ export function Dashboard() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">{me.data ? `Welcome, ${me.data.workspace_name}` : "Dashboard"}</h1>
-        <Link to="/projects/new" className={cta}>Make a video</Link>
+        <Link to="/ai-newsroom/new" className={cta}>Make a video</Link>
       </div>
       <ErrorBox error={me.error ?? projects.error} />
       <div className="grid gap-4 sm:grid-cols-3">
@@ -39,15 +39,15 @@ export function Dashboard() {
           <ul className="divide-y divide-line">
             {recent.map((p) => (
               <li key={p.id}>
-                <Link to={`/projects/${p.id}`} className="flex flex-wrap items-center justify-between gap-2 py-3 hover:bg-paper">
+                <Link to={`/ai-newsroom/${p.id}`} className="flex flex-wrap items-center justify-between gap-2 py-3 hover:bg-paper">
                   <span className="font-medium">{videoTitle(me.data?.workspace_name, p.created_at)}</span>
                   <span className="rounded-full bg-paper px-3 py-1 text-sm">{stateLabel(p.state)}</span>
                 </Link>
               </li>
             ))}
           </ul>
-        ) : <p className="text-muted">No videos yet. <Link className="underline" to="/projects/new">Make your first one</Link>.</p>}
-        {list.length > recent.length && <p className="mt-2 text-sm"><Link className="underline" to="/projects">See all videos</Link></p>}
+        ) : <p className="text-muted">No videos yet. <Link className="underline" to="/ai-newsroom/new">Make your first one</Link>.</p>}
+        {list.length > recent.length && <p className="mt-2 text-sm"><Link className="underline" to="/ai-newsroom/videos">See all videos</Link></p>}
       </Card>
     </>
   );

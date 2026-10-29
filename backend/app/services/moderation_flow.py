@@ -163,5 +163,8 @@ async def decide(session: AsyncSession, case: ModerationCase, decision: str, not
         )
     for to in emails:
         await send_email(
-            to, subject, body, link=("Open your project", f"{get_settings().app_base_url}/projects/{case.project_id}")
+            to,
+            subject,
+            body,
+            link=("Open your project", f"{get_settings().app_base_url}/ai-newsroom/{case.project_id}"),
         )

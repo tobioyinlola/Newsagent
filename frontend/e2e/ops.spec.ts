@@ -41,7 +41,7 @@ test("moderation holds risky content; once an operator approves it the owner con
   const ownerCtx = await browser.newContext();
   await ownerCtx.addInitScript((t) => localStorage.setItem("newsagent.token", t), `dev:${OWNER_EMAIL}`);
   const owner = await ownerCtx.newPage();
-  await owner.goto(`/projects/${p.id}`);
+  await owner.goto(`/ai-newsroom/${p.id}`);
   await owner.getByLabel("No interview").check();
   await owner.getByRole("button", { name: "Approve and make my video" }).click();
   await expect(owner.getByRole("alert")).toContainText("member of our team is checking");
@@ -98,7 +98,7 @@ test("demo mode is declared on the dashboard, and a finished video's progress is
   const { email, OWNER } = await setup(request);
   const p = await ok<{ id: string }>(await request.post(`${API}/v1/projects`, { headers: OWNER, data: { brief_text: "Acme Farms helps farmers sell produce online across Ghana." } }));
   await page.addInitScript((t) => localStorage.setItem("newsagent.token", t), `dev:${email}`);
-  await page.goto("/projects");
+  await page.goto("/ai-newsroom/videos");
   await expect(page.getByRole("note").filter({ hasText: "Demo mode." })).toBeVisible();
   const prog = await ok<{ percent: number; stages: { key: string; status: string }[]; cancellable: boolean }>(await request.get(`${API}/v1/projects/${p.id}/progress`, { headers: OWNER }));
   expect(prog.stages[0].key).toBe("script");

@@ -159,7 +159,7 @@ async def billing_webhook(request: Request, session: AsyncSession = Depends(get_
                     to,
                     "Credits added",
                     f"We've added {co.credits} credits to your workspace. Thank you!",
-                    link=("Make a video", f"{get_settings().app_base_url}/projects/new"),
+                    link=("Make a video", f"{get_settings().app_base_url}/ai-newsroom/new"),
                 )
     return {"result": result}
 

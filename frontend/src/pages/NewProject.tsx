@@ -30,7 +30,7 @@ export function NewProject() {
       await unwrap(api.POST("/v1/projects/{project_id}/guided/start", { params: { path: { project_id: p.id } } }));
       return p;
     },
-    onSuccess: (p) => nav(`/projects/${p.id}`),
+    onSuccess: (p) => nav(`/ai-newsroom/${p.id}`),
   });
   return (
     <Card title="Tell us about your announcement">

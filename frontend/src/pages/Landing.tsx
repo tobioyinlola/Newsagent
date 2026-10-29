@@ -3,6 +3,7 @@ import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { Logo, SecondaryLogo } from "../components/Logo";
+import { ScrollRow, StoryTile, useStories } from "../components/StoryCards";
 import { getToken } from "../lib/auth";
 
 // The public landing page. Layout: dark site with poster-style art (sunburst, mountains, clouds) drawn in the brand palette,
@@ -280,7 +281,7 @@ function Distribution() {
           <ul className="mt-6 space-y-3 text-white/90">
             {["Pick one region or several for each announcement", "Credits per region, shown before you confirm", "Your video and story stay yours to share anywhere"].map((x) => <li key={x} className="flex gap-3"><span className="text-brand-green" aria-hidden="true">✓</span>{x}</li>)}
           </ul>
-          <div className="mt-8 flex flex-wrap gap-3"><Cta to="/distribution" primary>Explore distribution</Cta><Cta href={`${CONTACT}%20-%20distribution`}>Join the waitlist</Cta></div>
+          <div className="mt-8 flex flex-wrap gap-3"><Cta to="/press-distribution" primary>Explore distribution</Cta><Cta href={`${CONTACT}%20-%20distribution`}>Join the waitlist</Cta></div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {regions.map((r, i) => (
@@ -390,7 +391,7 @@ function Faq() {
 
 export function Footer() {
   const cols: { title: string; links: [string, string][] }[] = [
-    { title: "Product", links: [["AI Newsroom", "/newsroom"], ["Distribution", "/distribution"], ["How it works", "/#how"], ["Pricing", "/#pricing"], ["FAQ", "/#faq"]] },
+    { title: "Product", links: [["AI Newsroom", "/ai-newsroom"], ["Latest Stories", "/latest-stories"], ["Press Distribution", "/press-distribution"], ["How it works", "/#how"], ["Pricing", "/#pricing"], ["FAQ", "/#faq"]] },
     { title: "Members", links: [["Sign in", "/login"], ["Reset password", "/forgot"], ["Publish your free story!", "/signup"], ["Contact support", "mailto:coverfounder@gmail.com"]] },
     { title: "Trust", links: [["AI disclosure", "/#faq"], ["Your data", "/account"], ["Security", "/security"]] },
   ];
@@ -420,7 +421,7 @@ export function Footer() {
   );
 }
 
-const NAV: [string, string][] = [["AI Newsroom", "/newsroom"], ["Distribution", "/distribution"], ["Pricing", "/#pricing"], ["FAQ", "/#faq"]];
+const NAV: [string, string][] = [["AI Newsroom", "/ai-newsroom"], ["Latest Stories", "/latest-stories"], ["Press Distribution", "/press-distribution"], ["Pricing", "/#pricing"], ["FAQ", "/#faq"]];
 
 // A site link: a page of the app (client-side) or a section of the home page (a normal link, so the browser scrolls to it).
 function SiteLink({ to, className, onClick, children }: { to: string; className: string; onClick?: () => void; children: ReactNode }) {
@@ -461,25 +462,25 @@ function MobileMenu({ open, onClose, signedIn }: { open: boolean; onClose: () =>
   );
 }
 
-// The home page's at-a-glance numbers. Videos and impressions are live (impressions = times a shared video was opened).
+// The home page's at-a-glance numbers. The video count is live.
 export const CHANNELS = ["YouTube", "LinkedIn", "X", "Instagram", "TikTok", "Facebook"];
+export const CONTINENTS = ["North America", "Africa", "Europe"];
 export const GEOGRAPHY: [string, string[]][] = [["United States", []], ["Canada", []], ["United Kingdom", []], ["Nigeria", []], ["Kenya", []]];
 export function StatsStrip() {
   const stats = useQuery({ queryKey: ["public-stats"], queryFn: () => unwrap(api.GET("/v1/public/stats")), retry: false, staleTime: 300000 });
-  const d = stats.data as { videos?: number; impressions?: number } | undefined;
+  const d = stats.data as { videos?: number } | undefined;
   const n = (v?: number) => (v == null ? "…" : v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}K` : String(v));
   const tiles: [string, string, string][] = [
     [n(d?.videos), "Videos created", "Finished news segments"],
-    [n(d?.impressions), "Impressions", "Views of shared videos"],
-    [String(CHANNELS.length), "Channels", CHANNELS.join(" · ")],
+    [String(CONTINENTS.length), "Continents coverage", CONTINENTS.join(" · ")],
     ["25K+", "Media platforms", "Distribution coverage"],
   ];
   return (
     <section aria-label="Cover Founder in numbers" className="border-b border-white/10 bg-ink px-4 py-12 md:px-8">
       <div className="mx-auto max-w-6xl">
-        <div className="grid grid-cols-2 border border-white/10 md:grid-cols-4">
+        <div className="grid grid-cols-1 border border-white/10 md:grid-cols-3">
           {tiles.map(([v, label, sub], i) => (
-            <div key={label} className={`p-6 ${i % 2 === 0 ? "border-r border-white/10" : "md:border-r md:border-white/10"} ${i < 2 ? "border-b border-white/10 md:border-b-0" : ""} ${i === 3 ? "md:border-r-0" : ""}`}>
+            <div key={label} className={`p-6 ${i < tiles.length - 1 ? "border-b border-white/10 md:border-b-0 md:border-r" : ""}`}>
               <p className="font-mono text-4xl font-bold text-white md:text-5xl">{v}</p>
               <p className="mt-2 font-mono text-xs font-bold uppercase tracking-wider text-brand-green">{label}</p>
               <p className="mt-1 text-xs text-white/60">{sub}</p>
@@ -492,6 +493,31 @@ export function StatsStrip() {
             <span key={region} className="rounded-sm border border-white/20 bg-white/5 px-3 py-1 text-sm text-white">{region}{parts.length ? <span className="text-white/60"> · {parts.join(", ")}</span> : null}</span>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+// A row of the newest published stories between the numbers and "Every announcement worth telling".
+function LatestStoriesRow() {
+  const q = useStories(12);
+  const cards = q.data ?? [];
+  return (
+    <section className="border-b border-white/10 bg-ink px-4 py-12 md:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <div><Eyebrow>Latest stories</Eyebrow><h2 className="mt-2 text-2xl text-white md:text-3xl">Fresh from the newsroom</h2></div>
+          <Link to="/latest-stories" className="whitespace-nowrap text-sm font-bold text-brand-green hover:underline">See all stories →</Link>
+        </div>
+        {cards.length ? (
+          <ScrollRow label="Latest stories" count={cards.length}>{cards.map((c) => <StoryTile key={c.slug} card={c} />)}</ScrollRow>
+        ) : (
+          <div className="border border-white/15 p-8 text-center">
+            <p className="text-lg font-bold text-white">Be the first story on Cover Founder.</p>
+            <p className="mt-1 text-sm text-white/70">Every finished video is published here with its press release.</p>
+            <div className="mt-4 flex justify-center"><Cta to="/signup" primary>Publish your free story!</Cta></div>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -546,7 +572,7 @@ export function Landing() {
             <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">AI newsroom for businesses.<br /><span className="text-brand-green">Press Creation &amp; Distribution</span></h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg text-white/85">In 10 minutes, we interview you on video, produce your news coverage, write your press release, and give you access to 25,000+ media channels for distribution, all in one place.</p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              {signedIn ? <Cta to="/projects/new" primary>Make a video</Cta> : <Cta to="/signup" primary>Publish your free story!</Cta>}
+              {signedIn ? <Cta to="/ai-newsroom/new" primary>Make a video</Cta> : <Cta to="/signup" primary>Publish your free story!</Cta>}
               <Cta href="#how">See how it works</Cta>
             </div>
           </div>
@@ -556,6 +582,7 @@ export function Landing() {
           <div className="cf-ticker flex w-max whitespace-nowrap font-mono text-sm text-white/80"><span>{ticker.repeat(4)}</span><span>{ticker.repeat(4)}</span></div>
         </div>
         <StatsStrip />
+        <LatestStoriesRow />
         <UseCases />
         <TwoWays />
         <Banner />
@@ -566,7 +593,7 @@ export function Landing() {
         <section className="cf-stripes border-t border-white/10 px-4 py-20 text-center md:px-8">
           <h2 className="text-3xl text-white md:text-5xl">Ready to go on air?</h2>
           <p className="mx-auto mt-3 max-w-xl text-white/70">Tell us about your next announcement. We'll send you an invitation and your first credits.</p>
-          <div className="mt-8 flex justify-center gap-3">{signedIn ? <Cta to="/projects/new" primary>Make a video</Cta> : <Cta to="/signup" primary>Publish your free story!</Cta>}<Cta to="/login">Sign in</Cta></div>
+          <div className="mt-8 flex justify-center gap-3">{signedIn ? <Cta to="/ai-newsroom/new" primary>Make a video</Cta> : <Cta to="/signup" primary>Publish your free story!</Cta>}<Cta to="/login">Sign in</Cta></div>
         </section>
       </main>
 

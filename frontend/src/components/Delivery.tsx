@@ -8,10 +8,12 @@ export function Delivery({ projectId }: { projectId: string }) {
   const p = { params: { path: { project_id: projectId } } };
   const dl = useQuery({ queryKey: ["downloads", projectId], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/downloads", p)) });
   const caps = useQuery({ queryKey: ["captions", projectId], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/captions", p)) });
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
-  const share = useMutation({ mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/share", p)), onSuccess: (d) => { setShareUrl(d.url); qc.invalidateQueries({ queryKey: ["captions", projectId] }); } });
-  const revoke = useMutation({ mutationFn: () => unwrap(api.DELETE("/v1/projects/{project_id}/share", p)), onSuccess: () => { setShareUrl(null); qc.invalidateQueries({ queryKey: ["captions", projectId] }); } });
+  const pub = useQuery({ queryKey: ["publication", projectId], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/publication", p)) });
+  const setPub = (d: unknown) => qc.setQueryData(["publication", projectId], d);
+  const takeDown = useMutation({ mutationFn: () => unwrap(api.DELETE("/v1/projects/{project_id}/publication", p)), onSuccess: setPub });
+  const publishAgain = useMutation({ mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/publication", p)), onSuccess: setPub });
+  const storyUrl = pub.data?.path ? `${window.location.origin}${pub.data.path}` : null;
 
   const copy = async (key: string, text: string) => {
     try { await navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(null), 1500); } catch { setCopied(null); }
@@ -42,20 +44,30 @@ export function Delivery({ projectId }: { projectId: string }) {
         </ul>
         <p className="mt-2 text-xs text-muted">Download links expire after 15 minutes. Reload this page for fresh ones.</p>
       </Card>
-      <Card title="Share">
+      <Card title="Your story on Cover Founder">
         <div className="space-y-3">
-          {shareUrl ? (
-            <div className="space-y-2">
-              <p className="text-sm">Anyone with this private link can watch. It is shown once, so copy it now.</p>
-              <div className="flex gap-2"><input readOnly aria-label="Share link" className="w-full rounded-md border border-ink bg-paper px-3 py-2 text-sm" value={shareUrl} onFocus={(e) => e.currentTarget.select()} />
-                <Button variant="secondary" onClick={() => copy("share", shareUrl)}>{copied === "share" ? "Copied" : "Copy"}</Button></div>
-            </div>
-          ) : <p className="text-sm text-muted">{caps.data?.has_active_share ? "A share link is active. For security the link itself can't be shown again; create a new one or revoke access." : "Create a private link you can send to anyone."}</p>}
-          <div className="flex gap-2">
-            <Button onClick={() => share.mutate()} disabled={share.isPending}>Create share link</Button>
-            <Button variant="danger" onClick={() => revoke.mutate()} disabled={revoke.isPending}>Revoke all links</Button>
-          </div>
-          <ErrorBox error={share.error ?? revoke.error} />
+          {pub.data?.published && storyUrl ? (
+            <>
+              <p className="text-sm">Your video and press release are published on Cover Founder Latest Stories. Share this link anywhere:</p>
+              <div className="flex gap-2">
+                <input readOnly aria-label="Link to your published story" className="w-full rounded-md border border-ink bg-paper px-3 py-2 text-sm" value={storyUrl} onFocus={(e) => e.currentTarget.select()} />
+                <Button variant="secondary" onClick={() => copy("story", storyUrl)}>{copied === "story" ? "Copied" : "Copy"}</Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <a className="rounded-md border-2 border-ink bg-brand-green px-4 py-2 text-sm font-bold text-ink hover:bg-ink hover:text-brand-green" href={pub.data.path ?? "#"} target="_blank" rel="noreferrer">View your story</a>
+                <Button variant="danger" onClick={() => takeDown.mutate()} disabled={takeDown.isPending}>Take it down</Button>
+              </div>
+              <p className="text-xs text-muted">Anyone with the link, and anyone browsing Latest Stories, can see it. The contact details in your press release are never shown.</p>
+            </>
+          ) : pub.data?.slug ? (
+            <>
+              <p className="text-sm text-muted">Your story is not published right now.</p>
+              <Button onClick={() => publishAgain.mutate()} disabled={publishAgain.isPending}>Publish it again</Button>
+            </>
+          ) : pub.isLoading ? <p aria-busy="true" className="text-sm text-muted">Checking…</p> : (
+            <p className="text-sm text-muted">This video has no written story, so there is nothing to publish.</p>
+          )}
+          <ErrorBox error={pub.error ?? takeDown.error ?? publishAgain.error} />
         </div>
       </Card>
       <Card title="Suggested captions">

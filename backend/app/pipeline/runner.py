@@ -15,7 +15,7 @@ from app.models import Job, Project
 from app.models.base import new_id
 from app.pipeline import steps
 from app.pipeline.queue import enqueue
-from app.services import provider_requests
+from app.services import provider_requests, stories
 from app.services import state_machine as sm
 from app.services.notifications import low_balance_alert, notify_operators, notify_owners, vendor_budget_alert
 from app.services.spend_guard import LimitReached, SpendGuard
@@ -270,6 +270,11 @@ async def _finish(step: str, pid: str, next_state: str | None) -> None:
             sm.transition(project, next_state)
             if next_state == "final_ready":
                 project.completed_at = datetime.now(UTC)
+        if next_state == "final_ready":
+            try:  # the story's public page is made automatically; it must never hold up a finished video
+                await stories.publish(session, project)
+            except Exception:  # noqa: BLE001
+                log.exception("could not publish the story page", extra={"project_id": pid})
         await session.commit()
         if next_state == "final_ready":
             await notify_owners(pid, "render_ready")

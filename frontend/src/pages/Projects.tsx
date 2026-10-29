@@ -13,7 +13,7 @@ export function Projects() {
     <>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Your videos</h1>
-        <Link to="/projects/new" className="rounded-sm border-2 border-ink bg-brand-green px-4 py-2 text-sm font-bold text-ink hover:bg-ink hover:text-brand-green">New video</Link>
+        <Link to="/ai-newsroom/new" className="rounded-sm border-2 border-ink bg-brand-green px-4 py-2 text-sm font-bold text-ink hover:bg-ink hover:text-brand-green">New video</Link>
       </div>
       <ErrorBox error={q.error} />
       <Card>
@@ -21,7 +21,7 @@ export function Projects() {
           <ul className="divide-y divide-line">
             {q.data.map((p) => (
               <li key={p.id}>
-                <Link to={`/projects/${p.id}`} className="flex flex-wrap items-center justify-between gap-2 py-3 hover:bg-paper">
+                <Link to={`/ai-newsroom/${p.id}`} className="flex flex-wrap items-center justify-between gap-2 py-3 hover:bg-paper">
                   <span className="font-medium">{videoTitle(me.data?.workspace_name, p.created_at)}</span>
                   <span className="rounded-full bg-paper px-3 py-1 text-sm">{stateLabel(p.state)}</span>
                 </Link>

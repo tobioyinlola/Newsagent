@@ -58,7 +58,7 @@ test("AI interview, recorded for real, merged with the answers column", async ({
   const page = await ctx.newPage();
   const violations: string[] = [];
   page.on("console", (m) => { if (/Content Security Policy|violates the following/i.test(m.text())) violations.push(m.text().slice(0, 200)); });
-  await page.goto(`/projects/${p.id}`);
+  await page.goto(`/ai-newsroom/${p.id}`);
 
   await expect(page.getByRole("heading", { name: "Your AI interview" })).toBeVisible();
   await page.getByLabel("I understand and agree.").check();
