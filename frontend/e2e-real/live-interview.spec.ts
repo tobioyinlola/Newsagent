@@ -98,16 +98,21 @@ test("AI interview, recorded for real, merged with the answers column", async ({
   // is beside the brand column (Pastel Green border, dark panel) at some point after the AI presenter
   const duration = Number(info.format.duration);
   expect(duration, "intro 4 s + cutaway 3 s + sign-off 4 s + 4 s of product footage are on top of the presenter and the answers").toBeGreaterThan(40);
-  const opening = pixel(1, 200, 300);
+  // every video starts with the 5 s Cover Founder intro card (dark) and ends with the 6 s outro card; the programme is in between
+  const INTRO = 5;
+  const OUTRO = 6;
+  const card = pixel(1, 200, 300);
+  expect(Math.max(...card), `intro card pixel ${card}`).toBeLessThan(100);
+  const opening = pixel(INTRO + 1.5, 200, 300);
   expect(Math.min(...opening), `opening shot pixel ${opening}`).toBeGreaterThan(150);
   let column = false;
-  for (let t = 5; t < duration - 4 && !column; t += 1) {
+  for (let t = INTRO + 1; t < duration - OUTRO - 4 && !column; t += 1) {
     const green = [1225, 1230, 1235, 1240].map((x) => pixel(t, x, 600)).find((px) => px[1] > 200 && px[0] > 150 && px[2] < 160);
     const panel = pixel(t, 1700, 1000);
     column = !!green && Math.max(...panel) < 80;
   }
   expect(column, "the answers column is on screen during an answer").toBe(true);
-  const ending = pixel(duration - 1, 200, 300);
+  const ending = pixel(duration - OUTRO - 1.5, 200, 300);
   expect(Math.min(...ending), `sign-off pixel ${ending}`).toBeGreaterThan(150);
   const costs = await (await request.get(`${API}/v1/projects/${p.id}/costs`, { headers: OWNER })).json();
   expect(costs.lines.map((l: { stage: string }) => l.stage)).toEqual(expect.arrayContaining(["anchor_render", "question_clips", "process_take", "merge_render"]));
