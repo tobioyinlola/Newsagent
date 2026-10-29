@@ -67,7 +67,7 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await page.getByRole("button", { name: "Produce my story" }).click();
   await expect(page.getByRole("heading", { name: "Your press release" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "What your presenter says" })).toBeVisible();
-  await expect(page.getByLabel("Outro")).toHaveValue(/For Cover Founder News, thank you for watching\.$/); // a full sign-off, not one line
+  await expect(page.getByLabel("Outro")).toHaveValue(/^This is Cover Founder News\..*have a great day!$/); // the standard closing line
   await expect(page.getByLabel(/Interview question/)).toHaveCount(0); // the questions are fixed once the answers are recorded
   await expect(page.getByRole("button", { name: "Make my video" })).toBeEnabled(); // pictures are optional
   const sample = (process.env.SNAPSHOT_PICS ?? "").split(",").filter(Boolean); // optional real pictures, for a visual check
@@ -120,6 +120,11 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await expect.poll(async () => (await video.evaluate((v: HTMLVideoElement) => v.muted)) === (await visitor.getByRole("button", { name: "Turn sound on" }).isVisible())).toBe(true);
   await expect(visitor.getByText("For immediate release")).toBeVisible();
   await expect(visitor.locator("article figure")).toHaveCount(2); // the pictures the owner uploaded sit inside the press release
+  const share = visitor.getByRole("group", { name: "Share this story" });
+  await expect(share.getByRole("link", { name: "Share on WhatsApp" })).toHaveAttribute("href", /^https:\/\/wa\.me\/\?text=.*latest-stories/);
+  await expect(share.getByRole("link", { name: "Share on LinkedIn" })).toHaveAttribute("href", /linkedin\.com\/sharing\/share-offsite\/\?url=.*latest-stories/);
+  await expect(share.getByRole("link", { name: "Share on X (Twitter)" })).toHaveAttribute("href", /twitter\.com\/intent\/tweet/);
+  await expect(share.getByRole("button", { name: /Copy link/ })).toBeVisible();
   await expect(visitor.getByText("Media Contact")).toHaveCount(0); // the contact details are never public
   await expect(visitor.getByText("AI-generated anchor").first()).toBeVisible();
   if (shots) await visitor.screenshot({ path: `${shots}/story-page.png`, fullPage: true });
