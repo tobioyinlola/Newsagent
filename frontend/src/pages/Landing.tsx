@@ -193,7 +193,7 @@ function UseCases() {
 function TwoWays() {
   const cards = [
     { art: "video" as const, title: "The news segment", body: "A broadcast-style video with an AI presenter, your founder's own answers cut in beside them, on-screen graphics in your colours, a natural sign-off and your product's address in the corner.", tags: ["AI PRESENTER", "FOUNDER ANSWERS", "CAPTIONS"] },
-    { art: "story" as const, title: "The written story", body: "A detailed feature written from your details and your interview: the news, the problem, how it works, what you said and what's next, plus a social post and hook ready to publish.", tags: ["FEATURE", "SOCIAL POST", "FACT FLAGS"] },
+    { art: "story" as const, photo: "/written-story.jpg", title: "The written story", body: "A detailed feature written from your details and your interview: the news, the problem, how it works, what you said and what's next, plus a social post and hook ready to publish.", tags: ["FEATURE", "SOCIAL POST", "FACT FLAGS"] },
   ];
   return (
     <section id="features" className="border-t border-white/10 bg-ink px-4 py-20 md:px-8">
@@ -203,8 +203,13 @@ function TwoWays() {
           {cards.map((c, i) => (
             <div key={c.title} className={`p-6 md:p-8 ${i === 0 ? "md:border-r md:border-white/10" : ""}`}>
               <div className="cf-grain relative h-56 overflow-hidden rounded-sm">
-                <CardArt variant={c.art} />
-                <div className="relative z-10 flex h-full items-end p-4">
+                {"photo" in c ? (
+                  // a photo of the finished story on a tablet: the tags go top-left so they stay clear of the screen
+                  <img src={c.photo} alt="" width={1200} height={675} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: "50% 72%" }} />
+                ) : (
+                  <CardArt variant={c.art} />
+                )}
+                <div className={`relative z-10 flex h-full p-4 ${"photo" in c ? "items-start" : "items-end"}`}>
                   <div className="flex flex-wrap gap-2">{c.tags.map((t) => <span key={t} className="rounded-sm border border-brand-green bg-ink/80 px-2 py-1 font-mono text-[11px] font-bold text-brand-green">{t}</span>)}</div>
                 </div>
               </div>
