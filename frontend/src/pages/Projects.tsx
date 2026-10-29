@@ -1,10 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api, unwrap } from "../api/client";
+import { useMe } from "../components/Layout";
 import { stateLabel } from "../lib/states";
+import { videoTitle } from "../lib/title";
 import { Card, ErrorBox } from "../components/ui";
 
 export function Projects() {
+  const me = useMe();
   const q = useQuery({ queryKey: ["projects"], queryFn: () => unwrap(api.GET("/v1/projects")) });
   return (
     <>
@@ -19,7 +22,7 @@ export function Projects() {
             {q.data.map((p) => (
               <li key={p.id}>
                 <Link to={`/projects/${p.id}`} className="flex flex-wrap items-center justify-between gap-2 py-3 hover:bg-paper">
-                  <span className="font-medium">Video {p.id.slice(0, 6)} <span className="text-sm font-normal text-muted">· {new Date(p.created_at).toLocaleDateString()}</span></span>
+                  <span className="font-medium">{videoTitle(me.data?.workspace_name, p.created_at)}</span>
                   <span className="rounded-full bg-paper px-3 py-1 text-sm">{stateLabel(p.state)}</span>
                 </Link>
               </li>
