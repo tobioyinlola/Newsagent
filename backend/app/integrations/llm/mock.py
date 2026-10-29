@@ -91,7 +91,10 @@ class MockScriptLLM(ScriptLLM):
             ),
             segments=[
                 ScriptSegment(kind="intro", text=f"Tonight's featured startup: {company}."),
-                ScriptSegment(kind="body", text=f"{facts.get('announcement', '')} Let's hear from the founder."),
+                ScriptSegment(
+                    kind="body",
+                    text=f"{facts.get('announcement', '')} Joining us in the studio is {facts.get('founder_name') or 'the founder'}.",
+                ),
             ],
             ticker_lines=[f"FEATURED: {company}"],
             lower_thirds=[{"title": company, "subtitle": kind.title()}],

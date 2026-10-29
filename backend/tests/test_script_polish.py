@@ -42,24 +42,37 @@ def test_a_reworded_repeat_is_still_a_repeat():
     assert out[1] == ""
 
 
-def test_the_invitation_is_said_once_however_the_writer_worded_it():
-    model_outro = "That was our look at Acme. If you want to get featured on Cover Founder, get in touch with us today. Thank you for watching."
-    text = steps.with_invite(model_outro)
-    assert text == model_outro  # not added again
-    assert sum(polish.is_invite(s) for s in polish.sentences(text)) == 1
-    # a worded-differently invite in the opening is dropped in favour of the closing one
+def test_the_invitation_to_get_featured_is_never_spoken():
     sc = script(
         [
             {
                 "kind": "intro",
-                "text": "Tonight, Acme. Want your story featured? Get in touch with Cover Founder. Let's hear from the founder.",
+                "text": "Tonight, Acme. Want your story featured? Get in touch with Cover Founder. Joining us is Ada.",
             },
-            {"kind": "outro", "text": "Thanks to the founder. Thank you for watching."},
+            {
+                "kind": "outro",
+                "text": "Thanks, Ada. If you want to get featured on Cover Founder, get in touch with us. Thank you for watching.",
+            },
         ]
     )
     t = steps.segment_texts(sc)
-    assert not polish.has_invite(t["main"]) and sum(polish.is_invite(s) for s in polish.sentences(t["outro"])) == 1
-    assert t["outro"].endswith("Thank you for watching.")  # the invitation sits before the sign-off line
+    assert not polish.has_invite(t["main"]) and not polish.has_invite(t["outro"])
+    assert t["outro"] == "Thanks, Ada. Thank you for watching."
+
+
+def test_the_programme_rounds_off_once():
+    out = steps.segment_texts(
+        script(
+            [
+                {
+                    "kind": "outro",
+                    "text": "That's all for this edition of Cover Founder. Thank you, Ada, for coming in. Thank you for watching. Have a wonderful day.",
+                }
+            ]
+        )
+    )["outro"]
+    # two separate round-ups: the last one stays (and its two lines are one round-up); the earlier one goes
+    assert out == "Thank you, Ada, for coming in. Thank you for watching. Have a wonderful day."
 
 
 def test_only_one_thank_you_for_watching():
@@ -67,19 +80,70 @@ def test_only_one_thank_you_for_watching():
     assert sum("watching" in p for p in out) == 1 and "watching" in out[1]
 
 
-def test_the_standard_sign_off_is_unchanged_so_its_presenter_clip_is_still_reused():
+def test_the_standard_sign_off_is_just_the_sign_off():
     t = steps.segment_texts(script([{"kind": "outro", "text": presenters.STANDARD_OUTRO}]))
-    assert t["outro"] == f"That was Cover Founder News. {steps.FEATURE_INVITE} Thank you for watching."
+    assert t["outro"] == "That was Cover Founder News. Thank you for watching."
 
 
-def test_the_first_question_does_not_hand_over_again_when_the_opening_already_did():
-    project = SimpleNamespace(flow="guided")
-    opening = [{"kind": "intro", "text": "Tonight, Acme raises a round. Let's hear from the founder now."}]
-    qs = ["What made you start Acme?", "Where do you want it in a year?"]
-    spoken = steps.question_texts(project, script(opening, qs), [0, 1])
-    assert spoken[0] == "What made you start Acme?"  # no second "let's hear from the founder"
-    plain = [{"kind": "intro", "text": "Tonight, Acme raises a round."}]
-    assert steps.question_texts(project, script(plain, qs), [0, 1])[0].startswith("Let's hear from the founder. ")
+def test_the_opening_does_not_hand_over():
+    t = steps.segment_texts(
+        script([{"kind": "intro", "text": "Tonight, Acme raises a round. Joining us is Ada. Let's hear from her now."}])
+    )
+    assert t["main"] == "Tonight, Acme raises a round. Joining us is Ada."
+
+
+def test_the_first_question_welcomes_the_guest_by_name_and_later_ones_acknowledge_the_answer():
+    project = SimpleNamespace(flow="guided", interview_mode="live", id="abc123", founder_name="Onyeka Akumah")
+    qs = ["What made you start Acme?", "What does the money change?", "Where next?", "Any advice?"]
+    spoken = steps.question_texts(
+        project, script([{"kind": "intro", "text": "Tonight, Acme raises a round."}], qs), [0, 1, 2, 3]
+    )
+    assert spoken[0].startswith("Onyeka") or "Onyeka" in spoken[0].split("?")[0]
+    assert spoken[0].endswith("What made you start Acme?")
+    assert "let's hear from" not in " ".join(spoken.values()).lower()
+    bridges = [spoken[i].replace(qs[i], "").strip() for i in (1, 2, 3)]
+    assert all(b for b in bridges) and len(set(bridges)) == 3  # each gap is acknowledged, differently
+    assert (
+        spoken[3].lower().count("last")
+        + spoken[3].lower().count("finally")
+        + spoken[3].lower().count("finish")
+        + spoken[3].lower().count("one more")
+        >= 1
+    )
+
+
+def test_different_videos_greet_and_bridge_differently_but_one_video_is_stable():
+    def run(pid):
+        project = SimpleNamespace(flow="guided", interview_mode="live", id=pid, founder_name="Ada Obi")
+        return steps.question_texts(
+            project, script([{"kind": "intro", "text": "Tonight."}], ["Q one?", "Q two?", "Q three?"]), [0, 1, 2]
+        )
+
+    assert run("aaaaaa") == run("aaaaaa")
+    openers = {run(f"{i:06x}")[0].split("Q one?")[0] for i in range(40)}
+    assert len(openers) >= 4  # not the same hook on every video
+
+
+def test_with_no_name_the_welcome_still_reads_naturally():
+    project = SimpleNamespace(flow="guided", interview_mode="live", id="zzz", founder_name="")
+    spoken = steps.question_texts(project, script([{"kind": "intro", "text": "Tonight."}], ["Q one?"]), [0])
+    assert "{name}" not in spoken[0] and spoken[0].endswith("Q one?") and not spoken[0].startswith(",")
+
+
+def test_the_new_flow_never_costs_the_presenter_vendor_more_words_than_the_old_one():
+    """Presenter clips are paid for by the second. The old programme: an opening up to 90 words ending with a hand-over, four
+    questions (the first prefixed with a 5-word hand-over), and a closing of up to 140 words plus the 23-word invitation. The new
+    one welcomes and bridges (a few words per question) but has shorter, single-purpose opening and closing."""
+    words = lambda s: len(s.split())  # noqa: E731
+    old_total = 90 + (5 + 4 * 14) + (140 + 23)
+    project = SimpleNamespace(flow="guided", interview_mode="live", id="abc123", founder_name="Onyeka")
+    opening = " ".join(["word"] * 65)  # the most the new opening can be (guided.PRESENTER_WORDS)
+    closing = " ".join(["word"] * 70)  # the most the new prompt asks the closing to be
+    qs = ["Why did you start this company and what problem were you solving?"] * 4
+    qs = [f"{q.rstrip('?')} number {i}?" for i, q in enumerate(qs)]  # distinct, ~14 words each
+    spoken = steps.question_texts(project, script([{"kind": "intro", "text": opening}], qs), [0, 1, 2, 3])
+    new_total = words(opening) + sum(words(t) for t in spoken.values()) + words(closing)
+    assert new_total <= old_total, (new_total, old_total)
 
 
 def test_a_question_that_repeats_an_earlier_line_is_trimmed_but_never_emptied():
@@ -93,7 +157,7 @@ def test_a_question_that_repeats_an_earlier_line_is_trimmed_but_never_emptied():
     )  # asked as written, not blank
 
 
-def test_the_presenter_only_script_is_deduplicated_and_ends_with_one_invitation():
+def test_the_presenter_only_script_is_deduplicated_and_has_no_invitation():
     sc = script(
         [
             {"kind": "intro", "text": "Acme raised money. Acme raised money."},
@@ -103,7 +167,7 @@ def test_the_presenter_only_script_is_deduplicated_and_ends_with_one_invitation(
     )
     text = steps.presenter_only_text(sc)
     assert text.count("Acme raised money") == 1
-    assert sum(polish.is_invite(s) for s in polish.sentences(text)) == 1
+    assert not polish.has_invite(text) and text.endswith("Thank you for watching.")
 
 
 def test_only_listed_questions_play_once_each():

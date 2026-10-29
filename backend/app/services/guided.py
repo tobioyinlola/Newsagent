@@ -22,7 +22,7 @@ from app.services.claims import detect_claims
 from app.services.safety import find_banned
 
 MAX_FEATURED = iv.MAX_QUESTIONS  # every answer can be in the video; each one costs a presenter question clip
-PRESENTER_WORDS = 90  # the opening the presenter speaks; every second of it is paid for
+PRESENTER_WORDS = 65  # the opening the presenter speaks; every second of it is paid for
 
 TYPES = {
     "product_launch": "Product launch",

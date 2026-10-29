@@ -6,7 +6,6 @@ from app.integrations import registry
 from app.integrations.avatar.mock import MockAvatarProvider
 from app.models import Project, ScriptVersion, User, Workspace
 from app.pipeline.queue import get_queue
-from app.pipeline.steps import with_invite
 from tests.conftest import OWNER
 from tests.helpers import record
 from tests.test_live_interview import interviewed_project, state
@@ -215,6 +214,6 @@ async def test_a_failed_revision_can_be_retried_and_keeps_the_footage(client, wo
     assert (await client.post(f"/v1/projects/{pid}/retry", headers=OWNER)).status_code == 200
     await get_queue().drain()
     assert await state(client, pid) == "final_ready"
-    assert ai.texts[-1] == with_invite("That was Acme. Over to you.")  # every sign-off carries the invitation
+    assert ai.texts[-1] == "That was Acme. Over to you."  # the sign-off is spoken as written: no invitation is added
     async with maker() as s:
         assert (await s.get(Project, pid)).completed_at is not None
