@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import Principal, operator
+from app.auth import Principal, require
 from app.config import get_settings
 from app.db import get_session
 from app.models import CreditPack, Invite, VendorBudget, Workspace
@@ -35,7 +35,7 @@ router = APIRouter(prefix="/v1/admin", tags=["admin"])
 async def create_invite(
     body: InviteCreate,
     request: Request,
-    op: Principal = Depends(operator),
+    op: Principal = Depends(require("customers.manage")),
     session: AsyncSession = Depends(get_session),
 ) -> InviteOut:
     invite_hours = max(48, get_settings().invite_ttl_hours)
@@ -78,7 +78,7 @@ async def patch_workspace(
     workspace_id: str,
     body: WorkspacePatch,
     request: Request,
-    op: Principal = Depends(operator),
+    op: Principal = Depends(require("customers.manage")),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     ws = await session.get(Workspace, workspace_id)
@@ -112,7 +112,7 @@ async def patch_workspace(
 async def set_vendor_budget(
     body: VendorBudgetSet,
     request: Request,
-    op: Principal = Depends(operator),
+    op: Principal = Depends(require("finance.manage")),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     await ensure_vendor_budget(session, body.vendor, body.limit)
@@ -131,7 +131,7 @@ async def set_vendor_budget(
 
 @router.get("/workspaces", response_model=list[WorkspaceAdminOut])
 async def list_workspaces(
-    _: Principal = Depends(operator), session: AsyncSession = Depends(get_session)
+    _: Principal = Depends(require("customers.view")), session: AsyncSession = Depends(get_session)
 ) -> list[Workspace]:
     rows = await session.execute(select(Workspace).order_by(Workspace.created_at.desc()).limit(200))
     return list(rows.scalars().all())
@@ -139,7 +139,7 @@ async def list_workspaces(
 
 @router.get("/vendor-budgets", response_model=list[VendorBudgetOut])
 async def list_vendor_budgets(
-    _: Principal = Depends(operator), session: AsyncSession = Depends(get_session)
+    _: Principal = Depends(require("finance.view")), session: AsyncSession = Depends(get_session)
 ) -> list[VendorBudget]:
     rows = await session.execute(select(VendorBudget).order_by(VendorBudget.period.desc(), VendorBudget.vendor))
     return list(rows.scalars().all())
@@ -147,14 +147,17 @@ async def list_vendor_budgets(
 
 @router.get("/packs", response_model=list[PackOut])
 async def admin_packs(
-    _: Principal = Depends(operator), session: AsyncSession = Depends(get_session)
+    _: Principal = Depends(require("finance.view")), session: AsyncSession = Depends(get_session)
 ) -> list[CreditPack]:
     return list((await session.execute(select(CreditPack).order_by(CreditPack.price_usd))).scalars().all())
 
 
 @router.post("/packs", response_model=PackOut)
 async def create_pack(
-    body: PackIn, request: Request, op: Principal = Depends(operator), session: AsyncSession = Depends(get_session)
+    body: PackIn,
+    request: Request,
+    op: Principal = Depends(require("finance.manage")),
+    session: AsyncSession = Depends(get_session),
 ) -> CreditPack:
     pack = CreditPack(name=body.name, credits=body.credits, price_usd=body.price_usd)
     session.add(pack)
@@ -177,7 +180,7 @@ async def patch_pack(
     pack_id: str,
     body: PackPatch,
     request: Request,
-    op: Principal = Depends(operator),
+    op: Principal = Depends(require("finance.manage")),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     pack = await session.get(CreditPack, pack_id)
@@ -202,7 +205,7 @@ async def add_credits(
     workspace_id: str,
     body: ManualCreditsIn,
     request: Request,
-    op: Principal = Depends(operator),
+    op: Principal = Depends(require("customers.manage")),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     """Record an offline payment (bank transfer, invoice). `ref` makes a double submit harmless."""

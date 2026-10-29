@@ -115,7 +115,9 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await expect(visitor).toHaveURL(new RegExp(`${slug}$`));
   const video = visitor.getByLabel(/^Video:/);
   await expect(video).toHaveAttribute("src", /.+/);
-  expect(await video.evaluate((v: HTMLVideoElement) => v.autoplay && v.muted && v.controls)).toBe(true); // autoplays (muted), with controls
+  expect(await video.evaluate((v: HTMLVideoElement) => v.autoplay && v.controls)).toBe(true); // autoplays, with controls
+  // it asks for sound; only if the browser refuses does it play muted, and then it says so and offers one tap to turn sound on
+  await expect.poll(async () => (await video.evaluate((v: HTMLVideoElement) => v.muted)) === (await visitor.getByRole("button", { name: "Turn sound on" }).isVisible())).toBe(true);
   await expect(visitor.getByText("For immediate release")).toBeVisible();
   await expect(visitor.locator("article figure")).toHaveCount(2); // the pictures the owner uploaded sit inside the press release
   await expect(visitor.getByText("Media Contact")).toHaveCount(0); // the contact details are never public

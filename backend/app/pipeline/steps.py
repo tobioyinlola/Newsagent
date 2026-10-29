@@ -18,7 +18,7 @@ from app.integrations.avatar.base import AvatarRequest
 from app.integrations.errors import ProviderPending, classify
 from app.integrations.renderer.base import RenderRequest
 from app.models import Asset, BrandKit, InterviewSession, Job, Project, ScriptVersion, Take, Workspace
-from app.services import cf_news, provider_requests
+from app.services import cf_news, provider_requests, thumbnails
 from app.services import conversation as conv
 from app.services import presenter as clip_lib
 from app.services import scene_plan as sp
@@ -723,7 +723,7 @@ async def preview_render(session: AsyncSession, project: Project, guard: SpendGu
     return StepOutcome({"props": props, "output_keys": status.output_keys}, cost)
 
 
-async def _record_outputs(session: AsyncSession, project: Project, status) -> dict:
+async def _record_outputs(session: AsyncSession, project: Project, status, *, guest_cover: bool = False) -> dict:
     """Register rendered files as assets and measure each video for the quality gate."""
     renderer = registry.get_renderer()
     analyses = {}
@@ -749,7 +749,16 @@ async def _record_outputs(session: AsyncSession, project: Project, status) -> di
         if o["kind"] == "video":
             analyses[key] = asdict(await renderer.analyze(registry.get_storage().presign_get(key)))
             duration = Decimal(str(round(analyses[key]["duration_s"], 2)))  # the story page shows how long the video is
-        session.add(Asset(project_id=project.id, type=atype, storage_key=key, format=o["format"], duration=duration))
+        session.add(
+            Asset(
+                project_id=project.id,
+                type=atype,
+                storage_key=key,
+                format=o["format"],
+                duration=duration,
+                hash=thumbnails.GUEST if guest_cover and atype == "thumbnail" else None,  # the cover shows the guest
+            )
+        )
     return analyses
 
 
@@ -1034,6 +1043,9 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
         "headline": story_headline(script),
         "presenter": presenter_identity(project),
     }
+    cover_at = thumbnails.guest_moment_s(project.scene_plan, brand_lead())
+    if cover_at is not None:  # the cover is the guest talking, not the presenter every video opens on
+        props["thumbnailAtSeconds"] = cover_at
     if site and closing_at is not None:  # shown in a corner while the presenter signs off
         props |= {"productUrl": display_url(site), "productUrlFromSeconds": closing_at}
     status, cost = await _submit_render(
@@ -1045,7 +1057,7 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
         prefix="final",
         input_urls={},
     )
-    analyses = await _record_outputs(session, project, status)
+    analyses = await _record_outputs(session, project, status, guest_cover=cover_at is not None)
     srt_key = await _store_srt(
         session, project, merge_srt([(a + brand_lead(), b + brand_lead(), t) for a, b, t in cues])
     )

@@ -38,9 +38,9 @@ export async function unwrap<T>(p: Promise<{ data?: T; error?: unknown; response
     message = "Please sign in again.";
     const otp = (detail as { error?: string } | undefined)?.error === "otp_required";
     // expired (e.g. an hour idle) or revoked: clear the dead token and go to sign-in
-    if (!otp && getToken() && !location.pathname.startsWith("/login")) {
+    if (!otp && getToken() && !location.pathname.startsWith("/admin/login")) {
       setToken(null);
-      location.assign("/login?expired=1");
+      location.assign("/admin/login?expired=1"); // the back office lives under /admin
     }
   }
   throw new ApiError(response.status, message, detail);

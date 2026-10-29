@@ -47,7 +47,10 @@ export async function renderThumbnail(format: "16x9" | "9x16", props: NewsProps 
   const url = await getBundle();
   const comp = await selectComposition({ serveUrl: url, id: `${compositionName(composition)}-${format}`, inputProps: props, browserExecutable });
   const lead = (props as { brandCards?: boolean }).brandCards ? Math.round(INTRO_SECONDS * comp.fps) : 0; // skip the opening card
-  await renderStill({ composition: comp, serveUrl: url, output: outFile, frame: Math.min(lead + 45, comp.durationInFrames - 1), inputProps: props, browserExecutable });
+  // a merged interview names the moment its cover should come from (the guest talking); otherwise a little after the opening
+  const at = (props as { thumbnailAtSeconds?: number }).thumbnailAtSeconds;
+  const frame = typeof at === "number" && at >= 0 ? Math.round(at * comp.fps) : lead + 45;
+  await renderStill({ composition: comp, serveUrl: url, output: outFile, frame: Math.min(frame, comp.durationInFrames - 1), inputProps: props, browserExecutable });
 }
 
 // H.264 needs even dimensions: reject scales that would produce odd pixel sizes before launching Chrome.

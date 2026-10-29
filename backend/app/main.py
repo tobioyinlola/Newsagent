@@ -1,6 +1,8 @@
+import asyncio
 import json
 import logging
 import re
+from contextlib import asynccontextmanager
 
 import sentry_sdk
 from fastapi import FastAPI, Request
@@ -25,6 +27,7 @@ from app.routes import (
     presenter,
     projects,
     scenes,
+    staff,
     stories,
     system,
 )
@@ -78,6 +81,25 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(doc, default=str)
 
 
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    """Videos made before covers showed the guest get a new cover once, in the background, after the app has started."""
+    task = None
+    if not get_settings().is_local and get_settings().guest_cover_backfill:
+        from app.services import thumbnails
+
+        async def run() -> None:
+            try:
+                logging.getLogger("thumbnails").info("covers refreshed: %s", await thumbnails.refresh_all())
+            except Exception:  # noqa: BLE001 - never takes the app down
+                logging.getLogger("thumbnails").exception("cover refresh failed")
+
+        task = asyncio.create_task(run())
+    yield
+    if task is not None and not task.done():
+        task.cancel()
+
+
 def create_app() -> FastAPI:
     s = get_settings()
     h = logging.StreamHandler()
@@ -89,7 +111,7 @@ def create_app() -> FastAPI:
         logging.getLogger(name).addFilter(RedactTokens())
     if s.sentry_dsn:
         sentry_sdk.init(dsn=s.sentry_dsn, environment=s.environment, before_send=_scrub_sentry, send_default_pii=False)
-    app = FastAPI(title="Newsagent API", version="0.1.0")
+    app = FastAPI(title="Newsagent API", version="0.1.0", lifespan=_lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=sorted({origin_of(s.app_base_url), origin_of(s.admin_base_url)}),  # origins only, never paths
@@ -143,6 +165,7 @@ def create_app() -> FastAPI:
         backoffice.router,
         presenter.router,
         scenes.router,
+        staff.router,
         stories.router,
         system.router,
         account.router,

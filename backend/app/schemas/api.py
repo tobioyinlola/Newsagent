@@ -13,6 +13,9 @@ class MeOut(BaseModel):
     workspace_name: str
     credit_balance: Decimal
     is_operator: bool
+    permissions: list[str] = []  # back-office permissions held (empty for customers)
+    is_owner: bool = False
+    staff_role: str | None = None  # "Owner", or the team role's label
 
 
 class ProjectCreate(BaseModel):
@@ -839,3 +842,81 @@ class ScenePatch(BaseModel):
 class ScenePatchOut(BaseModel):
     regenerates: list[str]  # what the next re-render will make again
     revision_pending: bool
+
+
+# ---------- back-office team (RBAC) ----------
+class PermissionOut(BaseModel):
+    key: str
+    label: str
+    group: str
+
+
+class RoleOut(BaseModel):
+    key: str
+    label: str
+    description: str
+    permissions: list[str]
+
+
+class StaffOut(BaseModel):
+    id: str
+    email: str
+    name: str
+    role: str  # owner | a role key | custom
+    role_label: str
+    permissions: list[str]
+    status: str  # owner | invited | active | suspended
+    invited_by: str | None = None
+    last_login_at: datetime | None = None
+    invite_expires_at: datetime | None = None
+    editable: bool  # may the signed-in person change this member?
+    is_you: bool = False
+
+
+class TeamOut(BaseModel):
+    roles: list[RoleOut]
+    permissions: list[PermissionOut]
+    members: list[StaffOut]
+    your_permissions: list[str]
+
+
+class StaffInviteIn(BaseModel):
+    email: EmailStr
+    name: str = Field(default="", max_length=200)
+    role: str = Field(max_length=20)
+    permissions: list[str] = []  # only used when role is "custom"
+
+
+class StaffInviteOut(BaseModel):
+    member: StaffOut
+    emailed: bool
+    join_url: str | None = None  # only when the email couldn't be sent, so the inviter can pass it on
+
+
+class StaffPatch(BaseModel):
+    name: str | None = Field(default=None, max_length=200)
+    role: str | None = Field(default=None, max_length=20)
+    permissions: list[str] | None = None
+    status: str | None = Field(default=None, pattern="^(active|suspended)$")
+
+
+class StaffInvitePreview(BaseModel):
+    email_hint: str
+    name: str
+    role_label: str
+    invited_by: str
+
+
+class StaffTokenIn(BaseModel):
+    token: str = Field(min_length=10, max_length=200)
+
+
+class StaffAcceptStartIn(BaseModel):
+    token: str = Field(min_length=10, max_length=200)
+    password: str = Field(min_length=1, max_length=200)
+    name: str = Field(default="", max_length=200)
+
+
+class StaffAcceptVerifyIn(BaseModel):
+    token: str = Field(min_length=10, max_length=200)
+    code: str = Field(min_length=4, max_length=12)

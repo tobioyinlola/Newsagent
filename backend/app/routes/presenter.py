@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import Principal, operator
+from app.auth import Principal, require
 from app.db import get_session
 from app.integrations import registry
 from app.integrations.storage.base import ObjectTooLarge
@@ -44,7 +44,7 @@ def _out(c: PresenterClip, preview: bool = True) -> PresenterClipOut:
 
 
 @router.get("", response_model=list[PresenterClipOut])
-async def list_clips(p: Principal = Depends(operator), session: AsyncSession = Depends(get_session)):
+async def list_clips(p: Principal = Depends(require("presenter.manage")), session: AsyncSession = Depends(get_session)):
     rows = (
         (
             await session.execute(
@@ -63,7 +63,7 @@ async def list_clips(p: Principal = Depends(operator), session: AsyncSession = D
 async def start_upload(
     body: PresenterClipUploadIn,
     request: Request,
-    p: Principal = Depends(operator),
+    p: Principal = Depends(require("presenter.manage")),
     session: AsyncSession = Depends(get_session),
 ):
     if not body.rights_confirmed:
@@ -102,7 +102,7 @@ async def start_upload(
 async def confirm_upload(
     clip_id: str,
     request: Request,
-    p: Principal = Depends(operator),
+    p: Principal = Depends(require("presenter.manage")),
     session: AsyncSession = Depends(get_session),
 ):
     """Read what was really uploaded: right file type, malware-free, real video of a usable length and size."""
@@ -168,7 +168,7 @@ async def update_clip(
     clip_id: str,
     body: PresenterClipPatch,
     request: Request,
-    p: Principal = Depends(operator),
+    p: Principal = Depends(require("presenter.manage")),
     session: AsyncSession = Depends(get_session),
 ):
     clip = await session.get(PresenterClip, clip_id)
@@ -198,7 +198,7 @@ async def update_clip(
 async def delete_clip(
     clip_id: str,
     request: Request,
-    p: Principal = Depends(operator),
+    p: Principal = Depends(require("presenter.manage")),
     session: AsyncSession = Depends(get_session),
 ) -> None:
     clip = await session.get(PresenterClip, clip_id)

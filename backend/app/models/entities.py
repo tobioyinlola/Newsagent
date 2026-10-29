@@ -438,3 +438,23 @@ class UserSession(Base, TimestampMixin):
     otp_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     user_agent: Mapped[str | None] = mapped_column(String(300), nullable=True)
     ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class StaffMember(Base, TimestampMixin):
+    """A back-office team member. Cover Founder's owners come from OPERATOR_EMAILS and always hold every permission; everyone
+    else is invited here with a role (a named set of permissions) or a custom list. Permissions are read on every request, so
+    a change takes effect at once. Only a hash of the invitation token is stored."""
+
+    __tablename__ = "staff_members"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    email: Mapped[str] = mapped_column(String(320), unique=True)
+    name: Mapped[str] = mapped_column(String(200), default="")
+    role: Mapped[str] = mapped_column(String(20))  # a role key from services/rbac.py, or "custom"
+    permissions: Mapped[list] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(12), default="invited")  # invited | active | suspended
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"))  # the team's own internal workspace
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    invited_by: Mapped[str] = mapped_column(String(320))
+    token_hash: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
+    invite_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

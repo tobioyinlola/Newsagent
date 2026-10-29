@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, unwrap } from "../../api/client";
+import { useCan } from "../../lib/can";
 import { Button, Card, ErrorBox, inputCls } from "../ui";
 
 export function JobsTab() {
   const qc = useQueryClient();
+  const can = useCan();
   const [status, setStatus] = useState("");
   const jobs = useQuery({ queryKey: ["admin-jobs", status], queryFn: () => unwrap(api.GET("/v1/admin/jobs", { params: { query: status ? { status } : {} } })), refetchInterval: 10000 });
   const retry = useMutation({
@@ -26,7 +28,7 @@ export function JobsTab() {
               <td><span className={j.status === "failed" ? "bg-red-tint px-1 font-bold text-ink" : j.stuck ? "bg-peach-tint px-1 font-bold text-ink" : ""}>{j.stuck ? "stuck" : j.status}</span></td>
               <td className="text-right">{j.attempts}</td><td className="text-right tabular-nums">{Number(j.cost).toFixed(4)}</td>
               <td className="max-w-xs truncate" title={j.error ?? ""}>{j.error ?? ""}</td>
-              <td>{(j.status === "failed" || j.stuck) && <Button variant="secondary" disabled={retry.isPending} onClick={() => retry.mutate(j.project_id)}>Retry video</Button>}</td>
+              <td>{can("operations.manage") && (j.status === "failed" || j.stuck) && <Button variant="secondary" disabled={retry.isPending} onClick={() => retry.mutate(j.project_id)}>Retry video</Button>}</td>
             </tr>))}</tbody></table>
       </div>
       {jobs.data?.length === 0 && <p className="text-muted">No jobs match.</p>}

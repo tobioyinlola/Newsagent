@@ -98,6 +98,10 @@ def sign_in_code(kind: str, code: str, minutes: int) -> tuple[str, str, str]:
         ),
         "login": ("Finish signing in", "Enter this code to finish signing in."),
         "reset": ("Reset your password", "Enter this code to choose a new password."),
+        "staff": (
+            "Confirm your email",
+            "Enter this code to confirm your email and finish joining the Cover Founder team.",
+        ),
     }[kind]
     html, text = render(
         copy[0],
@@ -135,3 +139,21 @@ def invite(workspace: str, signup_url: str, hours: int, credits: str | None = No
 def notice(heading: str, body: str, link: tuple[str, str] | None = None) -> tuple[str, str]:
     """A plain notification with an optional button, for project, billing and moderation updates."""
     return render(heading, body, button=link)
+
+
+def staff_invite(inviter: str, role: str, join_url: str, hours: int, name: str = "") -> tuple[str, str, str]:
+    body = (
+        f"{name + ', ' if name else ''}{inviter} has invited you to join the Cover Founder team as {role}. "
+        "You'll use the back office to look after customers and their videos.\n\n"
+        "What you can do depends on your role. Your team's admins can change it at any time."
+    )
+    after = (
+        "How to join:\n1. Press the button above (or open the link).\n2. Choose a password of at least 10 characters.\n"
+        "3. We email you a 6-digit code. Enter it to confirm your email.\n4. You're in. Each time you sign in we'll email you a code.\n\n"
+        f"The invitation can be used once and stays valid for {_span(hours)}. Weren't expecting it? Ignore this email: "
+        "nothing happens unless you open the link."
+    )
+    html, text = render(
+        "You're invited to the Cover Founder team", body, button=("Join the team", join_url), after=after
+    )
+    return "You're invited to the Cover Founder team", html, text

@@ -133,9 +133,9 @@ def is_operator_email(email: str) -> bool:
     return email.lower() in {e.strip().lower() for e in get_settings().operator_emails.split(",") if e.strip()}
 
 
-def lifetime_for(user: User) -> timedelta:
+def lifetime_for(user: User, operator: bool | None = None) -> timedelta:
     s = get_settings()
-    if is_operator_email(user.email):
+    if is_operator_email(user.email) if operator is None else operator:
         return timedelta(hours=s.operator_session_hours)  # operators: short sessions
     return timedelta(days=s.session_absolute_days)
 
@@ -147,14 +147,14 @@ class NewSession:
 
 
 async def create_session(
-    session: AsyncSession, user: User, request: Request | None, *, otp_verified: bool
+    session: AsyncSession, user: User, request: Request | None, *, otp_verified: bool, operator: bool | None = None
 ) -> NewSession:
     token = "nas_" + secrets.token_urlsafe(32)  # recognisable prefix so secret scanners can find a leaked one
     now = datetime.now(UTC)
     row = UserSession(
         user_id=user.id,
         token_hash=hash_token(token),
-        expires_at=now + lifetime_for(user),
+        expires_at=now + lifetime_for(user, operator),
         last_used_at=now,
         otp_verified=otp_verified,
         user_agent=(request.headers.get("user-agent", "")[:300] if request else None),
