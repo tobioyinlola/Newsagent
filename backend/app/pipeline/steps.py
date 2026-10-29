@@ -1087,9 +1087,14 @@ async def merge_inputs(session: AsyncSession, project: Project) -> dict:
 async def _wait(renderer, render_id: str, project_id: str | None = None):
     """Wait for a render. If the owner cancels the video meanwhile, stop the render too, so it frees the renderer."""
     import asyncio
+    import time
 
     polls = 0
+    deadline = time.monotonic() + VENDOR_POLICIES["renderer"].timeout_s
     while True:
+        if time.monotonic() > deadline:
+            await renderer.cancel(render_id)  # free the renderer; the retry submits a fresh render
+            raise TimeoutError("The render took too long")
         st = await renderer.status(render_id)
         if st.status == "succeeded":
             return st

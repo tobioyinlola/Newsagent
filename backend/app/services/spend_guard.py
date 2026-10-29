@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -192,7 +193,17 @@ async def ensure_vendor_budget(session: AsyncSession, vendor: str, limit: Decima
     ).scalar_one_or_none()
     if vb is None:
         vb = VendorBudget(id=new_id(), vendor=vendor, period=period, limit=limit, spent=Decimal("0"))
-        session.add(vb)
+        try:
+            async with session.begin_nested():  # a savepoint: losing the race must not undo the caller's other work
+                session.add(vb)
+                await session.flush()
+        except IntegrityError:  # another worker created this month's row first: use theirs
+            session.expunge(vb)
+            vb = (
+                await session.execute(
+                    select(VendorBudget).where(VendorBudget.vendor == vendor, VendorBudget.period == period)
+                )
+            ).scalar_one()
     else:
         vb.limit = limit
     await session.flush()

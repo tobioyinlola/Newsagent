@@ -3219,6 +3219,11 @@
             "title": "Percent",
             "type": "integer"
           },
+          "queue_ahead": {
+            "default": 0,
+            "title": "Queue Ahead",
+            "type": "integer"
+          },
           "retryable": {
             "title": "Retryable",
             "type": "boolean"
@@ -5105,6 +5110,7 @@
   "paths": {
     "/health": {
       "get": {
+        "description": "Liveness: the process is up. Deliberately checks nothing else, so a database blip never makes the host restart a healthy API.",
         "operationId": "health_health_get",
         "responses": {
           "200": {

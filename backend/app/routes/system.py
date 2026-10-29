@@ -49,12 +49,22 @@ async def ready(response: Response, session: AsyncSession = Depends(get_session)
                 checks["renderer"] = "ok" if (await c.get(f"{s.renderer_url}/health")).status_code == 200 else "down"
         except Exception:  # noqa: BLE001
             checks["renderer"] = "down"
+    depth: dict[str, int] = {}
+    if s.queue_backend == "celery":
+        from app.pipeline.queue import lane_depths
+
+        try:  # messages waiting in each lane: a number that keeps growing means the workers cannot keep up
+            depth = await lane_depths()
+            checks["queue"] = "ok"
+        except Exception:  # noqa: BLE001
+            checks["queue"] = "down"
     ok = checks["database"] == "ok"
     if not ok:
         response.status_code = 503
     return {
         "status": "ready" if ok and "down" not in checks.values() else ("degraded" if ok else "down"),
         "checks": checks,
+        "queue_depth": depth,
     }
 
 
