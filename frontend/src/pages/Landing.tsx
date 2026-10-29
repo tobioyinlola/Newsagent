@@ -170,9 +170,11 @@ function UseCases() {
             <ul className="mt-6 space-y-3">{u.points.map((p) => <li key={p} className="flex gap-3 text-white/90"><span className="text-brand-green" aria-hidden="true">✓</span>{p}</li>)}</ul>
             <div className="mt-8"><Cta to="/signup" primary>Publish your free story!</Cta></div>
           </div>
-          <div className="cf-grain relative min-h-72 overflow-hidden">
-            <CardArt variant={u.key === "funding" || u.key === "milestone" ? "story" : "video"} />
-            <div className="relative z-10 flex h-full items-center justify-center p-6">
+          <div className="relative min-h-[26rem] overflow-hidden bg-ink md:min-h-72">
+            <img src="/boardroom.jpg" alt="" width={1300} height={867} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: "50% 50%" }} />
+            <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-ink/85 via-transparent to-transparent" />
+            {/* the plan card sits at the bottom so the Cover Founder sign on the wall stays in view */}
+            <div className="relative z-10 flex h-full items-end justify-center p-6">
               <Panel title={`${u.label} · plan`} right={<Live>OK</Live>} className="w-full max-w-sm">
                 <ul className="space-y-1.5">
                   {[["Interview questions", "4"], ["Answers featured", "4 of 4"], ["Story length", "~800 words"], ["Formats", "16:9 + captions"]].map(([a, b]) => (
