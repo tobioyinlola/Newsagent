@@ -34,32 +34,6 @@ def absolute(url: str) -> str:
     return "https://" + u.lstrip("/")
 
 
-def render_plain(
-    heading: str, body: str, *, code: str | None = None, after: str = "", footer: str = ""
-) -> tuple[str, str]:
-    """(html, text) for emails a person asked for themselves (sign-in codes, password resets). Deliberately plain: no logo picture,
-    banner, button or boilerplate, because mail apps file logo-heavy, designed mail under Promotions and a plain note under Primary."""
-    code_html = (
-        f'<p style="margin:0 0 16px;font:700 28px/1.2 {HEAD};letter-spacing:6px;color:{INK}">{escape(code)}</p>'
-        if code
-        else ""
-    )
-    html = (
-        f'<!doctype html><html><body style="margin:0;padding:16px;background:#ffffff;font:16px/1.55 {BODY};color:{NAVY}">'
-        f'<p style="margin:0 0 16px"><b>{escape(heading)}</b></p>{_paragraphs(body)}{code_html}{_paragraphs(after) if after else ""}'
-        + (f'<p style="margin:16px 0 0;font:13px/1.5 {BODY};color:{MUTED}">{escape(footer)}</p>' if footer else "")
-        + "</body></html>"
-    )
-    text = f"{heading}\n\n{body.strip()}\n"
-    if code:
-        text += f"\n    {code}\n"
-    if after:
-        text += f"\n{after.strip()}\n"
-    if footer:
-        text += f"\n--\n{footer}\n"
-    return html, text
-
-
 def render(
     heading: str,
     body: str,
@@ -125,7 +99,7 @@ def sign_in_code(kind: str, code: str, minutes: int) -> tuple[str, str, str]:
         "login": ("Finish signing in", "Enter this code to finish signing in."),
         "reset": ("Reset your password", "Enter this code to choose a new password."),
     }[kind]
-    html, text = render_plain(
+    html, text = render(
         copy[0],
         copy[1],
         code=code,
