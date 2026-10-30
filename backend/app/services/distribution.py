@@ -279,6 +279,8 @@ async def send_confirmation(db: AsyncSession, row: DistributionRequest, *, deadl
             continue
         mail = await db.get(DistributionMail, ident, populate_existing=True)
         await db.commit()  # No transaction stays open while the provider is called.
+        if mail is None:  # The request may have been erased after the outbox lease was claimed.
+            continue
         try:
             if mail.kind in {"outreach", "metrics_request", "team_sale"}:
                 footer = (
