@@ -119,7 +119,25 @@ async def acquiring(maker, monkeypatch, public_key):
                 "intent_action": None,
             }
             state["intents"][data["id"]] = data
+        elif path == "/intent-actions" and req.method == "GET":
+            data = {
+                "items": [
+                    copy.deepcopy(i["intent_action"])
+                    for i in state["intents"].values()
+                    if i["id"] == req.url.params["payment_intent_id"] and i.get("intent_action")
+                ]
+            }
         elif path == "/intent-actions":
+            if state.get("reject_code"):
+                return httpx.Response(
+                    400,
+                    headers={"x-request-id": "test-request-id"},
+                    json={
+                        "status": "error",
+                        "type": state["reject_code"],
+                        "message": "SENSITIVE RAW PROCESSOR BODY MUST NOT BE LOGGED",
+                    },
+                )
             state["confirmations"] += 1
             body = json.loads(req.content)
             intent = state["intents"][body["payment_intent_id"]]
@@ -632,3 +650,223 @@ async def test_one_dollar_naira_bank_transfer_verifies_amount_and_credits_once(c
     status = (await client.get(f"/v1/billing/bank/{id}", headers=OWNER)).json()
     assert status["status"] == "paid" and Decimal(status["amount_ngn"]) == 1400
     assert await balance(maker, workspace) == Decimal("10.37")
+
+
+async def test_rejected_card_request_can_retry_without_storing_card_or_provider_body(
+    client, workspace, acquiring, maker, caplog
+):
+    id = await start(client)
+    acquiring["reject_code"] = "error_acquiring_decryption_failed"
+    r = await client.post(f"/v1/billing/card/{id}/confirm", headers=OWNER, json=confirmation())
+    assert r.status_code == 503
+    assert "encryption" in r.json()["detail"]
+    current = (await client.get(f"/v1/billing/card/{id}", headers=OWNER)).json()
+    assert current["can_retry_confirmation"] and current["provider_status"] == "requires_action"
+    assert current["payment_error"]["code"] == "error_acquiring_decryption_failed"
+    assert current["payment_error"]["request_id"] == "test-request-id"
+    assert "SENSITIVE RAW PROCESSOR" not in caplog.text
+    assert "encrypted_data" not in str(current["payment_error"])
+    async with maker() as db:
+        assert (await db.get(Checkout, id)).confirmation_started_at is None
+    acquiring["reject_code"] = None
+    acquiring["mode"] = "paid"
+    assert (await client.post(f"/v1/billing/card/{id}/confirm", headers=OWNER, json=confirmation())).json()[
+        "status"
+    ] == "paid"
+    assert await balance(maker, workspace) == Decimal("13.70")
+
+
+async def test_ambiguous_timeout_recovers_only_after_delay_and_no_actions(client, workspace, acquiring, maker):
+    id = await start(client)
+    acquiring["timeout"] = True
+    assert (await client.post(f"/v1/billing/card/{id}/confirm", headers=OWNER, json=confirmation())).status_code == 503
+    current = (await client.get(f"/v1/billing/card/{id}", headers=OWNER)).json()
+    assert not current["can_retry_confirmation"] and current["provider_status"] == "confirming"
+    async with maker() as db:
+        co = await db.get(Checkout, id)
+        co.confirmation_started_at = datetime.now(UTC) - timedelta(minutes=3)
+        await db.commit()
+    current = (await client.get(f"/v1/billing/card/{id}", headers=OWNER)).json()
+    assert current["can_retry_confirmation"] and current["provider_status"] == "requires_action"
+    assert acquiring["confirmations"] == 1
+    assert await balance(maker, workspace) == 10
+
+
+async def test_pending_3ds_action_never_reopens_card_submission(client, workspace, acquiring, maker):
+    id = await start(client)
+    assert (await client.post(f"/v1/billing/card/{id}/confirm", headers=OWNER, json=confirmation())).status_code == 200
+    intent = next(iter(acquiring["intents"].values()))
+    intent["status"] = "requires_action"
+    async with maker() as db:
+        co = await db.get(Checkout, id)
+        co.confirmation_started_at = datetime.now(UTC) - timedelta(minutes=3)
+        await db.commit()
+    current = (await client.get(f"/v1/billing/card/{id}", headers=OWNER)).json()
+    assert not current["can_retry_confirmation"]
+    assert acquiring["confirmations"] == 1
+
+
+async def test_unmatched_receipt_claim_admin_matching_and_duplicate_callback(client, workspace, naira, maker):
+    from app.models import AuditLog, BankReceipt
+    from tests.conftest import OPS
+
+    id, transfer = await bank_transfer(client, maker, naira)
+    transfer["narration"] = "Bank replaced the description"
+    transfer["unique_reference"] = "100004261030154115175873657637"
+    body, headers = signed(transfer, event="inflows.completed")
+    r = await client.post("/v1/webhooks/nuvion", content=body, headers=headers)
+    assert r.json()["result"] == "unmatched_reference"
+    assert await balance(maker, workspace) == 10
+    assert (await client.get("/v1/admin/payment-reconciliation", headers=OWNER)).status_code == 403
+    claim = await client.post(
+        f"/v1/billing/bank/{id}/claim", headers=OWNER, json={"reference": transfer["unique_reference"]}
+    )
+    assert claim.status_code == 200 and claim.json()["status"] == "pending_review", claim.text
+    assert await balance(maker, workspace) == 10
+    assert (await client.get(f"/v1/billing/bank/{id}", headers=OWNER)).json()["claim"]["status"] == "pending_review"
+    report = (await client.get("/v1/admin/payment-reconciliation", headers=OPS)).json()
+    receipt = report["receipts"][0]
+    assert receipt["status"] == "unmatched"
+    match = {
+        "checkout_id": id,
+        "ownership_confirmed": True,
+        "reason": "Verified bank receipt and payer ownership for this purchase.",
+    }
+    path = f"/v1/admin/payment-reconciliation/receipts/{receipt['id']}/match"
+    assert (await client.post(path, headers=OWNER, json=match)).status_code == 403
+    assert (await client.post(path, headers=OPS, json={**match, "ownership_confirmed": False})).status_code == 422
+    for _ in range(2):
+        r = await client.post(path, headers=OPS, json=match)
+        assert r.status_code == 200 and r.json()["status"] == "paid", r.text
+    assert await balance(maker, workspace) == Decimal("13.70")
+    r = await client.post("/v1/webhooks/nuvion", content=body, headers=headers)
+    assert r.json()["result"] == "duplicate"
+    assert await balance(maker, workspace) == Decimal("13.70")
+    async with maker() as db:
+        assert (await db.execute(select(BankReceipt))).scalar_one().checkout_id == id
+        audits = (
+            (await db.execute(select(AuditLog).where(AuditLog.action == "payment.bank_manually_matched")))
+            .scalars()
+            .all()
+        )
+        assert len(audits) == 1 and audits[0].actor == "ops@example.com"
+        assert await ledger.ledger_sum(db, workspace) == Decimal("13.70")
+
+
+async def test_receipt_cannot_credit_two_orders_or_wrong_amount(client, workspace, naira, maker):
+    from tests.conftest import OPS
+
+    id, transfer = await bank_transfer(client, maker, naira)
+    # Create a second valid purchase before the inflow timestamp.
+    second = (await ngn_checkout(client, "bank_transfer")).json()["checkout_id"]
+    transfer["created"] = int(datetime.now(UTC).timestamp() * 1000) + 1000
+    transfer["narration"] = "Missing checkout narration"
+    transfer["unique_reference"] = "bank-receipt-unique-reference"
+    assert (await client.post("/v1/admin/payment-reconciliation/sync", headers=OPS)).status_code == 200
+    report = (await client.get("/v1/admin/payment-reconciliation", headers=OPS)).json()
+    path = f"/v1/admin/payment-reconciliation/receipts/{report['receipts'][0]['id']}/match"
+    body = {
+        "checkout_id": id,
+        "ownership_confirmed": True,
+        "reason": "Verified payer and receipt against the selected purchase.",
+    }
+    transfer["amount"] += 1
+    assert (await client.post(path, headers=OPS, json=body)).status_code == 409
+    assert await balance(maker, workspace) == 10
+    transfer["amount"] -= 1
+    assert (await client.post(path, headers=OPS, json=body)).status_code == 200
+    r = await client.post(path, headers=OPS, json={**body, "checkout_id": second})
+    assert r.status_code == 409, r.text
+    assert await balance(maker, workspace) == Decimal("13.70")
+
+
+async def test_bank_claim_is_scoped_to_customer_and_requires_exact_reference(client, workspace, naira, maker):
+    id, transfer = await bank_transfer(client, maker, naira)
+    transfer["narration"] = "Bank removed the narration"
+    transfer["unique_reference"] = "bank-transaction-reference"
+    assert (
+        await client.post(f"/v1/billing/bank/{id}/claim", headers=OWNER, json={"reference": "wrong-reference"})
+    ).status_code == 409
+    async with maker() as db:
+        ws = Workspace(name="Other payer")
+        db.add(ws)
+        await db.flush()
+        db.add(User(email="payer-other@example.com", workspace_id=ws.id))
+        await db.commit()
+    other = {"Authorization": "Bearer dev:payer-other@example.com"}
+    assert (
+        await client.post(
+            f"/v1/billing/bank/{id}/claim", headers=other, json={"reference": transfer["unique_reference"]}
+        )
+    ).status_code == 404
+    assert await balance(maker, workspace) == 10
+
+
+async def test_parallel_receipt_matches_can_only_fund_one_purchase(client, workspace, naira, maker):
+    import asyncio
+
+    from tests.conftest import OPS
+
+    first, transfer = await bank_transfer(client, maker, naira)
+    second = (await ngn_checkout(client, "bank_transfer")).json()["checkout_id"]
+    transfer["created"] = int(datetime.now(UTC).timestamp() * 1000) + 1000
+    transfer["narration"] = "Narration replaced by bank"
+    assert (await client.post("/v1/admin/payment-reconciliation/sync", headers=OPS)).status_code == 200
+    report = (await client.get("/v1/admin/payment-reconciliation", headers=OPS)).json()
+    path = f"/v1/admin/payment-reconciliation/receipts/{report['receipts'][0]['id']}/match"
+    body = {"ownership_confirmed": True, "reason": "Verified payer ownership with the supplied bank receipt."}
+    assert (
+        await client.post(path, headers=OPS, json={**body, "checkout_id": first, "reason": " " * 12})
+    ).status_code == 422
+    results = await asyncio.gather(
+        client.post(path, headers=OPS, json={**body, "checkout_id": first}),
+        client.post(path, headers=OPS, json={**body, "checkout_id": second}),
+    )
+    assert sorted(r.status_code for r in results) == [200, 409]
+    assert await balance(maker, workspace) == Decimal("13.70")
+
+
+async def test_one_dollar_bank_receipt_manual_match_grants_exact_credit(client, workspace, naira, maker):
+    from tests.conftest import OPS
+
+    r = await client.post(
+        "/v1/billing/checkout",
+        headers=OWNER,
+        json={"amount_usd": "1", "currency": "NGN", "payment_method": "bank_transfer", "ngn_per_usd": "1400"},
+    )
+    id = r.json()["checkout_id"]
+    transfer = {
+        "id": "one-dollar-test-transfer",
+        "account_id": "test-ngn-account",
+        "entity_id": "test-entity",
+        "currency": "NGN",
+        "amount": 140000,
+        "status": "successful",
+        "type": "inflow",
+        "payment_type": "bank-transfer",
+        "narration": "Bank changed narration",
+        "created": int(datetime.now(UTC).timestamp() * 1000) + 1000,
+    }
+    naira["transfers"][transfer["id"]] = transfer
+    assert (await client.post("/v1/admin/payment-reconciliation/sync", headers=OPS)).status_code == 200
+    report = (await client.get("/v1/admin/payment-reconciliation", headers=OPS)).json()
+    path = f"/v1/admin/payment-reconciliation/receipts/{report['receipts'][0]['id']}/match"
+    body = {
+        "checkout_id": id,
+        "ownership_confirmed": True,
+        "reason": "Verified payer and the one dollar purchase receipt.",
+    }
+    for _ in range(2):
+        r = await client.post(path, headers=OPS, json=body)
+        assert r.status_code == 200 and Decimal(r.json()["credits"]) == Decimal("0.37"), r.text
+    assert await balance(maker, workspace) == Decimal("10.37")
+
+
+async def test_unknown_action_list_cannot_authorize_retry(acquiring, monkeypatch):
+    billing = registry.get_nuvion_billing()
+
+    async def unknown_response(*args, **kwargs):
+        return {"unexpected_shape": []}
+
+    monkeypatch.setattr(billing, "call", unknown_response)
+    assert await billing.has_actions({"id": "test-intent", "intent_action": None}) is True

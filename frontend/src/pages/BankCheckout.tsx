@@ -4,13 +4,16 @@ import { Link, useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { Button, Card, ErrorBox, Notice } from "../components/ui";
 
-type BankPayment = { checkout_id: string; amount_usd: string; amount_ngn: string; ngn_per_usd: string; credits: string; status: string; reference: string;
+type BankPayment = { checkout_id: string; amount_usd: string; amount_ngn: string; ngn_per_usd: string; credits: string; status: string; reference: string; claim?: { status: string; reference: string } | null;
   bank: { account_number: string; bank_name: string; beneficiary_name: string | null; account_label: string } };
 const ngn = (value: string) => Number(value).toLocaleString("en-NG", { style: "currency", currency: "NGN" });
 
 export function BankCheckout() {
   const { checkoutId = "" } = useParams();
   const qc = useQueryClient();
+  const [claimReference, setClaimReference] = useState("");
+  const [claimBusy, setClaimBusy] = useState(false);
+  const [claimError, setClaimError] = useState<unknown>(null);
   const [copied, setCopied] = useState("");
   const [copyError, setCopyError] = useState(false);
   const query = useQuery({ queryKey: ["bank-checkout", checkoutId], queryFn: () => unwrap(api.GET("/v1/billing/bank/{id}", { params: { path: { id: checkoutId } } })) as Promise<BankPayment>, retry: false,
@@ -48,6 +51,13 @@ export function BankCheckout() {
         <p className="mt-3 text-sm" role="status" aria-live="polite">{copyError ? "Copy failed. Select and copy the value above manually." : copied}</p>
       </Card>}
     </>}
+    {payment && !paid && <Card title="Already transferred but not credited?">
+      {payment.claim?.status === "pending_review" ? <Notice tone="ok">We verified the bank transfer you submitted. Our team is reviewing the payment match. You do not need to pay again.</Notice> : <form className="space-y-4" onSubmit={e => { e.preventDefault(); setClaimBusy(true); setClaimError(null); void unwrap(api.POST("/v1/billing/bank/{id}/claim", { params: { path: { id: checkoutId } }, body: { reference: claimReference.trim() } })).then(() => query.refetch()).catch(setClaimError).finally(() => setClaimBusy(false)); }}>
+        <p className="text-sm text-muted">If your bank changed the narration, enter the transaction reference from your bank receipt. We will verify the received transfer and send it to the team for matching.</p>
+        <label className="block text-sm font-semibold">Bank transaction reference<input className="mt-2 min-h-12 w-full rounded border border-ink p-3" required minLength={10} maxLength={200} pattern="[A-Za-z0-9_-]+" value={claimReference} onChange={e => setClaimReference(e.target.value)} autoComplete="off" disabled={claimBusy} /></label>
+        <Button type="submit" disabled={claimBusy}>{claimBusy ? "Verifying transfer…" : "Submit transfer for review"}</Button><ErrorBox error={claimError} />
+      </form>}
+    </Card>}
     {!paid && <Button variant="secondary" onClick={() => void query.refetch()} disabled={query.isFetching}>{query.isFetching ? "Checking…" : "Check transfer status"}</Button>}
     <Link className="block min-h-11 py-2 font-semibold underline" to="/billing">{paid ? "View wallet and continue" : "Back to billing"}</Link>
   </div>;

@@ -1,3 +1,4 @@
+import { PaymentReconciliation } from "../components/PaymentReconciliation";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api, unwrap } from "../api/client";
@@ -28,6 +29,7 @@ export function Revenue() {
           </table>
         )}
       </Card>
+      <PaymentReconciliation />
       <Card title="Payments">
         {p.items.length === 0 ? <p className="text-sm text-muted">Nothing to show.</p> : (
           <div className="overflow-x-auto">

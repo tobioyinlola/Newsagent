@@ -4228,6 +4228,49 @@
         "title": "RealtimeOut",
         "type": "object"
       },
+      "ReceiptClaim": {
+        "properties": {
+          "reference": {
+            "maxLength": 200,
+            "minLength": 10,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference"
+        ],
+        "title": "ReceiptClaim",
+        "type": "object"
+      },
+      "ReceiptMatch": {
+        "properties": {
+          "checkout_id": {
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Checkout Id",
+            "type": "string"
+          },
+          "ownership_confirmed": {
+            "const": true,
+            "title": "Ownership Confirmed",
+            "type": "boolean"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "checkout_id",
+          "ownership_confirmed",
+          "reason"
+        ],
+        "title": "ReceiptMatch",
+        "type": "object"
+      },
       "ResetIn": {
         "properties": {
           "code": {
@@ -8468,6 +8511,222 @@
         ]
       }
     },
+    "/v1/admin/payment-reconciliation": {
+      "get": {
+        "operationId": "overview_v1_admin_payment_reconciliation_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Overview",
+        "tags": [
+          "payment-reconciliation"
+        ]
+      }
+    },
+    "/v1/admin/payment-reconciliation/checkouts/{id}/recheck": {
+      "post": {
+        "operationId": "recheck_v1_admin_payment_reconciliation_checkouts__id__recheck_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Recheck",
+        "tags": [
+          "payment-reconciliation"
+        ]
+      }
+    },
+    "/v1/admin/payment-reconciliation/receipts/{id}/match": {
+      "post": {
+        "operationId": "match_v1_admin_payment_reconciliation_receipts__id__match_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiptMatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Match",
+        "tags": [
+          "payment-reconciliation"
+        ]
+      }
+    },
+    "/v1/admin/payment-reconciliation/sync": {
+      "post": {
+        "operationId": "sync_v1_admin_payment_reconciliation_sync_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sync",
+        "tags": [
+          "payment-reconciliation"
+        ]
+      }
+    },
     "/v1/admin/payments": {
       "get": {
         "operationId": "payments_v1_admin_payments_get",
@@ -10856,6 +11115,72 @@
         "summary": "Bank Status",
         "tags": [
           "billing"
+        ]
+      }
+    },
+    "/v1/billing/bank/{id}/claim": {
+      "post": {
+        "operationId": "claim_v1_billing_bank__id__claim_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiptClaim"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Claim",
+        "tags": [
+          "payment-reconciliation"
         ]
       }
     },

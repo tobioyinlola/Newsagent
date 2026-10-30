@@ -70,17 +70,23 @@ NAMES = [
     "MP3Naija",
     "AlbumTalks",
     "P mp Kulture",
+    "Pilot Newspaper",
+    "Leadership Newspaper",
+    "AIT News",
+    "TVC News",
+    "The Daily Times",
+    "Daily Nation",
 ]
 # Keep the existing IDs stable: drafts and paid requests refer to these outlets by ID.
 OUTLET_CATEGORIES = {
     "Media outlets": NAMES[:12],
     "Crypto News Channels": NAMES[12:17],
     "Business (Africa) Channels": NAMES[17:22],
-    "Nigeria News Channels": NAMES[22:38],
-    "Entertainment News Channels": NAMES[38:],
+    "Nigeria News Channels": NAMES[22:38] + NAMES[47:],
+    "Entertainment News Channels": NAMES[38:47],
 }
 CATEGORY_BY_NAME = {name: category for category, names in OUTLET_CATEGORIES.items() for name in names}
-# Exact "Credit on CF" values supplied by the owner; no margin-column surcharge.
+# Owner-supplied prices: original Credit on CF values plus the Nigerian sheet's final CF Credit + Margins values (already include its five-credit margin).
 DEFAULT_OUTLET_CREDITS = {
     "Empire Magazine Africa": "42",
     "Techpoint Africa": "83",
@@ -99,6 +105,26 @@ DEFAULT_OUTLET_CREDITS = {
     "The Crypto Reporters": "42",
     "The Coins Report": "42",
     "The Coins Insider": "42",
+    "Tribune": "18.8",
+    "Sun": "87.5",
+    "New Telegraph": "60.0",
+    "Independent": "18.8",
+    "Vanguard": "18.8",
+    "ThisDay": "27.0",
+    "The Guardian": "115.1",
+    "Punch": "128.8",
+    "Daily Trust": "22.9",
+    "Daily Post": "128.8",
+    "Business Day": "101.3",
+    "P.M. News": "18.8",
+    "Premium Times": "87.5",
+    "The Nation": "73.8",
+    "Pilot Newspaper": "87.5",
+    "Leadership Newspaper": "87.5",
+    "AIT News": "115.1",
+    "TVC News": "115.1",
+    "The Daily Times": "137.1",
+    "Daily Nation": "651.6",
 }
 OUTLETS = {
     str(i + 1): {

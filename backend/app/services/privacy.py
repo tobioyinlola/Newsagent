@@ -1,6 +1,7 @@
 """Data-subject rights: purge a project, export a workspace's data, delete a workspace, erase a founder's recordings."""
 
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +12,7 @@ from app.models import (
     AudienceDaily,
     AudienceEvent,
     AuthCode,
+    BankReceipt,
     BrandAsset,
     BrandKit,
     Brief,
@@ -301,6 +303,22 @@ async def export_workspace(session: AsyncSession, ws: Workspace, user: User) -> 
                 "description": t.description,
             }
             for t in ledger_rows
+        ],
+        "bank_receipts": [
+            {
+                "transfer_id": receipt.transfer_id,
+                "checkout_id": receipt.checkout_id,
+                "amount_ngn": str(Decimal(receipt.data["amount"]) / 100),
+                "status": receipt.status,
+                "matched_at": dt(receipt.matched_at),
+            }
+            for receipt in (
+                await session.execute(
+                    select(BankReceipt)
+                    .join(Checkout, BankReceipt.checkout_id == Checkout.id)
+                    .where(Checkout.workspace_id == ws.id)
+                )
+            ).scalars()
         ],
         "purchases": [
             {

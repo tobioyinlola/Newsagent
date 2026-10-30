@@ -52,3 +52,48 @@ def test_price_migration_updates_existing_overrides_and_rollback_preserves_later
             db.execute(sa.select(settings.c.key).where(settings.c.key == migration.BACKUP)).scalar_one_or_none() is None
         )
     engine.dispose()
+
+
+def test_nigeria_prices_migrate_overrides_without_changing_publisher_configuration():
+    path = Path(__file__).parents[1] / "alembic/versions/0028_nigeria_distribution_prices.py"
+    spec = importlib.util.spec_from_file_location("nigeria_price_migration", path)
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+    engine = sa.create_engine("sqlite://")
+    metadata = sa.MetaData()
+    settings = sa.Table(
+        "system_settings",
+        metadata,
+        sa.Column("key", sa.String, primary_key=True),
+        sa.Column("value", sa.JSON),
+        sa.Column("updated_by", sa.String),
+        sa.Column("updated_at", sa.DateTime),
+    )
+    metadata.create_all(engine)
+    with engine.begin() as db, patch.object(migration.op, "get_bind", return_value=db):
+        original = {
+            "team_emails": ["sales@example.com"],
+            "outlets": {
+                "1": {"credits": "42"},
+                "23": {"credits": "0", "contact_email": "editor@example.com", "logo_credits": "2.5"},
+                "24": {"credits": "10", "accepts_images": False},
+                "48": {"contact_name": "Publisher"},
+            },
+        }
+        db.execute(settings.insert().values(key=migration.KEY, value=original, updated_at=datetime.now(UTC)))
+        migration.upgrade()
+        updated = db.execute(sa.select(settings.c.value).where(settings.c.key == migration.KEY)).scalar_one()
+        assert updated["outlets"]["23"] == {**original["outlets"]["23"], "credits": "18.8"}
+        assert updated["outlets"]["24"] == {**original["outlets"]["24"], "credits": "87.5"}
+        assert updated["outlets"]["48"] == {**original["outlets"]["48"], "credits": "87.5"}
+        assert updated["outlets"]["1"] == original["outlets"]["1"]
+        assert updated["team_emails"] == original["team_emails"]
+        assert "49" not in updated["outlets"]
+        updated["outlets"]["23"]["credits"] = "99.9"
+        db.execute(settings.update().where(settings.c.key == migration.KEY).values(value=updated))
+        migration.downgrade()
+        restored = db.execute(sa.select(settings.c.value).where(settings.c.key == migration.KEY)).scalar_one()
+        assert restored["outlets"]["23"]["credits"] == "99.9"
+        assert restored["outlets"]["24"] == original["outlets"]["24"]
+        assert restored["outlets"]["48"] == original["outlets"]["48"]
+    engine.dispose()

@@ -68,7 +68,7 @@ async def draft(client, data):
 
 async def test_catalog_draft_video_and_admin_progress(client, distribution_data):
     catalog = (await client.get("/v1/distribution/outlets", headers=OWNER)).json()
-    assert len(catalog["outlets"]) == 47
+    assert len(catalog["outlets"]) == 53
     assert all(o["credits"] == "0" for o in catalog["outlets"])
     assert sum(o["name"] == "Premium Times" for o in catalog["outlets"]) == 1
     assert catalog["coming_soon"] == ["United States", "Canada", "United Kingdom"]
@@ -680,8 +680,8 @@ def test_outsize_media_quote_is_rejected_before_database_money_overflow():
 async def test_outlet_categories_match_groups_and_preserve_existing_ids(client, workspace):
     data = (await client.get("/v1/distribution/outlets", headers=OWNER)).json()
     outlets = data["outlets"]
-    assert len(outlets) == 47
-    assert len({o["id"] for o in outlets}) == 47
+    assert len(outlets) == 53
+    assert len({o["id"] for o in outlets}) == 53
     assert [o["name"] for o in outlets].count("Premium Times") == 1
     expected = {
         "Media outlets": routes.NAMES[:12],
@@ -699,7 +699,7 @@ async def test_outlet_categories_match_groups_and_preserve_existing_ids(client, 
             "The Globe and Mail",
             "Benzinga",
         ],
-        "Nigeria News Channels": routes.NAMES[22:38],
+        "Nigeria News Channels": routes.NAMES[22:38] + routes.NAMES[47:],
         "Entertainment News Channels": [
             "Naijaloaded",
             "Tooxclusive",
@@ -721,7 +721,7 @@ async def test_owner_credit_on_cf_prices_for_seventeen_outlets(client, workspace
     outlets = (await client.get("/v1/distribution/outlets", headers=OWNER)).json()["outlets"]
     expected = [42, 83, 124, 69, 97, 61, 138, 28, 42, 42, 28, 28, 42, 42, 42, 42, 42]
     assert [Decimal(o["credits"]) for o in outlets[:17]] == list(map(Decimal, expected))
-    assert all(Decimal(o["credits"]) == 0 for o in outlets[17:])
+    assert all(Decimal(o["credits"]) == 0 for o in outlets if o["name"] not in routes.DEFAULT_OUTLET_CREDITS)
 
 
 async def test_owner_prices_reach_quote_and_wallet_once(client, distribution_data, maker, workspace, monkeypatch):
@@ -741,3 +741,60 @@ async def test_owner_prices_reach_quote_and_wallet_once(client, distribution_dat
     async with maker() as db:
         assert (await db.get(Workspace, workspace)).credit_balance == Decimal("85")
         assert await ledger.ledger_sum(db, workspace) == Decimal("85")
+
+
+async def test_nigeria_sheet_final_margin_prices_reach_catalog(client, workspace):
+    outlets = (await client.get("/v1/distribution/outlets", headers=OWNER)).json()["outlets"]
+    expected = {
+        "Tribune": "18.8",
+        "Sun": "87.5",
+        "New Telegraph": "60.0",
+        "Independent": "18.8",
+        "Vanguard": "18.8",
+        "ThisDay": "27.0",
+        "The Guardian": "115.1",
+        "Punch": "128.8",
+        "Daily Trust": "22.9",
+        "Daily Post": "128.8",
+        "Business Day": "101.3",
+        "P.M. News": "18.8",
+        "Premium Times": "87.5",
+        "The Nation": "73.8",
+        "Pilot Newspaper": "87.5",
+        "Leadership Newspaper": "87.5",
+        "AIT News": "115.1",
+        "TVC News": "115.1",
+        "The Daily Times": "137.1",
+        "Daily Nation": "651.6",
+    }
+    by_name = {o["name"]: o for o in outlets}
+    for name, price in expected.items():
+        assert by_name[name]["category"] == "Nigeria News Channels"
+        assert Decimal(by_name[name]["credits"]) == Decimal(price)
+    assert by_name["Naijaloaded"]["id"] == "39"
+    assert by_name["P mp Kulture"]["id"] == "47"
+    assert by_name["Pilot Newspaper"]["id"] == "48"
+
+
+async def test_nigeria_fractional_prices_quote_and_debit_once(client, distribution_data, maker, workspace, monkeypatch):
+    for outlet in routes.OUTLETS.values():
+        monkeypatch.setitem(outlet, "credits", routes.DEFAULT_OUTLET_CREDITS.get(outlet["name"], "0"))
+    async with maker() as db:
+        ws = await db.get(Workspace, workspace)
+        await ledger.apply(db, ws, Decimal("100"), "grant", ref="nigeria-price-test-funding")
+        await db.commit()
+    data = {**distribution_data, "outlet_ids": ["23", "31"]}
+    id = await draft(client, data)
+    saved = (await client.get(f"/v1/distribution/{id}", headers=OWNER)).json()
+    assert Decimal(saved["total_credits"]) == Decimal("41.7")
+    assert [Decimal(o["credits"]) for o in saved["data"]["outlets"]] == [Decimal("18.8"), Decimal("22.9")]
+    for _ in range(2):
+        r = await client.post(f"/v1/distribution/{id}/submit", headers=OWNER, json={"expected_total": "41.7"})
+        assert r.status_code == 200, r.text
+    # Subsequent admin price changes cannot reprice the paid request.
+    monkeypatch.setitem(routes.OUTLETS["23"], "credits", "999")
+    saved = (await client.get(f"/v1/distribution/{id}", headers=OWNER)).json()
+    assert Decimal(saved["total_credits"]) == Decimal("41.7")
+    async with maker() as db:
+        assert (await db.get(Workspace, workspace)).credit_balance == Decimal("68.3")
+        assert await ledger.ledger_sum(db, workspace) == Decimal("68.3")

@@ -80,6 +80,10 @@ def output(co: Checkout, intent: dict, provider: NuvionBilling) -> dict:
     if co.confirmation_started_at and state == "requires_action":
         state = "confirming"
     return {
+        "can_retry_confirmation": not co.confirmation_started_at
+        and co.status == "pending"
+        and state == "requires_action",
+        "payment_error": (co.payment_context or {}).get("last_payment_error"),
         "checkout_id": co.id,
         "amount_usd": str(co.amount_usd),
         "credits": str(co.credits),
@@ -129,6 +133,7 @@ async def status(id: str, p: Principal = Depends(current_principal), db: AsyncSe
     except PaymentMismatch as e:
         raise HTTPException(409, str(e)) from e
     except NuvionError as e:
+        await payments.record_error(db, co, e, "payment_status")
         raise HTTPException(503, str(e)) from e
 
 
@@ -146,6 +151,7 @@ async def bank_status(
     except PaymentMismatch as e:
         raise HTTPException(409, str(e)) from e
     except NuvionError as e:
+        await payments.record_error(db, co, e, "payment_status")
         raise HTTPException(503, str(e)) from e
     return {
         "checkout_id": co.id,
@@ -154,6 +160,7 @@ async def bank_status(
         "ngn_per_usd": co.payment_context["ngn_per_usd"],
         "credits": str(co.credits),
         "status": co.status,
+        "claim": (co.payment_context or {}).get("bank_claim"),
         "reference": reference(co),
         "bank": co.payment_context["bank"],
     }
@@ -194,31 +201,43 @@ async def confirm(
             "user_agent": request.headers.get("user-agent", "")[:500],
             "ip_address": client_ip(request),
         }
-        await provider.call(
-            "POST",
-            "/intent-actions",
-            body={
-                "payment_intent_id": co.provider_ref,
-                "entity_id": provider.entity_id,
-                "intent_action": {
-                    "action": "confirm",
-                    "category": "collections",
-                    "payment_type": "card-acq",
-                    "payment_type_data": {
-                        "data": body.encrypted_data,
-                        "auth_model": "3ds_required",
-                        "billing_address": body.billing_address.model_dump(),
-                        "browser_info": browser,
+        try:
+            await provider.call(
+                "POST",
+                "/intent-actions",
+                body={
+                    "payment_intent_id": co.provider_ref,
+                    "entity_id": provider.entity_id,
+                    "intent_action": {
+                        "action": "confirm",
+                        "category": "collections",
+                        "payment_type": "card-acq",
+                        "payment_type_data": {
+                            "data": body.encrypted_data,
+                            "auth_model": "3ds_required",
+                            "billing_address": body.billing_address.model_dump(),
+                            "browser_info": browser,
+                        },
+                        "customer": {
+                            "first_name": body.first_name.strip(),
+                            "last_name": body.last_name.strip(),
+                            "email": p.user.email,
+                        },
+                        "return_url": f"{get_settings().app_base_url}/billing/card/{co.id}",
                     },
-                    "customer": {
-                        "first_name": body.first_name.strip(),
-                        "last_name": body.last_name.strip(),
-                        "email": p.user.email,
-                    },
-                    "return_url": f"{get_settings().app_base_url}/billing/card/{co.id}",
                 },
-            },
-        )
+            )
+        except NuvionError as error:
+            await payments.record_error(db, co, error, "card_confirmation")
+            if error.definite_rejection:
+                try:
+                    current = await provider.retrieve(co.provider_ref or intent["id"])
+                    provider.check(current, co)
+                    await payments.recover_confirmation(db, co, provider, current, rejected=True)
+                except NuvionError:
+                    pass
+            raise
+
         intent, _ = await payments.reconcile(db, co, provider)
         return output(co, intent, provider)
     except PaymentMismatch as e:
@@ -269,7 +288,9 @@ async def webhook(request: Request, db: AsyncSession = Depends(get_session)) -> 
         from app.services.bank_payments import process_inflow
 
         try:
-            return {"result": await process_inflow(db, event.get("data"))}
+            result = await process_inflow(db, event.get("data"))
+            payments.log.info("Nuvion webhook processed: event=inflows.completed result=%s", result)
+            return {"result": result}
         except PaymentMismatch:
             # A real but unmatched transfer needs review, not repeated delivery/endpoint blacklisting.
             return {"result": "requires_review"}
@@ -293,4 +314,5 @@ async def webhook(request: Request, db: AsyncSession = Depends(get_session)) -> 
         raise HTTPException(409, str(e)) from e
     except NuvionError as e:
         raise HTTPException(503, str(e)) from e
+    payments.log.info("Nuvion card webhook processed: checkout=%s result=%s", co.id, result)
     return {"result": result}

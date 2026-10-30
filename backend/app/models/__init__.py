@@ -1,4 +1,5 @@
 from app.models.analytics import AudienceDaily, AudienceEvent, PublisherSnapshot
+from app.models.bank_receipt import BankReceipt
 from app.models.base import Base
 from app.models.distribution import DistributionActivity, DistributionMail, DistributionPlacement, DistributionRequest
 from app.models.entities import (
@@ -31,6 +32,7 @@ from app.models.entities import (
 )
 
 __all__ = [
+    "BankReceipt",
     "AudienceDaily",
     "AudienceEvent",
     "PublisherSnapshot",

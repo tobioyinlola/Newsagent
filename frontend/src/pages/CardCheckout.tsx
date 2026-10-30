@@ -5,7 +5,7 @@ import { api, unwrap } from "../api/client";
 import { cardErrors, emptyCard, encryptCard, type CardDetails } from "../lib/cardPayment";
 import { Button, Card, ErrorBox, Notice } from "../components/ui";
 
-type Payment = { checkout_id: string; amount_usd: string; credits: string; currency: "USD" | "NGN"; amount?: string; ngn_per_usd?: string | null; status: string; provider_status: string; public_key: string; sandbox: boolean; next_action_url: string | null };
+type Payment = { checkout_id: string; amount_usd: string; credits: string; currency: "USD" | "NGN"; amount?: string; ngn_per_usd?: string | null; status: string; provider_status: string; public_key: string; sandbox: boolean; next_action_url: string | null; can_retry_confirmation?: boolean; payment_error?: { message: string; code: string } | null };
 const money = (v: string, currency = "USD") => Number(v).toLocaleString(undefined, { style: "currency", currency });
 export function CardCheckout() {
   const { checkoutId = "" } = useParams();
@@ -19,6 +19,7 @@ export function CardCheckout() {
     refetchInterval: q => q.state.data?.status === "pending" && q.state.data.provider_status !== "requires_action" ? 10000 : false,
   });
   const payment = query.data;
+  useEffect(() => { if (payment?.can_retry_confirmation === true) setAttempted(false); }, [payment?.can_retry_confirmation, query.dataUpdatedAt]);
   const paid = payment?.status === "paid";
   useEffect(() => {
     if (paid) for (const key of ["me", "billing-summary", "ledger", "payment-checkouts"]) void qc.invalidateQueries({ queryKey: [key] });
@@ -47,13 +48,14 @@ export function CardCheckout() {
     try { const result = await unwrap(api.POST("/v1/billing/card/{id}/cancel", { params: { path: { id: checkoutId } } })) as Payment; qc.setQueryData(["card-checkout", checkoutId], result); }
     catch (e) { setError(e); } finally { setBusy(false); }
   };
-  const canPay = payment?.status === "pending" && payment.provider_status === "requires_action" && !attempted;
+  const canPay = payment?.status === "pending" && payment.provider_status === "requires_action" && payment.can_retry_confirmation !== false && !attempted;
   const fields: [keyof CardDetails, string, string, string][] = [["first_name", "First name on card", "text", "cc-given-name"], ["last_name", "Last name on card", "text", "cc-family-name"], ["number", "Card number", "text", "cc-number"], ["expiry", "Expiry date (MM/YY)", "text", "cc-exp"], ["cvv", "Security code", "password", "cc-csc"], ["address_line_one", "Billing address", "text", "address-line1"], ["city", "City", "text", "address-level2"], ["state", "State / province / region", "text", "address-level1"], ["country", "Country code", "text", "country"], ["zip", "Postal code (optional)", "text", "postal-code"]];
   return <div className="mx-auto max-w-2xl space-y-5 pb-8"><h1 className="text-2xl font-bold">Buy credits by card</h1><ErrorBox error={error ?? query.error} />
     {!payment && <><p>{query.isFetching ? "Preparing your secure payment…" : "We couldn't load this payment."}</p><Button variant="secondary" onClick={() => void query.refetch()} disabled={query.isFetching}>Check payment status</Button></>}
     {payment && <>
       {payment.sandbox && <Notice tone="warn">Sandbox payment: no real money will be charged.</Notice>}
       <Card title={paid ? "Payment confirmed" : "Your purchase"}><p className="text-3xl font-bold">{money(payment.amount ?? payment.amount_usd, payment.currency)}</p><p className="mt-2">{payment.credits} credits · Charged in {payment.currency}</p>{payment.currency === "NGN" && <p className="mt-2 text-sm text-muted">USD package: {money(payment.amount_usd)} · ₦{Number(payment.ngn_per_usd).toLocaleString()} per $1. Your checkout rate is fixed.</p>}{paid && <Notice tone="ok">Your payment is confirmed and the credits have been added to your wallet.</Notice>}</Card>
+      {payment.payment_error && !paid && <Notice tone="warn">{payment.payment_error.message}{canPay ? " Please re-enter your card details to try again." : " Use Check payment status before starting another payment."}</Notice>}
       {canPay && <Card title="Card and billing details"><form className="grid gap-4 sm:grid-cols-2" onSubmit={e => { e.preventDefault(); void confirm(); }} noValidate>
         {fields.map(([key, label, type, autocomplete]) => <div key={key} className={key === "number" || key === "address_line_one" ? "sm:col-span-2" : ""}><label className="block text-sm font-semibold" htmlFor={`card-${key}`}>{label}</label><input id={`card-${key}`} name={key} type={type} autoComplete={autocomplete} inputMode={["number", "cvv"].includes(key) ? "numeric" : undefined} maxLength={key === "cvv" ? 4 : key === "number" ? 23 : key === "country" ? 2 : key === "expiry" ? 7 : key.includes("name") ? 30 : 200} placeholder={key === "country" ? "NG, CA, US…" : key === "expiry" ? "MM/YY" : undefined} value={card[key]} disabled={busy} aria-invalid={!!errors[key]} aria-describedby={errors[key] ? `error-${key}` : undefined} onChange={e => change(key, key === "country" ? e.target.value.toUpperCase() : e.target.value)} className="mt-2 min-h-12 w-full rounded-lg border border-ink p-3" />{errors[key] && <p id={`error-${key}`} role="alert" className="mt-1 text-sm text-red-800">{errors[key]}</p>}</div>)}
         <p className="text-sm text-muted sm:col-span-2">Card details are encrypted in your browser for Nuvion. Your bank may ask you to complete an additional verification step.</p><Button className="sm:col-span-2" type="submit" disabled={busy}>{busy ? "Processing…" : `Pay ${money(payment.amount ?? payment.amount_usd, payment.currency)}`}</Button>

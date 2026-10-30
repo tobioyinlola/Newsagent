@@ -3,6 +3,7 @@
 import hashlib
 import hmac
 import json
+import logging
 import re
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -17,7 +18,18 @@ from app.integrations.billing.base import BillingProvider, CheckoutSession, Inva
 
 
 class NuvionError(Exception):
-    pass
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str = "provider_unavailable",
+        http_status: int | None = None,
+        request_id: str | None = None,
+        definite_rejection: bool = False,
+    ):
+        super().__init__(message)
+        self.code, self.http_status, self.request_id = code, http_status, request_id
+        self.definite_rejection = definite_rejection
 
 
 class PaymentMismatch(NuvionError):
@@ -92,15 +104,54 @@ class NuvionBilling(BillingProvider):
         try:
             response = await self.client.request(method, path, json=body, params=params)
         except httpx.HTTPError as e:
+            code = "provider_timeout" if isinstance(e, httpx.TimeoutException) else "provider_connection_error"
+            logging.getLogger("payments").warning(
+                "Nuvion transport error: method=%s endpoint=%s code=%s", method, path.split("/")[1], code
+            )
             raise NuvionError(
-                "Payment provider is temporarily unavailable. Check your payment status before trying again."
+                "Payment provider is temporarily unavailable. Check your payment status before trying again.", code=code
             ) from e
-        if response.status_code == 409:
+        if response.status_code == 409 and method == "POST" and path == "/payment-intents":
             return {"_conflict": True}
         if response.status_code >= 400:
-            # Never echo processor response bodies, which can contain sensitive payment data.
+            try:
+                error = response.json()
+            except ValueError:
+                error = {}
+            raw_code = error.get("type", "") if isinstance(error, dict) else ""
+            code = (
+                raw_code
+                if isinstance(raw_code, str) and re.fullmatch(r"error_[a-z0-9_]{1,100}", raw_code)
+                else "provider_request_failed"
+            )
+            raw_id = response.headers.get("x-request-id", response.headers.get("request-id", ""))
+            request_id = raw_id if re.fullmatch(r"[A-Za-z0-9_-]{1,100}", raw_id) else None
+            messages = {
+                "error_acquiring_decryption_failed": "The payment encryption configuration could not be verified. Please contact support; no completed payment has been confirmed.",
+                "error_acquiring_encryption_keys_revoked": "Card payments need an updated payment encryption key. Please contact support.",
+                "error_acquiring_encryption_keys_expired": "Card payments need an updated payment encryption key. Please contact support.",
+                "error_acquiring_card_expired": "This card has expired. Please use an unexpired card.",
+                "error_acquiring_payment_method_invalid": "This card payment method is not supported for this purchase. Please choose another payment method.",
+                "error_validation_error": "The payment provider rejected the payment details. Please review the card and billing information.",
+                "error_acquiring_3ds_challenge_failed": "Your bank verification was not completed. Check payment status before trying again.",
+            }
+            logging.getLogger("payments").warning(
+                "Nuvion request failed: method=%s endpoint=%s http_status=%s code=%s request_id=%s",
+                method,
+                path.split("/")[1],
+                response.status_code,
+                code,
+                request_id,
+            )
             raise NuvionError(
-                "The payment provider could not complete this request. Please check payment status or contact support."
+                messages.get(
+                    code,
+                    "The payment provider could not complete this request. Check payment status before trying again.",
+                ),
+                code=code,
+                http_status=response.status_code,
+                request_id=request_id,
+                definite_rejection=response.status_code in {400, 401, 403, 404, 422},
             )
         try:
             result = response.json()
@@ -198,6 +249,17 @@ class NuvionBilling(BillingProvider):
             await self.call("POST", f"/intent-verifications/{action['id']}", body={"entity_id": self.entity_id})
             return await self.retrieve(intent["id"])
         return intent
+
+    async def has_actions(self, intent: dict) -> bool:
+        if intent.get("intent_action"):
+            return True
+        page = await self.call(
+            "GET",
+            "/intent-actions",
+            params={"payment_intent_id": intent["id"], "entity_id": self.entity_id, "limit": 1},
+        )
+        # Unknown list shapes fail closed: they cannot authorize another card submission.
+        return not (isinstance(page.get("items"), list) and not page["items"])
 
     def redirect_url(self, intent: dict) -> str | None:
         action = intent.get("intent_action") or {}

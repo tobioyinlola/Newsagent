@@ -85,6 +85,8 @@ async def reconcile(
             )
             await db.commit()
             await db.refresh(checkout)
+    if result == "pending":
+        await recover_confirmation(db, checkout, billing, intent)
     return intent, result
 
 
@@ -124,3 +126,73 @@ async def reconcile_pending() -> int:
                 await db.rollback()
                 log.warning("Payment reconciliation deferred; no unverified credits granted")
     return count
+
+
+async def record_error(db: AsyncSession, checkout: Checkout, error: NuvionError, stage: str) -> None:
+    from app.services.audit import audit
+
+    detail = {
+        "stage": stage,
+        "code": error.code,
+        "http_status": error.http_status,
+        "request_id": error.request_id,
+        "message": str(error),
+        "at": datetime.now(UTC).isoformat(),
+    }
+    checkout.payment_context = {**checkout.payment_context, "last_payment_error": detail}
+    audit(db, "payment-service", "payment.provider_error", target_type="checkout", target_id=checkout.id, detail=detail)
+    log.warning(
+        "Payment provider error: checkout=%s stage=%s code=%s http_status=%s request_id=%s",
+        checkout.id,
+        stage,
+        error.code,
+        error.http_status,
+        error.request_id,
+    )
+    await db.commit()
+
+
+async def recover_confirmation(
+    db: AsyncSession, checkout: Checkout, billing: NuvionBilling, intent: dict, *, rejected: bool = False
+) -> bool:
+    started = checkout.confirmation_started_at
+    if not started or checkout.paid_at or checkout.status != "pending" or intent.get("status") != "requires_action":
+        return False
+    if not rejected and datetime.now(UTC) - utc(started) < timedelta(minutes=2):
+        return False  # An ambiguous timeout is never immediately retried.
+    try:
+        if await billing.has_actions(intent):
+            return False
+    except NuvionError:
+        return False
+    changed = (
+        await db.execute(
+            update(Checkout)
+            .where(
+                Checkout.id == checkout.id,
+                Checkout.confirmation_started_at == started,
+                Checkout.paid_at.is_(None),
+                Checkout.status == "pending",
+            )
+            .values(confirmation_started_at=None)
+            .returning(Checkout.id)
+        )
+    ).scalar_one_or_none()
+    if changed:
+        from app.services.audit import audit
+
+        audit(
+            db,
+            "payment-service",
+            "payment.confirmation_recovered",
+            target_type="checkout",
+            target_id=checkout.id,
+            detail={
+                "provider_ref": checkout.provider_ref,
+                "reason": "Provider confirms requires_action and no intent actions; user must re-enter and explicitly submit card details.",
+            },
+        )
+        log.info("Payment confirmation recovered: checkout=%s", checkout.id)
+    await db.commit()
+    await db.refresh(checkout)
+    return bool(changed)

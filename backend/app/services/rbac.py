@@ -29,7 +29,7 @@ PERMISSIONS: tuple[Perm, ...] = (
     Perm("customers.view", "See customers and their videos", "Business"),
     Perm("customers.manage", "Invite customers, change their credits, caps and status", "Business"),
     Perm("finance.view", "See revenue, payments, vendor costs and budgets", "Finance"),
-    Perm("finance.manage", "Edit credit packs and vendor budgets", "Finance"),
+    Perm("finance.manage", "Reconcile payments and manage vendor budgets", "Finance"),
     Perm("review.manage", "Decide the review queue", "Operations"),
     Perm("operations.view", "See the queue and jobs", "Operations"),
     Perm("operations.manage", "Retry failed videos", "Operations"),
