@@ -1,31 +1,58 @@
-# Distribution requests
+# Distribution requests and fulfilment
 
-A completed video's page links to `/distribution/request?project=<id>`. The customer sidebar also lists Distribution. Starting a request immediately creates a server-side draft. The four steps are outlets, video/announcement, primary contact/images, and review/payment. Fields autosave after a short delay; Continue and Save draft explicitly persist changes. Existing drafts and submissions remain accessible from the request list.
+Customers start from a finished video or Distribution. Requests save drafts across outlet selection, video/announcement, contact/images, and review/payment. Submission uses the existing credit wallet; USD/NGN wallet funding remains in Billing.
 
-## Available outlets and pricing
+## Operator setup
 
-`backend/app/routes/distribution.py` contains the initial 47 distinct Africa catalogue entries. Premium Times appears once. All outlets currently cost **0 credits**. United States, Canada, and United Kingdom are marked coming soon and cannot be selected. Catalogue IDs are persistent: append new entries rather than reordering existing ones. Submitted requests snapshot outlet names and prices. These are requests for manual fulfilment, not API integrations with publishers or guarantees of placement.
+Open **Admin → Distribution → Notification and outlet settings**. `operations.view` permits inspection; `operations.manage` permits configuration, outreach, retries and fulfilment edits.
 
-Pricing and total calculation are authoritative on the backend. Before introducing nonzero prices, review the catalogue, set the per-outlet prices, and validate the intended commercial offer. A changed quote requires review before submission. There is no new payment-provider integration: paid requests use the existing credit wallet and ledger. The existing Billing screen remains responsible for top-ups; a return link restores the saved distribution request. Nuvion integration is still paused.
+- Set multiple team notification addresses (one per line or comma-separated). The default list is empty; addresses are never guessed. Changes apply to future submissions.
+- Select each outlet and set its placement credits, logo acceptance/fee and additional-picture acceptance/fee per picture. Initial placement prices remain zero. Unconfigured image policies are shown as awaiting confirmation and do not authorize image charges or forward images to publishers. Save the actual publisher terms before enabling outreach.
+- Set the publisher contact name/email. Enable automatic outreach only for direct-access outlets. A valid email is required.
+- Edit and save each outlet's plain-text email subject/body. Supported placeholders are listed in the UI. Templates reject unsupported field access, format directives, blank content and multi-line subjects. The default subject is a publication enquiry; the opening paragraph describes the sponsorship request and asks for publication confirmation, timeline, fee and bank/payment details. It distinguishes payment to Cover Founder from publisher payment.
 
-## Submission and wallet safety
+Configuration is stored in the existing `SystemSetting` row `distribution_fulfillment`, not an environment variable. Publisher replies continue to use the existing email provider's `EMAIL_REPLY_TO`/sender mailbox; ensure that mailbox is monitored. Replies, negotiation, bank details and actual publisher payments are handled outside this app. No inbound email reader or bank payout is implemented.
 
-Draft ownership is checked on every customer endpoint. Only a completed video from the same workspace and clean, checked uploads from that workspace can be used. Logo and all four contact details are required; additional pictures are optional (up to ten). Images reuse the existing signed upload, file-type verification, size limits and malware checking.
+## Authoritative pricing and safe payment
 
-Pay and submit atomically claims the draft, locks the wallet, checks the server-calculated total, deducts through the existing append-only ledger, and marks it paid/submitted. Repeated or concurrent submissions do not debit twice. Zero-credit submissions are marked paid without adding a zero-value ledger transaction. Insufficient credit leaves the request as an unpaid review-stage draft and returns 402. Submitted content is immutable to customers.
+The 47 existing Africa catalogue IDs are stable; other listed regions remain coming soon. Server quotes include base placement credits plus an accepted/selected logo fee and a fee per additional picture accepted/selected by each outlet. Company logo upload remains required for the team's records even when a publisher does not accept logos. The customer can opt out of sending a logo or pictures separately for each outlet. Unsupported/unconfirmed images are excluded from that outlet's publisher materials and add no fee.
 
-## Notifications and operations
+Prices and selected media are shown before payment. The browser submits its displayed total and catalogue version. Stale amounts or changed image policies require review, even if a draft autosave has already refreshed the stored total. The server derives charges itself, rejects totals outside the database's monetary range, locks the workspace wallet and atomically claims/debits/submits the request. Insufficient funds leave a draft and queue no sale/publisher emails. Duplicate/concurrent submissions cannot debit twice. Zero-credit orders are accurately identified as no-charge confirmations.
 
-The requester and primary contact receive the confirmation email, including the promise that the Cover Founder team will reach out within 24 hours. Failed email delivery does not undo submission/payment. The persisted `email_sent_at` field records successful delivery through the configured provider, and pending messages are retried by the existing `run_sweep` scheduled job. Email delivery is at least once: a crash after delivery but before recording it may cause a repeat email. Operators can also retry pending confirmations in the back office. Real delivery depends on the existing email provider configuration; local validation uses the mock mailbox.
+Submission stores immutable outlet/fee/media snapshots, creates one placement per outlet, and queues notifications in the same transaction as payment. Later configuration changes cannot change paid totals or rewrite queued/sent messages.
 
-`/admin/distribution` shows unpaid drafts and paid submissions, their current stage, last activity, creator, contact details, release text, selected outlets and prices. Operators with `operations.view` can inspect requests and load short-lived download links for video/logo/images. `operations.manage` is required to retry emails or update fulfilment to submitted, in progress, or completed. Drafts cannot be marked completed without payment. Submission and status updates are audited. Workspace export includes distribution data; account deletion removes its distribution/contact records.
+## Customer confirmation and receipt
 
-## Deployment and verification
+The requester and primary contact receive separate, deduplicated confirmation messages with outlet-by-outlet placement/logo/picture charges, total credits, a permanent `CF-DIST-<request-id>` confirmation number and payment reference. They retain the 24-hour contact promise at submission.
 
-Apply migration `0022` using the existing pre-deploy command `uv run alembic upgrade head`. No new environment variables or external publisher credentials are required. Scheduled notification retries require the existing scheduler/worker workflow; the manual admin retry remains available independently. No production deployment was performed as part of implementation.
+The authenticated request page provides a downloadable, printable HTML receipt/credit invoice with the same breakdown and reference. This records payment from a credit wallet; it is not a second USD/NGN card charge or a tax/VAT invoice. Receipt downloads require workspace ownership. The dashboard lists published press links and the distribution detail page tracks every selected outlet. Customer views never include publisher contact addresses, email logs, internal notes or publisher-payment flags.
 
-Checks:
+## Team and publisher messages
 
-- Backend: `uv run pytest -q tests/test_distribution.py` covers free/paid requests, concurrent debit protection, insufficient funds and retry, saved drafts, tenant isolation, checked assets, required fields, price changes, status access and email retries.
-- Browser: `CHROMIUM_PATH=/usr/bin/chromium pnpm e2e distribution.spec.ts` runs a completed video through outlet selection, selection summary, draft recovery, custom announcement, logo/images, submission, confirmation email and back-office status/downloads.
-- Migration: apply to a disposable database, run `alembic check`, downgrade to `0021`, and upgrade again.
+Configured team recipients receive the paid/no-charge indication, complete customer contact information, selected outlets and costs, full announcement, video project, image counts, signed video/logo/picture download links and a secure back-office link for reviewing submitted materials.
+
+Direct-access outlets automatically receive their saved, rendered publisher email after successful submission. Publisher material links include the selected video and only that outlet's accepted/selected logo/pictures. Signed material links expire after seven days. Admins can edit the rendered recipient, subject and body per placement, save them and explicitly send an additional email/follow-up. Refresh expired materials manually before sending old drafts. Each send has an idempotency key; retrying the same action does not queue a second message.
+
+The admin request detail contains message subjects/bodies, recipients, pending/sending/sent/failed state, attempts, sent time, errors and a request activity timeline. Editing a draft email does not rewrite sent history. Sent means the configured provider accepted the message, not proof of inbox delivery or a publisher reply.
+
+## Per-outlet status and publication
+
+Customer-visible statuses are **Pending**, **In progress** and **Published**. Admin-only progress includes **Not started**, **Follow-up done** and **Publisher payment made**, plus private notes. Publisher payment is a staff-entered record only; it does not move money or change a customer's payment status.
+
+Saving a new valid HTTP(S) publication URL marks that outlet Published and queues emails to the requester/contact with the outlet name and link. URLs cannot contain credentials or unsafe schemes. Multiple outlets are tracked independently, with separate publication notifications; repeating the same URL update does not send duplicates. The overall request completes only after its placements are published. Concurrent outlet updates are serialized at the request level so the roll-up remains correct. Customer progress refreshes automatically; links also appear on their dashboard.
+
+## Delivery reliability and privacy
+
+A durable per-recipient outbox commits before sending. Post-response delivery keeps email outages off the payment path; the existing `jobs.sweep` retries pending/failed messages and recovers sending leases older than ten minutes. Workers claim each message before calling the provider and hold no database transaction across the network call. Automatic attempts stop at eight; an authorized admin can retry a specific failed message without resetting its attempt history. A bounded processing window leaves remaining work queued for the next sweep. Exhausted messages cannot starve newer requests. Messages already marked sent are not resent during ordinary retries.
+
+Delivery is at least once: a process crash after provider acceptance but before saving success can still produce a repeat email. The configured provider interface has no delivery idempotency receipt. Wallet debits remain independently idempotent. Payment is retained when an email fails. Logs show the failure and permit recovery.
+
+Workspace export includes public outlet progress/links. Workspace erasure removes its distribution placements, outbox messages and activity records along with the original request data. Private publisher/admin fields are excluded from customer responses.
+
+## Migration and rollout
+
+Apply migration **0024** using the existing `alembic upgrade head` pre-deploy command. It creates placements, outbox and activity tables and backfills paid legacy requests without queuing historical emails or retroactive publisher outreach. Legacy completed orders retain their published status but may lack a recorded URL/contact/draft; staff can add these. Successful old confirmations are not automatically reissued. Downgrade removes new fulfilment tables while preserving original requests and payment records.
+
+This implementation has not been deployed as part of this task. Configure real team recipients, publisher contacts, actual fees/image policies and a monitored reply mailbox before relying on production outreach. Local tests use the mock email provider; no messages were sent to real team members or publishers.
+
+Validation covers paid/free/insufficient-funds paths; stale quote and fractional media charges; duplicate/concurrent submission and outreach; per-recipient failure/retry and stale leases; template validation and permissions; private internal status; safe publication links and multi-outlet roll-up; receipt download/privacy; workspace export/erasure; and complete browser journeys from payment to publisher email, follow-up, publication, customer email and dashboard links. Migration upgrade, legacy backfill, schema check, downgrade and re-upgrade were tested on a disposable SQLite database.

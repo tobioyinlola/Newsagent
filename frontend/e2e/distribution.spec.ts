@@ -84,7 +84,7 @@ test("completed video to distribution draft, checked images, wallet submission, 
   await ap.addInitScript(() => sessionStorage.setItem("newsagent.admin.token", "dev:ops@example.com"));
   await ap.goto("/admin/distribution");
   await expect(ap.getByText(/Custom distribution announcement/)).toBeVisible();
-  await expect(ap.getByText(/Unpaid.*Step: contact/)).toBeVisible();
+  await expect(ap.getByText(/Custom distribution announcement.*Unpaid.*Step: contact/)).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { name: "Primary contact and company images" })).toBeVisible();
   await page.getByRole("button", { name: "Continue", exact: true }).click();
@@ -128,7 +128,7 @@ test("completed video to distribution draft, checked images, wallet submission, 
   const confirmation = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: email } })).json();
   expect(confirmation.text).toContain("24 hours");
   await ap.reload();
-  const row = ap.locator("details").filter({ hasText: "Custom distribution announcement" });
+  const row = ap.locator("details").filter({ has: ap.locator("summary").filter({ hasText: "Custom distribution announcement" }) }).first();
   await row.locator("summary").click();
   await expect(row).toContainText("Paid 0.0000 credits");
   await expect(row).toContainText("Our own press announcement with all the details.");

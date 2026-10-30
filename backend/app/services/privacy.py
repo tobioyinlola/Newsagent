@@ -14,6 +14,9 @@ from app.models import (
     Brief,
     Checkout,
     CreditTransaction,
+    DistributionActivity,
+    DistributionMail,
+    DistributionPlacement,
     DistributionRequest,
     InterviewSession,
     Invite,
@@ -76,6 +79,9 @@ async def delete_workspace(session: AsyncSession, ws: Workspace) -> None:
         await purge_project(session, p)
     for a in (await session.execute(select(BrandAsset).where(BrandAsset.workspace_id == ws.id))).scalars():
         await storage.delete(a.key)
+    distribution_ids = select(DistributionRequest.id).where(DistributionRequest.workspace_id == ws.id)
+    for model in (DistributionActivity, DistributionMail, DistributionPlacement):
+        await session.execute(delete(model).where(model.request_id.in_(distribution_ids)))
     await session.execute(delete(DistributionRequest).where(DistributionRequest.workspace_id == ws.id))
     await session.execute(delete(BrandAsset).where(BrandAsset.workspace_id == ws.id))
     ws.brand_kit_id = None
@@ -215,9 +221,30 @@ async def export_workspace(session: AsyncSession, ws: Workspace, user: User) -> 
         ],
         "projects": projects,
         "distribution_requests": [
-            {"id": r.id, "status": r.status, "stage": r.stage, "data": r.data,
-             "total_credits": str(r.total_credits), "paid": r.paid_at is not None}
-            for r in (await session.execute(select(DistributionRequest).where(DistributionRequest.workspace_id == ws.id))).scalars()
+            {
+                "id": r.id,
+                "status": r.status,
+                "stage": r.stage,
+                "data": r.data,
+                "total_credits": str(r.total_credits),
+                "paid": r.paid_at is not None,
+                "placements": [
+                    {
+                        "outlet_id": x.outlet_id,
+                        "status": x.status,
+                        "published_url": x.published_url,
+                        "published_at": dt(x.published_at),
+                    }
+                    for x in (
+                        await session.execute(
+                            select(DistributionPlacement).where(DistributionPlacement.request_id == r.id)
+                        )
+                    ).scalars()
+                ],
+            }
+            for r in (
+                await session.execute(select(DistributionRequest).where(DistributionRequest.workspace_id == ws.id))
+            ).scalars()
         ],
         "credit_ledger": [
             {

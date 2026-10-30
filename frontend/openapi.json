@@ -1716,6 +1716,14 @@
             "title": "Logo Key",
             "type": "string"
           },
+          "media_options": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/MediaChoice"
+            },
+            "maxProperties": 100,
+            "title": "Media Options",
+            "type": "object"
+          },
           "outlet_ids": {
             "items": {
               "type": "string"
@@ -2782,6 +2790,22 @@
         "title": "MeOut",
         "type": "object"
       },
+      "MediaChoice": {
+        "properties": {
+          "include_logo": {
+            "default": true,
+            "title": "Include Logo",
+            "type": "boolean"
+          },
+          "include_pictures": {
+            "default": true,
+            "title": "Include Pictures",
+            "type": "boolean"
+          }
+        },
+        "title": "MediaChoice",
+        "type": "object"
+      },
       "MergePlanIn": {
         "properties": {
           "answers": {
@@ -2935,6 +2959,117 @@
           "code"
         ],
         "title": "OtpIn",
+        "type": "object"
+      },
+      "OutletConfig": {
+        "properties": {
+          "accepts_images": {
+            "default": true,
+            "title": "Accepts Images",
+            "type": "boolean"
+          },
+          "accepts_logo": {
+            "default": true,
+            "title": "Accepts Logo",
+            "type": "boolean"
+          },
+          "contact_email": {
+            "anyOf": [
+              {
+                "format": "email",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Email"
+          },
+          "contact_name": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "credits": {
+            "anyOf": [
+              {
+                "maximum": 1000000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Credits"
+          },
+          "direct_access": {
+            "default": false,
+            "title": "Direct Access",
+            "type": "boolean"
+          },
+          "email_body": {
+            "default": "Hello {contact_name},\n\nI'm reaching out from Cover Founder with a sponsorship request for {outlet_name}. {payment_summary}\n\nHeadline: {headline}\nBrief: {summary}\n\nPress announcement:\n{announcement}\n\nPublication materials:\n{assets}\n\nPlease confirm whether you can accept this placement, your publication timeline, the applicable sponsorship fee, and your bank/payment details so our team can arrange payment. Payment to your publication has not been confirmed by this email.\n\nPlease reply directly to this email; our team will coordinate the next steps with you.\n\nKind regards,\nThe Cover Founder team\nReference: {reference}",
+            "maxLength": 12000,
+            "minLength": 1,
+            "title": "Email Body",
+            "type": "string"
+          },
+          "email_subject": {
+            "default": "Publication enquiry: {headline}",
+            "maxLength": 250,
+            "minLength": 1,
+            "title": "Email Subject",
+            "type": "string"
+          },
+          "logo_credits": {
+            "anyOf": [
+              {
+                "maximum": 1000000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Logo Credits"
+          },
+          "picture_credits": {
+            "anyOf": [
+              {
+                "maximum": 1000000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Picture Credits"
+          }
+        },
+        "title": "OutletConfig",
+        "type": "object"
+      },
+      "OutreachSend": {
+        "properties": {
+          "idempotency_key": {
+            "maxLength": 64,
+            "minLength": 16,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Idempotency Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "idempotency_key"
+        ],
+        "title": "OutreachSend",
         "type": "object"
       },
       "Overview": {
@@ -3197,6 +3332,110 @@
           "content_type"
         ],
         "title": "PhotoIn",
+        "type": "object"
+      },
+      "PlacementUpdate": {
+        "properties": {
+          "contact_email": {
+            "anyOf": [
+              {
+                "format": "email",
+                "type": "string"
+              },
+              {
+                "const": "",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Email"
+          },
+          "internal_notes": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Notes"
+          },
+          "internal_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "not_started",
+                  "follow_up",
+                  "payment_made"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Status"
+          },
+          "outreach_body": {
+            "anyOf": [
+              {
+                "maxLength": 100000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outreach Body"
+          },
+          "outreach_subject": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outreach Subject"
+          },
+          "published_url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published Url"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pending",
+                  "in_progress",
+                  "published"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "PlacementUpdate",
         "type": "object"
       },
       "PlanAnswer": {
@@ -5429,6 +5668,39 @@
         "title": "StoryPictureOut",
         "type": "object"
       },
+      "SubmissionQuote": {
+        "properties": {
+          "expected_total": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Total"
+          },
+          "quote_version": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote Version"
+          }
+        },
+        "title": "SubmissionQuote",
+        "type": "object"
+      },
       "TakeOut": {
         "properties": {
           "attempts": {
@@ -5531,6 +5803,21 @@
           "flags"
         ],
         "title": "TakeOut",
+        "type": "object"
+      },
+      "TeamConfig": {
+        "properties": {
+          "team_emails": {
+            "items": {
+              "format": "email",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Team Emails",
+            "type": "array"
+          }
+        },
+        "title": "TeamConfig",
         "type": "object"
       },
       "TeamOut": {
@@ -6644,7 +6931,229 @@
         ]
       }
     },
+    "/v1/admin/distribution/config": {
+      "get": {
+        "operationId": "get_config_v1_admin_distribution_config_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Config",
+        "tags": [
+          "distribution"
+        ]
+      },
+      "put": {
+        "operationId": "set_config_v1_admin_distribution_config_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Config",
+        "tags": [
+          "distribution"
+        ]
+      }
+    },
+    "/v1/admin/distribution/outlets/{outlet_id}": {
+      "put": {
+        "operationId": "set_outlet_v1_admin_distribution_outlets__outlet_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "outlet_id",
+            "required": true,
+            "schema": {
+              "title": "Outlet Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutletConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Outlet",
+        "tags": [
+          "distribution"
+        ]
+      }
+    },
     "/v1/admin/distribution/{id}": {
+      "get": {
+        "operationId": "request_detail_v1_admin_distribution__id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Detail",
+        "tags": [
+          "distribution"
+        ]
+      },
       "patch": {
         "operationId": "admin_status_v1_admin_distribution__id__patch",
         "parameters": [
@@ -6829,6 +7338,221 @@
           }
         },
         "summary": "Retry Email",
+        "tags": [
+          "distribution"
+        ]
+      }
+    },
+    "/v1/admin/distribution/{id}/emails/{mail_id}/retry": {
+      "post": {
+        "operationId": "retry_mail_v1_admin_distribution__id__emails__mail_id__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "mail_id",
+            "required": true,
+            "schema": {
+              "title": "Mail Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retry Mail",
+        "tags": [
+          "distribution"
+        ]
+      }
+    },
+    "/v1/admin/distribution/{id}/placements/{placement_id}": {
+      "patch": {
+        "operationId": "update_placement_v1_admin_distribution__id__placements__placement_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "placement_id",
+            "required": true,
+            "schema": {
+              "title": "Placement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlacementUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Placement",
+        "tags": [
+          "distribution"
+        ]
+      }
+    },
+    "/v1/admin/distribution/{id}/placements/{placement_id}/outreach": {
+      "post": {
+        "operationId": "send_outreach_v1_admin_distribution__id__placements__placement_id__outreach_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "placement_id",
+            "required": true,
+            "schema": {
+              "title": "Placement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutreachSend"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Send Outreach",
         "tags": [
           "distribution"
         ]
@@ -10994,6 +11718,64 @@
         ]
       }
     },
+    "/v1/distribution/{id}/invoice": {
+      "get": {
+        "operationId": "download_invoice_v1_distribution__id__invoice_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download Invoice",
+        "tags": [
+          "distribution"
+        ]
+      }
+    },
     "/v1/distribution/{id}/submit": {
       "post": {
         "operationId": "submit_v1_distribution__id__submit_post",
@@ -11024,6 +11806,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/SubmissionQuote"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Expected"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {

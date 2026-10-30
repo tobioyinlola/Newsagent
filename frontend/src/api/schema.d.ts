@@ -198,7 +198,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/distribution/{id}": {
+    "/v1/admin/distribution/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Config */
+        get: operations["get_config_v1_admin_distribution_config_get"];
+        /** Set Config */
+        put: operations["set_config_v1_admin_distribution_config_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/distribution/outlets/{outlet_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -206,6 +224,24 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** Set Outlet */
+        put: operations["set_outlet_v1_admin_distribution_outlets__outlet_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/distribution/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Request Detail */
+        get: operations["request_detail_v1_admin_distribution__id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -243,6 +279,57 @@ export interface paths {
         put?: never;
         /** Retry Email */
         post: operations["retry_email_v1_admin_distribution__id__confirmation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/distribution/{id}/emails/{mail_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry Mail */
+        post: operations["retry_mail_v1_admin_distribution__id__emails__mail_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/distribution/{id}/placements/{placement_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Placement */
+        patch: operations["update_placement_v1_admin_distribution__id__placements__placement_id__patch"];
+        trace?: never;
+    };
+    "/v1/admin/distribution/{id}/placements/{placement_id}/outreach": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send Outreach */
+        post: operations["send_outreach_v1_admin_distribution__id__placements__placement_id__outreach_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1375,6 +1462,23 @@ export interface paths {
         get: operations["detail_v1_distribution__id__get"];
         /** Save */
         put: operations["save_v1_distribution__id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/distribution/{id}/invoice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Invoice */
+        get: operations["download_invoice_v1_distribution__id__invoice_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -3255,6 +3359,10 @@ export interface components {
              * @default
              */
             logo_key: string;
+            /** Media Options */
+            media_options?: {
+                [key: string]: components["schemas"]["MediaChoice"];
+            };
             /** Outlet Ids */
             outlet_ids?: string[];
             /**
@@ -3690,6 +3798,19 @@ export interface components {
             /** Workspace Name */
             workspace_name: string;
         };
+        /** MediaChoice */
+        MediaChoice: {
+            /**
+             * Include Logo
+             * @default true
+             */
+            include_logo: boolean;
+            /**
+             * Include Pictures
+             * @default true
+             */
+            include_pictures: boolean;
+        };
         /** MergePlanIn */
         MergePlanIn: {
             /**
@@ -3747,6 +3868,80 @@ export interface components {
         OtpIn: {
             /** Code */
             code: string;
+        };
+        /** OutletConfig */
+        OutletConfig: {
+            /**
+             * Accepts Images
+             * @default true
+             */
+            accepts_images: boolean;
+            /**
+             * Accepts Logo
+             * @default true
+             */
+            accepts_logo: boolean;
+            /** Contact Email */
+            contact_email?: string | null;
+            /**
+             * Contact Name
+             * @default
+             */
+            contact_name: string;
+            /**
+             * Credits
+             * @default 0
+             */
+            credits: number | string;
+            /**
+             * Direct Access
+             * @default false
+             */
+            direct_access: boolean;
+            /**
+             * Email Body
+             * @default Hello {contact_name},
+             *
+             *     I'm reaching out from Cover Founder with a sponsorship request for {outlet_name}. {payment_summary}
+             *
+             *     Headline: {headline}
+             *     Brief: {summary}
+             *
+             *     Press announcement:
+             *     {announcement}
+             *
+             *     Publication materials:
+             *     {assets}
+             *
+             *     Please confirm whether you can accept this placement, your publication timeline, the applicable sponsorship fee, and your bank/payment details so our team can arrange payment. Payment to your publication has not been confirmed by this email.
+             *
+             *     Please reply directly to this email; our team will coordinate the next steps with you.
+             *
+             *     Kind regards,
+             *     The Cover Founder team
+             *     Reference: {reference}
+             */
+            email_body: string;
+            /**
+             * Email Subject
+             * @default Publication enquiry: {headline}
+             */
+            email_subject: string;
+            /**
+             * Logo Credits
+             * @default 0
+             */
+            logo_credits: number | string;
+            /**
+             * Picture Credits
+             * @default 0
+             */
+            picture_credits: number | string;
+        };
+        /** OutreachSend */
+        OutreachSend: {
+            /** Idempotency Key */
+            idempotency_key: string;
         };
         /** Overview */
         Overview: {
@@ -3837,6 +4032,23 @@ export interface components {
         PhotoIn: {
             /** Content Type */
             content_type: string;
+        };
+        /** PlacementUpdate */
+        PlacementUpdate: {
+            /** Contact Email */
+            contact_email?: string | "" | null;
+            /** Internal Notes */
+            internal_notes?: string | null;
+            /** Internal Status */
+            internal_status?: ("not_started" | "follow_up" | "payment_made") | null;
+            /** Outreach Body */
+            outreach_body?: string | null;
+            /** Outreach Subject */
+            outreach_subject?: string | null;
+            /** Published Url */
+            published_url?: string | null;
+            /** Status */
+            status?: ("pending" | "in_progress" | "published") | null;
         };
         /** PlanAnswer */
         PlanAnswer: {
@@ -4633,6 +4845,13 @@ export interface components {
             /** Url */
             url: string;
         };
+        /** SubmissionQuote */
+        SubmissionQuote: {
+            /** Expected Total */
+            expected_total?: number | string | null;
+            /** Quote Version */
+            quote_version?: string | null;
+        };
         /** TakeOut */
         TakeOut: {
             /**
@@ -4665,6 +4884,11 @@ export interface components {
             transcript?: string | null;
             /** Video Url */
             video_url?: string | null;
+        };
+        /** TeamConfig */
+        TeamConfig: {
+            /** Team Emails */
+            team_emails?: string[];
         };
         /** TeamOut */
         TeamOut: {
@@ -5181,6 +5405,142 @@ export interface operations {
             };
         };
     };
+    get_config_v1_admin_distribution_config_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_config_v1_admin_distribution_config_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamConfig"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_outlet_v1_admin_distribution_outlets__outlet_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                outlet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OutletConfig"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_detail_v1_admin_distribution__id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     admin_status_v1_admin_distribution__id__patch: {
         parameters: {
             query?: never;
@@ -5277,6 +5637,116 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_mail_v1_admin_distribution__id__emails__mail_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+                mail_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_placement_v1_admin_distribution__id__placements__placement_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+                placement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlacementUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_outreach_v1_admin_distribution__id__placements__placement_id__outreach_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+                placement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OutreachSend"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -7827,7 +8297,7 @@ export interface operations {
             };
         };
     };
-    submit_v1_distribution__id__submit_post: {
+    download_invoice_v1_distribution__id__invoice_get: {
         parameters: {
             query?: never;
             header?: {
@@ -7839,6 +8309,43 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_v1_distribution__id__submit_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SubmissionQuote"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

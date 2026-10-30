@@ -3,11 +3,13 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, unwrap } from "../api/client";
 import { getToken } from "../lib/auth";
-import { distributionApi, type Distribution, type Draft, type Outlet } from "../lib/distribution";
+import { distributionApi, distributionStatus, priceOutlets, type Distribution, type Draft, type Outlet } from "../lib/distribution";
 import { CountryPhoneInput } from "../components/CountryPhoneInput";
 import { DistributionLogoUpload } from "../components/DistributionLogoUpload";
 import { validateDistributionStep, type DistributionErrors } from "../lib/distributionValidation";
 import { DistributionOutlets, DistributionSelection } from "../components/DistributionOutlets";
+import { DistributionProgress } from "../components/DistributionProgress";
+import { DistributionMediaOptions } from "../components/DistributionMediaOptions";
 import { Button, Card, ErrorBox } from "../components/ui";
 
 const steps = ["outlets", "content", "contact", "review"];
@@ -35,8 +37,8 @@ export function DistributionRequestPage() {
   const [topup, setTopup] = useState(false);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const submitting = useRef(false);
-  const list = useQuery({ queryKey: ["distributions"], queryFn: () => request<Distribution[]>("distribution") });
-  const outlets = useQuery({ queryKey: ["distribution-outlets"], queryFn: () => request<{ outlets: Outlet[]; coming_soon: string[] }>("distribution/outlets") });
+  const list = useQuery({ queryKey: ["distributions"], queryFn: () => request<Distribution[]>("distribution"), refetchInterval: 15000 });
+  const outlets = useQuery({ queryKey: ["distribution-outlets"], queryFn: () => request<{ outlets: Outlet[]; coming_soon: string[]; quote_version: string }>("distribution/outlets") });
   const videos = useQuery({ queryKey: ["distribution-videos"], queryFn: () => request<Video[]>("distribution/videos") });
   const stories = useQuery({ queryKey: ["distribution-stories"], queryFn: () => request<{ project_id: string; headline: string; announcement: string }[]>("distribution/stories") });
   const images = useQuery({ queryKey: ["distribution-images", draft?.logo_key], queryFn: () => unwrap(api.GET("/v1/brand-kit/assets")), enabled: !!draft?.logo_key });
@@ -46,6 +48,11 @@ export function DistributionRequestPage() {
     if (id) void request<Distribution>(`distribution/${id}`).then(r => { if (active) { setRow(r); setDraft(r.data); } }).catch(e => { if (active) setError(e); });
     return () => { active = false; };
   }, [id]);
+  useEffect(() => {
+    if (!id || !row?.paid) return;
+    const timer = setInterval(() => { void request<Distribution>(`distribution/${id}`).then(r => { setRow(r); setDraft(r.data); }).catch(() => undefined); }, row.email_sent ? 15000 : 2000);
+    return () => clearInterval(timer);
+  }, [id, row?.paid, row?.email_sent]);
   const save = (next: Draft) => {
     if (!row || row.status !== "draft") return Promise.resolve();
     setSaved("Saving…");
@@ -81,8 +88,8 @@ export function DistributionRequestPage() {
     } catch (e) { setError(e); } finally { setBusy(false); }
   };
   const all = outlets.data?.outlets ?? [];
-  const selected = all.filter(o => draft?.outlet_ids.includes(o.id));
-  const total = selected.reduce((n, o) => n + Number(o.credits), 0);
+  const selected = priceOutlets(all, draft);
+  const total = Number(selected.reduce((n, o) => n + Number(o.credits), 0).toFixed(4));
   const next = async (step: string) => {
     if (!draft) return;
     if (steps.indexOf(step) > steps.indexOf(draft.stage)) {
@@ -118,23 +125,23 @@ export function DistributionRequestPage() {
     setBusy(true); setError(null); setTopup(false);
     try {
       await save(draft);
-      const r = await request<Distribution>(`distribution/${row.id}/submit`, "POST"); setRow(r); setSuccess(true);
+      const r = await request<Distribution>(`distribution/${row.id}/submit`, "POST", { expected_total: String(total), quote_version: outlets.data?.quote_version }); setRow(r); setSuccess(true);
       await cache.invalidateQueries({ queryKey: ["distributions"] });
       await cache.invalidateQueries({ queryKey: ["me"] });
-    } catch (e) { setError(e); if (e instanceof ApiError && e.status === 402) setTopup(true); } finally { submitting.current = false; setBusy(false); }
+    } catch (e) { setError(e); if (e instanceof ApiError && e.status === 402) setTopup(true); if (e instanceof ApiError && e.status === 409) { await outlets.refetch(); } } finally { submitting.current = false; setBusy(false); }
   };
   return <div className="space-y-6 pb-28">
     <div><h1 className="text-3xl font-bold">Distribute your story</h1><p className="mt-2">Want to distribute your video and announcement to over 20,000 media outlets?</p><p className="text-sm text-muted">Choose from the available outlets below. Our team coordinates your request; submission is not a guarantee of publication.</p></div>
     <ErrorBox error={error ?? list.error ?? outlets.error ?? videos.error} />
-    {!id && <><Button onClick={() => void create()} disabled={busy || !videos.data || !outlets.data}>Start a distribution request</Button><Card title="Your distribution requests"><ul className="space-y-3">{list.data?.map(r => <li key={r.id}><Link className="underline" to={`/distribution/request?draft=${r.id}`}>{r.data.headline || "Untitled distribution"}</Link> — {r.status} · {r.stage} · {r.paid ? `Paid (${r.total_credits} credits)` : "Unpaid draft"}</li>)}</ul>{list.data?.length === 0 && <p>No requests yet. Your drafts will appear here.</p>}</Card></>}
+    {!id && <><Button onClick={() => void create()} disabled={busy || !videos.data || !outlets.data}>Start a distribution request</Button><Card title="Your distribution requests"><ul className="space-y-3">{list.data?.map(r => <li key={r.id}><Link className="underline" to={`/distribution/request?draft=${r.id}`}>{r.data.headline || "Untitled distribution"}</Link> — {distributionStatus(r.status)} · {r.stage} · {r.paid ? `Paid (${r.total_credits} credits)` : "Unpaid draft"}</li>)}</ul>{list.data?.length === 0 && <p>No requests yet. Your drafts will appear here.</p>}</Card></>}
     {id && !draft && !error && <p>Loading your saved request…</p>}
     {draft && row && <>
-      {row.status !== "draft" ? <Card title="Distribution request confirmed"><p>Your request is {row.status.replace("_", " ")}. Payment confirmed: {row.total_credits} credits.</p><p>Someone from the Cover Founder team will reach out within the next 24 hours.</p><p className="mt-2">{row.email_sent ? "Confirmation email sent." : "Your request is saved, but the confirmation email could not be sent. Our team can see your request."}</p><p className="mt-3 font-bold">{draft.headline}</p><p>{row.data.outlets?.map(o => o.name).join(", ")}</p><Link to="/distribution/request" className="underline">All requests</Link></Card> : <>
+      {row.status !== "draft" ? <DistributionProgress request={row} /> : <>
       <nav aria-label="Distribution steps" className="flex flex-wrap gap-2">{steps.map((s, i) => <Button key={s} variant={draft.stage === s ? "primary" : "secondary"} disabled={busy} onClick={() => void next(s)}>{i + 1}. {labels[i]}</Button>)}</nav>
       {Object.keys(fieldErrors).length > 0 && <div ref={validationSummary} tabIndex={-1} role="alert" className="rounded-lg border-2 border-brand-red bg-red-tint p-4 focus-visible:outline-2 focus-visible:outline-brand-purple"><p className="font-bold">Complete the required details before continuing.</p><ul className="mt-2 list-inside list-disc text-sm">{Object.values(fieldErrors).map(message => <li key={message}>{message}</li>)}</ul></div>}
       <p role="status" className="text-sm">{saved || "Your progress is saved automatically."}</p>
       {draft.stage === "outlets" && fieldError("outlet_ids")}
-      {draft.stage === "outlets" && <DistributionOutlets outlets={all} selectedIds={draft.outlet_ids} onChange={outlet_ids => patch({ outlet_ids })} comingSoon={outlets.data?.coming_soon ?? []} />}
+      {draft.stage === "outlets" && <DistributionOutlets outlets={all.map(o => selected.find(s => s.id === o.id) ?? o)} selectedIds={draft.outlet_ids} onChange={outlet_ids => patch({ outlet_ids })} comingSoon={outlets.data?.coming_soon ?? []} />}
       {draft.stage === "content" && <Card title="Choose your video and announcement">
         <label className="block font-semibold">Completed video<select aria-label="Completed video" aria-invalid={!!fieldErrors.project_id} aria-describedby={fieldErrors.project_id ? "distribution-error-project_id" : undefined} className="mt-2 block min-h-12 w-full rounded-lg border border-ink p-3 font-normal" value={draft.project_id ?? ""} onChange={e => patch({ project_id: e.target.value || null })}><option value="">Select a completed video</option>{videos.data?.map(v => <option key={v.id} value={v.id}>{v.headline || `Video ${v.id.slice(0, 8)}`}</option>)}</select></label>{fieldError("project_id")}
         {videos.data?.length === 0 && <p>Finish a video first. <Link className="underline" to="/ai-newsroom/new">Create a video</Link></p>}
@@ -148,9 +155,10 @@ export function DistributionRequestPage() {
         <DistributionLogoUpload value={draft.logo_key} url={logoPreview || images.data?.find(image => image.key === draft.logo_key)?.url || undefined} busy={busy} uploading={uploadKind === "logo"} error={fieldErrors.logo_key} onUpload={file => void upload(file, true)} onRemove={() => { patch({ logo_key: "" }); setLogoPreview(""); }} />
         <label className="mt-6 block font-semibold">Additional pictures (optional, up to 10, PNG/JPEG, 5 MB each)<input className="mt-3 block w-full rounded-lg border border-line p-3 text-sm file:mr-3 file:rounded file:border-0 file:bg-paper file:px-3 file:py-2 file:font-semibold" type="file" accept="image/png,image/jpeg" disabled={busy || draft.picture_keys.length >= 10} onChange={e => { const f = e.target.files?.[0]; if (f) void upload(f, false); e.target.value = ""; }} /></label><ul className="mt-3 space-y-2">{draft.picture_keys.map((k, i) => <li key={k} className="flex items-center justify-between rounded border border-line p-3 text-sm">Picture {i + 1} uploaded <button className="min-h-10 font-semibold underline" onClick={() => patch({ picture_keys: draft.picture_keys.filter(x => x !== k) })}>Remove picture {i + 1}</button></li>)}</ul>
       </Card>}
+      {draft.stage === "contact" && <DistributionMediaOptions outlets={selected} draft={draft} onChange={media_options => patch({ media_options })} />}
       {draft.stage === "review" && <section aria-labelledby="distribution-review-title" className="space-y-4"><h2 id="distribution-review-title" className="text-xl font-bold">Review your distribution request</h2><div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <Card title="Announcement"><div role="region" aria-label="Announcement preview" tabIndex={0} className="max-h-96 overflow-y-auto overscroll-contain rounded-lg border border-line bg-paper p-4 [overflow-wrap:anywhere] [scrollbar-gutter:stable] focus-visible:outline-2 focus-visible:outline-brand-purple sm:p-5"><h3 className="text-lg font-bold leading-snug">{draft.headline}</h3><div className="mt-4 space-y-4 text-sm leading-7">{draft.announcement.split(/\n\s*\n/).filter(p => p.trim()).map((paragraph, i) => <p key={i} className="whitespace-pre-wrap">{paragraph}</p>)}</div></div><button className="mt-3 min-h-11 text-sm font-bold underline" onClick={() => void next("content")}>Edit announcement</button></Card>
-        <div className="min-w-0 space-y-4"><Card title="Video and primary contact"><dl className="space-y-3 text-sm [overflow-wrap:anywhere]"><div><dt className="font-bold">Video</dt><dd>{videos.data?.find(v => v.id === draft.project_id)?.headline || draft.project_id}</dd></div><div><dt className="font-bold">Contact</dt><dd>{draft.contact_name}</dd><dd>{draft.contact_email}</dd></div><div><dt className="font-bold">Phone / WhatsApp</dt><dd>{draft.phone} / {draft.whatsapp}</dd></div><div><dt className="font-bold">Company images</dt><dd>{draft.logo_key ? "Logo uploaded" : "Logo required"} · {draft.picture_keys.length} additional pictures</dd></div></dl><button className="mt-3 min-h-11 text-sm font-bold underline" onClick={() => void next("contact")}>Edit contact and images</button></Card><Card title="Outlets and payment"><ul aria-label="Distribution cost breakdown" className="max-h-48 space-y-2 overflow-y-auto overscroll-contain pr-1 text-sm [scrollbar-gutter:stable]">{selected.map(o => <li key={o.id} className="flex justify-between gap-3 border-b border-line pb-2"><span className="min-w-0 break-words">{o.name}</span><span className="shrink-0">{o.credits} credits</span></li>)}</ul><p className="my-4 flex justify-between border-t-2 border-ink pt-3 font-bold"><span>Total</span><span>{total} credits</span></p><p className="mb-4 text-sm text-muted">Confirming deducts this total from your wallet. Our team will contact you within 24 hours.</p><Button className="w-full" disabled={busy} onClick={() => void submit()}>Pay and submit</Button>{topup && <p role="alert" className="mt-4">Your draft is saved. <Link className="underline" to={`/billing?returnTo=${encodeURIComponent(`/distribution/request?draft=${row.id}`)}`}>Top up your wallet</Link>, then return to this request.</p>}</Card></div>
+        <div className="min-w-0 space-y-4"><Card title="Video and primary contact"><dl className="space-y-3 text-sm [overflow-wrap:anywhere]"><div><dt className="font-bold">Video</dt><dd>{videos.data?.find(v => v.id === draft.project_id)?.headline || draft.project_id}</dd></div><div><dt className="font-bold">Contact</dt><dd>{draft.contact_name}</dd><dd>{draft.contact_email}</dd></div><div><dt className="font-bold">Phone / WhatsApp</dt><dd>{draft.phone} / {draft.whatsapp}</dd></div><div><dt className="font-bold">Company images</dt><dd>{draft.logo_key ? "Logo uploaded" : "Logo required"} · {draft.picture_keys.length} additional pictures</dd></div></dl><button className="mt-3 min-h-11 text-sm font-bold underline" onClick={() => void next("contact")}>Edit contact and images</button></Card><Card title="Outlets and payment"><ul aria-label="Distribution cost breakdown" className="max-h-48 space-y-2 overflow-y-auto overscroll-contain pr-1 text-sm [scrollbar-gutter:stable]">{selected.map(o => <li key={o.id} className="flex justify-between gap-3 border-b border-line pb-2"><span className="min-w-0 break-words">{o.name}<span className="mt-1 block text-xs text-muted">Placement {o.base_credits} · Logo {o.logo_fee} · Pictures {o.picture_fee} credits</span></span><span className="shrink-0">{o.credits} credits</span></li>)}</ul><p className="my-4 flex justify-between border-t-2 border-ink pt-3 font-bold"><span>Total</span><span>{total} credits</span></p><p className="mb-4 text-sm text-muted">Confirming deducts this total from your wallet. Our team will contact you within 24 hours.</p><Button className="w-full" disabled={busy} onClick={() => void submit()}>Pay and submit</Button>{topup && <p role="alert" className="mt-4">Your draft is saved. <Link className="underline" to={`/billing?returnTo=${encodeURIComponent(`/distribution/request?draft=${row.id}`)}`}>Top up your wallet</Link>, then return to this request.</p>}</Card></div>
       </div></section>}
       <div className="flex gap-3"><Button disabled={busy} variant="secondary" onClick={() => { setBusy(true); void save(draft).catch(() => undefined).finally(() => setBusy(false)); }}>Save draft</Button>{draft.stage !== "review" && draft.stage !== "outlets" && <Button disabled={busy} onClick={() => void next(steps[Math.min(3, steps.indexOf(draft.stage) + 1)])}>Continue</Button>}<Link to="/distribution/request" className="self-center underline">All requests</Link></div>
       <aside aria-label="Selected outlets" className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 right-3 z-20 mx-auto flex max-w-2xl md:left-[17rem] flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-ink bg-white/95 p-3 shadow-xl backdrop-blur-sm sm:px-5"><span className="text-sm"><strong className="tabular-nums">{selected.length} selected</strong><span className="ml-2 text-muted">· {total} credits</span></span><div className="flex gap-2"><Button variant="secondary" onClick={() => setView(true)}>View selection</Button>{draft.stage === "outlets" && <Button disabled={busy} onClick={() => void next("content")}>Continue</Button>}</div></aside>

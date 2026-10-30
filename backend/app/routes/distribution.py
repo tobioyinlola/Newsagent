@@ -4,7 +4,8 @@ import re
 from decimal import Decimal
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, EmailStr, Field, TypeAdapter, ValidationError
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,9 +15,10 @@ from app.db import get_session
 from app.integrations import registry
 from app.models import Asset, BrandAsset, Brief, DistributionRequest, Project, ScriptVersion, Workspace
 from app.models.base import utcnow
+from app.services import distribution as fulfillment
+from app.services import distribution_catalog as catalog_service
 from app.services import ledger
 from app.services.audit import audit
-from app.services.distribution import send_confirmation
 from app.services.ratelimit import limit
 
 router = APIRouter(tags=["distribution"])
@@ -74,6 +76,16 @@ OUTLETS = {
 }
 
 
+class MediaChoice(BaseModel):
+    include_logo: bool = True
+    include_pictures: bool = True
+
+
+class SubmissionQuote(BaseModel):
+    expected_total: Decimal | None = Field(default=None, ge=0)
+    quote_version: str | None = Field(default=None, max_length=64)
+
+
 class DraftIn(BaseModel):
     stage: Literal["outlets", "content", "contact", "review"] = "outlets"
     outlet_ids: list[str] = Field(default_factory=list, max_length=100)
@@ -90,10 +102,18 @@ class DraftIn(BaseModel):
     whatsapp_country: str = Field(default="", pattern=r"^(?:[A-Z]{2})?$")
     logo_key: str = Field(default="", max_length=500)
     picture_keys: list[str] = Field(default_factory=list, max_length=10)
+    media_options: dict[str, MediaChoice] = Field(default_factory=dict, max_length=100)
 
 
 class StatusIn(BaseModel):
     status: Literal["submitted", "in_progress", "completed"]
+
+
+def quoted_lines(body, catalog):
+    try:
+        return catalog_service.quote(body.model_dump(), catalog)
+    except catalog_service.QuoteTooLarge as error:
+        raise HTTPException(422, str(error)) from error
 
 
 def out(row: DistributionRequest) -> dict:
@@ -116,6 +136,12 @@ def out(row: DistributionRequest) -> dict:
     }
 
 
+async def result(db, row, *, admin=False):
+    value = {**out(row), **await fulfillment.details(db, row, admin=admin)}
+    await db.commit()  # Release read locks before post-response notification tasks open their session.
+    return value
+
+
 async def owned(db: AsyncSession, id: str, p: Principal) -> DistributionRequest:
     row = await db.get(DistributionRequest, id)
     if row is None or row.workspace_id != p.workspace.id:
@@ -126,6 +152,8 @@ async def owned(db: AsyncSession, id: str, p: Principal) -> DistributionRequest:
 async def validate(db: AsyncSession, body: DraftIn, workspace_id: str):
     if len(set(body.outlet_ids)) != len(body.outlet_ids) or any(i not in OUTLETS for i in body.outlet_ids):
         raise HTTPException(422, "Choose valid, distinct outlets")
+    if any(i not in OUTLETS for i in body.media_options):
+        raise HTTPException(422, "Choose valid outlet media options")
     if body.project_id:
         project = await db.get(Project, body.project_id)
         if project is None or project.workspace_id != workspace_id or project.state != "final_ready":
@@ -162,8 +190,13 @@ async def validate(db: AsyncSession, body: DraftIn, workspace_id: str):
 
 
 @router.get("/v1/distribution/outlets")
-async def outlets(p: Principal = Depends(current_principal)) -> dict:
-    return {"outlets": list(OUTLETS.values()), "coming_soon": ["United States", "Canada", "United Kingdom"]}
+async def outlets(p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> dict:
+    items = await catalog_service.catalog(db)
+    return {
+        "outlets": items,
+        "quote_version": catalog_service.version(items),
+        "coming_soon": ["United States", "Canada", "United Kingdom"],
+    }
 
 
 @router.get("/v1/distribution/stories")
@@ -260,7 +293,7 @@ async def listing(p: Principal = Depends(current_principal), db: AsyncSession = 
             .order_by(DistributionRequest.updated_at.desc())
         )
     ).scalars()
-    return [out(r) for r in rows]
+    return [await result(db, r) for r in rows]
 
 
 @router.post("/v1/distribution", dependencies=[Depends(limit("distribution-create", 30, 3600))])
@@ -268,12 +301,12 @@ async def create(p: Principal = Depends(current_principal), db: AsyncSession = D
     row = DistributionRequest(workspace_id=p.workspace.id, created_by=p.user.email, data=DraftIn().model_dump())
     db.add(row)
     await db.commit()
-    return out(row)
+    return await result(db, row)
 
 
 @router.get("/v1/distribution/{id}")
 async def detail(id: str, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> dict:
-    return out(await owned(db, id, p))
+    return await result(db, await owned(db, id, p))
 
 
 @router.put("/v1/distribution/{id}")
@@ -282,7 +315,9 @@ async def save(
 ) -> dict:
     await owned(db, id, p)
     await validate(db, body, p.workspace.id)
-    total = sum((Decimal(OUTLETS[i]["credits"]) for i in body.outlet_ids), Decimal("0"))
+    catalog = await catalog_service.catalog(db, admin=True)
+    lines = quoted_lines(body, catalog)
+    total = sum((Decimal(o["credits"]) for o in lines), Decimal("0"))
     row = (
         await db.execute(
             update(DistributionRequest)
@@ -294,11 +329,17 @@ async def save(
     if row is None:
         raise HTTPException(409, "Submitted requests cannot be edited")
     await db.commit()
-    return out(row)
+    return await result(db, row)
 
 
 @router.post("/v1/distribution/{id}/submit")
-async def submit(id: str, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> dict:
+async def submit(
+    id: str,
+    tasks: BackgroundTasks,
+    expected: SubmissionQuote | None = None,
+    p: Principal = Depends(current_principal),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
     # A conditional update claims the request on both SQLite and Postgres; concurrent submits cannot debit twice.
     await owned(db, id, p)
     now = utcnow()
@@ -312,8 +353,8 @@ async def submit(id: str, p: Principal = Depends(current_principal), db: AsyncSe
     ).scalar_one_or_none()
     if row is None:
         row = await owned(db, id, p)
-        await send_confirmation(db, row)
-        return out(row)
+        tasks.add_task(fulfillment.deliver_request, row.id)
+        return await result(db, row)
     body = DraftIn.model_validate(row.data)
     if body.announcement_source == "platform" and not body.story_project_id:
         raise HTTPException(422, "Select the platform story you want to use")
@@ -342,15 +383,24 @@ async def submit(id: str, p: Principal = Depends(current_principal), db: AsyncSe
     except ValidationError as e:
         raise HTTPException(422, "Enter a valid contact email") from e
     if any(
-        not re.fullmatch(r"\+[1-9][0-9]{6,14}", re.sub(r"[() .-]", "", value))
-        for value in [body.phone, body.whatsapp]
+        not re.fullmatch(r"\+[1-9][0-9]{6,14}", re.sub(r"[() .-]", "", value)) for value in [body.phone, body.whatsapp]
     ):
         raise HTTPException(422, "Enter valid phone and WhatsApp numbers, including the country code")
-    total = sum((Decimal(OUTLETS[i]["credits"]) for i in body.outlet_ids), Decimal("0"))
-    if total != row.total_credits:
+    catalog = await catalog_service.catalog(db, admin=True)
+    lines = quoted_lines(body, catalog)
+    total = sum((Decimal(o["credits"]) for o in lines), Decimal("0"))
+    if total != row.total_credits or (
+        expected
+        and (
+            (expected.expected_total is not None and expected.expected_total != total)
+            or (expected.quote_version is not None and expected.quote_version != catalog_service.version(catalog))
+        )
+    ):
         row.status, row.total_credits, row.stage = "draft", total, "review"
         await db.commit()
-        raise HTTPException(409, "Outlet pricing changed. Review the updated total before submitting.")
+        raise HTTPException(
+            409, "Outlet pricing or image policies changed. Review the updated total before submitting."
+        )
     ws = (
         await db.execute(
             select(Workspace)
@@ -383,7 +433,7 @@ async def submit(id: str, p: Principal = Depends(current_principal), db: AsyncSe
             stage="distribution",
             description=f"Distribution to {len(body.outlet_ids)} outlets",
         )
-    row.data = {**body.model_dump(), "outlets": [dict(OUTLETS[i]) for i in body.outlet_ids]}
+    row.data = {**body.model_dump(), "outlets": lines}
     row.total_credits, row.paid_at, row.submitted_at, row.stage = total, now, now, "submitted"
     audit(
         db,
@@ -393,9 +443,10 @@ async def submit(id: str, p: Principal = Depends(current_principal), db: AsyncSe
         target_id=id,
         detail={"credits": str(total), "outlets": len(body.outlet_ids)},
     )
+    await fulfillment.plan_submission(db, row, catalog)
     await db.commit()
-    await send_confirmation(db, row)
-    return out(row)
+    tasks.add_task(fulfillment.deliver_request, row.id)
+    return await result(db, row)
 
 
 @router.get("/v1/admin/distribution")
@@ -403,7 +454,7 @@ async def admin_list(
     p: Principal = Depends(require("operations.view")), db: AsyncSession = Depends(get_session)
 ) -> list[dict]:
     rows = (await db.execute(select(DistributionRequest).order_by(DistributionRequest.updated_at.desc()))).scalars()
-    return [out(r) for r in rows]
+    return [await result(db, r) for r in rows]
 
 
 @router.get("/v1/admin/distribution/{id}/assets")
@@ -438,25 +489,66 @@ async def admin_status(
         raise HTTPException(404, "Request not found")
     if not row.paid_at:
         raise HTTPException(409, "An unpaid draft cannot be marked as submitted")
-    row.status, row.updated_at = body.status, utcnow()
+    row = (
+        await db.execute(
+            update(DistributionRequest)
+            .where(DistributionRequest.id == id)
+            .values(updated_at=utcnow())
+            .returning(DistributionRequest)
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one()
+    from app.models import DistributionPlacement
+
+    placements = (
+        (await db.execute(select(DistributionPlacement).where(DistributionPlacement.request_id == id))).scalars().all()
+    )
+    if body.status == "completed" and (
+        not placements or any(x.status != "published" or not x.published_url for x in placements)
+    ):
+        raise HTTPException(409, "Add each outlet's published link before completing the request")
+    if body.status != "completed":
+        for placement in placements:
+            if placement.status != "published":
+                placement.status = "pending" if body.status == "submitted" else "in_progress"
+    row.status = "completed" if placements and all(x.status == "published" for x in placements) else body.status
+    row.updated_at = utcnow()
+    fulfillment.activity(db, row, "status_changed", {"status": row.status}, actor=p.user.email)
     audit(
         db,
         p.user.email,
         "distribution.status_changed",
         target_type="distribution",
         target_id=id,
-        detail={"status": body.status},
+        detail={"status": row.status},
     )
     await db.commit()
-    return out(row)
+    return await result(db, row)
 
 
 @router.post("/v1/admin/distribution/{id}/confirmation")
 async def retry_email(
-    id: str, p: Principal = Depends(require("operations.manage")), db: AsyncSession = Depends(get_session)
+    id: str,
+    tasks: BackgroundTasks,
+    p: Principal = Depends(require("operations.manage")),
+    db: AsyncSession = Depends(get_session),
 ) -> dict:
     row = await db.get(DistributionRequest, id)
     if row is None or row.paid_at is None:
         raise HTTPException(404, "Submitted request not found")
-    await send_confirmation(db, row)
-    return out(row)
+    tasks.add_task(fulfillment.deliver_request, row.id)
+    return await result(db, row)
+
+
+@router.get("/v1/distribution/{id}/invoice", response_class=HTMLResponse)
+async def download_invoice(id: str, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)):
+    row = await owned(db, id, p)
+    if not row.paid_at:
+        raise HTTPException(409, "Receipts are available after payment and submission")
+    return HTMLResponse(
+        fulfillment.receipt_html(row),
+        headers={
+            "Content-Disposition": f'attachment; filename="distribution-{row.id}.html"',
+            "Cache-Control": "no-store",
+        },
+    )
