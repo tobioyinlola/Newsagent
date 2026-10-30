@@ -145,7 +145,7 @@ class Settings(BaseSettings):
     # Customers buy fixed amounts (`credit_purchase_usd`) and get amount / usd_per_credit credits, rounded to 0.01.
     usd_per_credit: str = "2.70"
     credits_per_video: str = "1"
-    credit_purchase_usd: str = "10,50,100,200"
+    credit_purchase_usd: str = "1,10,50,100,200"
     credit_markup: str = "0"  # credits taken per 1 USD of vendor cost while a video is made: 0 = none, the video's flat price is its only charge
     low_balance_threshold: str = "1"
     billing_webhook_secret: str = ""  # HMAC secret for payment webhooks; REQUIRED outside local

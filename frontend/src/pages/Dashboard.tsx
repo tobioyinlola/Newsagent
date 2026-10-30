@@ -5,6 +5,7 @@ import { Card, ErrorBox } from "../components/ui";
 import { stateLabel } from "../lib/states";
 import { videoTitle } from "../lib/title";
 import { distributionApi, type Distribution } from "../lib/distribution";
+import { analyticsRequest, type AudienceReport } from "../lib/analytics";
 import { getToken } from "../lib/auth";
 
 const cta = "rounded-sm border-2 border-ink bg-brand-green px-4 py-2 text-sm font-bold text-ink hover:bg-ink hover:text-brand-green";
@@ -14,6 +15,7 @@ export function Dashboard() {
   const me = useQuery({ queryKey: ["me"], queryFn: () => unwrap(api.GET("/v1/me")), retry: false });
   const projects = useQuery({ queryKey: ["projects"], queryFn: () => unwrap(api.GET("/v1/projects")) });
   const distributions = useQuery({ queryKey: ["distributions"], queryFn: () => distributionApi<Distribution[]>("distribution", getToken()), refetchInterval: 15000 });
+  const audience = useQuery({ queryKey: ["dashboard-audience", getToken()], queryFn: () => analyticsRequest<AudienceReport>("analytics", getToken()), refetchInterval: 60000 });
   const published = (distributions.data ?? []).flatMap(r => (r.placements ?? []).filter(p => p.status === "published" && p.published_url).map(p => ({ ...p, headline: r.data.headline })));
   const list = projects.data ?? [];
   const done = list.filter((p) => p.state === "final_ready").length;
@@ -30,6 +32,7 @@ export function Dashboard() {
         <Card title="Videos"><p className="font-mono text-3xl font-bold">{projects.isLoading ? "…" : list.length}</p><p className="mt-1 text-sm text-muted">{done} finished</p></Card>
         <Card title="Press Distributed"><p className="font-mono text-3xl font-bold">{distributions.isLoading ? "…" : published.length}</p><p className="mt-1 text-sm text-muted">Published outlet placements</p><p className="mt-1 text-sm"><Link className="underline" to="/distribution/request">Manage press distribution</Link></p></Card>
       </div>
+      <Card title="Your audience · last 30 days"><p className="text-sm text-muted">{audience.data ? `${audience.data.platform.story_visits.toLocaleString()} story visits · ${audience.data.platform.video_views.toLocaleString()} engaged video views · ${audience.data.platform.impressions.toLocaleString()} story impressions` : audience.isError ? "Audience report is temporarily unavailable." : "Loading audience measurements…"}</p><Link className="mt-2 inline-block min-h-11 py-2 text-sm underline" to="/analytics">View reports and publisher results</Link></Card>
       {published.length > 0 && <Card title="Your published press"><ul className="divide-y divide-line">{published.slice(0, 5).map(p => <li key={p.id} className="py-3"><a className="block break-words font-semibold underline" href={p.published_url} target="_blank" rel="noopener noreferrer">{p.name} — {p.headline}</a></li>)}</ul><Link className="mt-3 inline-block min-h-11 py-2 text-sm underline" to="/distribution/request">See all distribution requests and links</Link></Card>}
       <Card title="How it works">
         <ol className="list-decimal space-y-1 pl-5 text-sm">

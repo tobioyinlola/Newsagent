@@ -3,6 +3,8 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { Link } from "react-router-dom";
 import { api, type Schemas, unwrap } from "../api/client";
 
+import { useStoryImpression } from "../lib/audience";
+
 export type StoryCard = Schemas["StoryCardOut"];
 
 export const STORIES_PATH = "/latest-stories";
@@ -30,8 +32,10 @@ export function PlayDisc({ size = 44 }: { size?: number }) {
 
 /** A story's picture: the video's thumbnail with a dark fade, the play button and the length. */
 export function StoryThumb({ card, big = false }: { card: StoryCard; big?: boolean }) {
+  const impression = useRef<HTMLDivElement>(null);
+  useStoryImpression(impression, card.slug);
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-sm bg-white/5">
+    <div ref={impression} className="relative aspect-video w-full overflow-hidden rounded-sm bg-white/5">
       {card.thumbnail_url ? <img src={card.thumbnail_url} alt="" className="h-full w-full object-cover" loading="lazy" /> : <div className="h-full w-full bg-gradient-to-br from-brand-purple/60 to-ink" />}
       <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
       <div className="absolute bottom-3 left-3 flex items-center gap-2 text-sm font-semibold text-white">

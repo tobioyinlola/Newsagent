@@ -50,3 +50,21 @@ test("a forged bank return stays pending until the server confirms settlement", 
   await expect(page.getByRole("heading", { name: "Payment confirmed" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Transfer instructions" })).toHaveCount(0);
 });
+
+for (const option of [{ currency: "USD", method: "card", label: "Buy $1.00 of credits" }, { currency: "NGN", method: "card", label: "Buy ₦1,400.00 of credits" }, { currency: "NGN", method: "bank_transfer", label: "Buy ₦1,400.00 of credits" }]) {
+  test(`one-dollar package: ${option.currency} ${option.method}`, async ({ page }) => {
+    let checkout: Record<string, unknown> | null = null;
+    await page.route("**/v1/billing/checkout", async route => { checkout = route.request().postDataJSON(); await route.fulfill({ json: { checkout_id: "one-dollar-test", url: "/billing?one-dollar-test=1" } }); });
+    await page.goto("/billing");
+    if (option.currency === "NGN") {
+      await page.getByRole("radio", { name: "Nigerian naira (NGN)" }).check();
+      if (option.method === "bank_transfer") await page.getByRole("radio", { name: /Bank transfer/ }).check();
+    }
+    const button = page.getByRole("button", { name: option.label, exact: true });
+    const pack = page.locator("li").filter({ has: button });
+    await expect(pack).toContainText("0.37 credits");
+    await expect(pack).toContainText("Adds to your existing credit balance");
+    await button.click(); await expect(page).toHaveURL(/one-dollar-test=1/);
+    expect(checkout).toEqual({ amount_usd: "1", currency: option.currency, payment_method: option.method, ...(option.currency === "NGN" ? { ngn_per_usd: "1400" } : {}) });
+  });
+}

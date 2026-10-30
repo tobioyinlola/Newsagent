@@ -1,3 +1,4 @@
+import { Analytics } from "./pages/Analytics";
 import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import { Layout } from "./components/Layout";
@@ -58,6 +59,7 @@ export function App() {
           <Route path="/ai-newsroom/new-classic" element={<NewProjectClassic />} /> {/* the original script-first flow; not linked */}
           <Route path="/ai-newsroom/:id" element={<ProjectDetail />} />
           <Route path="/brand" element={<Brand />} />
+          <Route path="/analytics" element={<Analytics />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/billing/card/:checkoutId" element={<CardCheckout />} />
           <Route path="/billing/bank/:checkoutId" element={<BankCheckout />} />

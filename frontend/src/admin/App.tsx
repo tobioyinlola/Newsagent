@@ -1,3 +1,4 @@
+import { AnalyticsAdmin } from "./pages/Analytics";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Audit } from "./components/admin/Audit";
 import { BillingAdmin } from "./components/admin/BillingAdmin";
@@ -50,6 +51,7 @@ export function App() {
           <Route path="/customers" element={<Guard any={["customers.view"]}><Customers /></Guard>} />
           <Route path="/customers/:id" element={<Guard any={["customers.view"]}><CustomerDetail /></Guard>} />
           <Route path="/revenue" element={<Guard any={["finance.view"]}><Revenue /></Guard>} />
+          <Route path="/analytics" element={<Guard any={["operations.view"]}><AnalyticsAdmin /></Guard>} />
           <Route path="/distribution" element={<Guard any={["operations.view"]}><DistributionAdmin /></Guard>} />
           <Route path="/operations" element={<Guard any={["operations.view"]}><Page title="Operations"><Operations /></Page></Guard>} />
           <Route path="/review" element={<Guard any={["review.manage"]}><Page title="Review queue"><Review /></Page></Guard>} />

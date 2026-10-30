@@ -5,6 +5,7 @@ import { api, unwrap } from "../api/client";
 import { PressRelease, type Story } from "../components/PressRelease";
 import { clock, dayOf, STORIES_PATH, StoryRow, useStories } from "../components/StoryCards";
 import { ShareLinks } from "../components/ShareLinks";
+import { usePageAudience, useVideoAudience } from "../lib/audience";
 import { Cta, SiteShell } from "./Landing";
 
 export function StoryPage() {
@@ -32,6 +33,8 @@ export function StoryPage() {
   }, [silent]);
   const soundOn = () => { const v = video.current; if (!v) return; v.muted = false; v.volume = 1; setSilent(false); void v.play().catch(() => undefined); };
   const s = q.data;
+  usePageAudience(slug, !!s);
+  useVideoAudience(video, slug, !!s);
   return (
     <SiteShell>
       <main className="px-4 py-8 md:px-8">
@@ -48,7 +51,7 @@ export function StoryPage() {
           {s && (
             <>
               <div className="mt-4 overflow-hidden rounded-sm border border-white/15 bg-black">
-                <video ref={video} key={s.video_url} src={s.video_url} poster={s.thumbnail_url ?? undefined} controls autoPlay playsInline preload="auto" onVolumeChange={(e) => { if (!e.currentTarget.muted) setSilent(false); }} className="aspect-video w-full bg-black" aria-label={`Video: ${s.title}`} />
+                <video ref={video} src={s.video_url} poster={s.thumbnail_url ?? undefined} controls autoPlay playsInline preload="auto" onVolumeChange={(e) => { if (!e.currentTarget.muted) setSilent(false); }} className="aspect-video w-full bg-black" aria-label={`Video: ${s.title}`} />
               </div>
               <p className="mt-2 text-xs text-white/60">
                 {silent && <button type="button" className="mr-2 rounded-sm bg-brand-green px-2 py-1 font-bold text-ink" onClick={soundOn}>Turn sound on</button>}

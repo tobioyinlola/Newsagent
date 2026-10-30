@@ -18,7 +18,7 @@
   always sums to the balance. A failed attempt rolls back whole (nothing recorded, nothing charged).
 - **A video costs one credit** (`CREDITS_PER_VIDEO`), charged when the project is created; a credit is sold at `USD_PER_CREDIT` ($2.70).
   New sign-ups get `SIGNUP_CREDITS` (1) free. With no credit left, `POST /v1/projects` answers 402 `insufficient_credits` and the app
-  shows a "buy credits" popup. Customers buy fixed amounts (`CREDIT_PURCHASE_USD`: 10, 50, 100, 200) and get amount / price credits
+  shows a "buy credits" popup. Customers buy fixed amounts (`CREDIT_PURCHASE_USD`: 1, 10, 50, 100, 200) and get amount / price credits
   (rounded to 0.01). Per-step charging is off (`CREDIT_MARKUP=0`); vendor cost is still recorded for budgets and margin.
 - **Payments**: provider-neutral interface, HMAC-signed webhook, idempotent by ledger ref, amount must match the checkout.
   The provider (Stripe / Paystack / Flutterwave) is **undecided**; only a mock exists. Mock provider and dev-pay route are local-only.

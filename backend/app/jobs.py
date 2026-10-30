@@ -156,4 +156,5 @@ async def run_hourly() -> dict:
 
 
 async def run_daily() -> dict:
-    return {"purged_takes": await purge_old_raw_takes()}
+    from app.services.analytics import prune_events
+    return {"purged_takes": await purge_old_raw_takes(), "analytics_session_markers_pruned": await prune_events()}

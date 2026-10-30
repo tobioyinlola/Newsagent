@@ -74,7 +74,7 @@ export function Billing() {
                 <p className="text-2xl font-bold">{currency === "NGN" ? rate ? naira(Number(o.amount_usd) * Number(rate)) : "Loading price…" : money(o.amount_usd)}</p>
                 {currency === "NGN" && <p className="mt-1 text-sm text-muted">{money(o.amount_usd)} package</p>}
                 <p className="font-semibold">{Number(o.credits).toFixed(2)} credits</p>
-                <p className="mb-3 text-muted">{o.videos} {o.videos === 1 ? "video" : "videos"}</p>
+                <p className="mb-3 text-muted">{o.videos > 0 ? `${o.videos} ${o.videos === 1 ? "video" : "videos"}` : "Adds to your existing credit balance"}</p>
                 <Button onClick={() => buy.mutate(o.amount_usd)} disabled={buy.isPending || !available} aria-label={`Buy ${currency === "NGN" && rate ? naira(Number(o.amount_usd) * Number(rate)) : money(o.amount_usd)} of credits`}>Buy</Button>
               </li>
             ))}

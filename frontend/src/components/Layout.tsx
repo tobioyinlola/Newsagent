@@ -109,6 +109,7 @@ export function Layout() {
           {item("/ai-newsroom/videos", "Videos", ICONS.videos)}
           {item("/brand", "Brand kit", ICONS.brand)}
           {item("/distribution/request", "Distribution", ICONS.videos)}
+          {item("/analytics", "Analytics", ICONS.videos)}
           {item("/billing", "Credits", ICONS.credits)}
           {item("/account", "Your data", ICONS.data)}
           {item("/security", "Security", ICONS.security)}

@@ -36,7 +36,7 @@ const I = {
 type Item = [string, string, ReactNode, string[]];
 const GROUPS: { title: string; items: Item[] }[] = [
   { title: "Business", items: [["/", "Overview", I.overview, ["overview.view"]], ["/customers", "Customers", I.customers, ["customers.view"]], ["/revenue", "Revenue", I.revenue, ["finance.view"]]] },
-  { title: "Operations", items: [["/distribution", "Distribution", I.ops, ["operations.view"]], ["/operations", "Operations", I.ops, ["operations.view"]], ["/review", "Review queue", I.review, ["review.manage"]], ["/jobs", "Jobs", I.jobs, ["operations.view"]], ["/costs", "Costs", I.costs, ["finance.view"]]] },
+  { title: "Operations", items: [["/analytics", "Reports & analytics", I.costs, ["operations.view"]], ["/distribution", "Distribution", I.ops, ["operations.view"]], ["/operations", "Operations", I.ops, ["operations.view"]], ["/review", "Review queue", I.review, ["review.manage"]], ["/jobs", "Jobs", I.jobs, ["operations.view"]], ["/costs", "Costs", I.costs, ["finance.view"]]] },
   { title: "Admin", items: [["/presenter", "Presenter clips", I.clips, ["presenter.manage"]], ["/billing", "Credits", I.packs, ["finance.view"]], ["/setup", "Setup", I.setup, ["customers.manage", "finance.view"]], ["/team", "Team", I.team, ["team.manage"]], ["/audit", "Audit log", I.audit, ["audit.view"]]] },
   { title: "You", items: [["/security", "Security", I.security, []]] },
 ];

@@ -13,6 +13,7 @@ from app.config import get_settings
 from app.routes import (
     account,
     admin,
+    analytics,
     auth,
     backoffice,
     billing,
@@ -180,6 +181,7 @@ def create_app() -> FastAPI:
         guest.router,
         distribution.router,
         distribution_operations.router,
+        analytics.router,
         admin.router,
         backoffice.router,
         presenter.router,

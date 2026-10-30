@@ -280,9 +280,11 @@ async def send_confirmation(db: AsyncSession, row: DistributionRequest, *, deadl
         mail = await db.get(DistributionMail, ident, populate_existing=True)
         await db.commit()  # No transaction stays open while the provider is called.
         try:
-            if mail.kind in {"outreach", "team_sale"}:
+            if mail.kind in {"outreach", "metrics_request", "team_sale"}:
                 footer = (
-                    "Cover Founder is contacting your publication about a sponsorship enquiry. Please reply directly to this email."
+                    "Cover Founder is requesting a performance report for a published announcement. Please reply directly to this email."
+                    if mail.kind == "metrics_request"
+                    else "Cover Founder is contacting your publication about a sponsorship enquiry. Please reply directly to this email."
                     if mail.kind == "outreach"
                     else "You are a configured recipient of Cover Founder distribution notifications."
                 )

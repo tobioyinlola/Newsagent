@@ -2,12 +2,14 @@
 
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.integrations import registry
 from app.models import (
     Asset,
+    AudienceDaily,
+    AudienceEvent,
     AuthCode,
     BrandAsset,
     BrandKit,
@@ -24,6 +26,7 @@ from app.models import (
     ModerationCase,
     Project,
     ProviderRequest,
+    PublisherSnapshot,
     ScriptVersion,
     ShareLink,
     Take,
@@ -65,7 +68,21 @@ async def purge_project(session: AsyncSession, project: Project) -> None:
     for a in (await session.execute(select(Asset).where(Asset.project_id == project.id))).scalars():
         await storage.delete(a.storage_key)
     await purge_takes(session, project.id)
-    for model in (Take, Asset, Job, ProviderRequest, ScriptVersion, ShareLink, InterviewSession, ModerationCase):
+    await session.execute(
+        update(PublisherSnapshot).where(PublisherSnapshot.project_id == project.id).values(project_id=None)
+    )
+    for model in (
+        AudienceEvent,
+        AudienceDaily,
+        Take,
+        Asset,
+        Job,
+        ProviderRequest,
+        ScriptVersion,
+        ShareLink,
+        InterviewSession,
+        ModerationCase,
+    ):
         await session.execute(delete(model).where(model.project_id == project.id))
     await session.execute(delete(Brief).where(Brief.project_id == project.id))
     await session.delete(project)
@@ -80,6 +97,7 @@ async def delete_workspace(session: AsyncSession, ws: Workspace) -> None:
     for a in (await session.execute(select(BrandAsset).where(BrandAsset.workspace_id == ws.id))).scalars():
         await storage.delete(a.key)
     distribution_ids = select(DistributionRequest.id).where(DistributionRequest.workspace_id == ws.id)
+    await session.execute(delete(PublisherSnapshot).where(PublisherSnapshot.workspace_id == ws.id))
     for model in (DistributionActivity, DistributionMail, DistributionPlacement):
         await session.execute(delete(model).where(model.request_id.in_(distribution_ids)))
     await session.execute(delete(DistributionRequest).where(DistributionRequest.workspace_id == ws.id))
@@ -244,6 +262,32 @@ async def export_workspace(session: AsyncSession, ws: Workspace, user: User) -> 
             }
             for r in (
                 await session.execute(select(DistributionRequest).where(DistributionRequest.workspace_id == ws.id))
+            ).scalars()
+        ],
+        "publisher_analytics": [
+            {
+                "placement_id": r.placement_id,
+                "as_of": dt(r.as_of),
+                "views": r.views,
+                "impressions": r.impressions,
+                "source_note": r.source_note,
+            }
+            for r in (
+                await session.execute(select(PublisherSnapshot).where(PublisherSnapshot.workspace_id == ws.id))
+            ).scalars()
+        ],
+        "platform_analytics": [
+            {
+                "project_id": r.project_id,
+                "day": dt(r.day),
+                "impressions": r.impressions,
+                "story_visits": r.story_visits,
+                "share_visits": r.share_visits,
+                "video_views": r.video_views,
+                "video_completions": r.video_completions,
+            }
+            for r in (
+                await session.execute(select(AudienceDaily).join(Project).where(Project.workspace_id == ws.id))
             ).scalars()
         ],
         "credit_ledger": [

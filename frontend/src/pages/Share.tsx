@@ -1,3 +1,5 @@
+import { useRef } from "react";
+import { usePageAudience, useVideoAudience } from "../lib/audience";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
@@ -7,6 +9,9 @@ import { DisclosureBadge } from "../components/ui";
 export function Share() {
   const { token = "" } = useParams();
   const q = useQuery({ queryKey: ["share", token], queryFn: () => unwrap(api.GET("/v1/share/{token}", { params: { path: { token } } })), retry: false });
+  const video = useRef<HTMLVideoElement>(null);
+  usePageAudience(token, !!q.data, "share");
+  useVideoAudience(video, token, !!q.data, "share");
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
       {q.isLoading && <p aria-busy="true">Loading…</p>}
@@ -14,7 +19,7 @@ export function Share() {
       {q.data && (
         <>
           <h1 className="text-2xl font-bold">{q.data.title}</h1>
-          <video controls className="w-full rounded-md bg-black" src={q.data.video_url} poster={q.data.thumbnail_url ?? undefined} aria-label={`Video: ${q.data.title}`} />
+          <video ref={video} controls className="w-full rounded-md bg-black" src={q.data.video_url} poster={q.data.thumbnail_url ?? undefined} aria-label={`Video: ${q.data.title}`} />
           <DisclosureBadge text={q.data.disclosure} />
         </>
       )}

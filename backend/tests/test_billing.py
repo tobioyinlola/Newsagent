@@ -33,10 +33,11 @@ async def balance(maker, wid):
         return (await s.get(Workspace, wid)).credit_balance
 
 
-async def test_credits_are_sold_in_four_fixed_amounts_at_2_70_a_credit(client, workspace):
+async def test_credits_are_sold_in_fixed_amounts_at_2_70_a_credit(client, workspace):
     options = (await client.get("/v1/billing/options", headers=OWNER)).json()
     assert [(Decimal(o["amount_usd"]), Decimal(o["credits"]), o["videos"]) for o in options] == [
-        (Decimal("10"), Decimal("3.70"), 3),  # the least that can be bought
+        (Decimal("1"), Decimal("0.37"), 0),
+        (Decimal("10"), Decimal("3.70"), 3),
         (Decimal("50"), Decimal("18.52"), 18),
         (Decimal("100"), Decimal("37.04"), 37),
         (Decimal("200"), Decimal("74.07"), 74),
@@ -52,7 +53,7 @@ async def test_credits_are_sold_in_four_fixed_amounts_at_2_70_a_credit(client, w
 
 
 async def test_the_checkout_is_for_exactly_the_amount_and_credits_on_offer(client, workspace, maker):
-    for amount, credits in (("10", "3.70"), ("50", "18.52"), ("100", "37.04"), ("200", "74.07")):
+    for amount, credits in (("1", "0.37"), ("10", "3.70"), ("50", "18.52"), ("100", "37.04"), ("200", "74.07")):
         co = await start_checkout(client, amount)
         async with maker() as s:
             row = await s.get(Checkout, co)
@@ -179,7 +180,7 @@ async def test_summary(client, workspace):
 async def test_the_amounts_on_sale_are_public_for_the_landing_page(client, workspace):
     r = await client.get("/v1/public/credit-options")
     assert r.status_code == 200
-    assert [Decimal(o["amount_usd"]) for o in r.json()] == [Decimal(a) for a in (10, 50, 100, 200)]
+    assert [Decimal(o["amount_usd"]) for o in r.json()] == [Decimal(a) for a in (1, 10, 50, 100, 200)]
 
 
 async def test_public_stats_count_finished_videos_and_shared_video_views(client, workspace):

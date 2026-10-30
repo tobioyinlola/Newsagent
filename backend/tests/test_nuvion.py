@@ -465,7 +465,7 @@ async def test_ngn_quote_and_stale_rate(client, workspace, naira, monkeypatch):
     methods = (await client.get("/v1/billing/payment-methods", headers=OWNER)).json()
     assert methods == {"ngn_per_usd": "1400", "usd_card": True, "ngn_card": True, "ngn_bank_transfer": True}
     options = (await client.get("/v1/billing/options", headers=OWNER)).json()
-    assert Decimal(options[0]["amount_ngn"]) == 14000
+    assert Decimal(next(o for o in options if Decimal(o["amount_usd"]) == 10)["amount_ngn"]) == 14000
     assert (await ngn_checkout(client, rate="1300")).status_code == 409
     assert (
         await client.post("/v1/billing/checkout", headers=OWNER, json={"amount_usd": "10", "currency": "NGN"})
@@ -571,3 +571,64 @@ async def test_bank_ownership_and_forged_return_do_not_credit(client, workspace,
     status = await client.get(f"/v1/billing/bank/{id}?status=successful&amount=1400000", headers=OWNER)
     assert status.json()["status"] == "pending"
     assert await balance(maker, workspace) == 10
+
+
+@pytest.mark.parametrize("currency,expected_minor", [("USD", 100), ("NGN", 140000)])
+async def test_one_dollar_card_package_verifies_and_credits_once(
+    client, workspace, naira, maker, currency, expected_minor
+):
+    response = await client.post(
+        "/v1/billing/checkout",
+        headers=OWNER,
+        json={"amount_usd": "1", "currency": currency, "payment_method": "card", "ngn_per_usd": "1400"},
+    )
+    assert response.status_code == 200, response.text
+    id = response.json()["checkout_id"]
+    status = await client.get(f"/v1/billing/card/{id}", headers=OWNER)
+    assert status.status_code == 200, status.text
+    assert Decimal(status.json()["credits"]) == Decimal("0.37")
+    assert Decimal(status.json()["amount"]) == (Decimal("1") if currency == "USD" else Decimal("1400"))
+    intent = next(iter(naira["intents"].values()))
+    assert intent["amount"] == expected_minor
+    assert await balance(maker, workspace) == 10
+    naira["mode"] = "paid"
+    response = await client.post(f"/v1/billing/card/{id}/confirm", headers=OWNER, json=confirmation())
+    assert response.status_code == 200 and response.json()["status"] == "paid", response.text
+    body, headers = signed(intent)
+    for _ in range(2):
+        assert (await client.post("/v1/webhooks/nuvion", content=body, headers=headers)).status_code == 200
+    assert await balance(maker, workspace) == Decimal("10.37")
+
+
+async def test_one_dollar_naira_bank_transfer_verifies_amount_and_credits_once(client, workspace, naira, maker):
+    response = await client.post(
+        "/v1/billing/checkout",
+        headers=OWNER,
+        json={"amount_usd": "1", "currency": "NGN", "payment_method": "bank_transfer", "ngn_per_usd": "1400"},
+    )
+    assert response.status_code == 200, response.text
+    id = response.json()["checkout_id"]
+    async with maker() as db:
+        co = await db.get(Checkout, id)
+        created = int(payments.utc(co.created_at).timestamp() * 1000) + 1000
+        assert co.credits == Decimal("0.37")
+    transfer = {
+        "id": "one-dollar-transfer",
+        "account_id": "test-ngn-account",
+        "entity_id": "test-entity",
+        "currency": "NGN",
+        "amount": 140000,
+        "status": "successful",
+        "type": "inflow",
+        "payment_type": "bank-transfer",
+        "narration": "CF" + id,
+        "created": created,
+    }
+    naira["transfers"][transfer["id"]] = transfer
+    body, headers = signed(transfer, event="inflows.completed")
+    for _ in range(2):
+        result = await client.post("/v1/webhooks/nuvion", content=body, headers=headers)
+        assert result.status_code == 200, result.text
+    status = (await client.get(f"/v1/billing/bank/{id}", headers=OWNER)).json()
+    assert status["status"] == "paid" and Decimal(status["amount_ngn"]) == 1400
+    assert await balance(maker, workspace) == Decimal("10.37")

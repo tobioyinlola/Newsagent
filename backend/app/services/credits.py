@@ -1,7 +1,7 @@
 """What a video costs and what credits are worth.
 
 One video costs `credits_per_video` credit (1), whatever the vendors charge us for it. One credit is sold at `usd_per_credit`
-($2.70). People buy fixed amounts (`credit_purchase_usd`: $10, $50, $100, $200) and are given amount / $2.70 credits once the
+($2.70). People buy fixed amounts (`credit_purchase_usd`: $1, $10, $50, $100, $200) and are given amount / $2.70 credits once the
 payment has gone through. A new workspace starts with `signup_credits` (1): one free video. After that, starting a video needs
 a credit; with none left the app asks them to buy more.
 

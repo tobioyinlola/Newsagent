@@ -63,6 +63,7 @@ export function Delivery({ projectId }: { projectId: string }) {
           ) : pub.isLoading ? <p aria-busy="true" className="text-sm text-muted">Checking…</p> : (
             <p className="text-sm text-muted">This video has no written story, so there is nothing to publish.</p>
           )}
+          <a className="inline-block min-h-11 py-2 text-sm font-semibold underline" href={`/analytics?project=${projectId}`}>View audience analytics</a>
           <ErrorBox error={pub.error} />
         </div>
       </Card>
