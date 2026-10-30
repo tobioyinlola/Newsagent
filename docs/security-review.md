@@ -86,7 +86,7 @@ do **not** strip the token from the address bar, because reloads on flaky mobile
   **re-read** and its real size, magic bytes and active content (SVG scripts/handlers/external refs, PDF JavaScript)
   checked, then malware-scanned (ClamAV INSTREAM). A scanner outage leaves the file *pending*, never *clean*. Production
   refuses to start without `CLAMD_HOST`.
-- Founder video chunks: per-chunk and per-take size caps, 5 attempts per question, 80 chunks maximum, processed by
+- Founder video chunks: per-chunk and per-take size caps, unlimited retakes with per-token/IP request throttling, 80 chunks maximum, processed by
   ffmpeg in the renderer (a media parser is attack surface: keep ffmpeg patched, run the renderer unprivileged with CPU
   and memory limits).
 - **Not covered**: founder video/audio is not malware-scanned (media bytes are decoded, not executed; ffmpeg is the risk).

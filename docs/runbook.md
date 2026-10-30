@@ -160,3 +160,12 @@ Never run a destructive migration in the same release that stops using the colum
   (videos already made are unaffected). If a video must not contain a clip any more, delete the clip and re-run the video's merge.
 - An upload that stays "checking" usually means the renderer or the malware scanner is unreachable: the clip stays pending and the
   operator can retry; nothing unscanned is ever used.
+
+
+## Interview uploads report missing chunks, or retakes become blocked
+
+Parallel chunk-confirmation requests used to overwrite the take's JSON chunk list. The browser could believe every chunk was confirmed while `/complete` returned `409 missing_chunks`. Re-recording then consumed a five-attempt allowance, including abandoned takes, and the live interview had no retry action for a start error.
+
+Chunk confirmation, completion and abandonment now serialize through the interview-session row and reload the latest take before updating it. Storage requests run before that database lock. The uploader retries only server-reported missing chunks from the local copy; terminal upload errors stop waiting and surface a recoverable error. The live room provides a **Try again** action, pauses its interview clock while waiting for retry and cleans up timers on stop. Retakes get a full answer window even after the original interview budget. Existing interview links can retry; no attempt-counter reset is needed. `GuestQuestion.attempts_left = null` means unlimited. Per-recording duration/size and request-rate safeguards remain.
+
+Regression checks include synchronized parallel confirmations, more than five abandoned live takes, missing-chunk reupload, terminated upload handling and a complete browser interview with injected start/completion failures.

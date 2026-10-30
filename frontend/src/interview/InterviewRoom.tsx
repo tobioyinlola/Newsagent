@@ -45,17 +45,20 @@ export function InterviewRoom(p: RoomProps) {
   const [takes, setTakes] = useState<Record<number, TakeState>>({});
   const [cameraLost, setCameraLost] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [overtime, setOvertime] = useState(false);
+  const overtime = elapsed > MAX_TOTAL_S;
 
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef(p.stream);
   const t0 = useRef(0);
+  const pausedAt = useRef<number | null>(null);
   const doneNow = useRef<(() => void) | null>(null); // "Done answering" pressed
   const recorder = useRef<MediaRecorder | null>(null);
   const lost = useRef(false);
   const takesRef = useRef<Record<number, TakeState>>({});
   const ctl = useRef<{ aborted: boolean }>({ aborted: false });
   const speakingNow = useRef<{ cancel: () => void } | null>(null);
+  const retry = useRef<(() => void) | null>(null);
+  const clockRef = useRef<number | null>(null);
   const redo = useRef<((q: number) => void) | null>(null);
   const [needsAttention, setNeedsAttention] = useState<number[]>([]);
   const keepAll = useRef<(() => void) | null>(null);
@@ -66,7 +69,7 @@ export function InterviewRoom(p: RoomProps) {
   }, []);
 
   const lineFor = (key: string): VoiceLine => p.lines.find((l) => l.key === key) ?? { key, text: key.startsWith("q") ? p.questions[Number(key.slice(1))] ?? "" : "" };
-  const elapsedNow = () => (Date.now() - t0.current) / 1000;
+  const elapsedNow = () => ((pausedAt.current ?? Date.now()) - t0.current) / 1000;
 
   // the interviewer says a line; captions show it so the interview works even with the sound off
   const say = async (key: string, show = true) => {
@@ -105,12 +108,27 @@ export function InterviewRoom(p: RoomProps) {
     } catch { setError("We still can't see your camera. Allow it in your browser, then try again."); }
   };
 
+  const retryable = async <T,>(operation: () => Promise<T>): Promise<T> => {
+    for (;;) {
+      if (ctl.current.aborted) throw new Error("Interview stopped.");
+      try { return await operation(); } catch (e) {
+        if (ctl.current.aborted) throw e;
+        pausedAt.current = Date.now();
+        setError((e as Error).message); setPhase("attention");
+        await new Promise<void>(resolve => { retry.current = resolve; });
+        retry.current = null;
+        if (pausedAt.current !== null) t0.current += Date.now() - pausedAt.current;
+        pausedAt.current = null; setError(null);
+      }
+    }
+  };
+
   // ---- one answer ----
-  const answer = async (q: number, left: number): Promise<"ok" | "camera"> => {
+  const answer = async (q: number, left: number, retake = false): Promise<"ok" | "camera"> => {
     const mime = pickMime("video");
     if (!mime) throw new Error("This browser can't record video. Please use Chrome, Edge or Safari.");
-    const win = answerWindow(elapsedNow(), left, p.limits.maxAnswer, p.limits.minAnswer);
-    setAnsWindow(win); setAnsElapsed(0); setPhase("answering"); setCaption(lineFor(`q${q}`).text); // the question stays on screen while they answer
+    const win = retake ? p.limits.maxAnswer : answerWindow(elapsedNow(), left, p.limits.maxAnswer, p.limits.minAnswer);
+    setAnsWindow(win); setAnsElapsed(0); setCaption(lineFor(`q${q}`).text); // the question stays on screen while they answer
     const take = await must(guest.POST("/v1/interview/{token}/takes", { params: { path: { token: p.token } }, body: { question_index: q, kind: "video", mime } }));
     await store.setMeta({ takeId: take.id, question: q, kind: "video", mime });
     const up = new TakeUploader(p.token, take.id, store, () => undefined);
@@ -119,8 +137,9 @@ export function InterviewRoom(p: RoomProps) {
     recorder.current = rec;
     let n = 0;
     rec.ondataavailable = (e) => { if (e.data.size > 0) { const i = n++; chunks[i] = e.data; void up.add(i, e.data); } };
-    const stopped = new Promise<void>((r) => { rec.onstop = () => r(); });
+    const stopped = new Promise<void>((resolve, reject) => { rec.onstop = () => resolve(); rec.onerror = () => reject(new Error("Your browser interrupted the recording. Please try this answer again.")); });
     rec.start(CHUNK_MS);
+    setPhase("answering");
     const started = Date.now();
     let snapped = false;
     const tick = window.setInterval(async () => {
@@ -132,13 +151,12 @@ export function InterviewRoom(p: RoomProps) {
         const b = await grabFrame(video.current);
         if (b) void uploadSnapshot(p.token, take.id, b).catch(() => undefined);
       }
-      if ((s >= win || elapsedNow() >= MAX_TOTAL_S + 30) && rec.state === "recording") rec.stop();
+      if ((s >= win) && rec.state === "recording") rec.stop();
     }, 250);
     doneNow.current = () => { if (rec.state === "recording" && Date.now() - started > (FAST ? 0 : 3000)) rec.stop(); };
-    await stopped;
-    window.clearInterval(tick);
-    doneNow.current = null;
-    recorder.current = null;
+    try { await stopped; } catch (e) { up.dispose(); throw e; } finally {
+      window.clearInterval(tick); doneNow.current = null; recorder.current = null;
+    }
     if (ctl.current.aborted) { // the person stopped the interview: nothing half-finished is kept
       up.dispose();
       await guest.DELETE("/v1/interview/{token}/takes/{take_id}", { params: { path: { token: p.token, take_id: take.id } } }).catch(() => undefined);
@@ -159,8 +177,7 @@ export function InterviewRoom(p: RoomProps) {
   // upload, then wait for the server to check the recording, without holding up the next question
   const finishTake = async (q: number, takeId: string, up: TakeUploader, count: number) => {
     try {
-      await up.drained(count);
-      await must(guest.POST("/v1/interview/{token}/takes/{take_id}/complete", { params: { path: { token: p.token, take_id: takeId } }, body: { chunk_count: count } }));
+      await up.complete(count);
       setTake(q, { takeId, status: "processing", messages: [] });
       for (let i = 0; i < 240 && !ctl.current.aborted; i++) {
         const t = await must(guest.GET("/v1/interview/{token}/takes/{take_id}", { params: { path: { token: p.token, take_id: takeId } } }));
@@ -195,7 +212,7 @@ export function InterviewRoom(p: RoomProps) {
         if (choice !== "keep") {
           setError(null);
           await say(`q${choice.q}`);
-          for (;;) { const r = await answer(choice.q, 1); if (r === "ok") break; await waitCamera(); }
+          for (;;) { const r = await retryable(() => answer(choice.q, 1, true)); if (r === "ok") break; await waitCamera(); }
           setPhase("finishing");
           continue;
         }
@@ -206,7 +223,7 @@ export function InterviewRoom(p: RoomProps) {
       break;
     }
     try {
-      await must(guest.POST("/v1/interview/{token}/submit", { params: { path: { token: p.token } } }));
+      await retryable(async () => { setPhase("finishing"); await must(guest.POST("/v1/interview/{token}/submit", { params: { path: { token: p.token } } })); });
       setPhase("done");
       p.onFinished();
     } catch (e) {
@@ -223,7 +240,7 @@ export function InterviewRoom(p: RoomProps) {
     const start = window.setTimeout(async () => {
       try {
         t0.current = Date.now();
-        const clock = window.setInterval(() => { const e = elapsedNow(); setElapsed(e); setOvertime(e > MAX_TOTAL_S); }, 500);
+        clockRef.current = window.setInterval(() => { const e = elapsedNow(); setElapsed(e); }, 500);
         const q0 = lineFor("greeting");
         if (p.intro && q0.text) { setPhase("greeting"); await say("greeting"); }
         for (let n = 0; n < p.indices.length && !c.aborted; n++) {
@@ -234,7 +251,7 @@ export function InterviewRoom(p: RoomProps) {
             if (c.aborted) return;
             setPhase("asking");
             await say(`q${q}`);
-            const r = await answer(q, p.indices.length - n);
+            const r = await retryable(() => answer(q, p.indices.length - n));
             if (r === "ok") break;
           }
           if (n < p.indices.length - 1) { setPhase("between"); await say("thanks", false); }
@@ -242,14 +259,15 @@ export function InterviewRoom(p: RoomProps) {
         if (c.aborted) return;
         setPhase("closing");
         if (p.intro) await say("closing");
-        window.clearInterval(clock);
+        if (clockRef.current !== null) window.clearInterval(clockRef.current);
         await finish();
       } catch (e) {
-        setError((e as Error).message);
-        setPhase("attention");
+        if (!c.aborted) { setError((e as Error).message); setPhase("attention"); }
+      } finally {
+        if (clockRef.current !== null) window.clearInterval(clockRef.current);
       }
     }, 0);
-    return () => { c.aborted = true; clearTimeout(start); speakingNow.current?.cancel(); if (recorder.current?.state === "recording") recorder.current.stop(); };
+    return () => { c.aborted = true; retry.current?.(); if (clockRef.current !== null) window.clearInterval(clockRef.current); clearTimeout(start); speakingNow.current?.cancel(); if (recorder.current?.state === "recording") recorder.current.stop(); };
   }, []);
 
   const remaining = MAX_TOTAL_S - elapsed;
@@ -267,8 +285,8 @@ export function InterviewRoom(p: RoomProps) {
         <div className="absolute left-3 top-3 flex items-center gap-2 rounded-sm bg-ink px-3 py-1.5 text-sm font-bold">
           {phase === "answering" ? <><span className="inline-block h-3 w-3 animate-pulse rounded-full bg-brand-red" aria-hidden /> Recording {mmss(ansElapsed)}</> : <><span className="inline-block h-3 w-3 rounded-full bg-brand-green" aria-hidden /> Camera on</>}
         </div>
-        <div className={`absolute right-3 top-3 rounded-sm px-3 py-1.5 font-mono text-sm font-bold ${overtime ? "bg-brand-red text-ink" : "bg-ink text-brand-green"}`} aria-label="Time left in the interview">
-          {overtime ? "Time's up" : `${mmss(remaining)} left`}
+        <div className={`absolute right-3 top-3 rounded-sm px-3 py-1.5 font-mono text-sm font-bold ${overtime ? "bg-brand-red text-ink" : "bg-ink text-brand-green"}`} aria-label="Interview timing">
+          {overtime ? `Extra time · ${mmss(elapsed - MAX_TOTAL_S)}` : `${mmss(remaining)} left`}
         </div>
         {["greeting", "asking", "answering", "between", "closing"].includes(phase) && !cameraLost && (
           <div className="pointer-events-none absolute inset-x-0 top-14 flex justify-center px-3">
@@ -335,13 +353,14 @@ export function InterviewRoom(p: RoomProps) {
                 </div>
               </div>
             ))}
+            {error && needsAttention.length === 0 && <button type="button" className="rounded-sm border-2 border-ink bg-brand-green px-4 py-3 font-bold text-ink" onClick={() => retry.current?.()}>Try again</button>}
             {error && <p role="alert" className="rounded-sm border-2 border-brand-red bg-red-tint p-3 text-sm text-ink">{error}</p>}
           </div>
         )}
         <button
           type="button"
           className="mt-auto self-start text-sm font-bold text-white underline"
-          onClick={() => { if (confirm("Stop the interview? Your answers so far are kept.")) { ctl.current.aborted = true; speakingNow.current?.cancel(); p.onCancel(); } }}
+          onClick={() => { if (confirm("Stop the interview? Your answers so far are kept.")) { ctl.current.aborted = true; retry.current?.(); speakingNow.current?.cancel(); p.onCancel(); } }}
         >
           Stop the interview
         </button>

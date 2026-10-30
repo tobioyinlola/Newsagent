@@ -76,11 +76,28 @@ test("AI interview: understands the announcement, interviews on camera, then mak
   await expect(page.getByRole("heading", { name: "Check your camera and microphone" })).toBeVisible();
   await expect(page.getByText("✓ Your camera is on")).toBeVisible();
   await expect(page.getByText(/Hi Ada, welcome\./)).toBeVisible();
+  // An interrupted start must expose a retry, and completion can recover a missing chunk.
+  let rejectedStart = false;
+  let repairedCompletion = false;
+  await page.route("**/v1/interview/*/takes", async route => {
+    if (route.request().method() === "POST" && !rejectedStart) {
+      rejectedStart = true;
+      await route.fulfill({ status: 503, json: { detail: "Temporary recording interruption. Please retry." } });
+    } else await route.continue();
+  });
+  await page.route("**/v1/interview/*/takes/*/complete", async route => {
+    if (!repairedCompletion) {
+      repairedCompletion = true;
+      await route.fulfill({ status: 409, json: { detail: { error: "missing_chunks", message: "Some parts haven't arrived yet.", missing: [0] } } });
+    } else await route.continue();
+  });
   await page.getByRole("button", { name: "Start the interview" }).click();
 
   // the room: four questions, each answered on camera
   const room = page.getByRole("dialog", { name: "AI interview" });
   await expect(room).toBeVisible();
+  await expect(room.getByRole("alert")).toContainText("Temporary recording interruption");
+  await room.getByRole("button", { name: "Try again", exact: true }).click();
   for (let q = 1; q <= 4; q++) {
     await expect(room.getByText("Your turn: answer now")).toBeVisible({ timeout: 20_000 });
     await expect(room.getByText(`Question ${q} of 4`)).toBeVisible();
@@ -90,9 +107,11 @@ test("AI interview: understands the announcement, interviews on camera, then mak
     if (q < 4) await expect(room.getByText("Your turn: answer now")).toBeHidden();
   }
 
+  expect(rejectedStart).toBe(true);
   // answers are checked, then the owner reviews them on the dashboard
   await expect(page.getByRole("heading", { name: "Review your interview" })).toBeVisible({ timeout: 60_000 });
   await expect(page.getByLabel(/Your answer to question/)).toHaveCount(4);
+  expect(repairedCompletion).toBe(true);
   await expect(page.getByLabel("How your answers appear in the video")).toHaveValue("full") // news-channel style: the founder full screen;
   await page.getByRole("button", { name: "Make my video" }).click();
 

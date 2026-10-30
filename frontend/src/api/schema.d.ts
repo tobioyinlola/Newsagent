@@ -3587,7 +3587,7 @@ export interface components {
         /** GuestQuestion */
         GuestQuestion: {
             /** Attempts Left */
-            attempts_left: number;
+            attempts_left?: number | null;
             /** Clip Url */
             clip_url?: string | null;
             /** Index */

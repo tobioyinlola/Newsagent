@@ -457,7 +457,7 @@ class GuestQuestion(BaseModel):
     text: str
     clip_url: str | None = None
     take: GuestTake | None = None
-    attempts_left: int
+    attempts_left: int | None = None  # None means unlimited retakes.
 
 
 class GuestView(BaseModel):

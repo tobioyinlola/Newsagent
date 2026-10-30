@@ -297,8 +297,7 @@ function Answer({ token, q, total, stream, kind, onFinished, onBack }: { token: 
     setError(null); setSub("checking");
     try {
       const n = chunks.current.length;
-      await u.drained(n, setUp);
-      await must(guest.POST("/v1/interview/{token}/takes/{take_id}/complete", { params: { path: { token, take_id: id } }, body: { chunk_count: n } }));
+      await u.complete(n, setUp);
       await poll(id);
     } catch (e) {
       setError((e as Error).message); setSub("review");
@@ -323,9 +322,8 @@ function Answer({ token, q, total, stream, kind, onFinished, onBack }: { token: 
         <>
           {q.clip_url && <video className="w-full rounded-xl bg-black" src={q.clip_url} controls playsInline aria-label="The anchor asks this question" />}
           <p className="text-muted">Answer in about 30 to 60 seconds. You can record again as many times as you like.</p>
-          {q.attempts_left <= 0 && <Note tone="warn">You've used all your takes for this question. Please keep your best one.</Note>}
           {error && <Note tone="warn">{error}</Note>}
-          <button className={primary} onClick={begin} disabled={q.attempts_left <= 0}>I'm ready, start recording</button>
+          <button className={primary} onClick={begin}>I'm ready, start recording</button>
           <button className={secondary} onClick={onBack}>Back to all questions</button>
         </>
       )}

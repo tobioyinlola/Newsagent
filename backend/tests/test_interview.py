@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -221,14 +222,15 @@ async def test_chunk_limits(client, workspace):
     assert (await client.get(f"/v1/interview/{token}/takes/{tid}")).json()["chunks_received"] == []
 
 
-async def test_attempt_cap_per_question(client, workspace):
+async def test_recording_again_has_no_per_question_attempt_cap(client, workspace):
     pid = await make_awaiting_founder(client)
     token = await invite(client, pid)
     await client.post(f"/v1/interview/{token}/consent")
     body = {"question_index": 0, "kind": "video", "mime": "video/webm"}
-    for _ in range(iv.MAX_ATTEMPTS_PER_QUESTION):
+    for _ in range(12):
         assert (await client.post(f"/v1/interview/{token}/takes", json=body)).status_code == 200
-    assert (await client.post(f"/v1/interview/{token}/takes", json=body)).status_code == 429
+    view = (await client.get(f"/v1/interview/{token}")).json()
+    assert view["questions"][0]["attempts_left"] is None
 
 
 async def test_retake_supersedes_previous(client, workspace, maker):
@@ -239,10 +241,7 @@ async def test_retake_supersedes_previous(client, workspace, maker):
     async with maker() as s:
         assert (await s.get(Take, first)).status == "superseded" and (await s.get(Take, second)).status == "ready"
     v = (await client.get(f"/v1/interview/{token}")).json()
-    assert (
-        v["questions"][0]["take"]["id"] == second
-        and v["questions"][0]["attempts_left"] == iv.MAX_ATTEMPTS_PER_QUESTION - 2
-    )
+    assert v["questions"][0]["take"]["id"] == second and v["questions"][0]["attempts_left"] is None
 
 
 # ---------- quality flags ----------
@@ -654,3 +653,43 @@ async def test_speedtest_slot_is_scoped_and_cleaned_up(client, workspace):
     await registry.get_storage().put(other, b"keep")
     await client.post(f"/v1/interview/{token}/speedtest/done", json={"key": other})
     assert await registry.get_storage().exists(other)
+
+
+async def test_parallel_confirmations_preserve_every_chunk_and_complete(client, workspace, monkeypatch):
+    pid = await make_awaiting_founder(client)
+    token = await invite(client, pid)
+    await client.post(f"/v1/interview/{token}/consent")
+    take = (
+        await client.post(
+            f"/v1/interview/{token}/takes", json={"question_index": 0, "kind": "video", "mime": "video/webm"}
+        )
+    ).json()["id"]
+    urls = (
+        await client.post(f"/v1/interview/{token}/takes/{take}/chunk-urls", json={"indexes": list(range(8))})
+    ).json()["urls"]
+    for url in urls.values():
+        assert (await client.put(api_path(url), content=b"x" * 500)).status_code == 200
+    storage = registry.get_storage()
+    original_size = storage.size
+    arrived = 0
+    together = asyncio.Event()
+
+    async def synchronized_size(key):
+        nonlocal arrived
+        result = await original_size(key)
+        arrived += 1
+        if arrived == 8:
+            together.set()
+        await asyncio.wait_for(together.wait(), timeout=10)
+        return result
+
+    monkeypatch.setattr(storage, "size", synchronized_size)
+    responses = await asyncio.gather(
+        *(client.post(f"/v1/interview/{token}/takes/{take}/chunks/{i}/confirm") for i in range(8))
+    )
+    assert all(r.status_code == 200 for r in responses), [r.text for r in responses]
+    saved = (await client.get(f"/v1/interview/{token}/takes/{take}")).json()
+    assert saved["chunks_received"] == list(range(8))
+    completed = await client.post(f"/v1/interview/{token}/takes/{take}/complete", json={"chunk_count": 8})
+    assert completed.status_code == 200, completed.text
+    assert completed.json()["status"] == "uploaded"

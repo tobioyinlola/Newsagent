@@ -97,7 +97,7 @@ export function LiveInterviewPanel({ projectId, founderName, founderTitle, guide
     <>{overlay}<Card title="Your AI interview">
       <div className="space-y-4">
         <Notice tone="ok">
-          {guided ? "Our AI interviewer will talk with you on camera: up to" : "Your script is approved. Before we make your video, our AI interviewer will talk with you on camera: up to"} {s?.questions.length ?? 4} questions, about 4 minutes, no more than 5.
+          {guided ? "Our AI interviewer will talk with you on camera: up to" : "Your script is approved. Before we make your video, our AI interviewer will talk with you on camera: up to"} {s?.questions.length ?? 4} questions, usually about 4 minutes. You can retake any answer before submitting.
           {" "}Your answers are woven into the video next to the AI presenter.
         </Notice>
         {facts && (facts.announcement || facts.key_facts.length > 0) && (
@@ -206,7 +206,7 @@ function GetReady({ session, onStart, onBack }: { session: Session; onStart: () 
           </div>
           <p className="text-muted">Keep your face inside the oval. The interviewer will say:</p>
           <blockquote className="border-l-4 border-brand-green pl-3 font-mono text-sm">“{greeting}”</blockquote>
-          <p className="text-muted">The whole interview is about {mmss(240)}, never more than {mmss(300)}.</p>
+          <p className="text-muted">Most interviews take about {mmss(240)}. Take extra time for retakes if you need it.</p>
           <div className="flex flex-wrap gap-2 pt-1">
             <Button disabled={!live} onClick={onStart}>Start the interview</Button>
             <Button variant="secondary" onClick={onBack}>Back</Button>

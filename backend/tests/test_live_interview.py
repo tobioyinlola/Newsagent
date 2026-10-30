@@ -376,3 +376,16 @@ async def test_an_unfinished_recording_can_be_abandoned_so_it_never_blocks_submi
     assert (await client.post(f"/v1/interview/{token}/submit")).status_code == 200
     done = await client.delete(f"/v1/interview/{token}/takes/{take}")  # a finished or unknown take is left alone
     assert done.status_code == 200
+
+
+async def test_live_interview_can_retry_beyond_five_abandoned_takes(client, workspace):
+    pid = await live_project(client)
+    token = (await start(client, pid)).json()["token"]
+    for _ in range(12):
+        r = await client.post(
+            f"/v1/interview/{token}/takes", json={"question_index": 0, "kind": "video", "mime": "video/webm"}
+        )
+        assert r.status_code == 200, r.text
+        assert (await client.delete(f"/v1/interview/{token}/takes/{r.json()['id']}")).status_code == 200
+    view = (await client.get(f"/v1/interview/{token}")).json()
+    assert view["questions"][0]["attempts_left"] is None

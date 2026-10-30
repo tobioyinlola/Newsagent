@@ -40,7 +40,7 @@
   AND a Fernet-encrypted copy (`SECRET_KEY`) used only to re-send the same link in reminders. The encrypted copy is
   deleted when the founder submits, the owner revokes/merges, or the link expires.
 - **Takes are processed as soon as the founder keeps them** (not at submit) so a dark or silent take is caught while
-  they are still on the page. Cost is bounded by 5 attempts per question.
+  they are still on the page. Retakes are unlimited before submission; per-recording size/duration checks and per-token/IP request throttling still apply.
 - **Take failures never change the project state** (take-level `failed` + retry); only the owner-visible pipeline
   steps move the project.
 - **Interview cut renders two anchor clips** (intro+body, then outro) plus one clip per question. Costs 2 + N avatar

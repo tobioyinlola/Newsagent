@@ -66,7 +66,6 @@ def hash_token(token: str) -> str:
 MAX_CHUNKS = 80
 MAX_CHUNK_BYTES = 8 * 1024 * 1024
 MAX_TAKE_BYTES = 150 * 1024 * 1024
-MAX_ATTEMPTS_PER_QUESTION = 5
 MAX_QUESTIONS = 5
 LAYOUTS = {"pip", "split", "column", "full"}
 

@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import func, select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
@@ -86,6 +86,28 @@ async def _owned_take(session: AsyncSession, s: InterviewSession, take_id: str) 
     return t
 
 
+async def _lock_take(session: AsyncSession, owner: InterviewSession, take_id: str) -> Take:
+    # Chunk uploads confirm in parallel. Serialize changes to one interview so JSON merges
+    # cannot overwrite a sibling confirmation, or race completion/abandonment.
+    # Release the earlier read transaction before obtaining the write lock on SQLite too.
+    await session.commit()
+    locked = (
+        await session.execute(
+            update(InterviewSession)
+            .where(InterviewSession.id == owner.id)
+            .values(consent_version=InterviewSession.consent_version)
+            .returning(InterviewSession)
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
+    if locked is None or locked.revoked_at is not None or iv.is_expired(locked.expiry):
+        raise GONE
+    take = await session.get(Take, take_id, populate_existing=True)
+    if take is None or take.session_id != owner.id:
+        raise HTTPException(404, "Recording not found")
+    return take
+
+
 async def _company(session: AsyncSession, project: Project) -> str:
     script = await approved_script(session, project.id)
     ws = await session.get(Workspace, project.workspace_id)
@@ -97,15 +119,6 @@ async def view(token: str, session: AsyncSession = Depends(get_session)) -> Gues
     s, project = await load(token, session)
     script = await approved_script(session, project.id)
     takes = await latest_takes(session, project.id)
-    attempts = dict(
-        (
-            await session.execute(
-                select(Take.question_index, func.count())
-                .where(Take.project_id == project.id)
-                .group_by(Take.question_index)
-            )
-        ).all()
-    )
     clips = {
         a.format: a
         for a in (
@@ -132,7 +145,7 @@ async def view(token: str, session: AsyncSession = Depends(get_session)) -> Gues
                 text=q,
                 clip_url=storage.presign_get(clips[f"q{i}"].storage_key, URL_TTL) if f"q{i}" in clips else None,
                 take=_take(takes[i]) if i in takes else None,
-                attempts_left=max(0, iv.MAX_ATTEMPTS_PER_QUESTION - attempts.get(i, 0)),
+                attempts_left=None,
             )
             for i, q in enumerate(script.interview_questions)
         ],
@@ -161,15 +174,6 @@ async def start_take(token: str, body: GuestTakeIn, session: AsyncSession = Depe
     table = iv.ALLOWED_VIDEO_MIME if body.kind == "video" else iv.ALLOWED_AUDIO_MIME
     if mime not in table:
         raise HTTPException(415, "This browser's recording format isn't supported. Try audio only.")
-    used = (
-        await session.execute(
-            select(func.count())
-            .select_from(Take)
-            .where(Take.session_id == s.id, Take.question_index == body.question_index)
-        )
-    ).scalar_one()
-    if used >= iv.MAX_ATTEMPTS_PER_QUESTION:
-        raise HTTPException(429, "That's the maximum number of takes for this question. Please keep your best one.")
     t = Take(
         session_id=s.id, project_id=project.id, question_index=body.question_index, kind=body.kind, ext=table[mime]
     )
@@ -208,6 +212,9 @@ async def confirm_chunk(token: str, take_id: str, idx: int, session: AsyncSessio
     if size > iv.MAX_CHUNK_BYTES or size == 0:
         await storage.delete(key)
         raise HTTPException(422, "That part of the recording was not accepted.")
+    t = await _lock_take(session, s, take_id)
+    if t.status != "recording":
+        raise HTTPException(409, "This recording is already finished.")
     chunks = dict(t.chunks or {})
     chunks[str(idx)] = size
     if sum(chunks.values()) > iv.MAX_TAKE_BYTES:
@@ -222,13 +229,14 @@ async def abandon_take(token: str, take_id: str, session: AsyncSession = Depends
     """Drop a recording that will never be finished (the camera went off, or the person left), so it can't block
     submitting. A finished take is never touched: re-recording replaces it instead."""
     s, project = await load(token, session, states={"awaiting_founder"})
-    t = await _owned_take(session, s, take_id)
+    t = await _lock_take(session, s, take_id)
     if t.status == "recording":
-        storage = registry.get_storage()
-        for idx in list(t.chunks or {}):
-            await storage.delete(chunk_key(project.id, t.id, int(idx)))
+        keys = [chunk_key(project.id, t.id, int(idx)) for idx in (t.chunks or {})]
         t.status, t.chunks = "superseded", {}
-        await session.commit()
+        await session.commit()  # Release the interview lock before deleting remote files.
+        storage = registry.get_storage()
+        for key in keys:
+            await storage.delete(key)
     return {"ok": True}
 
 
@@ -243,7 +251,7 @@ async def complete_take(
     token: str, take_id: str, body: CompleteIn, session: AsyncSession = Depends(get_session)
 ) -> GuestTake:
     s, project = await load(token, session, states={"awaiting_founder"})
-    t = await _owned_take(session, s, take_id)
+    t = await _lock_take(session, s, take_id)
     if t.status in {"uploaded", "processing", "ready", "needs_retake"}:
         return _take(t)  # idempotent: a retried request after a dropped response is fine
     if t.status != "recording":

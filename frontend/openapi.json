@@ -1872,8 +1872,15 @@
       "GuestQuestion": {
         "properties": {
           "attempts_left": {
-            "title": "Attempts Left",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempts Left"
           },
           "clip_url": {
             "anyOf": [
@@ -1907,8 +1914,7 @@
         },
         "required": [
           "index",
-          "text",
-          "attempts_left"
+          "text"
         ],
         "title": "GuestQuestion",
         "type": "object"

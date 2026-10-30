@@ -15,6 +15,7 @@ export class TakeUploader {
   private stopped = false;
   private wake: (() => void) | null = null;
   private lastError: string | null = null;
+  private fatalError: Error | null = null;
 
   constructor(private token: string, readonly takeId: string, private store: ChunkStore, private onChange: (s: UploadState) => void) {
     window.addEventListener("online", this.poke);
@@ -64,7 +65,7 @@ export class TakeUploader {
           this.lastError = null;
           backoff = 1000;
         } catch (e) {
-          if ((e as { status?: number }).status === 404 || (e as { status?: number }).status === 409) { this.lastError = (e as Error).message; break; } // link gone / take finished
+          if ([400, 401, 403, 404, 410, 413, 415, 422].includes((e as { status?: number }).status ?? 0) || ((e as { status?: number }).status === 409 && (e as Error).message.includes("already finished"))) { this.fatalError = e as Error; this.lastError = (e as Error).message; break; } // link gone / take finished
           this.lastError = (e as Error).message;
           this.emit();
           await Promise.race([sleep(backoff), new Promise<void>((r) => { this.wake = r; })]);
@@ -84,8 +85,7 @@ export class TakeUploader {
     if (!blob) throw new Error("local chunk missing");
     const put = await fetch(url, { method: "PUT", body: blob });
     if (!put.ok) throw new Error(`upload failed (${put.status})`);
-    const done = await guest.POST("/v1/interview/{token}/takes/{take_id}/chunks/{idx}/confirm", { params: { path: { token: this.token, take_id: this.takeId, idx } } });
-    if (!done.response.ok) throw Object.assign(new Error("confirm failed"), { status: done.response.status });
+    await must(guest.POST("/v1/interview/{token}/takes/{take_id}/chunks/{idx}/confirm", { params: { path: { token: this.token, take_id: this.takeId, idx } } }));
     this.confirmed.add(idx);
     this.emit();
   }
@@ -94,10 +94,30 @@ export class TakeUploader {
   async drained(count: number, onWait?: (s: UploadState) => void): Promise<void> {
     for (;;) {
       if (this.stopped) throw new Error("stopped");
+      if (this.fatalError) throw this.fatalError;
       if ([...Array(count).keys()].every((i) => this.confirmed.has(i))) return;
       onWait?.(this.state());
       void this.pump();
       await sleep(400);
+    }
+  }
+
+  // Reconcile against the server before finishing, including older confirmations lost by a race.
+  async complete(count: number, onWait?: (s: UploadState) => void) {
+    for (let attempt = 0; ; attempt++) {
+      await this.drained(count, onWait);
+      try {
+        return await must(guest.POST("/v1/interview/{token}/takes/{take_id}/complete", { params: { path: { token: this.token, take_id: this.takeId } }, body: { chunk_count: count } }));
+      } catch (e) {
+        const detail = (e as { detail?: { error?: string; missing?: unknown } }).detail;
+        if ((e as { status?: number }).status !== 409 || detail?.error !== "missing_chunks" || !Array.isArray(detail.missing) || !detail.missing.length || attempt >= 3) throw e;
+        for (const index of detail.missing) {
+          if (!Number.isInteger(index) || index < 0 || index >= count) throw e;
+          if (!await this.store.get(this.takeId, index)) throw new Error("Part of this recording is unavailable on this device. Please record this answer again.");
+          this.confirmed.delete(index); this.known.add(index);
+        }
+        this.emit();
+      }
     }
   }
 
