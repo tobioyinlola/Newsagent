@@ -14,6 +14,9 @@ const env = {
 // The API lives on Railway. Vercel forwards the site's /v1/... calls there, so the browser only ever talks to this site (no CORS,
 // and it works even if VITE_API_URL was never set at build time). Change API_TARGET if the backend moves.
 const API_TARGET = process.env.API_TARGET || "https://backend-production-73a97.up.railway.app";
+// Link-preview crawlers (WhatsApp, LinkedIn, X, Facebook, Slack, search bots) get a small page with the story's headline, summary and
+// cover picture from the API, because the app itself has none of that in its HTML. People always get the app.
+const CRAWLERS = "facebookexternalhit|Facebot|WhatsApp|LinkedInBot|Twitterbot|Slackbot|TelegramBot|Discordbot|SkypeUriPreview|Pinterest|redditbot|Googlebot|bingbot|Applebot";
 const headers = Object.entries(securityHeaders(env)).map(([key, value]) => ({ key, value }));
 const config = {
   $schema: "https://openapi.vercel.sh/vercel.json",
@@ -22,6 +25,11 @@ const config = {
   outputDirectory: "dist",
   rewrites: [
     { source: "/v1/(.*)", destination: `${API_TARGET}/v1/$1` },
+    {
+      source: "/latest-stories/:slug",
+      has: [{ type: "header", key: "user-agent", value: `(?i).*(${CRAWLERS}).*` }],
+      destination: `${API_TARGET}/v1/public/stories/:slug/preview`,
+    },
     { source: "/(.*)", destination: "/index.html" },
   ],
   headers: [

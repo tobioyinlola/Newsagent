@@ -81,6 +81,9 @@ class Settings(BaseSettings):
     renderer_shared_secret: str = ""
     open_signup_enabled: bool = True  # anyone can create a workspace by confirming their email (no invitation needed)
     signup_credits: str = "1"  # credits a new workspace starts with when it signs up on its own: one free video
+    signup_per_ip_per_hour: int = (
+        20  # sign-up codes one address may ask for in an hour (the automated browser tests raise it)
+    )
     invite_ttl_hours: int = 336  # how long an emailed invitation to join stays valid (never less than 48 hours)
     otp_ttl_minutes: int = 10
     session_idle_minutes: int = 60
