@@ -1,18 +1,15 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, unwrap } from "../api/client";
+import { ShareLinks } from "./ShareLinks";
 import { Button, Card, DisclosureBadge, ErrorBox } from "./ui";
 
 export function Delivery({ projectId }: { projectId: string }) {
-  const qc = useQueryClient();
   const p = { params: { path: { project_id: projectId } } };
   const dl = useQuery({ queryKey: ["downloads", projectId], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/downloads", p)) });
   const caps = useQuery({ queryKey: ["captions", projectId], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/captions", p)) });
   const [copied, setCopied] = useState<string | null>(null);
   const pub = useQuery({ queryKey: ["publication", projectId], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/publication", p)) });
-  const setPub = (d: unknown) => qc.setQueryData(["publication", projectId], d);
-  const takeDown = useMutation({ mutationFn: () => unwrap(api.DELETE("/v1/projects/{project_id}/publication", p)), onSuccess: setPub });
-  const publishAgain = useMutation({ mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/publication", p)), onSuccess: setPub });
   const storyUrl = pub.data?.path ? `${window.location.origin}${pub.data.path}` : null;
 
   const copy = async (key: string, text: string) => {
@@ -20,7 +17,7 @@ export function Delivery({ projectId }: { projectId: string }) {
   };
   const shape = (f: string | null) => (f === "9x16" ? "Vertical video (9:16)" : "Widescreen video (16:9)");
   const label = (t: string, f: string | null) => t === "render" ? `${shape(f)}: HD` : t === "render_light" ? `${shape(f)}: Light` : ({ thumbnail: "Thumbnail", caption: "Captions (.srt)", preview: "Preview" } as Record<string, string>)[t] ?? t;
-  const note = (t: string) => t === "render" ? "The original file, at full quality. Larger." : t === "render_light" ? "The same video compressed to about 20 MB, at 720p. Easier to upload and share, but the picture quality is lower than HD." : null;
+  const note = (t: string) => t === "render" ? "The original file, at full quality. Larger." : t === "render_light" ? "The same video, compressed to a much smaller file. Easier to upload and share." : null;
   const order = (t: string) => ["render", "render_light", "thumbnail", "caption"].indexOf(t);
   const items = (dl.data?.items ?? []).filter((i) => i.type !== "preview").sort((a, b) => order(a.type) - order(b.type) || String(a.format).localeCompare(String(b.format)));
   const videoUrl = dl.data?.items.find((i) => i.type === "render" && i.format === "16x9")?.url;
@@ -53,21 +50,20 @@ export function Delivery({ projectId }: { projectId: string }) {
                 <input readOnly aria-label="Link to your published story" className="w-full rounded-md border border-ink bg-paper px-3 py-2 text-sm" value={storyUrl} onFocus={(e) => e.currentTarget.select()} />
                 <Button variant="secondary" onClick={() => copy("story", storyUrl)}>{copied === "story" ? "Copied" : "Copy"}</Button>
               </div>
+              <ShareLinks url={storyUrl} title="My story on Cover Founder News" text="Our story on Cover Founder News" />
               <div className="flex flex-wrap gap-2">
                 <a className="rounded-md border-2 border-ink bg-brand-green px-4 py-2 text-sm font-bold text-ink hover:bg-ink hover:text-brand-green" href={pub.data.path ?? "#"} target="_blank" rel="noreferrer">View your story</a>
-                <Button variant="danger" onClick={() => takeDown.mutate()} disabled={takeDown.isPending}>Take it down</Button>
               </div>
-              <p className="text-xs text-muted">Anyone with the link, and anyone browsing Latest Stories, can see it. The contact details in your press release are never shown.</p>
+              <p className="text-xs text-muted">Anyone with the link, and anyone browsing Latest Stories, can see it. The contact details in your press release are never shown. To have it removed, contact us.</p>
             </>
           ) : pub.data?.slug ? (
             <>
-              <p className="text-sm text-muted">Your story is not published right now.</p>
-              <Button onClick={() => publishAgain.mutate()} disabled={publishAgain.isPending}>Publish it again</Button>
+              <p className="text-sm text-muted">Your story is not published right now. Contact us if you have questions.</p>
             </>
           ) : pub.isLoading ? <p aria-busy="true" className="text-sm text-muted">Checking…</p> : (
             <p className="text-sm text-muted">This video has no written story, so there is nothing to publish.</p>
           )}
-          <ErrorBox error={pub.error ?? takeDown.error ?? publishAgain.error} />
+          <ErrorBox error={pub.error} />
         </div>
       </Card>
       <Card title="Suggested captions">

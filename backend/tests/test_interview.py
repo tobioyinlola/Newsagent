@@ -590,7 +590,7 @@ async def test_deleting_project_removes_takes_and_files(client, workspace, maker
         t = (await s.execute(select(Take).where(Take.project_id == pid))).scalars().first()
         keys = [f"projects/{pid}/takes/{t.id}/raw/00000", t.processed_video_key]
     assert all([await storage.exists(k) for k in keys])
-    assert (await client.delete(f"/v1/projects/{pid}", headers=OWNER)).status_code == 200
+    assert (await client.delete(f"/v1/admin/projects/{pid}", headers=OPS)).status_code == 200
     assert not any([await storage.exists(k) for k in keys])
     async with maker() as s:
         assert (await s.execute(select(Take))).first() is None and (

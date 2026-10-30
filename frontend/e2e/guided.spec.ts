@@ -96,6 +96,7 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
 
   // 6. the story is published on Latest Stories automatically, and the link replaces the old private share link
   const box = page.getByLabel("Link to your published story");
+  await expect(page.getByRole("group", { name: "Share this story" }).getByRole("link", { name: "Share on LinkedIn" })).toBeVisible(); // sharing is offered as soon as the video is done
   await expect(box).toBeVisible();
   const storyUrl = await box.inputValue();
   expect(storyUrl).toMatch(/\/latest-stories\/[a-z0-9-]+-[0-9a-f]{6}$/);
@@ -129,12 +130,15 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await expect(visitor.getByText("AI-generated anchor").first()).toBeVisible();
   if (shots) await visitor.screenshot({ path: `${shots}/story-page.png`, fullPage: true });
 
-  // taking it down removes the page
-  await page.getByRole("button", { name: "Take it down" }).click();
-  await expect(page.getByRole("button", { name: "Publish it again" })).toBeVisible();
+  // customers can't take it down or delete it; only the back office can, and that removes the page
+  await expect(page.getByRole("button", { name: "Take it down" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Delete video" })).toHaveCount(0);
+  const pid = /\/ai-newsroom\/([0-9a-f]+)/.exec(page.url())![1];
+  await ok(await request.delete(`${API}/v1/admin/projects/${pid}/publication`, { headers: OPS }));
   await visitor.reload();
   await expect(visitor.getByText("This story isn't available.")).toBeVisible();
-  await page.getByRole("button", { name: "Publish it again" }).click();
+  await ok(await request.post(`${API}/v1/admin/projects/${pid}/publication`, { headers: OPS }));
+  await page.reload();
   await expect(page.getByLabel("Link to your published story")).toHaveValue(storyUrl);
   await visitor.reload();
   await expect(visitor.getByRole("video")).toHaveCount(0).catch(() => undefined);

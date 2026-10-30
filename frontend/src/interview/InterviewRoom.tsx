@@ -278,6 +278,14 @@ export function InterviewRoom(p: RoomProps) {
           </div>
         )}
         {phase === "answering" && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center px-3">
+            <div className={`rounded-md border-4 px-8 py-2 text-center shadow-2xl ${ansLeft <= 10 ? "animate-pulse border-brand-red bg-brand-red text-ink" : "border-brand-green bg-ink text-brand-green"}`} role="timer" aria-label="Time left for this answer">
+              <p className="font-mono text-7xl font-extrabold leading-none tabular-nums md:text-8xl">{mmss(ansLeft)}</p>
+              <p className="mt-1 text-sm font-bold uppercase tracking-widest">left for this answer</p>
+            </div>
+          </div>
+        )}
+        {phase === "answering" && (
           <div className="absolute inset-x-0 bottom-0 h-2 bg-ink" role="progressbar" aria-label="Time left for this answer" aria-valuemin={0} aria-valuemax={ansWindow} aria-valuenow={Math.round(ansLeft)}>
             <div className="h-full bg-brand-green transition-[width] duration-300" style={{ width: `${ansWindow ? (ansLeft / ansWindow) * 100 : 0}%` }} />
           </div>

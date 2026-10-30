@@ -324,6 +324,7 @@ async def customer(
                 completed_at=_utc(p.completed_at),
                 cost_usd=p.cost_total,
                 interview=(p.interview_mode if p.interview_enabled else "none"),
+                published=p.published_at is not None and p.story_slug is not None,
             )
             for p in projects[:25]
         ],

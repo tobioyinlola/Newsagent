@@ -1272,6 +1272,11 @@
             "title": "Interview",
             "type": "string"
           },
+          "published": {
+            "default": false,
+            "title": "Published",
+            "type": "boolean"
+          },
           "state": {
             "title": "State",
             "type": "string"
@@ -7015,6 +7020,186 @@
         ]
       }
     },
+    "/v1/admin/projects/{project_id}": {
+      "delete": {
+        "description": "Delete a customer's video: its files and every record that belongs to it. Customers can't do this themselves.",
+        "operationId": "delete_video_v1_admin_projects__project_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Video V1 Admin Projects  Project Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Video",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/v1/admin/projects/{project_id}/publication": {
+      "delete": {
+        "description": "Take a story off Latest Stories (its page stops working). The video itself stays.",
+        "operationId": "take_story_down_v1_admin_projects__project_id__publication_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Take Story Down V1 Admin Projects  Project Id  Publication Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Take Story Down",
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "operationId": "put_story_back_v1_admin_projects__project_id__publication_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Story Back V1 Admin Projects  Project Id  Publication Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Story Back",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/v1/admin/projects/{project_id}/retry": {
       "post": {
         "description": "Restart a failed or paused project on the owner's behalf (e.g. after fixing a vendor outage).",
@@ -10655,65 +10840,6 @@
       }
     },
     "/v1/projects/{project_id}": {
-      "delete": {
-        "description": "Owner can delete a project at any time it isn't mid-render. Removes files and all records.",
-        "operationId": "delete_project_v1_projects__project_id__delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project_id",
-            "required": true,
-            "schema": {
-              "title": "Project Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Delete Project V1 Projects  Project Id  Delete",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Delete Project",
-        "tags": [
-          "projects"
-        ]
-      },
       "get": {
         "operationId": "get_project_v1_projects__project_id__get",
         "parameters": [
@@ -12072,62 +12198,6 @@
       }
     },
     "/v1/projects/{project_id}/publication": {
-      "delete": {
-        "operationId": "take_down_v1_projects__project_id__publication_delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project_id",
-            "required": true,
-            "schema": {
-              "title": "Project Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicationOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Take Down",
-        "tags": [
-          "stories"
-        ]
-      },
       "get": {
         "description": "Where this video's story is published. A finished video that was never published (made before Latest Stories) is\npublished the first time its owner looks.",
         "operationId": "publication_v1_projects__project_id__publication_get",
@@ -12181,62 +12251,6 @@
           }
         },
         "summary": "Publication",
-        "tags": [
-          "stories"
-        ]
-      },
-      "post": {
-        "operationId": "republish_v1_projects__project_id__publication_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project_id",
-            "required": true,
-            "schema": {
-              "title": "Project Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicationOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Republish",
         "tags": [
           "stories"
         ]
@@ -13196,6 +13210,90 @@
           }
         },
         "summary": "Public Story",
+        "tags": [
+          "stories"
+        ]
+      }
+    },
+    "/v1/public/stories/{slug}/image": {
+      "get": {
+        "description": "A steady address for a story's cover picture (the stored file's own link expires), for link previews.",
+        "operationId": "story_image_v1_public_stories__slug__image_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Story Image",
+        "tags": [
+          "stories"
+        ]
+      }
+    },
+    "/v1/public/stories/{slug}/preview": {
+      "get": {
+        "description": "What WhatsApp, LinkedIn, X, Facebook and Slack read to draw a link preview. The site serves this page, instead of the app,\nto those crawlers only (see vercel.json); people always get the app.",
+        "operationId": "story_preview_v1_public_stories__slug__preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Story Preview",
         "tags": [
           "stories"
         ]

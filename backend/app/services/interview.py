@@ -72,7 +72,7 @@ LAYOUTS = {"pip", "split", "column", "full"}
 
 # ---------- live (AI interviewer) limits ----------
 LIVE_MAX_TOTAL_S = 300  # the whole interview, including the interviewer speaking, is at most 5 minutes
-LIVE_MAX_ANSWER_S = 75  # one answer is never longer than this
+LIVE_MAX_ANSWER_S = 60  # one answer is never longer than this: one minute
 LIVE_MIN_ANSWER_S = 15  # an answer window is never shorter than this
 LIVE_MAX_CHUNKS = 45  # 75 s of 2 s chunks, plus slack
 ALLOWED_VIDEO_MIME = {"video/webm": "webm", "video/mp4": "mp4"}

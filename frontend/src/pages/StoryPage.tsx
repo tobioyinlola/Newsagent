@@ -4,35 +4,8 @@ import { Link, useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { PressRelease, type Story } from "../components/PressRelease";
 import { clock, dayOf, STORIES_PATH, StoryRow, useStories } from "../components/StoryCards";
+import { ShareLinks } from "../components/ShareLinks";
 import { Cta, SiteShell } from "./Landing";
-
-const shareBtn = "rounded-sm border border-white/40 px-3 py-1.5 text-xs font-bold text-white hover:border-brand-green hover:text-brand-green";
-
-// Share this story: WhatsApp, LinkedIn, X (Twitter), Facebook, email, a copied link, and the phone's own share sheet where there is one.
-function ShareStory({ title, company }: { title: string; company: string }) {
-  const [copied, setCopied] = useState(false);
-  const url = window.location.href;
-  const text = `${title} (${company}) on Cover Founder News`;
-  const u = encodeURIComponent(url), t = encodeURIComponent(text);
-  const targets: [string, string][] = [
-    ["WhatsApp", `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`],
-    ["LinkedIn", `https://www.linkedin.com/sharing/share-offsite/?url=${u}`],
-    ["X (Twitter)", `https://twitter.com/intent/tweet?text=${t}&url=${u}`],
-    ["Facebook", `https://www.facebook.com/sharer/sharer.php?u=${u}`],
-    ["Email", `mailto:?subject=${t}&body=${u}`],
-  ];
-  const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
-  return (
-    <div className="mt-6 flex flex-wrap items-center gap-2" role="group" aria-label="Share this story">
-      <span className="mr-1 text-sm font-semibold text-white">Share this story</span>
-      {targets.map(([name, href]) => (
-        <a key={name} href={href} target={name === "Email" ? undefined : "_blank"} rel="noopener noreferrer" className={shareBtn} aria-label={`Share on ${name}`}>{name}</a>
-      ))}
-      <button type="button" className={shareBtn} onClick={async () => { try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { setCopied(false); } }}>{copied ? "Link copied" : "Copy link"}</button>
-      {canNativeShare && <button type="button" className={shareBtn} onClick={() => { void navigator.share({ title, text, url }).catch(() => undefined); }}>More…</button>}
-    </div>
-  );
-}
 
 export function StoryPage() {
   const { slug = "" } = useParams();
@@ -87,7 +60,7 @@ export function StoryPage() {
                 <span>· {dayOf(s.published_at)}</span>
                 {s.duration_s != null && <span>· {clock(s.duration_s)}</span>}
               </div>
-              <ShareStory title={s.title} company={s.company} />
+              <div className="mt-6"><ShareLinks tone="dark" url={window.location.href} title={s.title} text={`${s.title} (${s.company}) on Cover Founder News`} /></div>
               <div className="mt-8 border-t border-white/10 pt-8">
                 <PressRelease
                   tone="dark"

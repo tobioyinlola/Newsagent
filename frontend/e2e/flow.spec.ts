@@ -71,10 +71,8 @@ test("invite to shared video", async ({ page, browser }) => {
   await expect(fp.getByRole("heading", { name: "Your story on Cover Founder" })).toBeVisible();
   await expect(fp.getByText("has no written story")).toBeVisible();
 
-  // --- owner deletes the video; it disappears from the list
-  fp.on("dialog", (d) => d.accept());
-  await fp.getByRole("button", { name: "Delete video" }).click();
-  await expect(fp.getByText("No videos yet.")).toBeVisible();
+  // --- customers can't delete videos (only the back office can)
+  await expect(fp.getByRole("button", { name: "Delete video" })).toHaveCount(0);
 });
 
 test("a wrong password gets one generic message", async ({ page }) => {

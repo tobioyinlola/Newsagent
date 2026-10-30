@@ -103,6 +103,7 @@ class CustomerProject(BaseModel):
     completed_at: datetime | None
     cost_usd: Decimal
     interview: str  # none | live | invite
+    published: bool = False  # its story is live on Latest Stories
 
 
 class PaymentRow(BaseModel):

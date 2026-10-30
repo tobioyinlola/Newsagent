@@ -283,3 +283,25 @@ async def test_when_email_cannot_be_sent_the_inviter_gets_the_link(client, works
     monkeypatch.setattr(staff, "send_email", failing)
     r = await invite(client, "nomail@cover.example.com", "viewer")
     assert r["emailed"] is False and "/admin/join?token=" in r["join_url"]
+
+
+async def test_only_content_managers_can_delete_videos_and_take_stories_down(client, workspace):
+    r = await client.post(
+        "/v1/projects", json={"brief_text": "Acme sells solar lamps to market traders in Kumasi."}, headers=OWNER
+    )
+    pid = r.json()["id"]
+    await invite(client, "support2@cover.example.com", "support")
+    await invite(client, "content2@cover.example.com", "content")
+    support, content = (
+        await join(client, "support2@cover.example.com"),
+        await join(client, "content2@cover.example.com"),
+    )
+    assert (await client.delete(f"/v1/admin/projects/{pid}", headers=support)).status_code == 403
+    assert (await client.delete(f"/v1/admin/projects/{pid}/publication", headers=support)).status_code == 403
+    assert (await client.delete(f"/v1/admin/projects/{pid}", headers=OWNER)).status_code in (
+        403,
+        401,
+    )  # a customer isn't staff
+    assert (await client.delete(f"/v1/admin/projects/{pid}", headers=content)).status_code == 200
+    assert (await client.get(f"/v1/projects/{pid}", headers=OWNER)).status_code == 404
+    assert (await client.delete(f"/v1/admin/projects/{pid}", headers=content)).status_code == 404

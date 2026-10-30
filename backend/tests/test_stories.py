@@ -6,7 +6,7 @@ from sqlalchemy import select
 from app.models import Project, Workspace
 from app.pipeline.queue import get_queue
 from app.services import stories
-from tests.conftest import OWNER
+from tests.conftest import OPS, OWNER
 from tests.test_guided_flow import interviewed
 from tests.test_live_interview import state
 
@@ -51,11 +51,14 @@ async def test_a_finished_video_is_published_automatically_and_shown_publicly(cl
 async def test_the_owner_can_take_the_story_down_and_put_it_back(client, workspace):
     pid = await finished_story(client)
     slug = (await client.get(f"/v1/projects/{pid}/publication", headers=OWNER)).json()["slug"]
-    down = (await client.delete(f"/v1/projects/{pid}/publication", headers=OWNER)).json()
+    assert (
+        await client.delete(f"/v1/projects/{pid}/publication", headers=OWNER)
+    ).status_code == 405  # customers can't take it down
+    down = (await client.delete(f"/v1/admin/projects/{pid}/publication", headers=OPS)).json()
     assert down["published"] is False and down["slug"] == slug
     assert (await client.get("/v1/public/stories")).json() == []
     assert (await client.get(f"/v1/public/stories/{slug}")).status_code == 404
-    again = (await client.post(f"/v1/projects/{pid}/publication", headers=OWNER)).json()
+    again = (await client.post(f"/v1/admin/projects/{pid}/publication", headers=OPS)).json()
     assert again["published"] and again["slug"] == slug  # the same address as before
     assert (await client.get(f"/v1/public/stories/{slug}")).status_code == 200
 
@@ -71,7 +74,7 @@ async def test_a_suspended_or_sharing_disabled_workspace_is_never_shown(client, 
     assert (await client.get(f"/v1/public/stories/{slug}")).status_code == 404
 
 
-async def test_other_workspaces_cannot_change_a_story(client, workspace, maker):
+async def test_nobody_on_the_customer_side_can_change_a_story(client, workspace, maker):
     from app.models import User
 
     pid = await finished_story(client)
@@ -82,8 +85,9 @@ async def test_other_workspaces_cannot_change_a_story(client, workspace, maker):
         s.add(User(email="other@example.com", workspace_id=ws.id))
         await s.commit()
     other = {"Authorization": "Bearer dev:other@example.com"}
-    for call in (client.get, client.post, client.delete):
-        assert (await call(f"/v1/projects/{pid}/publication", headers=other)).status_code == 404
+    assert (await client.get(f"/v1/projects/{pid}/publication", headers=other)).status_code == 404
+    for call in (client.post, client.delete):  # nobody on the customer side can change it
+        assert (await call(f"/v1/projects/{pid}/publication", headers=other)).status_code == 405
     async with maker() as s:
         assert (await s.execute(select(Project).where(Project.id == pid))).scalar_one().published_at is not None
 
@@ -109,6 +113,6 @@ async def test_link_previews_have_the_headline_summary_and_a_steady_cover_addres
     assert card["title"].replace("&", "&amp;").replace('"', "&quot;")[:20] in r.text
     img = await client.get(f"/v1/public/stories/{slug}/image")
     assert img.status_code == 302 and img.headers["location"]
-    await client.delete(f"/v1/projects/{pid}/publication", headers=OWNER)  # taken down: no preview, no picture
+    await client.delete(f"/v1/admin/projects/{pid}/publication", headers=OPS)  # taken down: no preview, no picture
     assert (await client.get(f"/v1/public/stories/{slug}/preview")).status_code == 404
     assert (await client.get(f"/v1/public/stories/{slug}/image")).status_code == 404
