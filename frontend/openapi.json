@@ -1515,6 +1515,15 @@
             "title": "Announcement",
             "type": "string"
           },
+          "announcement_source": {
+            "default": "custom",
+            "enum": [
+              "platform",
+              "custom"
+            ],
+            "title": "Announcement Source",
+            "type": "string"
+          },
           "contact_email": {
             "default": "",
             "maxLength": 320,
@@ -1582,6 +1591,17 @@
             ],
             "title": "Stage",
             "type": "string"
+          },
+          "story_project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Story Project Id"
           },
           "whatsapp": {
             "default": "",
@@ -10198,6 +10218,60 @@
           }
         },
         "summary": "Outlets",
+        "tags": [
+          "distribution"
+        ]
+      }
+    },
+    "/v1/distribution/stories": {
+      "get": {
+        "operationId": "stories_v1_distribution_stories_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Stories V1 Distribution Stories Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stories",
         "tags": [
           "distribution"
         ]

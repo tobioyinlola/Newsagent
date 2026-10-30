@@ -78,6 +78,8 @@ class DraftIn(BaseModel):
     stage: Literal["outlets", "content", "contact", "review"] = "outlets"
     outlet_ids: list[str] = Field(default_factory=list, max_length=100)
     project_id: str | None = None
+    story_project_id: str | None = None
+    announcement_source: Literal["platform", "custom"] = "custom"
     headline: str = Field(default="", max_length=300)
     announcement: str = Field(default="", max_length=50000)
     contact_name: str = Field(default="", max_length=200)
@@ -126,6 +128,20 @@ async def validate(db: AsyncSession, body: DraftIn, workspace_id: str):
         project = await db.get(Project, body.project_id)
         if project is None or project.workspace_id != workspace_id or project.state != "final_ready":
             raise HTTPException(422, "Select one of your completed videos")
+    if body.story_project_id:
+        story = (
+            await db.execute(
+                select(ScriptVersion.id)
+                .join(Project, Project.id == ScriptVersion.project_id)
+                .where(
+                    Project.workspace_id == workspace_id,
+                    Project.id == body.story_project_id,
+                    ScriptVersion.story.is_not(None),
+                )
+            )
+        ).first()
+        if story is None:
+            raise HTTPException(422, "Choose a story written in your workspace")
     for key, kinds in [
         (body.logo_key, {"logo_light", "logo_dark", "product_image"}),
         *[(k, {"product_image"}) for k in body.picture_keys],
@@ -146,6 +162,43 @@ async def validate(db: AsyncSession, body: DraftIn, workspace_id: str):
 @router.get("/v1/distribution/outlets")
 async def outlets(p: Principal = Depends(current_principal)) -> dict:
     return {"outlets": list(OUTLETS.values()), "coming_soon": ["United States", "Canada", "United Kingdom"]}
+
+
+@router.get("/v1/distribution/stories")
+async def stories(p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> list[dict]:
+    scripts = (
+        (
+            await db.execute(
+                select(ScriptVersion)
+                .join(Project, Project.id == ScriptVersion.project_id)
+                .where(Project.workspace_id == p.workspace.id, ScriptVersion.story.is_not(None))
+                .order_by(ScriptVersion.created_at.desc(), ScriptVersion.version.desc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    result, seen = [], set()
+    for script in scripts:
+        if script.project_id in seen or not script.story:
+            continue
+        seen.add(script.project_id)
+        story = script.story
+        parts = [story.get("dek", "")]
+        for section in story.get("sections", []):
+            if section.get("heading"):
+                parts.append(section["heading"])
+            parts.extend(section.get("paragraphs", []))
+        if story.get("about"):
+            parts.append(story["about"])
+        result.append(
+            {
+                "project_id": script.project_id,
+                "headline": story.get("headline", ""),
+                "announcement": "\n\n".join(x for x in parts if x.strip()),
+            }
+        )
+    return result
 
 
 @router.get("/v1/distribution/videos")
@@ -260,6 +313,8 @@ async def submit(id: str, p: Principal = Depends(current_principal), db: AsyncSe
         await send_confirmation(db, row)
         return out(row)
     body = DraftIn.model_validate(row.data)
+    if body.announcement_source == "platform" and not body.story_project_id:
+        raise HTTPException(422, "Select the platform story you want to use")
     await validate(db, body, p.workspace.id)
     if (
         not body.outlet_ids

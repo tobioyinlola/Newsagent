@@ -210,3 +210,60 @@ async def test_changed_price_requires_review(client, distribution_data, monkeypa
     assert r.status_code == 409
     row = (await client.get(f"/v1/distribution/{id}", headers=OWNER)).json()
     assert Decimal(row["total_credits"]) == 2 and not row["paid"]
+
+
+async def test_platform_story_selection_and_edited_copy(client, distribution_data, maker):
+    stories = (await client.get("/v1/distribution/stories", headers=OWNER)).json()
+    assert stories[0]["project_id"] == distribution_data["project_id"]
+    assert stories[0]["headline"] == "Acme launches"
+    assert "A new product." in stories[0]["announcement"]
+    async with maker() as db:
+        db.add(
+            ScriptVersion(
+                project_id=distribution_data["project_id"],
+                version=2,
+                story={
+                    "headline": "Updated announcement",
+                    "sections": [{"heading": "Launch", "paragraphs": ["Our latest details."]}],
+                },
+            )
+        )
+        await db.commit()
+    latest = (await client.get("/v1/distribution/stories", headers=OWNER)).json()
+    assert len(latest) == 1 and latest[0]["headline"] == "Updated announcement"
+    data = {
+        **distribution_data,
+        "announcement_source": "platform",
+        "story_project_id": latest[0]["project_id"],
+        "headline": latest[0]["headline"],
+        "announcement": "An edited version of our platform story.",
+    }
+    id = await draft(client, data)
+    result = await client.post(f"/v1/distribution/{id}/submit", headers=OWNER)
+    assert result.status_code == 200, result.text
+    assert result.json()["data"]["story_project_id"] == latest[0]["project_id"]
+    assert result.json()["data"]["announcement"] == data["announcement"]
+
+
+async def test_story_selection_draft_can_be_incomplete_but_not_submitted(client, distribution_data):
+    id = await draft(client, {**distribution_data, "announcement_source": "platform", "story_project_id": None})
+    assert (await client.post(f"/v1/distribution/{id}/submit", headers=OWNER)).status_code == 422
+    assert (await client.get(f"/v1/distribution/{id}", headers=OWNER)).json()["status"] == "draft"
+
+
+async def test_platform_stories_are_private_to_workspace(client, distribution_data, maker):
+    async with maker() as db:
+        ws = Workspace(name="Other story workspace")
+        db.add(ws)
+        await db.flush()
+        db.add(User(email="story-other@example.com", workspace_id=ws.id))
+        await db.commit()
+    other = {"Authorization": "Bearer dev:story-other@example.com"}
+    assert (await client.get("/v1/distribution/stories", headers=other)).json() == []
+    created = (await client.post("/v1/distribution", headers=other)).json()
+    result = await client.put(
+        f"/v1/distribution/{created['id']}",
+        headers=other,
+        json={"announcement_source": "platform", "story_project_id": distribution_data["project_id"]},
+    )
+    assert result.status_code == 422

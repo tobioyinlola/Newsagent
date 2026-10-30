@@ -1228,6 +1228,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/distribution/stories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stories */
+        get: operations["stories_v1_distribution_stories_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/distribution/videos": {
         parameters: {
             query?: never;
@@ -3004,6 +3021,12 @@ export interface components {
              */
             announcement: string;
             /**
+             * Announcement Source
+             * @default custom
+             * @enum {string}
+             */
+            announcement_source: "platform" | "custom";
+            /**
              * Contact Email
              * @default
              */
@@ -3040,6 +3063,8 @@ export interface components {
              * @enum {string}
              */
             stage: "outlets" | "content" | "contact" | "review";
+            /** Story Project Id */
+            story_project_id?: string | null;
             /**
              * Whatsapp
              * @default
@@ -7220,6 +7245,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stories_v1_distribution_stories_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
             /** @description Validation Error */

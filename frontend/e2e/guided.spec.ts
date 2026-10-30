@@ -94,6 +94,43 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await expect(page.getByRole("button", { name: "Copy the social post" })).toBeVisible();
   await expect(page.getByText("AI-generated anchor").first()).toBeVisible();
 
+  // A platform-written story can be selected independently for distribution and edited without changing the original.
+  const projectId = new URL(page.url()).pathname.split("/").pop()!;
+  const availableStories = await ok<{ project_id: string; headline: string; announcement: string }[]>(await request.get(`${API}/v1/distribution/stories`, { headers: { Authorization: `Bearer ${token}` } }));
+  const writtenStory = availableStories.find(s => s.project_id === projectId)!;
+  expect(writtenStory).toBeTruthy();
+  const distribution = await page.context().newPage();
+  await distribution.goto(`/distribution/request?project=${projectId}`);
+  await distribution.getByRole("button", { name: "Start a distribution request" }).click();
+  await distribution.getByRole("checkbox", { name: /Empire Magazine Africa/ }).check();
+  await distribution.getByRole("button", { name: "Continue", exact: true }).click();
+  await distribution.getByRole("radio", { name: /Choose a Cover Founder story/ }).check();
+  await distribution.getByLabel("Platform story", { exact: true }).selectOption(projectId);
+  await expect(distribution.getByLabel("Headline", { exact: true })).toHaveValue(writtenStory.headline);
+  await expect(distribution.getByLabel("Press announcement", { exact: true })).toHaveValue(writtenStory.announcement);
+  const longAnnouncement = Array.from({ length: 25 }, (_, i) => `Paragraph ${i + 1}. Our company announcement explains the product and the people behind it. This release has enough detail for media partners to understand the news.`).join("\n\n");
+  await distribution.getByLabel("Press announcement", { exact: true }).fill(longAnnouncement);
+  await distribution.getByRole("button", { name: "Continue", exact: true }).click();
+  await distribution.getByLabel("Contact name", { exact: true }).fill("Ada Obi");
+  await distribution.getByLabel("Contact email", { exact: true }).fill("ada@example.com");
+  await distribution.getByLabel("Primary phone number").fill("+2348012345678");
+  await distribution.getByLabel("WhatsApp number").fill("+2348012345678");
+  await distribution.getByLabel(/Company logo \(required/).setInputFiles({ name: "company.png", mimeType: "image/png", buffer: PNG });
+  await expect(distribution.getByText("Company logo uploaded ✓")).toBeVisible();
+  await distribution.getByRole("button", { name: "Continue", exact: true }).click();
+  await distribution.setViewportSize({ width: 390, height: 844 });
+  const announcementPreview = distribution.getByRole("region", { name: "Announcement preview" });
+  await expect(announcementPreview).toContainText("Paragraph 25");
+  expect(await announcementPreview.evaluate(e => e.scrollHeight > e.clientHeight && e.clientHeight <= 384)).toBe(true);
+  expect(await distribution.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await distribution.screenshot({ path: "/tmp/distribution-long-review-mobile.png", fullPage: true });
+  await distribution.reload();
+  await expect(distribution.getByRole("region", { name: "Announcement preview" })).toContainText("Paragraph 25");
+  await distribution.getByRole("button", { name: "Edit announcement", exact: true }).click();
+  await expect(distribution.getByLabel("Platform story", { exact: true })).toHaveValue(projectId);
+  await expect(distribution.getByLabel("Press announcement", { exact: true })).toHaveValue(longAnnouncement);
+  await distribution.close();
+
   // 6. the story is published on Latest Stories automatically, and the link replaces the old private share link
   const box = page.getByLabel("Link to your published story");
   await expect(page.getByRole("group", { name: "Share this story" }).getByRole("link", { name: "Share on LinkedIn" })).toBeVisible(); // sharing is offered as soon as the video is done
