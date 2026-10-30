@@ -94,7 +94,7 @@ async def test_start_needs_consent_and_the_right_state_and_is_resumable(client, 
     r = await start(client, pid)
     assert r.status_code == 200, r.text
     s = r.json()
-    assert s["questions"] == QUESTIONS and s["max_total_s"] == 300 and s["max_answer_s"] == 75 and s["company"]
+    assert s["questions"] == QUESTIONS and s["max_total_s"] == 300 and s["max_answer_s"] == 60 and s["company"]
     assert (await start(client, pid)).json()["token"] == s["token"]  # reload: same room, same recorder credential
     async with maker() as db:
         sess = (await db.execute(select(InterviewSession))).scalar_one()

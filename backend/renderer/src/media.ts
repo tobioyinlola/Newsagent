@@ -52,24 +52,11 @@ export async function normalizeAudio(file: string): Promise<void> {
   fs.renameSync(tmp, file);
 }
 
-// The "light" download: the same video and sound, re-encoded to a file of about LIGHT_TARGET_MB, however long the video is. The
-// picture is scaled down to 720p (the short side) and the bitrate is worked out from the length so the file lands near the
-// target; quality is lower than HD on purpose, and the app says so. Made from the finished HD file (already
-// loudness-normalised), never from a new render.
-export const LIGHT_TARGET_MB = 20;
-const LIGHT_AUDIO_KBPS = 96;
-
-export function lightVideoKbps(durationS: number): number {
-  const total = ((LIGHT_TARGET_MB * 1024 * 1024 * 8) / Math.max(durationS, 1) / 1000) * 0.94; // 6% for container overhead
-  return Math.round(Math.min(4000, Math.max(250, total - LIGHT_AUDIO_KBPS)));
-}
-
+// The "light" download: the same video and sound, re-encoded for a much smaller file. Same picture size and frame rate; a
+// constant-quality encode (CRF 24, slow preset) with a bitrate ceiling, which keeps a talking-head broadcast looking the same
+// to the eye at a fraction of the bytes. Made from the finished HD file (already loudness-normalised), never from a new render.
 export async function makeLight(input: string, output: string): Promise<void> {
-  const info = await analyzeFile(input);
-  const portrait = (info.height ?? 0) > (info.width ?? 0);
-  const scale = portrait ? "scale='min(720,iw)':-2" : "scale=-2:'min(720,ih)'";
-  const kbps = lightVideoKbps(info.duration_s);
-  await run("ffmpeg", ["-y", "-i", input, "-vf", scale, "-c:v", "libx264", "-preset", "slow", "-profile:v", "high", "-b:v", `${kbps}k`, "-maxrate", `${Math.round(kbps * 1.25)}k`, "-bufsize", `${kbps * 2}k`, "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", `${LIGHT_AUDIO_KBPS}k`, "-movflags", "+faststart", output], { maxBuffer: 64 * 1024 * 1024 });
+  await run("ffmpeg", ["-y", "-i", input, "-c:v", "libx264", "-preset", "slow", "-profile:v", "high", "-crf", "24", "-maxrate", "4M", "-bufsize", "8M", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", output], { maxBuffer: 64 * 1024 * 1024 });
 }
 
 export async function analyzeUrl(url: string): Promise<Analysis> {

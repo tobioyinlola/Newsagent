@@ -1,8 +1,8 @@
 // The interview is designed to fit in 5 minutes. This is the same rule the server documents in services/interview.py
 // (answer_window_s): each answer gets the time left, shared across the questions still to ask, minus the time the
-// interviewer needs to speak, never more than 75 s and never less than 15 s.
+// interviewer needs to speak, never more than 60 s and never less than 15 s.
 export const MAX_TOTAL_S = 300;
-export const MAX_ANSWER_S = 75;
+export const MAX_ANSWER_S = 60; // one minute per answer
 export const MIN_ANSWER_S = 15;
 const RESERVE_S = 14; // the closing line
 const SPEAKING_S = 9; // the interviewer speaking one question

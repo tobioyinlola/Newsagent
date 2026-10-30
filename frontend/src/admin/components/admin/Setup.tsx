@@ -55,7 +55,7 @@ export function Setup() {
             <li key={w.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
               <span><strong>{w.name}</strong> · {Number(w.credit_balance).toFixed(2)} credits · spent {Number(w.spent_total).toFixed(2)} / cap {Number(w.spend_cap).toFixed(2)}{w.suspended && " · suspended"}{w.share_disabled && " · sharing off"}</span>
               {can("customers.manage") && <span className="flex gap-2">
-                <Button variant="secondary" onClick={() => patch.mutate({ id: w.id, body: { credit_balance: String(Number(w.credit_balance) + 10) } })}>+10 credits</Button>
+                <Button variant="secondary" onClick={() => patch.mutate({ id: w.id, body: { credit_balance: String(Number(w.credit_balance) + 1) } })}>+1 credit</Button>
                 <Button variant="secondary" onClick={() => patch.mutate({ id: w.id, body: { share_disabled: !w.share_disabled } })}>{w.share_disabled ? "Enable" : "Disable"} sharing</Button>
                 <Button variant={w.suspended ? "secondary" : "danger"} onClick={() => patch.mutate({ id: w.id, body: { suspended: !w.suspended } })}>{w.suspended ? "Unsuspend" : "Suspend"}</Button>
               </span>}
