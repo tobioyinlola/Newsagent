@@ -267,3 +267,22 @@ async def test_platform_stories_are_private_to_workspace(client, distribution_da
         json={"announcement_source": "platform", "story_project_id": distribution_data["project_id"]},
     )
     assert result.status_code == 422
+
+
+async def test_contact_country_choices_survive_draft_reload(client, distribution_data):
+    data = {**distribution_data, "phone_country": "NG", "whatsapp_country": "CA", "whatsapp": "+19058052110"}
+    id = await draft(client, data)
+    row = (await client.get(f"/v1/distribution/{id}", headers=OWNER)).json()
+    assert row["data"]["phone_country"] == "NG"
+    assert row["data"]["whatsapp_country"] == "CA"
+    assert row["data"]["whatsapp"] == "+19058052110"
+
+
+@pytest.mark.parametrize("field", ["phone", "whatsapp"])
+@pytest.mark.parametrize("value", ["08031234567", "2348031234567", "+01234567890", "+2348031234567890"])
+async def test_submission_requires_international_phone_format(client, distribution_data, field, value):
+    id = await draft(client, {**distribution_data, field: value})
+    response = await client.post(f"/v1/distribution/{id}/submit", headers=OWNER)
+    assert response.status_code == 422
+    row = (await client.get(f"/v1/distribution/{id}", headers=OWNER)).json()
+    assert row["status"] == "draft" and not row["paid"]

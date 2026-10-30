@@ -1730,6 +1730,12 @@
             "title": "Phone",
             "type": "string"
           },
+          "phone_country": {
+            "default": "",
+            "pattern": "^(?:[A-Z]{2})?$",
+            "title": "Phone Country",
+            "type": "string"
+          },
           "picture_keys": {
             "items": {
               "type": "string"
@@ -1775,6 +1781,12 @@
             "default": "",
             "maxLength": 40,
             "title": "Whatsapp",
+            "type": "string"
+          },
+          "whatsapp_country": {
+            "default": "",
+            "pattern": "^(?:[A-Z]{2})?$",
+            "title": "Whatsapp Country",
             "type": "string"
           }
         },

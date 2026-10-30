@@ -1,4 +1,5 @@
 import type { Draft } from "./distribution";
+import { validPhone } from "./phone";
 export type DistributionErrors = Partial<Record<keyof Draft, string>>;
 export function validateDistributionStep(d: Draft, step: string): DistributionErrors {
   const e: DistributionErrors = {};
@@ -13,7 +14,7 @@ export function validateDistributionStep(d: Draft, step: string): DistributionEr
     if (!d.contact_name.trim()) e.contact_name = "Enter the primary contact’s name.";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.contact_email.trim())) e.contact_email = "Enter a valid contact email address.";
     for (const key of ["phone", "whatsapp"] as const) {
-      if (!/^[+()0-9 .-]{7,40}$/.test(d[key]) || d[key].replace(/\D/g, "").length < 7) e[key] = `Enter a valid ${key === "phone" ? "phone" : "WhatsApp"} number, including the country code.`;
+      if (!validPhone(d[key], d[`${key}_country`])) e[key] = `Select a country and enter a valid ${key === "phone" ? "phone" : "WhatsApp"} number.`;
     }
     if (!d.logo_key) e.logo_key = "Upload your company logo before continuing.";
   }

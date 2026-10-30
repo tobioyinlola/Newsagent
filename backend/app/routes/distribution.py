@@ -86,6 +86,8 @@ class DraftIn(BaseModel):
     contact_email: str = Field(default="", max_length=320)
     phone: str = Field(default="", max_length=40)
     whatsapp: str = Field(default="", max_length=40)
+    phone_country: str = Field(default="", pattern=r"^(?:[A-Z]{2})?$")
+    whatsapp_country: str = Field(default="", pattern=r"^(?:[A-Z]{2})?$")
     logo_key: str = Field(default="", max_length=500)
     picture_keys: list[str] = Field(default_factory=list, max_length=10)
 
@@ -340,7 +342,7 @@ async def submit(id: str, p: Principal = Depends(current_principal), db: AsyncSe
     except ValidationError as e:
         raise HTTPException(422, "Enter a valid contact email") from e
     if any(
-        not re.fullmatch(r"[+()0-9 .-]{7,40}", value) or len(re.sub(r"\D", "", value)) < 7
+        not re.fullmatch(r"\+[1-9][0-9]{6,14}", re.sub(r"[() .-]", "", value))
         for value in [body.phone, body.whatsapp]
     ):
         raise HTTPException(422, "Enter valid phone and WhatsApp numbers, including the country code")

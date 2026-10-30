@@ -3262,6 +3262,11 @@ export interface components {
              * @default
              */
             phone: string;
+            /**
+             * Phone Country
+             * @default
+             */
+            phone_country: string;
             /** Picture Keys */
             picture_keys?: string[];
             /** Project Id */
@@ -3279,6 +3284,11 @@ export interface components {
              * @default
              */
             whatsapp: string;
+            /**
+             * Whatsapp Country
+             * @default
+             */
+            whatsapp_country: string;
         };
         /** ForgotIn */
         ForgotIn: {

@@ -113,8 +113,8 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await distribution.getByRole("button", { name: "Continue", exact: true }).click();
   await distribution.getByLabel("Contact name", { exact: true }).fill("Ada Obi");
   await distribution.getByLabel("Contact email", { exact: true }).fill("ada@example.com");
-  await distribution.getByLabel("Primary phone number").fill("+2348012345678");
-  await distribution.getByLabel("WhatsApp number").fill("+2348012345678");
+  await distribution.getByLabel("Primary phone number", { exact: true }).fill("+2348012345678");
+  await distribution.getByLabel("WhatsApp number", { exact: true }).fill("+2348012345678");
   await distribution.getByLabel(/Company logo \(required/).setInputFiles({ name: "company.png", mimeType: "image/png", buffer: PNG });
   await expect(distribution.getByText("Company logo uploaded ✓")).toBeVisible();
   await distribution.getByRole("button", { name: "Continue", exact: true }).click();
@@ -142,6 +142,7 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
 
   const visitor = await (await page.context().browser()!.newContext()).newPage(); // someone not signed in
   await visitor.goto("/");
+  await expect(visitor.locator("#pricing")).toHaveCount(0);
   const row = visitor.getByRole("region", { name: "Latest stories" }); // the row on the home page, between the numbers and the use cases
   await expect(row.getByRole("link").first()).toBeVisible({ timeout: 20_000 });
   const shots = process.env.SNAPSHOT_DIR; // optional, for a visual check
@@ -164,7 +165,8 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await expect(share.getByRole("link", { name: "Share on X (Twitter)" })).toHaveAttribute("href", /twitter\.com\/intent\/tweet/);
   await expect(share.getByRole("button", { name: /Copy link/ })).toBeVisible();
   await expect(visitor.getByText("Media Contact")).toHaveCount(0); // the contact details are never public
-  await expect(visitor.getByText("AI-generated anchor").first()).toBeVisible();
+  await expect(visitor.getByText("The presenter is AI-generated, but the business story was recorded by real people.")).toBeVisible();
+  await expect(share.getByRole("link", { name: "Share on Instagram" })).toHaveAttribute("href", "https://www.instagram.com/");
   if (shots) await visitor.screenshot({ path: `${shots}/story-page.png`, fullPage: true });
 
   // customers can't take it down or delete it; only the back office can, and that removes the page

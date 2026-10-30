@@ -7,7 +7,7 @@ import { ScrollRow, StoryTile, useStories } from "../components/StoryCards";
 import { getToken } from "../lib/auth";
 
 // The public landing page. Layout: dark site with poster-style art (sunburst, mountains, clouds) drawn in the brand palette,
-// product "screens" built from real app states, and credit pricing read live from the amounts on offer.
+// product "screens" built from real app states, and product walkthroughs.
 
 export const CONTACT = "mailto:coverfounder@gmail.com?subject=Cover%20Founder%20access";
 const P = { ink: "#222222", navy: "#191A30", green: "#C0FE73", red: "#EB464B", purple: "#634EA0", aqua: "#0CC0DF", peach: "#FFBD59", cream: "#F3EBDD" };
@@ -226,7 +226,7 @@ function Banner() {
       <div className="mx-auto max-w-6xl text-center">
         <h2 className="text-3xl text-white md:text-5xl">A newsroom for businesses,<br />without the newsroom.</h2>
         <p className="mx-auto mt-4 max-w-2xl text-white/70">You bring the news and twenty minutes. We bring the presenter, the questions, the writer, the edit and the graphics, and label every AI-generated presenter clearly.</p>
-        <div className="mt-6 flex justify-center gap-3"><Cta to="/signup" primary>Get started</Cta><Cta href="#pricing">See pricing</Cta></div>
+        <div className="mt-6 flex justify-center gap-3"><Cta to="/signup" primary>Get started</Cta></div>
       </div>
       <div className="relative mx-auto mt-12 h-64 max-w-6xl overflow-hidden bg-ink md:h-96"><BannerPhoto /></div>
       <div className="mx-auto grid max-w-6xl grid-cols-2 border border-t-0 border-white/10 md:grid-cols-4">
@@ -303,37 +303,6 @@ function Distribution() {
   );
 }
 
-function Pricing() {
-  const packs = useQuery({ queryKey: ["public-credit-options"], queryFn: () => unwrap(api.GET("/v1/public/credit-options")), retry: false, staleTime: 600000 });
-  const list = packs.data ?? [];
-  const uses = [["Make a video", "Credits cover the presenter, the interview transcription and the render. You see the cost before anything is made."], ["Written story & social post", "Included with every video you make."], ["Distribution", "Credits per region you choose. Coming soon."]];
-  return (
-    <section id="pricing" className="border-t border-white/10 bg-ink px-4 py-20 md:px-8">
-      <div className="mx-auto max-w-6xl">
-        <div className="text-center"><Eyebrow>Pricing</Eyebrow><h2 className="mt-3 text-3xl text-white md:text-5xl">Buy credits. Spend them on news.</h2><p className="mx-auto mt-3 max-w-2xl text-white/70">No subscription. Top up a credit wallet and use it to make videos and, soon, to distribute them. Failed steps are never charged.</p></div>
-        <div className="mt-10 grid gap-4 md:grid-cols-4">
-          {list.length ? list.map((p, i) => (
-            <div key={p.amount_usd} className={`rounded-sm border p-6 ${i === 1 ? "border-brand-green bg-white/5" : "border-white/10"}`}>
-              <p className="font-mono text-4xl font-bold text-white">${Number(p.amount_usd).toLocaleString()}</p>
-              <p className="mt-1 text-brand-green">{Number(p.credits).toLocaleString()} credits</p>
-              <p className="mt-1 text-sm text-white/70">{p.videos} {p.videos === 1 ? "video" : "videos"}</p>
-              <div className="mt-6"><Cta to="/signup" primary={i === 1}>Get started</Cta></div>
-            </div>
-          )) : (
-            <div className="rounded-sm border border-white/10 p-6 md:col-span-3 text-center">
-              <p className="text-white">{packs.isLoading ? "Loading prices…" : "Your first video is free. Sign up to start."}</p>
-              {!packs.isLoading && <div className="mt-4"><Cta to="/signup" primary>Get started free</Cta></div>}
-            </div>
-          )}
-        </div>
-        <div className="mt-6 grid border border-white/10 md:grid-cols-3">
-          {uses.map(([t, d], i) => <div key={t} className={`p-6 ${i < 2 ? "border-b border-white/10 md:border-b-0 md:border-r" : ""}`}><h3 className="text-base text-white">{t}</h3><p className="mt-2 text-sm text-white/70">{d}</p></div>)}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 const FAQ: { group: string; items: [string, string][] }[] = [
   { group: "The product", items: [
     ["What exactly do I get?", "A broadcast-style news video with an AI presenter and your founder's answers cut in, a detailed written story (700 to 900 words), a social post with a hook and hashtags, captions and a thumbnail. All from one short interview."],
@@ -397,7 +366,7 @@ function Faq() {
 
 export function Footer() {
   const cols: { title: string; links: [string, string][] }[] = [
-    { title: "Product", links: [["AI Newsroom", "/ai-newsroom"], ["Latest Stories", "/latest-stories"], ["Press Distribution", "/press-distribution"], ["How it works", "/#how"], ["Pricing", "/#pricing"], ["FAQ", "/#faq"]] },
+    { title: "Product", links: [["AI Newsroom", "/ai-newsroom"], ["Latest Stories", "/latest-stories"], ["Press Distribution", "/press-distribution"], ["How it works", "/#how"], ["FAQ", "/#faq"]] },
     { title: "Members", links: [["Sign in", "/login"], ["Reset password", "/forgot"], ["Publish your free story!", "/signup"], ["Contact support", "mailto:coverfounder@gmail.com"]] },
     { title: "Trust", links: [["AI disclosure", "/#faq"], ["Your data", "/account"], ["Security", "/security"]] },
   ];
@@ -419,7 +388,6 @@ export function Footer() {
         </div>
         <div className="mt-12 flex flex-wrap items-center justify-between gap-3 text-xs text-white/60">
           <p className="font-bold">© {new Date().getFullYear()} Cover Founder. All rights reserved.</p>
-          <p className="max-w-lg">Every Cover Founder video uses an AI-generated presenter, disclosed with the video. Founder answers are the founder's own recordings.</p>
         </div>
       </div>
       <p aria-hidden="true" className="pointer-events-none mt-6 select-none whitespace-nowrap bg-gradient-to-b from-white/35 to-transparent bg-clip-text text-center font-mono text-[11vw] font-bold leading-[0.85] text-transparent md:text-[9.5rem]">COVER FOUNDER</p>
@@ -427,7 +395,7 @@ export function Footer() {
   );
 }
 
-const NAV: [string, string][] = [["AI Newsroom", "/ai-newsroom"], ["Latest Stories", "/latest-stories"], ["Press Distribution", "/press-distribution"], ["Pricing", "/#pricing"], ["FAQ", "/#faq"]];
+const NAV: [string, string][] = [["AI Newsroom", "/ai-newsroom"], ["Latest Stories", "/latest-stories"], ["Press Distribution", "/press-distribution"], ["FAQ", "/#faq"]];
 
 // A site link: a page of the app (client-side) or a section of the home page (a normal link, so the browser scrolls to it).
 function SiteLink({ to, className, onClick, children }: { to: string; className: string; onClick?: () => void; children: ReactNode }) {
@@ -562,7 +530,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
 
 export function Landing() {
   const signedIn = Boolean(getToken());
-  useEffect(() => { // arriving from another page at /#pricing etc.: the page loads after the browser looked for the section
+  useEffect(() => { // arriving from another page at /#how or /#faq: the page loads after the browser looked for the section
     const id = window.location.hash.slice(1);
     if (id) window.setTimeout(() => document.getElementById(id)?.scrollIntoView(), 50);
   }, []);
@@ -594,7 +562,6 @@ export function Landing() {
         <Banner />
         <HowItWorks />
         <Distribution />
-        <Pricing />
         <Faq />
         <section className="cf-stripes border-t border-white/10 px-4 py-20 text-center md:px-8">
           <h2 className="text-3xl text-white md:text-5xl">Ready to go on air?</h2>

@@ -14,7 +14,6 @@ from app.integrations import registry
 from app.models import Asset, Project, Workspace
 from app.schemas.api import PublicationOut, StoryCardOut, StoryPageOut, StoryPictureOut
 from app.services import stories
-from app.services.captions import DISCLOSURE
 from app.services.ratelimit import limit
 
 router = APIRouter(tags=["stories"])
@@ -97,7 +96,7 @@ async def public_story(slug: str, session: AsyncSession = Depends(get_session)) 
         "about": str(story.get("about") or ""),
         "pictures": pictures,
         "video_url": storage.presign_get(video.storage_key, stories.PUBLIC_URL_TTL_S),
-        "disclosure": DISCLOSURE,
+        "disclosure": "The presenter is AI-generated, but the business story was recorded by real people.",
     }
 
 

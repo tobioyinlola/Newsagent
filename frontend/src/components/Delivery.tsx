@@ -66,6 +66,7 @@ export function Delivery({ projectId }: { projectId: string }) {
           <ErrorBox error={pub.error} />
         </div>
       </Card>
+      <section className="rounded-lg border border-line bg-white p-6"><h2 className="text-xl font-bold">Distribute to over 20,000 media outlets</h2><p className="my-3">Share your video and announcement with selected media outlets. Choose your channels and see their credit costs before submitting.</p><a className="inline-block rounded bg-ink px-4 py-3 font-bold text-white" href={`/distribution/request?project=${projectId}`}>Choose distribution outlets</a></section>
       <Card title="Suggested captions">
         <p className="mb-3 text-sm text-muted">Copy-ready text for each platform. The disclosure is included and can't be removed.</p>
         <div className="space-y-4">

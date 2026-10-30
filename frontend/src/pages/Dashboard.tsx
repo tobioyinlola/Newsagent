@@ -24,7 +24,7 @@ export function Dashboard() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card title="Credits"><p className="font-mono text-3xl font-bold">{me.data ? Number(me.data.credit_balance).toFixed(2) : "…"}</p><p className="mt-1 text-sm text-muted"><Link className="underline" to="/billing">Add credits</Link></p></Card>
         <Card title="Videos"><p className="font-mono text-3xl font-bold">{projects.isLoading ? "…" : list.length}</p><p className="mt-1 text-sm text-muted">{done} finished</p></Card>
-        <Card title="Brand kit"><p className="text-sm">Your logo, colours and fonts appear in every video.</p><p className="mt-1 text-sm"><Link className="underline" to="/brand">Open brand kit</Link></p></Card>
+        <Card title="Press Distributed"><p className="text-sm">Share your video and announcement with selected media outlets.</p><p className="mt-1 text-sm"><Link className="underline" to="/distribution/request">Manage press distribution</Link></p></Card>
       </div>
       <Card title="How it works">
         <ol className="list-decimal space-y-1 pl-5 text-sm">

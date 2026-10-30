@@ -73,8 +73,7 @@ def render(
         f'style="display:block;border:0;width:174px;height:60px;color:{GREEN};font:700 18px {HEAD}"></td></tr>'
         f'<tr><td style="padding:32px 28px 12px"><h1 style="margin:0 0 18px;font:700 24px/1.25 {HEAD};color:{INK}">{escape(heading)}</h1>'
         f"{_paragraphs(body)}{code_html}{button_html}{_paragraphs(after) if after else ''}</td></tr>"
-        f'<tr><td style="padding:16px 28px 28px;border-top:1px solid #E3E3DC;font:12px/1.5 {BODY};color:{MUTED}">{escape(footer)}<br>'
-        "Cover Founder videos use an AI-generated anchor and are always labelled as such.</td></tr>"
+        f'<tr><td style="padding:16px 28px 28px;border-top:1px solid #E3E3DC;font:12px/1.5 {BODY};color:{MUTED}">{escape(footer)}</td></tr>'
         "</table></td></tr></table></body></html>"
     )
     text = f"{heading}\n\n{body.strip()}\n"
