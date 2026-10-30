@@ -11,6 +11,7 @@ import { Forgot, Login, OtpChallenge, Signup } from "./pages/Login";
 import { NewProject } from "./pages/NewProject";
 import { NewProjectClassic } from "./pages/NewProjectClassic";
 import { ProjectDetail } from "./pages/ProjectDetail";
+import { DistributionRequestPage } from "./pages/DistributionRequest";
 import { Projects } from "./pages/Projects";
 import { Share } from "./pages/Share";
 
@@ -48,6 +49,7 @@ export function App() {
       <Route path="/billing/pay/:checkoutId" element={<MockPay />} />
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
+          <Route path="/distribution/request" element={<DistributionRequestPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/ai-newsroom/videos" element={<Projects />} />
           <Route path="/ai-newsroom/new" element={<NewProject />} />

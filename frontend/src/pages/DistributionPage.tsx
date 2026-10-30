@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { getToken } from "../lib/auth";
 import { type Outlet, OUTLETS_BOTTOM, OUTLETS_TOP } from "../lib/outlets";
-import { CHANNELS, CONTACT, CardArt, Cta, Eyebrow, HeroArt, Panel, SiteShell } from "./Landing";
+import { CHANNELS, CardArt, Cta, Eyebrow, HeroArt, Panel, SiteShell } from "./Landing";
 
 // Dedicated page for distribution (press-distribution style): reach, how it works, coverage by region, outlet types,
 // credit-based packages, the placement report and questions. Distribution is launching: the page says so plainly.
 
-const WAITLIST = `${CONTACT}%20-%20distribution`;
+const WAITLIST = "/distribution/request";
 
 const REGIONS: { name: string; places: string; outlets: string[] }[] = [
   { name: "United States", places: "National and state outlets", outlets: ["Business & finance", "Technology", "Startups & VC", "Local news"] },
@@ -32,10 +32,10 @@ const PACKAGES: { name: string; reach: string; points: string[]; featured?: bool
 ];
 
 const QUESTIONS: [string, string][] = [
-  ["When can I use distribution?", "It's launching soon. Join the waitlist and we'll let you know first; you can make your video and story today."],
+  ["When can I use distribution?", "You can submit a distribution request for the available Africa outlets now. United States, Canada and United Kingdom coverage is coming soon."],
   ["How is it priced?", "With the same credits you use for videos. Each package shows its credits before you confirm, and nothing is charged until you do."],
   ["What gets distributed?", "Your news segment (video) and your written story, with your headline, links and social copy."],
-  ["Which regions can I pick?", "United States, Canada, United Kingdom, Nigeria and Kenya to start, with more to follow."],
+  ["Which regions can I pick?", "Africa is available now. United States, Canada and United Kingdom distribution is coming soon."],
   ["Will I see where it ran?", "Yes. Every distribution comes with a placement report listing where your story appeared."],
 ];
 
@@ -97,10 +97,10 @@ export function DistributionPage() {
           <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(25,26,48,0.9)_0%,rgba(25,26,48,0.6)_45%,transparent_80%)]" />
           <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-[1.2fr_1fr]">
             <div>
-              <p className="inline-block rounded-sm border border-brand-peach bg-ink/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-brand-peach">Distribution · launching soon</p>
-              <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">Your news, across <span className="text-brand-green">25K+ media platforms.</span></h1>
-              <p className="mt-5 max-w-xl text-lg text-white/85">Send your news segment and written story to business, technology and regional outlets in the United States, Canada, the United Kingdom, Nigeria and Kenya. Pay with credits; get a report of where it ran.</p>
-              <div className="mt-8 flex flex-wrap gap-3"><Cta href={WAITLIST} primary>Join the waitlist</Cta><Cta href="#coverage">See coverage</Cta></div>
+              <p className="inline-block rounded-sm border border-brand-peach bg-ink/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-brand-peach">Distribution · Africa available</p>
+              <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">Your news, across <span className="text-brand-green">20,000+ media outlets.</span></h1>
+              <p className="mt-5 max-w-xl text-lg text-white/85">Submit your news segment and written announcement for distribution to the available Africa outlets. United States, Canada and United Kingdom coverage is coming soon. Review the credits before submitting.</p>
+              <div className="mt-8 flex flex-wrap gap-3"><Cta to={signedIn ? "/distribution/request" : "/login"} primary>Choose distribution outlets</Cta><Cta href="#coverage">See coverage</Cta></div>
             </div>
             <div className="flex justify-center"><ReportMock /></div>
           </div>
@@ -160,7 +160,7 @@ export function DistributionPage() {
                   <p className="text-xs font-bold uppercase tracking-wider text-white/60">{p.name}</p>
                   <p className="mt-3 text-3xl font-bold text-white">{p.reach}</p>
                   <ul className="mt-5 flex-1 space-y-2 text-sm text-white/85">{p.points.map((x) => <li key={x} className="flex gap-2"><span className="text-brand-green" aria-hidden="true">✓</span>{x}</li>)}</ul>
-                  <div className="mt-6"><Cta href={WAITLIST} primary={p.featured}>Join the waitlist</Cta></div>
+                  <div className="mt-6"><Cta href={WAITLIST} primary={p.featured}>Choose outlets</Cta></div>
                 </div>
               ))}
             </div>
@@ -186,9 +186,9 @@ export function DistributionPage() {
 
         <section className="cf-stripes border-t border-white/10 px-4 py-20 text-center md:px-8">
           <div className="cf-grain relative mx-auto mb-10 h-40 max-w-4xl overflow-hidden rounded-sm"><CardArt variant="story" /></div>
-          <h2 className="text-3xl text-white md:text-5xl">Be first on the wire.</h2>
-          <p className="mx-auto mt-3 max-w-xl text-white/70">Join the distribution waitlist, and make your news segment in the meantime.</p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3"><Cta href={WAITLIST} primary>Join the waitlist</Cta>{signedIn ? <Cta to="/ai-newsroom/new">Make a video</Cta> : <Cta to="/ai-newsroom">See the AI Newsroom</Cta>}</div>
+          <h2 className="text-3xl text-white md:text-5xl">Choose where your story goes.</h2>
+          <p className="mx-auto mt-3 max-w-xl text-white/70">Choose available outlets, review your announcement and submit a request to our team.</p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3"><Cta href={WAITLIST} primary>Choose outlets</Cta>{signedIn ? <Cta to="/ai-newsroom/new">Make a video</Cta> : <Cta to="/ai-newsroom">See the AI Newsroom</Cta>}</div>
         </section>
       </main>
     </SiteShell>

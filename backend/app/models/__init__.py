@@ -1,4 +1,5 @@
 from app.models.base import Base
+from app.models.distribution import DistributionRequest
 from app.models.entities import (
     Asset,
     AuditLog,
@@ -29,6 +30,7 @@ from app.models.entities import (
 )
 
 __all__ = [
+    "DistributionRequest",
     "Asset",
     "AuditLog",
     "AuthCode",

@@ -94,7 +94,7 @@ export function Layout() {
       {/* On phones the menu slides in from the right; from md up it is the static sidebar. */}
       <aside
         id="sidebar"
-        className={`fixed inset-y-0 right-0 z-30 w-72 max-w-[85vw] overflow-y-auto bg-ink transition-transform duration-200 md:sticky md:top-0 md:z-auto md:h-screen md:max-w-none md:shrink-0 md:translate-x-0 md:visible ${collapsed ? "md:w-[72px]" : "md:w-64"} ${open ? "translate-x-0" : "invisible translate-x-full"}`}
+        className={`fixed inset-y-0 right-0 z-30 w-72 max-w-[85vw] overflow-y-auto bg-ink transition-transform duration-200 md:sticky md:top-0 md:right-auto md:bottom-auto md:transition-none md:z-auto md:h-screen md:max-w-none md:shrink-0 md:translate-x-0 md:visible ${collapsed ? "md:w-[72px]" : "md:w-64"} ${open ? "translate-x-0" : "invisible translate-x-full"}`}
       >
         <nav aria-label="Main" className="flex h-full flex-col gap-1 p-3">
           <div className="mb-2 flex items-center justify-between md:hidden">
@@ -108,6 +108,7 @@ export function Layout() {
           {item("/dashboard", "Dashboard", ICONS.home)}
           {item("/ai-newsroom/videos", "Videos", ICONS.videos)}
           {item("/brand", "Brand kit", ICONS.brand)}
+          {item("/distribution/request", "Distribution", ICONS.videos)}
           {item("/billing", "Credits", ICONS.credits)}
           {item("/account", "Your data", ICONS.data)}
           {item("/security", "Security", ICONS.security)}

@@ -97,6 +97,7 @@ export function ProjectDetail() {
       {p.state === "processing_founder" && <ReviewPanel projectId={id} keepRaw={p.keep_raw_takes} />}
       {p.state === "merging" && <Card title="Making your final video"><p aria-busy="true">We're putting the interview together. You'll get an email when it is ready.</p></Card>}
       {p.state === "final_ready" && <Delivery projectId={id} />}
+      {p.state === "final_ready" && <section className="rounded-lg border border-line bg-white p-6"><h2 className="text-xl font-bold">Distribute to over 20,000 media outlets</h2><p className="my-3">Share your video and announcement with selected media outlets. Choose your channels and see their credit costs before submitting.</p><a className="inline-block rounded bg-ink px-4 py-3 font-bold text-white" href={`/distribution/request?project=${id}`}>Choose distribution outlets</a></section>}
       {p.state === "final_ready" && guided && <StoryCopy projectId={id} />}
       {p.state === "final_ready" && p.interview_enabled && <SceneEditor projectId={id} state={p.state} />}
       {costs.data && costs.data.lines.length > 0 && (

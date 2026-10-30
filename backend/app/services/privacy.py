@@ -14,6 +14,7 @@ from app.models import (
     Brief,
     Checkout,
     CreditTransaction,
+    DistributionRequest,
     InterviewSession,
     Invite,
     Job,
@@ -75,6 +76,7 @@ async def delete_workspace(session: AsyncSession, ws: Workspace) -> None:
         await purge_project(session, p)
     for a in (await session.execute(select(BrandAsset).where(BrandAsset.workspace_id == ws.id))).scalars():
         await storage.delete(a.key)
+    await session.execute(delete(DistributionRequest).where(DistributionRequest.workspace_id == ws.id))
     await session.execute(delete(BrandAsset).where(BrandAsset.workspace_id == ws.id))
     ws.brand_kit_id = None
     await session.execute(delete(BrandKit).where(BrandKit.workspace_id == ws.id))
@@ -212,6 +214,11 @@ async def export_workspace(session: AsyncSession, ws: Workspace, user: User) -> 
             for k in kits
         ],
         "projects": projects,
+        "distribution_requests": [
+            {"id": r.id, "status": r.status, "stage": r.stage, "data": r.data,
+             "total_credits": str(r.total_credits), "paid": r.paid_at is not None}
+            for r in (await session.execute(select(DistributionRequest).where(DistributionRequest.workspace_id == ws.id))).scalars()
+        ],
         "credit_ledger": [
             {
                 "at": dt(t.created_at),

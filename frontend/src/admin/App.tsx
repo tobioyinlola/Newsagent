@@ -15,6 +15,7 @@ import { Join } from "./pages/Join";
 import { Forgot, Login, OtpChallenge } from "./pages/Login";
 import { Overview } from "./pages/Overview";
 import { Presenter } from "./pages/Presenter";
+import { DistributionAdmin } from "./pages/Distribution";
 import { Revenue } from "./pages/Revenue";
 import { Security } from "./pages/Security";
 import { TeamPage } from "./pages/Team";
@@ -49,6 +50,7 @@ export function App() {
           <Route path="/customers" element={<Guard any={["customers.view"]}><Customers /></Guard>} />
           <Route path="/customers/:id" element={<Guard any={["customers.view"]}><CustomerDetail /></Guard>} />
           <Route path="/revenue" element={<Guard any={["finance.view"]}><Revenue /></Guard>} />
+          <Route path="/distribution" element={<Guard any={["operations.view"]}><DistributionAdmin /></Guard>} />
           <Route path="/operations" element={<Guard any={["operations.view"]}><Page title="Operations"><Operations /></Page></Guard>} />
           <Route path="/review" element={<Guard any={["review.manage"]}><Page title="Review queue"><Review /></Page></Guard>} />
           <Route path="/jobs" element={<Guard any={["operations.view"]}><Page title="Jobs"><JobsTab /></Page></Guard>} />

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { Button, Card, ErrorBox, Notice } from "../components/ui";
@@ -11,6 +11,14 @@ const KIND: Record<string, string> = { grant: "Credits added", purchase: "Purcha
 export function Billing() {
   const qc = useQueryClient();
   const [params] = useSearchParams();
+  const candidate = params.get("returnTo");
+  const [savedReturn] = useState(() => { try { return sessionStorage.getItem("distribution-return"); } catch { return null; } });
+  const returnTo = candidate?.startsWith("/distribution/request?") ? candidate : savedReturn;
+  useEffect(() => {
+    if (candidate?.startsWith("/distribution/request?")) {
+      try { sessionStorage.setItem("distribution-return", candidate); } catch { /* the URL still preserves the return path */ }
+    }
+  }, [candidate]);
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
   const summary = useQuery({ queryKey: ["billing-summary"], queryFn: () => unwrap(api.GET("/v1/billing/summary")) });
   const caps = useQuery({ queryKey: ["capabilities"], queryFn: () => unwrap(api.GET("/v1/capabilities")), staleTime: 600000, retry: false });
@@ -29,6 +37,7 @@ export function Billing() {
   return (
     <>
       <h1 className="text-2xl font-bold">Credits and billing</h1>
+      {returnTo?.startsWith("/distribution/request?") && <Link className="underline" to={returnTo}>Return to your saved distribution request</Link>}
       {params.get("paid") && <Notice tone="ok">Payment received. Your credits have been added.</Notice>}
       <Card title="Your balance">
         <p className="text-4xl font-extrabold tabular-nums" aria-label="Credit balance">{s ? Number(s.credit_balance).toFixed(2) : "…"} <span className="text-lg font-medium text-muted">credits</span></p>
