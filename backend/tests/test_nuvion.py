@@ -53,6 +53,7 @@ async def acquiring(maker, monkeypatch, public_key):
         "mismatch": None,
         "timeout": False,
         "lookup_exists": False,
+        "transfers": {},
     }
 
     def action(intent, status):
@@ -60,11 +61,11 @@ async def acquiring(maker, monkeypatch, public_key):
             "id": "action-" + intent["id"],
             "payment_intent_id": intent["id"],
             "status": status,
-            "currency": "USD",
+            "currency": intent["currency"],
             "amount": intent["amount"],
             "charge_amount": intent["amount"],
             "refunded_amount": 0,
-            "account_id": "test-account",
+            "account_id": intent["account_id"],
             "entity_id": "test-entity",
             "reference": intent["reference"],
             "action": "confirm",
@@ -80,7 +81,31 @@ async def acquiring(maker, monkeypatch, public_key):
     async def handler(req):
         state["calls"].append((req.method, req.url.path, json.loads(req.content) if req.content else None))
         path = req.url.path
-        if path == "/payment-intents" and req.method == "GET":
+        if path == "/accounts/test-ngn-account":
+            data = {
+                "account": {
+                    "id": "test-ngn-account",
+                    "entity_id": "test-entity",
+                    "currency": "NGN",
+                    "display_name": "Test merchant",
+                },
+                "account_details": [
+                    {
+                        "account_id": "test-ngn-account",
+                        "entity_id": "test-entity",
+                        "currency": "NGN",
+                        "status": "active",
+                        "account_number": "0000000000",
+                        "issuer": {"name": "Test bank"},
+                        "config": {"inflow_enabled": True},
+                    }
+                ],
+            }
+        elif path == "/transfers":
+            data = {"data": list(state["transfers"].values()), "meta": {"pagination": {"has_next": False}}}
+        elif path.startswith("/transfers/"):
+            data = state["transfers"][path.split("/")[-1]]
+        elif path == "/payment-intents" and req.method == "GET":
             items = [i for i in state["intents"].values() if i["reference"] == req.url.params["reference"]]
             data = {"items": copy.deepcopy(items)}
         elif path == "/payment-intents" and req.method == "POST":
@@ -390,4 +415,159 @@ async def test_webhook_health_bootstraps_without_payment_settings(client, worksp
     assert await balance(maker, workspace) == 10
     financial = await client.post("/v1/webhooks/nuvion", json={"event": "payment_intent.completed", "data": {}})
     assert financial.status_code == 503
+    assert await balance(maker, workspace) == 10
+
+
+@pytest.fixture
+async def naira(acquiring, monkeypatch):
+    settings = get_settings()
+    monkeypatch.setattr(settings, "nuvion_ngn_account_id", "test-ngn-account")
+    monkeypatch.setattr(settings, "nuvion_ngn_card_enabled", True)
+    monkeypatch.setattr(settings, "nuvion_ngn_bank_enabled", True)
+    monkeypatch.setattr(settings, "ngn_per_usd", Decimal("1400"))
+    usd = registry.get_nuvion_billing()
+    registry.override(nuvion_ngn_billing=NuvionBilling(usd.client, currency="NGN"))
+    return acquiring
+
+
+async def ngn_checkout(client, method="card", rate="1400"):
+    return await client.post(
+        "/v1/billing/checkout",
+        headers=OWNER,
+        json={"amount_usd": "10", "currency": "NGN", "payment_method": method, "ngn_per_usd": rate},
+    )
+
+
+async def bank_transfer(client, maker, state):
+    response = await ngn_checkout(client, "bank_transfer")
+    assert response.status_code == 200, response.text
+    id = response.json()["checkout_id"]
+    async with maker() as db:
+        co = await db.get(Checkout, id)
+        created = int(payments.utc(co.created_at).timestamp() * 1000) + 1000
+    transfer = {
+        "id": "transfer-test",
+        "account_id": "test-ngn-account",
+        "entity_id": "test-entity",
+        "currency": "NGN",
+        "amount": 1400000,
+        "status": "successful",
+        "type": "inflow",
+        "payment_type": "bank-transfer",
+        "narration": "CF" + id,
+        "created": created,
+    }
+    state["transfers"][transfer["id"]] = transfer
+    return id, transfer
+
+
+async def test_ngn_quote_and_stale_rate(client, workspace, naira, monkeypatch):
+    methods = (await client.get("/v1/billing/payment-methods", headers=OWNER)).json()
+    assert methods == {"ngn_per_usd": "1400", "usd_card": True, "ngn_card": True, "ngn_bank_transfer": True}
+    options = (await client.get("/v1/billing/options", headers=OWNER)).json()
+    assert Decimal(options[0]["amount_ngn"]) == 14000
+    assert (await ngn_checkout(client, rate="1300")).status_code == 409
+    assert (
+        await client.post("/v1/billing/checkout", headers=OWNER, json={"amount_usd": "10", "currency": "NGN"})
+    ).status_code == 409
+    monkeypatch.setattr(get_settings(), "nuvion_ngn_card_enabled", False)
+    assert (await ngn_checkout(client)).status_code == 409
+    assert not naira["intents"]
+
+
+async def test_ngn_card_amount_and_snapshot_settlement(client, workspace, naira, maker, monkeypatch):
+    response = await ngn_checkout(client)
+    assert response.status_code == 200, response.text
+    id = response.json()["checkout_id"]
+    response = await client.get(f"/v1/billing/card/{id}", headers=OWNER)
+    assert response.json()["currency"] == "NGN"
+    assert Decimal(response.json()["amount"]) == 14000
+    intent = next(iter(naira["intents"].values()))
+    assert intent["amount"] == 1400000 and intent["account_id"] == "test-ngn-account"
+    monkeypatch.setattr(get_settings(), "ngn_per_usd", Decimal("1600"))
+    naira["mode"] = "paid"
+    response = await client.post(f"/v1/billing/card/{id}/confirm", headers=OWNER, json=confirmation())
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "paid" and Decimal(response.json()["amount"]) == 14000
+    assert await balance(maker, workspace) == Decimal("13.70")
+    body, headers = signed(intent)
+    assert (await client.post("/v1/webhooks/nuvion", content=body, headers=headers)).status_code == 200
+    assert await balance(maker, workspace) == Decimal("13.70")
+
+
+async def test_ngn_card_rejects_usd_amount_disguised_as_naira(client, workspace, naira, maker):
+    id = (await ngn_checkout(client)).json()["checkout_id"]
+    assert (await client.get(f"/v1/billing/card/{id}", headers=OWNER)).status_code == 200
+    intent = next(iter(naira["intents"].values()))
+    intent["amount"] = 1000
+    intent["status"] = "completed"
+    intent["intent_action"] = naira["action"](intent, "completed")
+    body, headers = signed(intent)
+    assert (await client.post("/v1/webhooks/nuvion", content=body, headers=headers)).status_code == 409
+    assert await balance(maker, workspace) == 10
+
+
+async def test_bank_transfer_online_verification_and_idempotency(client, workspace, naira, maker, monkeypatch):
+    id, transfer = await bank_transfer(client, maker, naira)
+    monkeypatch.setattr(get_settings(), "ngn_per_usd", Decimal("1600"))
+    body, headers = signed(transfer, event="inflows.completed")
+    for _ in range(2):
+        r = await client.post("/v1/webhooks/nuvion", content=body, headers=headers)
+        assert r.status_code == 200, r.text
+    status = await client.get(f"/v1/billing/bank/{id}", headers=OWNER)
+    assert status.json()["status"] == "paid"
+    assert Decimal(status.json()["amount_ngn"]) == 14000
+    assert await balance(maker, workspace) == Decimal("13.70")
+    history = (await client.get("/v1/billing/checkouts", headers=OWNER)).json()
+    assert history[0]["currency"] == "NGN" and history[0]["payment_method"] == "bank_transfer"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("amount", 1000),
+        ("amount", 1400001),
+        ("currency", "USD"),
+        ("account_id", "another-account"),
+        ("entity_id", "another-entity"),
+        ("status", "pending"),
+        ("type", "outflow"),
+        ("payment_type", "card-acq"),
+        ("narration", "CFno-match"),
+        ("created", 1),
+    ],
+)
+async def test_bank_never_trusts_signed_event_over_provider_state(client, workspace, naira, maker, field, value):
+    id, transfer = await bank_transfer(client, maker, naira)
+    body, headers = signed(copy.deepcopy(transfer), event="inflows.completed")
+    transfer[field] = value
+    response = await client.post("/v1/webhooks/nuvion", content=body, headers=headers)
+    assert response.status_code == 200, response.text
+    assert await balance(maker, workspace) == 10
+    async with maker() as db:
+        assert (await db.get(Checkout, id)).status == "pending"
+
+
+async def test_bank_reconciliation_recovers_missing_webhook(client, workspace, naira, maker):
+    id, _ = await bank_transfer(client, maker, naira)
+    assert await payments.reconcile_pending() == 1
+    assert await payments.reconcile_pending() == 0
+    assert await balance(maker, workspace) == Decimal("13.70")
+    assert (await client.get(f"/v1/billing/card/{id}", headers=OWNER)).status_code == 404
+
+
+async def test_bank_ownership_and_forged_return_do_not_credit(client, workspace, naira, maker):
+    response = await ngn_checkout(client, "bank_transfer")
+    id = response.json()["checkout_id"]
+    async with maker() as db:
+        other = Workspace(name="Other", credit_balance=0)
+        db.add(other)
+        await db.flush()
+        db.add(User(email="other@acme.test", workspace_id=other.id))
+        await db.commit()
+    assert (
+        await client.get(f"/v1/billing/bank/{id}", headers={"Authorization": "Bearer dev:other@acme.test"})
+    ).status_code == 404
+    status = await client.get(f"/v1/billing/bank/{id}?status=successful&amount=1400000", headers=OWNER)
+    assert status.json()["status"] == "pending"
     assert await balance(maker, workspace) == 10

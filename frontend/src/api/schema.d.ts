@@ -920,6 +920,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/billing/bank/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bank Status */
+        get: operations["bank_status_v1_billing_bank__id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/billing/card/{id}": {
         parameters: {
             query?: never;
@@ -1054,6 +1071,23 @@ export interface paths {
          * @description What can be bought: fixed amounts, each with the credits it gives.
          */
         get: operations["options_v1_billing_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/payment-methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Payment Methods */
+        get: operations["payment_methods_v1_billing_payment_methods_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2906,6 +2940,20 @@ export interface components {
         CheckoutIn: {
             /** Amount Usd */
             amount_usd: number | string;
+            /**
+             * Currency
+             * @default USD
+             * @enum {string}
+             */
+            currency: "USD" | "NGN";
+            /** Ngn Per Usd */
+            ngn_per_usd?: number | string | null;
+            /**
+             * Payment Method
+             * @default card
+             * @enum {string}
+             */
+            payment_method: "card" | "bank_transfer";
         };
         /** CheckoutOut */
         CheckoutOut: {
@@ -3022,6 +3070,11 @@ export interface components {
         };
         /** CreditOptionOut */
         CreditOptionOut: {
+            /**
+             * Amount Ngn
+             * @default 0
+             */
+            amount_ngn: string;
             /** Amount Usd */
             amount_usd: string;
             /** Credits */
@@ -6752,6 +6805,41 @@ export interface operations {
             };
         };
     };
+    bank_status_v1_billing_bank__id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     status_v1_billing_card__id__get: {
         parameters: {
             query?: never;
@@ -7015,6 +7103,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CreditOptionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    payment_methods_v1_billing_payment_methods_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

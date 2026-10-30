@@ -68,9 +68,9 @@ async def owned(db: AsyncSession, id: str, p: Principal) -> Checkout:
     return co
 
 
-def active_provider() -> NuvionBilling:
+def active_provider(co: Checkout | None = None) -> NuvionBilling:
     try:
-        return payments.provider()
+        return payments.provider(co)
     except NuvionError as e:
         raise HTTPException(503, str(e)) from e
 
@@ -83,7 +83,9 @@ def output(co: Checkout, intent: dict, provider: NuvionBilling) -> dict:
         "checkout_id": co.id,
         "amount_usd": str(co.amount_usd),
         "credits": str(co.credits),
-        "currency": "USD",
+        "currency": provider.currency,
+        "amount": str(provider.amount(co)),
+        "ngn_per_usd": co.payment_context.get("ngn_per_usd"),
         "status": co.status,
         "provider_status": state,
         "public_key": provider.public_key,
@@ -97,7 +99,7 @@ async def history(p: Principal = Depends(current_principal), db: AsyncSession = 
     rows = (
         await db.execute(
             select(Checkout)
-            .where(Checkout.workspace_id == p.workspace.id, Checkout.provider == "nuvion")
+            .where(Checkout.workspace_id == p.workspace.id, Checkout.provider.in_(["nuvion", "nuvion_bank"]))
             .order_by(Checkout.created_at.desc())
             .limit(50)
         )
@@ -106,6 +108,9 @@ async def history(p: Principal = Depends(current_principal), db: AsyncSession = 
         {
             "id": co.id,
             "amount_usd": str(co.amount_usd),
+            "currency": co.payment_context.get("currency", "USD"),
+            "amount": co.payment_context.get("amount_ngn", str(co.amount_usd)),
+            "payment_method": "bank_transfer" if co.provider == "nuvion_bank" else "card",
             "credits": str(co.credits),
             "status": co.status,
             "created_at": co.created_at,
@@ -117,7 +122,7 @@ async def history(p: Principal = Depends(current_principal), db: AsyncSession = 
 @router.get("/v1/billing/card/{id}", dependencies=[Depends(limit("card-status", 120, 600))])
 async def status(id: str, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> dict:
     co = await owned(db, id, p)
-    provider = active_provider()
+    provider = active_provider(co)
     try:
         intent, _ = await payments.reconcile(db, co, provider, verify=True)
         return output(co, intent, provider)
@@ -125,6 +130,33 @@ async def status(id: str, p: Principal = Depends(current_principal), db: AsyncSe
         raise HTTPException(409, str(e)) from e
     except NuvionError as e:
         raise HTTPException(503, str(e)) from e
+
+
+@router.get("/v1/billing/bank/{id}", dependencies=[Depends(limit("bank-status", 120, 600))])
+async def bank_status(
+    id: str, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)
+) -> dict:
+    from app.services.bank_payments import reconcile_bank, reference
+
+    co = await db.get(Checkout, id)
+    if co is None or co.workspace_id != p.workspace.id or co.provider != "nuvion_bank":
+        raise HTTPException(404, "Payment not found")
+    try:
+        await reconcile_bank(db, co, active_provider(co))
+    except PaymentMismatch as e:
+        raise HTTPException(409, str(e)) from e
+    except NuvionError as e:
+        raise HTTPException(503, str(e)) from e
+    return {
+        "checkout_id": co.id,
+        "amount_usd": str(co.amount_usd),
+        "amount_ngn": co.payment_context["amount_ngn"],
+        "ngn_per_usd": co.payment_context["ngn_per_usd"],
+        "credits": str(co.credits),
+        "status": co.status,
+        "reference": reference(co),
+        "bank": co.payment_context["bank"],
+    }
 
 
 @router.post("/v1/billing/card/{id}/confirm", dependencies=[Depends(limit("card-confirm", 20, 3600))])
@@ -136,7 +168,7 @@ async def confirm(
     db: AsyncSession = Depends(get_session),
 ) -> dict:
     co = await owned(db, id, p)
-    provider = active_provider()
+    provider = active_provider(co)
     if p.workspace.suspended:
         raise HTTPException(403, "This workspace is suspended")
     try:
@@ -198,7 +230,7 @@ async def confirm(
 @router.post("/v1/billing/card/{id}/cancel")
 async def cancel(id: str, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> dict:
     co = await owned(db, id, p)
-    provider = active_provider()
+    provider = active_provider(co)
     try:
         intent, _ = await payments.reconcile(db, co, provider)
         if intent.get("status") == "requires_action":
@@ -233,6 +265,16 @@ async def webhook(request: Request, db: AsyncSession = Depends(get_session)) -> 
         raise HTTPException(400, "Malformed event") from None
     if not isinstance(event, dict):
         raise HTTPException(400, "Malformed event")
+    if event.get("event") == "inflows.completed":
+        from app.services.bank_payments import process_inflow
+
+        try:
+            return {"result": await process_inflow(db, event.get("data"))}
+        except PaymentMismatch:
+            # A real but unmatched transfer needs review, not repeated delivery/endpoint blacklisting.
+            return {"result": "requires_review"}
+        except NuvionError as e:
+            raise HTTPException(503, str(e)) from e
     if event.get("event") not in {"payment_intent.completed", "payment_intent.failed", "payment_intent.cancelled"}:
         return {"result": "ignored"}
     data = event.get("data")
@@ -243,6 +285,7 @@ async def webhook(request: Request, db: AsyncSession = Depends(get_session)) -> 
         return {"result": "unknown_checkout"}
     if co.provider_ref and co.provider_ref != data["id"]:
         raise HTTPException(409, "Payment reference mismatch")
+    provider = active_provider(co)
     try:
         # The event is only a wake-up signal. Never trust its amount, status or return URL.
         _, result = await payments.reconcile(db, co, provider)

@@ -923,6 +923,38 @@
               }
             ],
             "title": "Amount Usd"
+          },
+          "currency": {
+            "default": "USD",
+            "enum": [
+              "USD",
+              "NGN"
+            ],
+            "title": "Currency",
+            "type": "string"
+          },
+          "ngn_per_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ngn Per Usd"
+          },
+          "payment_method": {
+            "default": "card",
+            "enum": [
+              "card",
+              "bank_transfer"
+            ],
+            "title": "Payment Method",
+            "type": "string"
           }
         },
         "required": [
@@ -1257,6 +1289,11 @@
       },
       "CreditOptionOut": {
         "properties": {
+          "amount_ngn": {
+            "default": "0",
+            "title": "Amount Ngn",
+            "type": "string"
+          },
           "amount_usd": {
             "title": "Amount Usd",
             "type": "string"
@@ -9270,6 +9307,66 @@
         ]
       }
     },
+    "/v1/billing/bank/{id}": {
+      "get": {
+        "operationId": "bank_status_v1_billing_bank__id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Bank Status V1 Billing Bank  Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bank Status",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/v1/billing/card/{id}": {
       "get": {
         "operationId": "status_v1_billing_card__id__get",
@@ -9746,6 +9843,57 @@
           }
         },
         "summary": "Options",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/billing/payment-methods": {
+      "get": {
+        "operationId": "payment_methods_v1_billing_payment_methods_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Payment Methods V1 Billing Payment Methods Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Payment Methods",
         "tags": [
           "billing"
         ]

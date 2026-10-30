@@ -208,3 +208,9 @@ def get_nuvion_billing():
     from app.integrations.billing.nuvion import NuvionBilling
 
     return _get("nuvion_billing", NuvionBilling)
+
+
+def get_nuvion_ngn_billing():
+    from app.integrations.billing.nuvion import NuvionBilling
+
+    return _get("nuvion_ngn_billing", lambda: NuvionBilling(currency="NGN"))

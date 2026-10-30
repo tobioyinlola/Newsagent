@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -510,6 +510,7 @@ class PhotoConfirmIn(BaseModel):
 # ---------- billing ----------
 class CreditOptionOut(BaseModel):
     amount_usd: Decimal
+    amount_ngn: Decimal = Decimal("0")
     credits: Decimal  # what the payment buys: amount / the price of a credit
     videos: int  # whole videos those credits pay for
 
@@ -526,6 +527,9 @@ class BillingSummary(BaseModel):
 
 class CheckoutIn(BaseModel):
     amount_usd: Decimal  # one of the purchase options (GET /v1/billing/options)
+    currency: Literal["USD", "NGN"] = "USD"
+    payment_method: Literal["card", "bank_transfer"] = "card"
+    ngn_per_usd: Decimal | None = None  # client quote; stale quotes must be reviewed before checkout
 
 
 class CheckoutOut(BaseModel):

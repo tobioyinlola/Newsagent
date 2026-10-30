@@ -37,6 +37,8 @@ def configuration_problems(settings) -> list[str]:
             errors.append(name.upper() + " is required for Nuvion payments")
     if settings.nuvion_webhook_secret and len(settings.nuvion_webhook_secret) < 24:
         errors.append("NUVION_WEBHOOK_SECRET must be at least 24 characters")
+    if (settings.nuvion_ngn_card_enabled or settings.nuvion_ngn_bank_enabled) and not settings.nuvion_ngn_account_id:
+        errors.append("NUVION_NGN_ACCOUNT_ID is required for naira payments")
     if settings.nuvion_api_url.rstrip("/") not in {"https://api.nuvion.dev", "https://api.nuvion.co"}:
         errors.append("NUVION_API_URL must be the official sandbox or production API URL")
     if settings.environment == "production" and settings.nuvion_api_url.rstrip("/") != "https://api.nuvion.co":
@@ -54,10 +56,13 @@ def configuration_problems(settings) -> list[str]:
 class NuvionBilling(BillingProvider):
     name = "nuvion"
 
-    def __init__(self, client: httpx.AsyncClient | None = None):
+    def __init__(self, client: httpx.AsyncClient | None = None, *, currency: str = "USD"):
         s = get_settings()
         self.base_url = s.nuvion_api_url.rstrip("/")
         self.account_id, self.entity_id = s.nuvion_account_id, s.nuvion_entity_id
+        self.currency = currency
+        if currency == "NGN":
+            self.account_id = s.nuvion_ngn_account_id
         self.secret = s.nuvion_webhook_secret
         self.public_key = s.nuvion_public_key.replace("\\n", "\n")
         self.client = client or httpx.AsyncClient(
@@ -69,7 +74,13 @@ class NuvionBilling(BillingProvider):
 
     @property
     def context(self) -> dict:
-        return {"account_id": self.account_id, "entity_id": self.entity_id, "api_url": self.base_url}
+        result = {"account_id": self.account_id, "entity_id": self.entity_id, "api_url": self.base_url}
+        if self.currency == "NGN":
+            result["currency"] = "NGN"
+        return result
+
+    def amount(self, checkout) -> Decimal:
+        return Decimal(checkout.payment_context["amount_ngn"]) if self.currency == "NGN" else checkout.amount_usd
 
     async def create_checkout(
         self, *, checkout_id: str, credits: Decimal, amount_usd: Decimal, description: str
@@ -100,16 +111,17 @@ class NuvionBilling(BillingProvider):
             raise NuvionError("Payment provider returned an invalid response. Please check payment status.") from e
 
     def check(self, intent: dict, checkout, *, require_bound: bool = True) -> None:
-        expected = checkout.payment_context or self.context
+        saved = checkout.payment_context or self.context
+        expected = {key: saved.get(key) for key in self.context}
         amount = intent.get("amount")
         if (
             expected != self.context
             or intent.get("account_id") != expected["account_id"]
             or intent.get("entity_id") != expected["entity_id"]
-            or intent.get("currency") != "USD"
+            or intent.get("currency") != self.currency
             or isinstance(amount, bool)
             or not isinstance(amount, int)
-            or Decimal(amount) != checkout.amount_usd * 100
+            or Decimal(amount) != self.amount(checkout) * 100
             or intent.get("reference") != checkout.id
             or not intent.get("id")
             or (require_bound and intent.get("id") != checkout.provider_ref)
@@ -122,7 +134,7 @@ class NuvionBilling(BillingProvider):
             not isinstance(action, dict)
             or action.get("status") != "completed"
             or action.get("payment_intent_id") != intent["id"]
-            or action.get("currency") != "USD"
+            or action.get("currency") != self.currency
             or action.get("amount") != amount
             or action.get("account_id") != expected["account_id"]
             or action.get("entity_id") != expected["entity_id"]
@@ -157,8 +169,8 @@ class NuvionBilling(BillingProvider):
                 "POST",
                 "/payment-intents",
                 body={
-                    "currency": "USD",
-                    "amount": int(checkout.amount_usd * 100),
+                    "currency": self.currency,
+                    "amount": int(self.amount(checkout) * 100),
                     "account_id": self.account_id,
                     "entity_id": self.entity_id,
                     "reference": checkout.id,
@@ -210,7 +222,13 @@ class NuvionBilling(BillingProvider):
             age = (datetime.now(UTC) - instant).total_seconds()
         except (ValueError, TypeError) as e:
             raise InvalidSignature("Invalid timestamp") from e
-        if not self.secret or not re.fullmatch(r"[0-9a-f]{64}", signature) or not headers.get("x-nuvion-event-id") or age > 300 or age < -60:
+        if (
+            not self.secret
+            or not re.fullmatch(r"[0-9a-f]{64}", signature)
+            or not headers.get("x-nuvion-event-id")
+            or age > 300
+            or age < -60
+        ):
             raise InvalidSignature("Invalid signature")
         expected = hmac.new(self.secret.encode(), timestamp.encode() + b"." + body, hashlib.sha256).hexdigest()
         if not hmac.compare_digest(signature, expected):

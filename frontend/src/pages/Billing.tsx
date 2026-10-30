@@ -6,10 +6,20 @@ import { Button, Card, ErrorBox, Notice } from "../components/ui";
 import { downloadAuthed } from "../lib/download";
 
 const money = (v: string | number) => Number(v).toLocaleString(undefined, { style: "currency", currency: "USD" });
+type Methods = { ngn_per_usd: string; usd_card: boolean; ngn_card: boolean; ngn_bank_transfer: boolean };
+const naira = (v: string | number) => Number(v).toLocaleString("en-NG", { style: "currency", currency: "NGN" });
+function PaymentIcon({ bank }: { bank: boolean }) {
+  return <svg aria-hidden="true" viewBox="0 0 32 24" className="mb-2 h-6 w-8" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{bank ? <><path d="M3 8 16 2l13 6H3Z" /><path d="M5 21h22M8 11v7m8-7v7m8-7v7" /></> : <><rect x="2" y="3" width="28" height="18" rx="3" /><path d="M2 9h28M6 16h6m8 0h6" /></>}</svg>;
+}
 const KIND: Record<string, string> = { grant: "Credits added", purchase: "Purchase", adjustment: "Adjustment", usage: "Used", usage_adjust: "Usage correction", usage_release: "Refunded (step didn't run)" };
 
 export function Billing() {
   const qc = useQueryClient();
+  const [currency, setCurrency] = useState<"USD" | "NGN">("USD");
+  const [method, setMethod] = useState<"card" | "bank_transfer">("card");
+  const methods = useQuery({ queryKey: ["payment-methods"], queryFn: () => unwrap(api.GET("/v1/billing/payment-methods")) as Promise<Methods>, staleTime: 0 });
+  const rate = methods.data?.ngn_per_usd;
+  const available = currency === "USD" ? methods.data?.usd_card : method === "card" ? methods.data?.ngn_card : methods.data?.ngn_bank_transfer;
   const [params] = useSearchParams();
   const candidate = params.get("returnTo");
   const [savedReturn] = useState(() => { try { return sessionStorage.getItem("distribution-return"); } catch { return null; } });
@@ -24,12 +34,13 @@ export function Billing() {
   const caps = useQuery({ queryKey: ["capabilities"], queryFn: () => unwrap(api.GET("/v1/capabilities")), staleTime: 600000, retry: false });
   const manual = (caps.data as { payments?: string } | undefined)?.payments === "manual";
   const options = useQuery({ queryKey: ["credit-options"], queryFn: () => unwrap(api.GET("/v1/billing/options")) });
-  const checkouts = useQuery({ queryKey: ["payment-checkouts"], queryFn: () => unwrap(api.GET("/v1/billing/checkouts")) as Promise<{ id: string; amount_usd: string; credits: string; status: string; created_at: string }[]> });
+  const checkouts = useQuery({ queryKey: ["payment-checkouts"], queryFn: () => unwrap(api.GET("/v1/billing/checkouts")) as Promise<{ id: string; amount_usd: string; credits: string; status: string; created_at: string; currency?: string; amount?: string; payment_method?: string }[]> });
   const usage = useQuery({ queryKey: ["usage", month], queryFn: () => unwrap(api.GET("/v1/billing/usage", { params: { query: { month } } })) });
   const ledger = useQuery({ queryKey: ["ledger"], queryFn: () => unwrap(api.GET("/v1/billing/ledger", { params: { query: { limit_: 50 } } })) });
   const buy = useMutation({
-    mutationFn: (amount_usd: string) => unwrap(api.POST("/v1/billing/checkout", { body: { amount_usd } })),
+    mutationFn: (amount_usd: string) => unwrap(api.POST("/v1/billing/checkout", { body: { amount_usd, currency, payment_method: currency === "USD" ? "card" : method, ...(currency === "NGN" && rate ? { ngn_per_usd: rate } : {}) } })),
     onSuccess: (d) => { qc.invalidateQueries({ queryKey: ["me"] }); window.location.assign(d.url); },
+    onError: () => { void methods.refetch(); void options.refetch(); },
   });
   const [csvErr, setCsvErr] = useState<string | null>(null);
   const s = summary.data;
@@ -45,21 +56,33 @@ export function Billing() {
         {s && <p className="mt-2 text-sm text-muted">1 video = {Number(s.credits_per_video)} credit · 1 credit = {money(s.usd_per_credit)} · you can make {s.videos_left} more {s.videos_left === 1 ? "video" : "videos"}.</p>}
       </Card>
       <Card title="Add credits">
+        {!manual && <div className="mb-5 space-y-4">
+          <fieldset><legend className="mb-2 text-sm font-semibold">Pay in</legend><div className="flex flex-wrap gap-3">{(["USD", "NGN"] as const).map(value => <label key={value} className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-lg border-2 px-4 py-3 ${currency === value ? "border-ink bg-brand-green" : "border-line"}`}><input type="radio" name="payment-currency" value={value} checked={currency === value} disabled={buy.isPending} onChange={() => { setCurrency(value); setMethod(value === "NGN" && !methods.data?.ngn_card && methods.data?.ngn_bank_transfer ? "bank_transfer" : "card"); buy.reset(); }} />{value === "NGN" ? "Nigerian naira (NGN)" : "US dollars (USD)"}</label>)}</div></fieldset>
+          {currency === "NGN" ? <>
+            {rate && <p className="text-sm text-muted">₦{Number(rate).toLocaleString()} = $1 USD. Packages and credits stay the same; you pay the naira equivalent.</p>}
+            <fieldset><legend className="mb-2 text-sm font-semibold">Payment method</legend><div className="grid gap-3 sm:grid-cols-2">{([{ value: "card", label: "Local card", help: "Pay in NGN with a supported card", enabled: methods.data?.ngn_card }, { value: "bank_transfer", label: "Bank transfer", help: "Transfer from your Nigerian banking app", enabled: methods.data?.ngn_bank_transfer }] as const).map(item => <label key={item.value} className={`flex min-h-20 items-start gap-3 rounded-xl border-2 p-4 ${method === item.value ? "border-ink" : "border-line"} ${!item.enabled ? "opacity-60" : "cursor-pointer"}`}><input className="mt-1" type="radio" name="payment-method" checked={method === item.value} disabled={!item.enabled || buy.isPending} onChange={() => { setMethod(item.value); buy.reset(); }} /><span><PaymentIcon bank={item.value === "bank_transfer"} /><span className="block font-semibold">{item.label}{!item.enabled ? " · Not available yet" : ""}</span><span className="mt-1 block text-sm text-muted">{item.help}</span></span></label>)}</div></fieldset>
+            {methods.data && !methods.data.ngn_card && !methods.data.ngn_bank_transfer && <Notice tone="warn">Naira payments are being set up. You can still pay in USD with a card that supports international payments.</Notice>}
+          </> : <p className="text-sm text-muted">Charged in USD. Nigerian cards must support international USD payments. Choose NGN for local payment options.</p>}
+          <ErrorBox error={methods.error} />
+          {methods.isError && <Button variant="secondary" onClick={() => void methods.refetch()}>Reload payment methods</Button>}
+        </div>}
+
         {manual ? <p className="text-muted">Credits are added by our team. Contact us with the amount you need and we'll top up your workspace.</p> : options.data?.length ? (
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {options.data.map((o) => (
               <li key={o.amount_usd} className="rounded-md border border-line p-4">
-                <p className="text-2xl font-bold">{money(o.amount_usd)}</p>
+                <p className="text-2xl font-bold">{currency === "NGN" ? rate ? naira(Number(o.amount_usd) * Number(rate)) : "Loading price…" : money(o.amount_usd)}</p>
+                {currency === "NGN" && <p className="mt-1 text-sm text-muted">{money(o.amount_usd)} package</p>}
                 <p className="font-semibold">{Number(o.credits).toFixed(2)} credits</p>
                 <p className="mb-3 text-muted">{o.videos} {o.videos === 1 ? "video" : "videos"}</p>
-                <Button onClick={() => buy.mutate(o.amount_usd)} disabled={buy.isPending} aria-label={`Buy ${money(o.amount_usd)} of credits`}>Buy</Button>
+                <Button onClick={() => buy.mutate(o.amount_usd)} disabled={buy.isPending || !available} aria-label={`Buy ${currency === "NGN" && rate ? naira(Number(o.amount_usd) * Number(rate)) : money(o.amount_usd)} of credits`}>Buy</Button>
               </li>
             ))}
           </ul>
         ) : <p className="text-muted">Credits can't be bought right now. Contact us to add credits.</p>}
         <ErrorBox error={buy.error} />
       </Card>
-      {!!checkouts.data?.length && <Card title="Card payments"><ul className="space-y-3">{checkouts.data.map(co => <li key={co.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3 text-sm"><span>{money(co.amount_usd)} · {co.credits} credits · <strong>{co.status}</strong></span><Link className="font-semibold underline" to={`/billing/card/${co.id}`}>{co.status === "pending" ? "Resume / check payment" : "View payment"}</Link></li>)}</ul></Card>}
+      {!!checkouts.data?.length && <Card title="Payments"><ul className="space-y-3">{checkouts.data.map(co => <li key={co.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3 text-sm"><span>{co.currency === "NGN" ? naira(co.amount ?? "0") : money(co.amount_usd)} · {co.payment_method === "bank_transfer" ? "Bank transfer · " : ""}{co.credits} credits · <strong>{co.status}</strong></span><Link className="font-semibold underline" to={`/billing/${co.payment_method === "bank_transfer" ? "bank" : "card"}/${co.id}`}>{co.status === "pending" ? "Resume / check payment" : "View payment"}</Link></li>)}</ul></Card>}
       <Card title="Usage" actions={
         <span className="flex flex-wrap items-center gap-2">
           <label className="text-sm" htmlFor="month">Month</label>

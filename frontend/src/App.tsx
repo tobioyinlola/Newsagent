@@ -5,6 +5,7 @@ import { RequireAuth } from "./components/RequireAuth";
 import { Account } from "./pages/Account";
 import { Security } from "./pages/Security";
 import { CardCheckout } from "./pages/CardCheckout";
+import { BankCheckout } from "./pages/BankCheckout";
 import { Billing, MockPay } from "./pages/Billing";
 import { Brand } from "./pages/Brand";
 import { Dashboard } from "./pages/Dashboard";
@@ -59,6 +60,7 @@ export function App() {
           <Route path="/brand" element={<Brand />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/billing/card/:checkoutId" element={<CardCheckout />} />
+          <Route path="/billing/bank/:checkoutId" element={<BankCheckout />} />
           <Route path="/account" element={<Account />} />
           <Route path="/security" element={<Security />} />
         </Route>

@@ -2,9 +2,8 @@
 
 import logging
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
 
-from sqlalchemy import select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -18,10 +17,14 @@ from app.services.notifications import send_email
 log = logging.getLogger("payments")
 
 
-def provider() -> NuvionBilling:
+def provider(checkout: Checkout | None = None, *, currency: str = "USD") -> NuvionBilling:
     if configuration_problems(get_settings()):
         raise NuvionError("Card payments are not available yet. Please contact support.")
-    item = registry.get_nuvion_billing()
+    if checkout:
+        currency = (checkout.payment_context or {}).get("currency", "USD")
+    if currency == "NGN" and not get_settings().nuvion_ngn_account_id:
+        raise NuvionError("Naira payments are not available yet. Please choose USD.")
+    item = registry.get_nuvion_ngn_billing() if currency == "NGN" else registry.get_nuvion_billing()
     if not isinstance(item, NuvionBilling):
         raise NuvionError("Card payments are not enabled. Please contact support.")
     return item
@@ -67,7 +70,7 @@ async def reconcile(
                 event_id=f"nuvion:{intent['id']}",
                 checkout_id=checkout.id,
                 status="paid",
-                amount_usd=Decimal(intent["amount"]) / 100,
+                amount_usd=checkout.amount_usd,
             ),
         )
         await db.commit()
@@ -88,7 +91,6 @@ async def reconcile(
 async def reconcile_pending() -> int:
     if configuration_problems(get_settings()):
         return 0
-    billing = provider()
     count = 0
     async with session_maker()() as db:
         checkouts = (
@@ -96,11 +98,11 @@ async def reconcile_pending() -> int:
                 await db.execute(
                     select(Checkout)
                     .where(
-                        Checkout.provider == "nuvion",
+                        Checkout.provider.in_(["nuvion", "nuvion_bank"]),
                         Checkout.status == "pending",
-                        Checkout.confirmation_started_at.is_not(None),
+                        or_(Checkout.provider == "nuvion_bank", Checkout.confirmation_started_at.is_not(None)),
                     )
-                    .order_by(Checkout.created_at)
+                    .order_by(func.coalesce(Checkout.last_verified_at, Checkout.created_at), Checkout.created_at)
                     .limit(100)
                 )
             )
@@ -109,7 +111,14 @@ async def reconcile_pending() -> int:
         )
         for checkout in checkouts:
             try:
-                _, result = await reconcile(db, checkout, billing, verify=True)
+                if checkout.provider == "nuvion_bank":
+                    from app.services.bank_payments import reconcile_bank
+
+                    result = await reconcile_bank(db, checkout, provider(checkout))
+                elif checkout.confirmation_started_at:
+                    _, result = await reconcile(db, checkout, provider(checkout), verify=True)
+                else:
+                    continue
                 count += result == "granted"
             except NuvionError:
                 await db.rollback()

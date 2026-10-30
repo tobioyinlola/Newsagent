@@ -35,9 +35,27 @@ from app.services.ratelimit import limit
 router = APIRouter(tags=["billing"])
 
 
+@router.get("/v1/billing/payment-methods")
+async def payment_methods(_: Principal = Depends(current_principal)) -> dict:
+    s = get_settings()
+    ngn = s.billing_provider == "nuvion" and bool(s.nuvion_ngn_account_id)
+    return {
+        "ngn_per_usd": str(s.ngn_per_usd),
+        "usd_card": s.billing_provider != "manual",
+        "ngn_card": ngn and s.nuvion_ngn_card_enabled,
+        "ngn_bank_transfer": ngn and s.nuvion_ngn_bank_enabled,
+    }
+
+
 def _options() -> list[CreditOptionOut]:
     return [
-        CreditOptionOut(amount_usd=o.amount_usd, credits=o.credits, videos=o.videos) for o in credits.purchase_options()
+        CreditOptionOut(
+            amount_usd=o.amount_usd,
+            amount_ngn=credits.ngn_for_usd(o.amount_usd),
+            credits=o.credits,
+            videos=o.videos,
+        )
+        for o in credits.purchase_options()
     ]
 
 
@@ -90,6 +108,17 @@ async def checkout(
     option = credits.option_for(body.amount_usd)
     if option is None:
         raise HTTPException(422, "Choose one of the amounts on offer.")
+    if p.workspace.suspended:
+        raise HTTPException(403, "This workspace is suspended")
+    s = get_settings()
+    if body.currency == "USD" and body.payment_method != "card":
+        raise HTTPException(422, "Bank transfer is available for NGN purchases only.")
+    if body.currency == "NGN":
+        enabled = s.nuvion_ngn_card_enabled if body.payment_method == "card" else s.nuvion_ngn_bank_enabled
+        if s.billing_provider != "nuvion" or not s.nuvion_ngn_account_id or not enabled:
+            raise HTTPException(409, "This naira payment method is not available yet. Please choose another method.")
+        if body.ngn_per_usd != s.ngn_per_usd:
+            raise HTTPException(409, "The naira exchange rate has changed. Refresh billing and review the new amount.")
     co = Checkout(
         workspace_id=p.workspace.id,
         credits=option.credits,
@@ -101,13 +130,26 @@ async def checkout(
         from app.services.payments import provider
 
         try:
-            co.payment_context = provider().context
+            billing = provider(currency=body.currency)
+            co.payment_context = billing.context
+            if body.currency == "NGN":
+                co.payment_context = {
+                    **co.payment_context,
+                    "amount_ngn": str(credits.ngn_for_usd(option.amount_usd)),
+                    "ngn_per_usd": str(s.ngn_per_usd),
+                }
+                if body.payment_method == "bank_transfer":
+                    from app.services.bank_payments import receiving_details
+
+                    co.provider = "nuvion_bank"
+                    co.payment_context = {**co.payment_context, "bank": await receiving_details(billing)}
         except NuvionError as e:
             raise HTTPException(503, str(e)) from e
-    if p.workspace.suspended:
-        raise HTTPException(403, "This workspace is suspended")
     session.add(co)
     await session.flush()
+    if co.provider == "nuvion_bank":
+        await session.commit()
+        return CheckoutOut(checkout_id=co.id, url=f"{s.app_base_url}/billing/bank/{co.id}")
     sess = await registry.get_billing().create_checkout(
         checkout_id=co.id,
         credits=option.credits,

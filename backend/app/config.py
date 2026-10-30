@@ -1,5 +1,6 @@
 """Environment-driven settings plus per-vendor timeout/retry/concurrency policy."""
 
+from decimal import Decimal
 from functools import lru_cache
 
 from pydantic import BaseModel, Field
@@ -154,6 +155,10 @@ class Settings(BaseSettings):
     nuvion_entity_id: str = ""
     nuvion_public_key: str = ""
     nuvion_webhook_secret: str = Field(default="", repr=False)
+    ngn_per_usd: Decimal = Field(default=Decimal("1400"), gt=0, le=1000000, decimal_places=2)
+    nuvion_ngn_account_id: str = ""
+    nuvion_ngn_card_enabled: bool = False
+    nuvion_ngn_bank_enabled: bool = False
     billing_provider: str = "mock"  # mock (local only) | manual (an operator adds credits; no checkout) | a real adapter, still to be chosen (Stripe / Paystack / Flutterwave)
     clamd_host: str = ""  # ClamAV daemon; required for uploads when USE_MOCKS=false
     clamd_port: int = 3310

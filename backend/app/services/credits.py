@@ -45,6 +45,10 @@ def credits_for_usd(usd: Decimal | str | int) -> Decimal:
     return (Decimal(usd) / usd_per_credit()).quantize(CENT, rounding=ROUND_HALF_UP)
 
 
+def ngn_for_usd(usd: Decimal) -> Decimal:
+    return (usd * get_settings().ngn_per_usd).quantize(CENT, rounding=ROUND_HALF_UP)
+
+
 def videos_for(credits: Decimal) -> int:
     """Whole videos these credits pay for."""
     return int((credits / credits_per_video()).to_integral_value(rounding=ROUND_FLOOR))
