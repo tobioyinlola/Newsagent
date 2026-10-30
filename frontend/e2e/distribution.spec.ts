@@ -8,7 +8,7 @@ test("completed video to distribution draft, checked images, wallet submission, 
     expect((await request.put(`${API}/v1/admin/vendor-budgets`, { headers: OPS, data: { vendor, limit: "1000" } })).ok()).toBeTruthy();
   }
   const email = `distribution${Date.now()}@example.com`;
-  const invited = await (await request.post(`${API}/v1/admin/invites`, { headers: OPS, data: { email, workspace_name: "Distribution Test", credits: "25", spend_cap: "100" } })).json();
+  const invited = await (await request.post(`${API}/v1/admin/invites`, { headers: OPS, data: { email, workspace_name: "Distribution Test", credits: "250", spend_cap: "100" } })).json();
   await request.post(`${API}/v1/auth/signup/start`, { data: { invite_code: invited.code, password: "correct horse battery" } });
   const mail = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: email } })).json();
   const signup = await (await request.post(`${API}/v1/auth/signup/verify`, { data: { invite_code: invited.code, code: /\b(\d{6})\b/.exec(mail.text)![1] } })).json();
@@ -33,13 +33,28 @@ test("completed video to distribution draft, checked images, wallet submission, 
   await page.getByRole("button", { name: "View selection" }).click();
   const selection = page.getByRole("dialog", { name: "Your selected outlets" });
   await expect(selection).toContainText("Empire Magazine Africa");
-  await expect(selection).toContainText("Total 0 credits");
+  await expect(selection).toContainText("Total 125 credits");
   await page.getByRole("button", { name: "Close selection" }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   const outletList = page.getByRole("region", { name: "Available media outlets" });
   await expect(outletList).toBeVisible();
   expect(await outletList.evaluate(e => e.scrollHeight > e.clientHeight)).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  for (const name of ["Media outlets", "Crypto News Channels", "Business (Africa) Channels", "Nigeria News Channels", "Entertainment News Channels"]) {
+    await expect(page.getByRole("heading", { name, exact: true })).toHaveCount(1);
+  }
+  await page.getByLabel("Outlet category", { exact: true }).selectOption("Crypto News Channels");
+  await expect(page.getByRole("checkbox")).toHaveCount(5);
+  await page.getByRole("checkbox", { name: /^CoinSpeaks/ }).check();
+  await page.getByLabel("Outlet category", { exact: true }).selectOption("Nigeria News Channels");
+  await expect(page.getByRole("checkbox")).toHaveCount(16);
+  await expect(page.getByRole("checkbox", { name: /CoinSpeaks/ })).toHaveCount(0);
+  await expect(page.getByLabel("Selected outlets", { exact: true })).toContainText("3 selected");
+  await page.getByLabel("Outlet category", { exact: true }).selectOption("Crypto News Channels");
+  await expect(page.getByRole("checkbox", { name: /^CoinSpeaks/ })).toBeChecked();
+  await page.getByRole("checkbox", { name: /^CoinSpeaks/ }).uncheck();
+  await page.getByLabel("Outlet category", { exact: true }).selectOption("");
+  await expect(page.getByRole("checkbox")).toHaveCount(47);
   await page.getByRole("searchbox", { name: "Search media outlets" }).fill("Premium Times");
   await expect(page.getByRole("checkbox")).toHaveCount(1);
   await expect(page.getByLabel("Selected outlets", { exact: true })).toContainText("2 selected");
@@ -130,7 +145,7 @@ test("completed video to distribution draft, checked images, wallet submission, 
   await ap.reload();
   const row = ap.locator("details").filter({ has: ap.locator("summary").filter({ hasText: "Custom distribution announcement" }) }).first();
   await row.locator("summary").click();
-  await expect(row).toContainText("Paid 0.0000 credits");
+  await expect(row).toContainText("Paid 125.0000 credits");
   await expect(row).toContainText("Our own press announcement with all the details.");
   await row.getByLabel("Distribution status", { exact: true }).selectOption("in_progress");
   await expect.poll(async () => (await (await request.get(`${API}/v1/distribution/${id}`, { headers })).json()).status).toBe("in_progress");

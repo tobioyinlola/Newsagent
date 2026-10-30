@@ -13,7 +13,10 @@ from tests.conftest import OPS, OWNER
 
 
 @pytest.fixture
-async def distribution_data(maker, workspace):
+async def distribution_data(maker, workspace, monkeypatch):
+    # Workflow tests exercise a deliberately free catalog; price-specific tests set their own costs.
+    for outlet in routes.OUTLETS.values():
+        monkeypatch.setitem(outlet, "credits", "0")
     async with maker() as db:
         project = Project(workspace_id=workspace, state="final_ready")
         db.add(project)
@@ -672,3 +675,69 @@ def test_outsize_media_quote_is_rejected_before_database_money_overflow():
     ]
     with pytest.raises(QuoteTooLarge):
         quote({"outlet_ids": [o["id"] for o in outlets], "logo_key": "logo", "picture_keys": ["picture"] * 10}, outlets)
+
+
+async def test_outlet_categories_match_groups_and_preserve_existing_ids(client, workspace):
+    data = (await client.get("/v1/distribution/outlets", headers=OWNER)).json()
+    outlets = data["outlets"]
+    assert len(outlets) == 47
+    assert len({o["id"] for o in outlets}) == 47
+    assert [o["name"] for o in outlets].count("Premium Times") == 1
+    expected = {
+        "Media outlets": routes.NAMES[:12],
+        "Crypto News Channels": [
+            "CoinSpeaks",
+            "The Cryptofy",
+            "The Crypto Reporters",
+            "The Coins Report",
+            "The Coins Insider",
+        ],
+        "Business (Africa) Channels": [
+            "Business Insider",
+            "Street Insider",
+            "Bar Chart",
+            "The Globe and Mail",
+            "Benzinga",
+        ],
+        "Nigeria News Channels": routes.NAMES[22:38],
+        "Entertainment News Channels": [
+            "Naijaloaded",
+            "Tooxclusive",
+            "NotJustOk",
+            "9jaflaver",
+            "Mp3bullet",
+            "Naijamusic",
+            "MP3Naija",
+            "AlbumTalks",
+            "P mp Kulture",
+        ],
+    }
+    for category, names in expected.items():
+        assert [o["name"] for o in outlets if o["category"] == category] == names
+    assert [(o["id"], o["name"]) for o in outlets] == [(str(i + 1), name) for i, name in enumerate(routes.NAMES)]
+
+
+async def test_owner_credit_on_cf_prices_for_seventeen_outlets(client, workspace):
+    outlets = (await client.get("/v1/distribution/outlets", headers=OWNER)).json()["outlets"]
+    expected = [42, 83, 124, 69, 97, 61, 138, 28, 42, 42, 28, 28, 42, 42, 42, 42, 42]
+    assert [Decimal(o["credits"]) for o in outlets[:17]] == list(map(Decimal, expected))
+    assert all(Decimal(o["credits"]) == 0 for o in outlets[17:])
+
+
+async def test_owner_prices_reach_quote_and_wallet_once(client, distribution_data, maker, workspace, monkeypatch):
+    for outlet in routes.OUTLETS.values():
+        monkeypatch.setitem(outlet, "credits", routes.DEFAULT_OUTLET_CREDITS.get(outlet["name"], "0"))
+    async with maker() as db:
+        ws = await db.get(Workspace, workspace)
+        await ledger.apply(db, ws, Decimal("200"), "grant", ref="owner-price-test-funding")
+        await db.commit()
+    id = await draft(client, distribution_data)
+    saved = (await client.get(f"/v1/distribution/{id}", headers=OWNER)).json()
+    assert Decimal(saved["total_credits"]) == 125
+    assert [Decimal(o["credits"]) for o in saved["data"]["outlets"]] == [42, 83]
+    for _ in range(2):
+        r = await client.post(f"/v1/distribution/{id}/submit", headers=OWNER, json={"expected_total": "125"})
+        assert r.status_code == 200, r.text
+    async with maker() as db:
+        assert (await db.get(Workspace, workspace)).credit_balance == Decimal("85")
+        assert await ledger.ledger_sum(db, workspace) == Decimal("85")

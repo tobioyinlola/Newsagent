@@ -56,3 +56,10 @@ Apply migration **0024** using the existing `alembic upgrade head` pre-deploy co
 This implementation has not been deployed as part of this task. Configure real team recipients, publisher contacts, actual fees/image policies and a monitored reply mailbox before relying on production outreach. Local tests use the mock email provider; no messages were sent to real team members or publishers.
 
 Validation covers paid/free/insufficient-funds paths; stale quote and fractional media charges; duplicate/concurrent submission and outreach; per-recipient failure/retry and stale leases; template validation and permissions; private internal status; safe publication links and multi-outlet roll-up; receipt download/privacy; workspace export/erasure; and complete browser journeys from payment to publisher email, follow-up, publication, customer email and dashboard links. Migration upgrade, legacy backfill, schema check, downgrade and re-upgrade were tested on a disposable SQLite database.
+
+
+## Owner-supplied placement prices
+
+The Credit on CF column supplied on 30 October 2026 sets the base placement credits for outlets 1–17: `42, 83, 124, 69, 97, 61, 138, 28, 42, 42, 28, 28, 42, 42, 42, 42, 42`. These are the first 12 media outlets and five crypto channels. The other outlets retain their existing defaults until prices are provided. These values are credit units, with the existing configured logo/image add-ons applied separately when selected.
+
+Migration `0026` updates only the placement-credit field in existing overrides for these 17 outlets, preserving contacts, email templates and media policies. It does not create media-policy confirmations for previously unconfigured outlets or rewrite paid requests. Old override credits are recorded for rollback; rollback preserves later admin pricing edits. Current UI totals, saved quotes, invoices and wallet deductions use the authoritative catalog, with stale-quote protection still in place.

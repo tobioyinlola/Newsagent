@@ -71,8 +71,44 @@ NAMES = [
     "AlbumTalks",
     "P mp Kulture",
 ]
+# Keep the existing IDs stable: drafts and paid requests refer to these outlets by ID.
+OUTLET_CATEGORIES = {
+    "Media outlets": NAMES[:12],
+    "Crypto News Channels": NAMES[12:17],
+    "Business (Africa) Channels": NAMES[17:22],
+    "Nigeria News Channels": NAMES[22:38],
+    "Entertainment News Channels": NAMES[38:],
+}
+CATEGORY_BY_NAME = {name: category for category, names in OUTLET_CATEGORIES.items() for name in names}
+# Exact "Credit on CF" values supplied by the owner; no margin-column surcharge.
+DEFAULT_OUTLET_CREDITS = {
+    "Empire Magazine Africa": "42",
+    "Techpoint Africa": "83",
+    "Nairametrics": "124",
+    "Tech Next": "69",
+    "Tech Cabal": "97",
+    "Techeconomy": "61",
+    "Condia": "138",
+    "88 Lately": "28",
+    "Crest Africa": "42",
+    "Talented Women Network": "42",
+    "Iconic Africa": "28",
+    "Iconic Global": "28",
+    "CoinSpeaks": "42",
+    "The Cryptofy": "42",
+    "The Crypto Reporters": "42",
+    "The Coins Report": "42",
+    "The Coins Insider": "42",
+}
 OUTLETS = {
-    str(i + 1): {"id": str(i + 1), "name": name, "region": "Africa", "credits": "0"} for i, name in enumerate(NAMES)
+    str(i + 1): {
+        "id": str(i + 1),
+        "name": name,
+        "region": "Africa",
+        "credits": DEFAULT_OUTLET_CREDITS.get(name, "0"),
+        "category": CATEGORY_BY_NAME[name],
+    }
+    for i, name in enumerate(NAMES)
 }
 
 
