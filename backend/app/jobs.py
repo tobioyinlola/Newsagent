@@ -141,8 +141,9 @@ async def reconcile_projects(now: datetime | None = None) -> int:
 async def run_sweep() -> dict:
     """Every few minutes: re-send work whose queue message was lost (broker restart, failed publish, killed worker)."""
     from app.services.distribution import retry_confirmations
+    from app.services.payments import reconcile_pending
 
-    return {"stuck_projects": await reconcile_projects(), "requeued": await requeue_stuck(), "distribution_emails": await retry_confirmations()}
+    return {"stuck_projects": await reconcile_projects(), "requeued": await requeue_stuck(), "distribution_emails": await retry_confirmations(), "payments_reconciled": await reconcile_pending()}
 
 
 async def run_hourly() -> dict:

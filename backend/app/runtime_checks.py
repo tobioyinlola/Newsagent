@@ -44,6 +44,9 @@ def problems(s: Settings) -> list[str]:
         out.append(
             "BILLING_PROVIDER=mock is local-only; use manual (an operator adds credits) or a real payment adapter"
         )
+    elif s.billing_provider == "nuvion":
+        from app.integrations.billing.nuvion import configuration_problems
+        out.extend(configuration_problems(s))
     elif s.billing_provider != "manual" and (not s.billing_webhook_secret or len(s.billing_webhook_secret) < 24):
         out.append("BILLING_WEBHOOK_SECRET must be set to a long random value (24+ characters)")
     if not s.clamd_host and not (s.allow_unscanned_uploads and s.environment == "staging"):

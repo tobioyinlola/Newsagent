@@ -195,8 +195,16 @@ def get_billing():
     def make():
         from app.integrations.billing.mock import MockBilling
 
+        if get_settings().billing_provider == "nuvion":
+            return get_nuvion_billing()
         if get_settings().billing_provider != "mock":
             raise RuntimeError("No payment provider adapter is configured. See docs/decisions.md.")
         return MockBilling()
 
     return _get("billing", make)
+
+
+def get_nuvion_billing():
+    from app.integrations.billing.nuvion import NuvionBilling
+
+    return _get("nuvion_billing", NuvionBilling)

@@ -18,6 +18,7 @@ from app.routes import (
     billing,
     brand,
     broll,
+    card_payments,
     delivery,
     distribution,
     guest,
@@ -53,6 +54,8 @@ class RedactTokens(logging.Filter):
 
 def _scrub_sentry(event, _hint):
     req = event.get("request") or {}
+    if "/v1/billing/card/" in req.get("url", ""):
+        req.pop("data", None)
     if "url" in req:
         req["url"] = redact(req["url"])
     if event.get("transaction"):
@@ -169,6 +172,7 @@ def create_app() -> FastAPI:
         broll.router,
         guided.router,
         billing.router,
+        card_payments.router,
         projects.router,
         delivery.router,
         interview.router,

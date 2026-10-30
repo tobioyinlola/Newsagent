@@ -920,6 +920,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/billing/card/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status */
+        get: operations["status_v1_billing_card__id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/card/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel */
+        post: operations["cancel_v1_billing_card__id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/card/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm */
+        post: operations["confirm_v1_billing_card__id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/billing/checkout": {
         parameters: {
             query?: never;
@@ -931,6 +982,23 @@ export interface paths {
         put?: never;
         /** Checkout */
         post: operations["checkout_v1_billing_checkout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/checkouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** History */
+        get: operations["history_v1_billing_checkouts_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2437,6 +2505,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/webhooks/nuvion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Webhook */
+        post: operations["webhook_v1_webhooks_nuvion_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2738,6 +2823,77 @@ export interface components {
             disclosure: string;
             /** Has Active Share */
             has_active_share: boolean;
+        };
+        /** CardAddress */
+        CardAddress: {
+            /** Address Line One */
+            address_line_one: string;
+            /** City */
+            city: string;
+            /** Country */
+            country: string;
+            /** State */
+            state: string;
+            /**
+             * Zip
+             * @default
+             */
+            zip: string;
+        };
+        /** CardBrowserInfo */
+        CardBrowserInfo: {
+            /**
+             * Channel
+             * @default browser
+             * @constant
+             */
+            channel: "browser";
+            /**
+             * Color Depth
+             * @default
+             */
+            color_depth: string;
+            /**
+             * Java Enabled
+             * @default false
+             */
+            java_enabled: boolean;
+            /**
+             * Javascript Enabled
+             * @default true
+             */
+            javascript_enabled: boolean;
+            /**
+             * Language
+             * @default en
+             */
+            language: string;
+            /**
+             * Screen Height
+             * @default
+             */
+            screen_height: string;
+            /**
+             * Screen Width
+             * @default
+             */
+            screen_width: string;
+            /**
+             * Timezone Offset
+             * @default
+             */
+            timezone_offset: string;
+        };
+        /** CardConfirmation */
+        CardConfirmation: {
+            billing_address: components["schemas"]["CardAddress"];
+            browser_info: components["schemas"]["CardBrowserInfo"];
+            /** Encrypted Data */
+            encrypted_data: string;
+            /** First Name */
+            first_name: string;
+            /** Last Name */
+            last_name: string;
         };
         /** ChangePasswordIn */
         ChangePasswordIn: {
@@ -6596,6 +6752,115 @@ export interface operations {
             };
         };
     };
+    status_v1_billing_card__id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_v1_billing_card__id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_v1_billing_card__id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CardConfirmation"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     checkout_v1_billing_checkout_post: {
         parameters: {
             query?: never;
@@ -6618,6 +6883,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CheckoutOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    history_v1_billing_checkouts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
             /** @description Validation Error */
@@ -9661,6 +9959,28 @@ export interface operations {
         };
     };
     heygen_webhook_v1_webhooks_heygen_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    webhook_v1_webhooks_nuvion_post: {
         parameters: {
             query?: never;
             header?: never;

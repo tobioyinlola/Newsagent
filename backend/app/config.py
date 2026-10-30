@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -148,6 +148,12 @@ class Settings(BaseSettings):
     credit_markup: str = "0"  # credits taken per 1 USD of vendor cost while a video is made: 0 = none, the video's flat price is its only charge
     low_balance_threshold: str = "1"
     billing_webhook_secret: str = ""  # HMAC secret for payment webhooks; REQUIRED outside local
+    nuvion_api_key: str = Field(default="", repr=False)
+    nuvion_api_url: str = "https://api.nuvion.dev"
+    nuvion_account_id: str = ""
+    nuvion_entity_id: str = ""
+    nuvion_public_key: str = ""
+    nuvion_webhook_secret: str = Field(default="", repr=False)
     billing_provider: str = "mock"  # mock (local only) | manual (an operator adds credits; no checkout) | a real adapter, still to be chosen (Stripe / Paystack / Flutterwave)
     clamd_host: str = ""  # ClamAV daemon; required for uploads when USE_MOCKS=false
     clamd_port: int = 3310

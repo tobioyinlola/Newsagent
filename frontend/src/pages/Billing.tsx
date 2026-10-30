@@ -24,6 +24,7 @@ export function Billing() {
   const caps = useQuery({ queryKey: ["capabilities"], queryFn: () => unwrap(api.GET("/v1/capabilities")), staleTime: 600000, retry: false });
   const manual = (caps.data as { payments?: string } | undefined)?.payments === "manual";
   const options = useQuery({ queryKey: ["credit-options"], queryFn: () => unwrap(api.GET("/v1/billing/options")) });
+  const checkouts = useQuery({ queryKey: ["payment-checkouts"], queryFn: () => unwrap(api.GET("/v1/billing/checkouts")) as Promise<{ id: string; amount_usd: string; credits: string; status: string; created_at: string }[]> });
   const usage = useQuery({ queryKey: ["usage", month], queryFn: () => unwrap(api.GET("/v1/billing/usage", { params: { query: { month } } })) });
   const ledger = useQuery({ queryKey: ["ledger"], queryFn: () => unwrap(api.GET("/v1/billing/ledger", { params: { query: { limit_: 50 } } })) });
   const buy = useMutation({
@@ -38,7 +39,6 @@ export function Billing() {
     <>
       <h1 className="text-2xl font-bold">Credits and billing</h1>
       {returnTo?.startsWith("/distribution/request?") && <Link className="underline" to={returnTo}>Return to your saved distribution request</Link>}
-      {params.get("paid") && <Notice tone="ok">Payment received. Your credits have been added.</Notice>}
       <Card title="Your balance">
         <p className="text-4xl font-extrabold tabular-nums" aria-label="Credit balance">{s ? Number(s.credit_balance).toFixed(2) : "…"} <span className="text-lg font-medium text-muted">credits</span></p>
         {low && <div className="mt-3"><Notice tone="warn">You're running low. Add credits so your next video isn't paused.</Notice></div>}
@@ -59,6 +59,7 @@ export function Billing() {
         ) : <p className="text-muted">Credits can't be bought right now. Contact us to add credits.</p>}
         <ErrorBox error={buy.error} />
       </Card>
+      {!!checkouts.data?.length && <Card title="Card payments"><ul className="space-y-3">{checkouts.data.map(co => <li key={co.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3 text-sm"><span>{money(co.amount_usd)} · {co.credits} credits · <strong>{co.status}</strong></span><Link className="font-semibold underline" to={`/billing/card/${co.id}`}>{co.status === "pending" ? "Resume / check payment" : "View payment"}</Link></li>)}</ul></Card>}
       <Card title="Usage" actions={
         <span className="flex flex-wrap items-center gap-2">
           <label className="text-sm" htmlFor="month">Month</label>
@@ -88,7 +89,7 @@ export function MockPay() {
   const nav = useNavigate();
   const pay = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/billing/dev/pay/{checkout_id}", { params: { path: { checkout_id: checkoutId } } })),
-    onSuccess: () => nav("/billing?paid=1"),
+    onSuccess: () => nav("/billing"),
   });
   return (
     <div className="mx-auto max-w-md space-y-4 p-6">

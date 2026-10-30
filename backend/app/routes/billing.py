@@ -8,7 +8,7 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import Principal, current_principal
@@ -96,6 +96,16 @@ async def checkout(
         amount_usd=option.amount_usd,
         provider=get_settings().billing_provider,
     )
+    if co.provider == "nuvion":
+        from app.integrations.billing.nuvion import NuvionError
+        from app.services.payments import provider
+
+        try:
+            co.payment_context = provider().context
+        except NuvionError as e:
+            raise HTTPException(503, str(e)) from e
+    if p.workspace.suspended:
+        raise HTTPException(403, "This workspace is suspended")
     session.add(co)
     await session.flush()
     sess = await registry.get_billing().create_checkout(
@@ -120,8 +130,24 @@ async def handle_payment_event(session: AsyncSession, event) -> str:
         return "not_paid"
     if event.amount_usd is not None and Decimal(event.amount_usd) != Decimal(co.amount_usd):
         return "amount_mismatch"  # never grant credits for a payment that doesn't match the pack price
+    claimed = (
+        await session.execute(
+            update(Checkout)
+            .where(Checkout.id == co.id, Checkout.paid_at.is_(None))
+            .values(status="paid", paid_at=datetime.now(UTC))
+            .returning(Checkout.id)
+        )
+    ).scalar_one_or_none()
+    if claimed is None:
+        await session.refresh(co)
+        return "duplicate"
     ws = (
-        await session.execute(select(Workspace).where(Workspace.id == co.workspace_id).with_for_update())
+        await session.execute(
+            select(Workspace)
+            .where(Workspace.id == co.workspace_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
     ).scalar_one()
     tx = await ledger.apply(
         session,
@@ -147,6 +173,10 @@ async def handle_payment_event(session: AsyncSession, event) -> str:
 
 @router.post("/v1/webhooks/billing")
 async def billing_webhook(request: Request, session: AsyncSession = Depends(get_session)) -> dict:
+    if get_settings().billing_provider == "nuvion":
+        from app.routes.card_payments import webhook
+
+        return await webhook(request, session)
     body = await request.body()  # the signature is over the RAW body, so read it before any parsing
     try:
         event = registry.get_billing().parse_webhook({k.lower(): v for k, v in request.headers.items()}, body)

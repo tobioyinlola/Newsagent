@@ -86,7 +86,7 @@ test("owner buys credits through checkout", async ({ browser, request }) => {
   await owner.getByRole("button", { name: "Buy $10.00 of credits" }).click();
   await expect(owner.getByText("This is a test checkout")).toBeVisible();
   await owner.getByRole("button", { name: "Pay now (test)" }).click();
-  await expect(owner.getByText("Payment received")).toBeVisible();
+  await expect(owner.getByRole("heading", { name: "Credits and billing" })).toBeVisible();
   await expect(owner.getByLabel("Credit balance")).toContainText("23.70");
   await expect(owner.getByRole("cell", { name: /Purchase/ })).toBeVisible();
 

@@ -384,6 +384,9 @@ class Checkout(Base, TimestampMixin):
     amount_usd: Mapped[Decimal] = mapped_column(Money)
     provider: Mapped[str] = mapped_column(String(30))
     provider_ref: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    payment_context: Mapped[dict] = mapped_column(JSON, default=dict, server_default="{}")
+    confirmation_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | paid | failed | expired
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
