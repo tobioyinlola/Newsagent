@@ -88,7 +88,7 @@ async def signup_start(
 ) -> CodeSentOut:
     settings = get_settings()
     if body.invite_code:  # an invitation: the workspace and the address are already decided
-        await _throttle(request, "signup", body.invite_code, (5, 3600), (20, 3600))
+        await _throttle(request, "signup", body.invite_code, (5, 3600), (settings.signup_per_ip_per_hour, 3600))
         inv = await _invite(db, body.invite_code)
         email, invite_id, workspace_name = inv.email.lower(), inv.id, None
     else:  # open sign-up: a business creates its own workspace after confirming its email
@@ -103,7 +103,7 @@ async def signup_start(
         if body.industry == "other" and len((body.industry_other or "").strip()) < 2:
             raise HTTPException(422, "Tell us which industry your business is in.")
         email, invite_id, workspace_name = str(body.email).lower(), None, body.business_name.strip()
-        await _throttle(request, "signup", email, (5, 3600), (20, 3600))
+        await _throttle(request, "signup", email, (5, 3600), (settings.signup_per_ip_per_hour, 3600))
     if (await db.execute(select(User.id).where(User.email == email))).first():
         raise HTTPException(409, "This email already has an account. Sign in instead.")
     _check_password(body.password, email)
