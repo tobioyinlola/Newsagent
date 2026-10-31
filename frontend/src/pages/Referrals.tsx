@@ -23,7 +23,7 @@ export function Referrals() {
     } catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) setMessage("Sharing is unavailable. You can copy your link instead."); }
   };
   return <div className="min-w-0 space-y-6">
-    <header className="rounded-xl border-2 border-ink bg-lime-tint p-6 sm:p-8"><p className="text-xs font-bold uppercase tracking-widest text-muted">Grow your circle</p><h1 className="mt-3 text-3xl sm:text-4xl">Invite a business. Earn a credit.</h1><p className="mt-4 max-w-2xl leading-relaxed">Share your personal referral link. When a new business signs up through it and verifies its email, we'll add 1 credit to your workspace wallet.</p><p className="mt-2 text-sm text-muted">Use it like any other wallet credit for videos and other credit-based services. No purchase is required to earn the reward.</p></header>
+    <header className="rounded-xl border-2 border-ink bg-lime-tint p-6 sm:p-8"><h1 className="text-3xl sm:text-4xl">Invite a business. Earn a credit.</h1><p className="mt-4 max-w-2xl leading-relaxed">Share your personal referral link. When a new business signs up through it and verifies its email, we'll add 1 credit to your workspace wallet.</p><p className="mt-2 text-sm text-muted">Use it like any other wallet credit for videos and other credit-based services. No purchase is required to earn the reward.</p></header>
     <ErrorBox error={q.error} />
     {q.isLoading && <p role="status">Loading your referral link…</p>}
     {q.data && <>
