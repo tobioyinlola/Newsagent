@@ -5078,7 +5078,6 @@
         "type": "object"
       },
       "SignupStartIn": {
-        "description": "Sign up with an invitation (invite_code + password), or on your own (email + business_name + password).",
         "properties": {
           "business_name": {
             "anyOf": [
@@ -5186,6 +5185,18 @@
             "minLength": 10,
             "title": "Password",
             "type": "string"
+          },
+          "referral_code": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referral Code"
           }
         },
         "required": [
@@ -16579,6 +16590,53 @@
         "summary": "Story Preview",
         "tags": [
           "stories"
+        ]
+      }
+    },
+    "/v1/referrals": {
+      "get": {
+        "operationId": "overview_v1_referrals_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Overview",
+        "tags": [
+          "referrals"
         ]
       }
     },

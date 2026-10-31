@@ -159,6 +159,7 @@ class DraftIn(BaseModel):
     contact_name: str = Field(default="", max_length=200)
     contact_email: str = Field(default="", max_length=320)
     phone: str = Field(default="", max_length=40)
+    # Optional legacy fields preserve existing drafts and older clients.
     whatsapp: str = Field(default="", max_length=40)
     phone_country: str = Field(default="", pattern=r"^(?:[A-Z]{2})?$")
     whatsapp_country: str = Field(default="", pattern=r"^(?:[A-Z]{2})?$")
@@ -432,7 +433,6 @@ async def submit(
                 body.contact_name,
                 body.contact_email,
                 body.phone,
-                body.whatsapp,
                 body.logo_key,
             ]
         )
@@ -444,10 +444,8 @@ async def submit(
         TypeAdapter(EmailStr).validate_python(body.contact_email)
     except ValidationError as e:
         raise HTTPException(422, "Enter a valid contact email") from e
-    if any(
-        not re.fullmatch(r"\+[1-9][0-9]{6,14}", re.sub(r"[() .-]", "", value)) for value in [body.phone, body.whatsapp]
-    ):
-        raise HTTPException(422, "Enter valid phone and WhatsApp numbers, including the country code")
+    if not re.fullmatch(r"\+[1-9][0-9]{6,14}", re.sub(r"[() .-]", "", body.phone)):
+        raise HTTPException(422, "Enter a valid phone number, including the country code")
     catalog = await catalog_service.catalog(db, admin=True)
     lines = quoted_lines(body, catalog)
     total = sum((Decimal(o["credits"]) for o in lines), Decimal("0"))

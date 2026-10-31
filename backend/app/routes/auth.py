@@ -35,7 +35,7 @@ from app.schemas.api import (
     SignupVerifyIn,
 )
 from app.services import email_templates as templates
-from app.services import ledger, passwords, ratelimit, rbac
+from app.services import ledger, passwords, ratelimit, rbac, referrals
 from app.services import sessions as sess
 from app.services.audit import audit
 from app.services.notifications import send_email
@@ -107,6 +107,8 @@ async def signup_start(
     if (await db.execute(select(User.id).where(User.email == email))).first():
         raise HTTPException(409, "This email already has an account. Sign in instead.")
     _check_password(body.password, email)
+    referrer = await referrals.resolve(db, body.referral_code) if not invite_id else None
+    referral_code = body.referral_code if referrer and referrer.email.lower() != email else None
     code = await sess.issue_code(
         db,
         email,
@@ -119,6 +121,7 @@ async def signup_start(
         country=(body.country or "").strip() or None,
         industry=body.industry,
         industry_other=((body.industry_other or "").strip() or None) if body.industry == "other" else None,
+        referral_code=referral_code,
     )
     await db.commit()
     subject, html, text = _email("signup", code)
@@ -169,6 +172,9 @@ async def signup_verify(body: SignupVerifyIn, request: Request, db: AsyncSession
     db.add(kit)
     await db.flush()
     ws.brand_kit_id = kit.id
+    await referrals.ensure_link(db, user)
+    if inv is None:
+        await referrals.reward(db, row.referral_code, user)
     row.password_hash = None  # not needed any more
     ns = await sess.create_session(db, user, request, otp_verified=True)
     audit(

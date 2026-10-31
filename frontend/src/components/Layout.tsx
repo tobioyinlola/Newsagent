@@ -111,6 +111,7 @@ export function Layout() {
           {item("/distribution/request", "Distribution", ICONS.videos)}
           {item("/analytics", "Analytics", ICONS.videos)}
           {item("/billing", "Credits", ICONS.credits)}
+          {item("/referrals", "Referrals", ICONS.credits)}
           {item("/account", "Your data", ICONS.data)}
           {item("/security", "Security", ICONS.security)}
 

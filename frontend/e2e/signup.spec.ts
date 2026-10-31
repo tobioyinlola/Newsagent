@@ -52,3 +52,36 @@ test("choosing Others in the industry list opens a field for the business to say
   await page.getByLabel("Industry", { exact: true }).selectOption("technology");
   await expect(page.getByLabel("Your industry")).toHaveCount(0);
 });
+
+test("sign-in keeps authentication behavior with shared navigation on desktop and mobile", async ({ page, request }) => {
+  const email = `signin${Date.now()}@newbiz.example.com`;
+  await request.post("http://localhost:8000/v1/auth/signup/start", { data: { email, business_name: "Returning Biz", city: "Lagos", country: "Nigeria", industry: "technology", password: "correct horse battery" } });
+  const mail = await (await request.get("http://localhost:8000/v1/dev/last-email", { params: { to: email } })).json();
+  await request.post("http://localhost:8000/v1/auth/signup/verify", { data: { email, code: /\b(\d{6})\b/.exec(mail.text)![1] } });
+  await page.goto("/login");
+  await expect(page.getByRole("navigation", { name: "Site", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Cover Founder home" })).toHaveAttribute("href", "/");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill("wrong password");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await expect(page.getByRole("dialog", { name: "Menu", exact: true })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Site (mobile)", exact: true }).getByRole("link", { name: "Latest Stories" })).toHaveAttribute("href", "/latest-stories");
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: "/tmp/signin-mobile-refined.png", fullPage: true });
+  await page.getByLabel("Password", { exact: true }).fill("correct horse battery");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Welcome, Returning Biz" })).toBeVisible();
+});
+
+test("signup navigation stays usable on small screens", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/signup");
+  await expect(page.getByRole("navigation", { name: "Site", exact: true })).toBeVisible();
+  await expect(page.getByLabel("Business name")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: "/tmp/signup-mobile-refined.png", fullPage: true });
+});

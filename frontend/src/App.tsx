@@ -1,3 +1,4 @@
+import { Referrals } from "./pages/Referrals";
 import { Analytics } from "./pages/Analytics";
 import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes, useParams } from "react-router-dom";
@@ -53,6 +54,7 @@ export function App() {
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
           <Route path="/distribution/request" element={<DistributionRequestPage />} />
+          <Route path="/referrals" element={<Referrals />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/ai-newsroom/videos" element={<Projects />} />
           <Route path="/ai-newsroom/new" element={<NewProject />} />

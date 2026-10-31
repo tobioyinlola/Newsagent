@@ -282,7 +282,7 @@ async def test_contact_country_choices_survive_draft_reload(client, distribution
     assert row["data"]["whatsapp"] == "+19058052110"
 
 
-@pytest.mark.parametrize("field", ["phone", "whatsapp"])
+@pytest.mark.parametrize("field", ["phone"])
 @pytest.mark.parametrize("value", ["08031234567", "2348031234567", "+01234567890", "+2348031234567890"])
 async def test_submission_requires_international_phone_format(client, distribution_data, field, value):
     id = await draft(client, {**distribution_data, field: value})
@@ -365,6 +365,7 @@ async def test_configured_team_publisher_emails_and_media_receipt(client, distri
     assert "brand/logo.png" not in restricted["body"] and "brand/one.png" not in restricted["body"]
     team = next(m for m in admin["emails"] if m["recipient"] == "sales@example.com")
     assert distribution_data["contact_email"] in team["body"] and distribution_data["phone"] in team["body"]
+    assert "WhatsApp" not in team["body"]
     assert distribution_data["announcement"] in team["body"] and "Total: 7" in team["body"]
     assert "brand/logo.png" in team["body"] and "brand/one.png" in team["body"] and "video/test.mp4" in team["body"]
     receipt = await client.get(f"/v1/distribution/{id}/invoice", headers=OWNER)
@@ -798,3 +799,10 @@ async def test_nigeria_fractional_prices_quote_and_debit_once(client, distributi
     async with maker() as db:
         assert (await db.get(Workspace, workspace)).credit_balance == Decimal("68.3")
         assert await ledger.ledger_sum(db, workspace) == Decimal("68.3")
+
+
+async def test_distribution_submission_needs_only_phone_not_whatsapp(client, distribution_data):
+    data = {key: value for key, value in distribution_data.items() if key != "whatsapp"}
+    id = await draft(client, data)
+    response = await client.post(f"/v1/distribution/{id}/submit", headers=OWNER)
+    assert response.status_code == 200 and response.json()["paid"], response.text

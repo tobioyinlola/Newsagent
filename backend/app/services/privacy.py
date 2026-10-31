@@ -29,6 +29,8 @@ from app.models import (
     Project,
     ProviderRequest,
     PublisherSnapshot,
+    ReferralLink,
+    ReferralReward,
     ScriptVersion,
     ShareLink,
     Take,
@@ -110,6 +112,13 @@ async def delete_workspace(session: AsyncSession, ws: Workspace) -> None:
     uids = list((await session.execute(select(User.id).where(User.workspace_id == ws.id))).scalars())
     emails = list((await session.execute(select(User.email).where(User.workspace_id == ws.id))).scalars())
     if uids:
+        await session.execute(
+            update(ReferralReward).where(ReferralReward.referrer_user_id.in_(uids)).values(referrer_user_id=None)
+        )
+        await session.execute(
+            update(ReferralReward).where(ReferralReward.referred_user_id.in_(uids)).values(referred_user_id=None)
+        )
+        await session.execute(delete(ReferralLink).where(ReferralLink.user_id.in_(uids)))
         await session.execute(delete(UserSession).where(UserSession.user_id.in_(uids)))
     if emails:
         await session.execute(delete(AuthCode).where(AuthCode.email.in_(emails)))
@@ -217,7 +226,27 @@ async def export_workspace(session: AsyncSession, ws: Workspace, user: User) -> 
         .scalars()
         .all()
     )
+    referrals = (
+        (
+            await session.execute(
+                select(ReferralReward).where(
+                    (ReferralReward.referrer_workspace_id == ws.id) | (ReferralReward.referred_workspace_id == ws.id)
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
     return {
+        "referrals": [
+            {
+                "id": r.id,
+                "direction": "invited" if r.referrer_workspace_id == ws.id else "joined",
+                "credits": str(r.credits),
+                "created_at": dt(r.created_at),
+            }
+            for r in referrals
+        ],
         "exported_at": datetime.now(UTC).isoformat(),
         "account": {"email": user.email, "role": user.role, "created_at": dt(user.created_at)},
         "workspace": {

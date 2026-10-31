@@ -149,7 +149,7 @@ async def plan_submission(db, row, catalog):
         body = (
             f"A distribution request has been confirmed.\nPayment: {'Paid from credit wallet' if row.total_credits else 'No-charge request'}\n"
             f"Total: {row.total_credits} credits\nReceipt: {invoice(row)['number']}\nRequester: {row.created_by}\n"
-            f"Contact: {data['contact_name']} <{data['contact_email']}>\nPhone: {data['phone']}\nWhatsApp: {data['whatsapp']}\n"
+            f"Contact: {data['contact_name']} <{data['contact_email']}>\nPhone: {data['phone']}\n"
             f"Video project: {data['project_id']}\n\nSelected outlets and charges:\n{breakdown(row)}\n\n"
             f"Headline: {data['headline']}\n\nAnnouncement:\n{data['announcement']}\n\n"
             f"Company logo uploaded: {'Yes' if data.get('logo_key') else 'No'}\nAdditional pictures: {len(data.get('picture_keys', []))}\n"

@@ -4,20 +4,32 @@ import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { api, type Schemas, unwrap } from "../api/client";
 import { Combobox } from "../components/Combobox";
 import { Button, Card, ErrorBox, Field, inputCls, Notice, Toast } from "../components/ui";
-import { Logo } from "../components/Logo";
+import { PublicNavigation } from "../components/PublicNavigation";
 import { getToken, setToken } from "../lib/auth";
 
 type Session = Schemas["SessionOut"];
 
-function Shell({ children }: { children: ReactNode }) {
-  return (
-    <div className="cf-stripes flex min-h-screen items-center justify-center p-6">
-      <div className="w-full max-w-md space-y-6">
-        <Logo className="w-52 text-brand-green" />
-        {children}
+function Shell({ children, signup = false }: { children: ReactNode; signup?: boolean }) {
+  return <div className="min-h-screen bg-ink text-white"><PublicNavigation />
+    <main className="bg-paper px-4 py-8 text-navy sm:px-6 sm:py-12 lg:py-16">
+      <div className="mx-auto grid max-w-6xl items-start gap-8 lg:grid-cols-[1fr_1.05fr] lg:gap-14">
+        <section className="cf-stripes rounded-2xl border border-white/10 px-6 py-8 text-white sm:p-10 lg:sticky lg:top-28 lg:py-14">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-green">Cover Founder</p>
+          <h1 className="mt-4 max-w-md text-3xl leading-tight text-white sm:text-4xl lg:text-5xl">{signup ? "Give your business a bigger stage." : "Your next story starts here."}</h1>
+          <p className="mt-5 max-w-md leading-relaxed text-white/80">{signup ? "Create your workspace, tell your story, and bring your business to new audiences." : "Welcome back. Pick up your story, create your next video, or follow your press distribution."}</p>
+          <div className="mt-8 hidden space-y-5 border-t border-white/20 pt-6 sm:block">
+            {["Tell the story behind your business", "Create your video and announcement", "Choose where your news goes next"].map((text, i) => <div key={text} className="flex items-center gap-3 text-sm"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-brand-green/40 text-xs font-bold text-brand-green">0{i + 1}</span><span>{text}</span></div>)}
+          </div>
+          <Link className="mt-8 inline-flex min-h-11 items-center text-sm font-semibold text-brand-green underline underline-offset-4" to="/latest-stories">Explore the latest stories →</Link>
+        </section>
+        <div className="min-w-0 space-y-5 [&>section]:rounded-2xl [&>section]:border-line [&>section]:p-6 [&>section]:shadow-sm sm:[&>section]:p-8 [&_form>button[type=submit]]:min-h-12 [&_form>button[type=submit]]:w-full [&_input]:min-h-12 [&_select]:min-h-12">
+          {children}
+          <p className="text-center text-xs leading-relaxed text-muted">Your workspace for business stories, videos, and press distribution.</p>
+        </div>
       </div>
-    </div>
-  );
+    </main>
+    <footer className="border-t border-white/10 px-4 py-6 text-center text-xs text-white/70">Cover Founder · Tell your story. Reach new audiences.</footer>
+  </div>;
 }
 
 function PasswordField({ label = "Password", value, onChange, autoComplete, hint }: { label?: string; value: string; onChange: (v: string) => void; autoComplete: string; hint?: string }) {
@@ -70,7 +82,7 @@ export function Login() {
         </form>
         <p className="mt-3 text-sm"><Link className="underline" to="/forgot">Forgot your password?</Link></p>
       </Card>
-      <p className="text-sm text-white">New here? <Link className="underline" to="/signup">Create your free account</Link>. Have an invite link? Open it to join your workspace.</p>
+      <p className="text-sm leading-relaxed text-muted">New here? <Link className="underline" to="/signup">Create your free account</Link>. Have an invite link? Open it to join your workspace.</p>
     </Shell>
   );
 }
@@ -94,6 +106,14 @@ const INDUSTRIES: [Industry, string, string][] = [
 export function Signup() {
   const [params] = useSearchParams();
   const inviteCode = params.get("code") ?? "";
+  const [referralCode] = useState(() => {
+    const incoming = params.get("ref");
+    const valid = incoming && /^[A-Za-z0-9_-]{24}$/.test(incoming) ? incoming : null;
+    try {
+      if (valid) sessionStorage.setItem("newsagent.referral", valid);
+      return valid ?? sessionStorage.getItem("newsagent.referral") ?? undefined;
+    } catch { return valid ?? undefined; }
+  });
   const [business, setBusiness] = useState("");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
@@ -121,19 +141,19 @@ export function Signup() {
     enabled: inviteCode.length > 0,
     retry: false,
   });
-  const body = inviteCode ? { invite_code: inviteCode } : { email: email.trim(), business_name: business.trim(), city: city.trim(), country: country.trim(), industry: industry as Industry, industry_other: industry === "other" ? industryOther.trim() : undefined };
+  const body = inviteCode ? { invite_code: inviteCode } : { email: email.trim(), business_name: business.trim(), city: city.trim(), country: country.trim(), referral_code: referralCode, industry: industry as Industry, industry_other: industry === "other" ? industryOther.trim() : undefined };
   const start = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/auth/signup/start", { body: { ...body, password } })),
     onSuccess: (r) => { setHint(r.email_hint ?? email); setSent(true); },
   });
   const verify = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/auth/signup/verify", { body: { ...(inviteCode ? { invite_code: inviteCode } : { email: email.trim() }), code: code.trim() } })),
-    onSuccess: (s) => { setCreated(true); window.setTimeout(() => finish(s), 1800); },
+    onSuccess: (s) => { try { sessionStorage.removeItem("newsagent.referral"); } catch { /* storage may be unavailable */ } setCreated(true); window.setTimeout(() => finish(s), 1800); },
   });
   const mismatch = confirm.length > 0 && confirm !== password;
   if (getToken() && !created) return <Navigate to="/dashboard" replace />;
   return (
-    <Shell>
+    <Shell signup>
       {created && <Toast>Account created. Taking you to your dashboard…</Toast>}
       <Card title={inviteCode ? "Create your workspace" : "Publish your story free"}>
         {inviteCode && preview.isError ? (
@@ -156,6 +176,7 @@ export function Signup() {
               <p>You have been invited to set up <strong>{preview.data?.workspace_name}</strong> as <strong>{preview.data?.email_hint}</strong>. Choose a password; then we will email a code to confirm it is you.</p>
             ) : (
               <>
+                {referralCode && <Notice tone="info">You're joining through a referral link. Your inviter can earn 1 credit after you verify your email and create your business workspace.</Notice>}
                 <p>Create a free workspace for your business. We'll email you a 6-digit code to confirm your email before you get in.</p>
                 <Field label="Business name">{(id) => <input id={id} required minLength={2} maxLength={200} autoComplete="organization" className={inputCls} value={business} onChange={(e) => setBusiness(e.target.value)} />}</Field>
                 <div className="grid gap-4 sm:grid-cols-2">

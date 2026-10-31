@@ -423,6 +423,7 @@ class AuthCode(Base, TimestampMixin):
     country: Mapped[str | None] = mapped_column(String(120), nullable=True)
     industry: Mapped[str | None] = mapped_column(String(30), nullable=True)
     industry_other: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    referral_code: Mapped[str | None] = mapped_column(String(24), nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

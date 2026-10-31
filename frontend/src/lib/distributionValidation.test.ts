@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validateDistributionStep } from "./distributionValidation";
 import type { Draft } from "./distribution";
 
-const complete: Draft = { stage: "review", outlet_ids: ["1"], project_id: "video", headline: "A headline", announcement: "Our story.", contact_name: "Ada", contact_email: "ada@example.com", phone: "+2348012345678", whatsapp: "+2348012345678", logo_key: "checked-logo", picture_keys: [] };
+const complete: Draft = { stage: "review", outlet_ids: ["1"], project_id: "video", headline: "A headline", announcement: "Our story.", contact_name: "Ada", contact_email: "ada@example.com", phone: "+2348012345678", logo_key: "checked-logo", picture_keys: [] };
 describe("distribution step validation", () => {
   it("requires outlet selection before advancing", () => {
     expect(validateDistributionStep({ ...complete, outlet_ids: [] }, "outlets").outlet_ids).toBeTruthy();
@@ -16,7 +16,7 @@ describe("distribution step validation", () => {
     expect(validateDistributionStep({ ...complete, announcement_source: "custom" }, "content")).toEqual({});
   });
   it("requires usable contact details and a checked logo, while pictures stay optional", () => {
-    expect(Object.keys(validateDistributionStep({ ...complete, contact_name: "", contact_email: "wrong", phone: "abc1234567", whatsapp: "123", logo_key: "" }, "contact"))).toHaveLength(5);
+    expect(Object.keys(validateDistributionStep({ ...complete, contact_name: "", contact_email: "wrong", phone: "abc1234567", whatsapp: "123", logo_key: "" }, "contact"))).toHaveLength(4);
     expect(validateDistributionStep(complete, "contact")).toEqual({});
   });
 });

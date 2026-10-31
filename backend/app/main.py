@@ -31,6 +31,7 @@ from app.routes import (
     payment_reconciliation,
     presenter,
     projects,
+    referrals,
     scenes,
     staff,
     stories,
@@ -171,6 +172,7 @@ def create_app() -> FastAPI:
     for r in (
         health.router,
         auth.router,
+        referrals.router,
         brand.router,
         broll.router,
         guided.router,

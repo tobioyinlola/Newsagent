@@ -50,6 +50,7 @@ async def issue_code(
     country: str | None = None,
     industry: str | None = None,
     industry_other: str | None = None,
+    referral_code: str | None = None,
 ) -> str:
     """Create a fresh code. Codes older than a minute stop working; one requested seconds ago (a double click, a quick resend) still does,
     so the code in the first email the person opens is never the one that was just cancelled."""
@@ -79,6 +80,7 @@ async def issue_code(
             country=country,
             industry=industry,
             industry_other=industry_other,
+            referral_code=referral_code,
             expires_at=now + timedelta(minutes=get_settings().otp_ttl_minutes),
         )
     )
@@ -120,8 +122,15 @@ async def check_code(
             if r.attempts >= MAX_CODE_ATTEMPTS:
                 r.consumed_at = now  # burned: the attacker must request a new code (which is rate limited)
         return None
-    hit.consumed_at = now
-    return hit
+    claimed = (
+        await session.execute(
+            update(AuthCode)
+            .where(AuthCode.id == hit.id, AuthCode.consumed_at.is_(None))
+            .values(consumed_at=now)
+            .returning(AuthCode.id)
+        )
+    ).scalar_one_or_none()
+    return hit if claimed else None
 
 
 # ---------- sessions ----------

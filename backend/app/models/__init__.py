@@ -30,8 +30,11 @@ from app.models.entities import (
     WebhookEvent,
     Workspace,
 )
+from app.models.referral import ReferralLink, ReferralReward
 
 __all__ = [
+    "ReferralLink",
+    "ReferralReward",
     "BankReceipt",
     "AudienceDaily",
     "AudienceEvent",

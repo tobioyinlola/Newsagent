@@ -2786,6 +2786,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/referrals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overview */
+        get: operations["overview_v1_referrals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/share/{token}": {
         parameters: {
             query?: never;
@@ -4902,10 +4919,7 @@ export interface components {
             /** Workspace Id */
             workspace_id: string;
         };
-        /**
-         * SignupStartIn
-         * @description Sign up with an invitation (invite_code + password), or on your own (email + business_name + password).
-         */
+        /** SignupStartIn */
         SignupStartIn: {
             /** Business Name */
             business_name?: string | null;
@@ -4923,6 +4937,8 @@ export interface components {
             invite_code?: string | null;
             /** Password */
             password: string;
+            /** Referral Code */
+            referral_code?: string | null;
         };
         /** SignupVerifyIn */
         SignupVerifyIn: {
@@ -11276,6 +11292,37 @@ export interface operations {
                 };
                 content: {
                     "text/html": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overview_v1_referrals_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

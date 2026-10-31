@@ -684,6 +684,7 @@ Otp = Annotated[str, Field(min_length=6, max_length=6, pattern=r"^\d{6}$")]
 
 
 class SignupStartIn(BaseModel):
+    referral_code: str | None = Field(default=None, max_length=100)
     """Sign up with an invitation (invite_code + password), or on your own (email + business_name + password)."""
 
     invite_code: str | None = Field(default=None, min_length=8, max_length=100)
