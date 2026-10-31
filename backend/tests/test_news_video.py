@@ -4,6 +4,7 @@ from sqlalchemy import select
 from app.integrations import registry
 from app.integrations.avatar.base import AvatarResult
 from app.integrations.renderer.base import Analysis
+from app.config import get_settings
 from app.models import Job, NewsVideo, Project, Workspace
 from app.services import news_video
 from app.services import news_video_rules as rules
@@ -73,6 +74,8 @@ async def test_isolated_render_ready_publish_and_deduplicated_retry(client, work
     assert current["video"]["matches_draft"]
     # Republish-only revisions do not purchase the same video again.
     assert await start(client, current, monkeypatch) == job
+
+
     changed = (
         await client.put(
             f"{BASE}/{row['id']}",
@@ -86,6 +89,23 @@ async def test_isolated_render_ready_publish_and_deduplicated_retry(client, work
     ).json()
     assert not changed["video"]["matches_draft"]
     assert (await client.get(f"/v1/public/stories/{row['slug']}")).json()["title"] == row["data"]["headline"]
+
+
+async def test_breaking_story_uses_the_female_news_desk_presenter(client, workspace, monkeypatch):
+    row = await with_picture(client)
+    avatar = registry.get_avatar_named("mock")
+    seen = []
+    original_generate = avatar.generate
+
+    async def capture(request):
+        seen.append(request)
+        return await original_generate(request)
+
+    monkeypatch.setattr(avatar, "generate", capture)
+    job = await start(client, row, monkeypatch)
+    await news_video.run(job)
+    assert seen and seen[0].avatar_id == get_settings().news_desk_avatar_id
+    assert get_settings().news_desk_avatar_id == "56f77809cfb5befeec11d8820fef119f"
 
 
 async def test_publish_waits_for_inflight_video_and_stale_copy_is_rejected(client, workspace, monkeypatch):
