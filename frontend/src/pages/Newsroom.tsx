@@ -1,6 +1,6 @@
 import { CFSymbol, Logo } from "../components/Logo";
 import { getToken } from "../lib/auth";
-import { CardArt, Cta, Eyebrow, HeroArt, Panel, SiteShell } from "./Landing";
+import { CardArt, Cta, Eyebrow, Panel, SiteShell } from "./Landing";
 
 // Dedicated page for the AI Newsroom: the team, what comes out, how a segment is made.
 
@@ -58,8 +58,11 @@ export function Newsroom() {
     <SiteShell>
       <main>
         <section className="cf-grain relative overflow-hidden px-4 pb-16 pt-16 md:px-8 md:pt-24">
-          <HeroArt />
-          <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(25,26,48,0.9)_0%,rgba(25,26,48,0.6)_45%,transparent_80%)]" />
+          <div aria-hidden="true" className="absolute inset-0">
+            <img src="/newsroom-hero.webp" alt="" width={1800} height={874} fetchPriority="high" decoding="async" className="h-full w-full object-cover object-[62%_center] md:object-center" />
+            <div className="absolute inset-0 bg-ink/50" />
+            <div className="absolute inset-0 bg-gradient-to-b from-ink/20 via-transparent to-ink/80" />
+          </div>
           <div className="relative z-10 mx-auto max-w-4xl text-center">
             <p className="inline-block rounded-sm border border-white/20 bg-ink/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white"><span className="text-brand-green" aria-hidden="true">● </span>AI Newsroom</p>
             <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">A full newsroom team.<br /><span className="text-brand-green">On call for your business.</span></h1>
