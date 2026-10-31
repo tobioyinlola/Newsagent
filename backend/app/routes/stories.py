@@ -4,7 +4,7 @@ from html import escape
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import select
+from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import Principal, current_principal
@@ -42,6 +42,16 @@ async def public_stories(
                 Workspace.suspended.is_(False),
                 Workspace.share_disabled.is_(False),
                 Workspace.deleted_at.is_(None),
+                # CF Featured Stories is reserved for customer-produced videos.
+                # Require the completed widescreen render here so unpublished or
+                # text-only projects cannot enter the feed.
+                exists(
+                    select(Asset.id).where(
+                        Asset.project_id == Project.id,
+                        Asset.type == "render",
+                        Asset.format == "16x9",
+                    )
+                ),
             )
             .order_by(Project.published_at.desc())
             .limit(limit_ + offset)
@@ -53,15 +63,6 @@ async def public_stories(
         if not story:
             continue
         out.append(await stories.card(session, project, ws, story, await _assets(session, project.id)))
-    editorial = (
-        await session.execute(
-            select(NewsStory)
-            .where(NewsStory.status == "published", NewsStory.published_data.is_not(None))
-            .order_by(NewsStory.published_at.desc())
-            .limit(limit_ + offset)
-        )
-    ).scalars()
-    out.extend([await news_desk_public.card(session, row) for row in editorial])
     out.sort(key=lambda item: item["published_at"].isoformat(), reverse=True)
     return out[offset : offset + limit_]
 

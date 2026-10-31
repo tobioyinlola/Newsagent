@@ -57,7 +57,8 @@ async def test_news_rewrite_review_publish_snapshot_unpublish_without_video_jobs
     assert page["company"] == "Cover Founder News" and page["has_video"] is False
     assert page["video_url"] is None and page["source_url"] == "https://example.com/story"
     assert "source_text" not in page and "presenter_script" not in page
-    assert (await client.get("/v1/public/stories")).json()[0]["slug"] == row["slug"]
+    assert (await client.get("/v1/public/stories")).json() == []
+    assert (await client.get("/v1/public/cf-news")).json()[0]["slug"] == row["slug"]
     assert (await client.get(f"/v1/public/stories/{row['slug']}/preview")).status_code == 200
     # Unpublished editor changes never alter the live snapshot.
     edited = await client.put(
@@ -71,7 +72,7 @@ async def test_news_rewrite_review_publish_snapshot_unpublish_without_video_jobs
     r = await client.post(f"{BASE}/{row['id']}/unpublish", headers=OPS, json={"revision": row["revision"]})
     assert r.status_code == 200
     assert (await client.get(f"/v1/public/stories/{row['slug']}")).status_code == 404
-    assert (await client.get("/v1/public/stories")).json() == []
+    assert (await client.get("/v1/public/cf-news")).json() == []
     async with maker() as db:
         assert not list((await db.execute(select(Job))).scalars())
 
