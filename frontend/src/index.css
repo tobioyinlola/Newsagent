@@ -256,3 +256,11 @@ html { font-family: var(--font-sans); color: var(--color-navy); background: #fff
 .admin-range button[aria-pressed="true"] { box-shadow: 0 1px 2px #0002; }
 .admin-layout > .workspace-toolbar:focus-within { border-color: #b8c99e; box-shadow: 0 4px 18px #2222220b; }
 @media (max-width: 640px) { .admin-workspace-content { padding: 16px 12px 28px; } .admin-dashboard-hero { min-height: 0; } .admin-kpis .admin-stat { min-height: 120px; padding: 16px; } .admin-card { padding: 16px; } }
+
+/* Keep the back office canvas behind the full document, including space below short pages. */
+html.admin-backoffice-page,
+html.admin-backoffice-page body,
+html.admin-backoffice-page #root {
+  min-height: 100vh;
+  background: var(--color-paper);
+}

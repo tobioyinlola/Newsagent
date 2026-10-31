@@ -51,6 +51,10 @@ export function Layout() {
   const loc = useLocation();
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    document.documentElement.classList.add("admin-backoffice-page");
+    return () => document.documentElement.classList.remove("admin-backoffice-page");
+  }, []);
   useEffect(() => setOpen(false), [loc.pathname]);
   useEffect(() => {
     if (!open) return;
