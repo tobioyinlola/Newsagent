@@ -53,7 +53,7 @@ async def test_news_rewrite_review_publish_snapshot_unpublish_without_video_jobs
     assert r.status_code == 200, r.text
     row = r.json()
     page = (await client.get(f"/v1/public/stories/{row['slug']}")).json()
-    assert page["category"] == "CF Technology Breaking News"
+    assert page["category"] == "CF News"
     assert page["company"] == "Cover Founder News" and page["has_video"] is False
     assert page["video_url"] is None and page["source_url"] == "https://example.com/story"
     assert "source_text" not in page and "presenter_script" not in page

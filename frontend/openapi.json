@@ -18083,6 +18083,66 @@
         ]
       }
     },
+    "/v1/public/cf-news": {
+      "get": {
+        "operationId": "cf_news_v1_public_cf_news_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "maximum": 60,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StoryCardOut"
+                  },
+                  "title": "Response Cf News V1 Public Cf News Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cf News",
+        "tags": [
+          "stories"
+        ]
+      }
+    },
     "/v1/public/credit-options": {
       "get": {
         "description": "The same, for the public pricing section of the landing page (no sign-in needed).",
@@ -18365,66 +18425,6 @@
           }
         },
         "summary": "Story Preview",
-        "tags": [
-          "stories"
-        ]
-      }
-    },
-    "/v1/public/technology-news": {
-      "get": {
-        "operationId": "technology_news_v1_public_technology_news_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 24,
-              "maximum": 60,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "offset",
-            "required": false,
-            "schema": {
-              "default": 0,
-              "minimum": 0,
-              "title": "Offset",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/StoryCardOut"
-                  },
-                  "title": "Response Technology News V1 Public Technology News Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Technology News",
         "tags": [
           "stories"
         ]

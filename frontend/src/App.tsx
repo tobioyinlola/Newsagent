@@ -31,6 +31,7 @@ const Founder = lazy(() => import("./founder/Founder"));
 const Landing = lazy(() => import("./pages/Landing").then((m) => ({ default: m.Landing })));
 const Newsroom = lazy(() => import("./pages/Newsroom").then((m) => ({ default: m.Newsroom })));
 const LatestStories = lazy(() => import("./pages/LatestStories").then((m) => ({ default: m.LatestStories })));
+const CFNews = lazy(() => import("./pages/CFNews").then((m) => ({ default: m.CFNews })));
 const StoryPage = lazy(() => import("./pages/StoryPage").then((m) => ({ default: m.StoryPage })));
 const DistributionPage = lazy(() => import("./pages/DistributionPage").then((m) => ({ default: m.DistributionPage })));
 
@@ -44,6 +45,7 @@ export function App() {
       <Route path="/ai-newsroom" element={<Suspense fallback={<div className="min-h-screen bg-ink" />}><Newsroom /></Suspense>} />
       <Route path="/press-distribution" element={<Suspense fallback={<div className="min-h-screen bg-ink" />}><DistributionPage /></Suspense>} />
       <Route path="/latest-stories" element={<Suspense fallback={<div className="min-h-screen bg-ink" />}><LatestStories /></Suspense>} />
+      <Route path="/cf-news" element={<Suspense fallback={<div className="min-h-screen bg-ink" />}><CFNews /></Suspense>} />
       <Route path="/latest-stories/:slug" element={<Suspense fallback={<div className="min-h-screen bg-ink" />}><StoryPage /></Suspense>} />
       <Route path="/newsroom" element={<Navigate to="/ai-newsroom" replace />} />
       <Route path="/distribution" element={<Navigate to="/press-distribution" replace />} />

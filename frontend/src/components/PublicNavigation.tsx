@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { SecondaryLogo } from "./Logo";
 import { getToken } from "../lib/auth";
 
-const NAV: [string, string][] = [["AI Newsroom", "/ai-newsroom"], ["Latest Stories", "/latest-stories"], ["Press Distribution", "/press-distribution"], ["FAQ", "/#faq"]];
+const NAV: [string, string][] = [["Featured Stories", "/latest-stories"], ["News", "/cf-news"], ["AI Newsroom", "/ai-newsroom"], ["Press Distribution", "/press-distribution"]];
 
 // A site link: a page of the app (client-side) or a section of the home page (a normal link, so the browser scrolls to it).
 export function SiteLink({ to, className, onClick, children }: { to: string; className: string; onClick?: () => void; children: ReactNode }) {

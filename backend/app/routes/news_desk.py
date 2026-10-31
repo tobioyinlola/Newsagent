@@ -20,7 +20,7 @@ from app.services.audit import audit
 from app.services.ratelimit import limit
 
 router = APIRouter(prefix="/v1/admin/news-desk", tags=["news-desk"])
-CATEGORY = "CF Technology Breaking News"
+CATEGORY = "CF News"
 
 
 class Picture(BaseModel):

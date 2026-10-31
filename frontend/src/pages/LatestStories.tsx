@@ -52,7 +52,7 @@ function Hero({ cards }: { cards: StoryCard[] }) {
 
 export function LatestStories() {
   const q = useStories(48);
-  const news = useQuery({ queryKey: ["technology-news"], queryFn: () => unwrap(api.GET("/v1/public/technology-news")), staleTime: 60000 });
+  const news = useQuery({ queryKey: ["cf-news"], queryFn: () => unwrap(api.GET("/v1/public/cf-news")), staleTime: 60000 });
   const cards = useMemo(() => q.data ?? [], [q.data]);
   const byIndustry = useMemo(() => {
     const m = new Map<string, StoryCard[]>();
@@ -64,7 +64,7 @@ export function LatestStories() {
       <main className="px-4 py-10 md:px-8">
         <div className="mx-auto max-w-6xl">
           <Eyebrow>Cover Founder</Eyebrow>
-          <h1 className="mt-3 text-3xl text-white md:text-5xl">Latest stories</h1>
+          <h1 className="mt-3 text-3xl text-white md:text-5xl">CF Featured Stories</h1>
           <p className="mt-3 max-w-2xl text-white/70">News from the businesses on Cover Founder: each story is a video and its press release, published the moment it is ready.</p>
           <div className="mt-8">
             {q.isLoading ? <p aria-busy="true" className="text-white/70">Loading…</p> : cards.length === 0 ? (
@@ -81,7 +81,7 @@ export function LatestStories() {
               </>
             )}
           </div>
-          {news.data?.length ? <StoryRow title="CF Technology Breaking News" cards={news.data} /> : <section className="mt-8 border-t border-white/15 py-8"><h2 className="text-xl text-white">CF Technology Breaking News</h2><p className="mt-3 text-sm text-white/70">{news.isError ? "Technology news is temporarily unavailable. Please try again shortly." : news.isLoading ? "Loading technology news…" : "Technology updates from the Cover Founder News Desk will appear here."}</p></section>}
+          {news.data?.length ? <StoryRow title="CF News" cards={news.data} /> : <section className="mt-8 border-t border-white/15 py-8"><h2 className="text-xl text-white">CF News</h2><p className="mt-3 text-sm text-white/70">{news.isError ? "CF News is temporarily unavailable. Please try again shortly." : news.isLoading ? "Loading CF News…" : "Breaking news from the Cover Founder News Desk will appear here."}</p></section>}
         </div>
       </main>
     </SiteShell>

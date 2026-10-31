@@ -67,11 +67,11 @@ async def public_stories(
 
 
 @router.get(
-    "/v1/public/technology-news",
+    "/v1/public/cf-news",
     response_model=list[StoryCardOut],
     dependencies=[Depends(limit("public-stories", 120, 600))],
 )
-async def technology_news(
+async def cf_news(
     limit_: int = Query(24, alias="limit", ge=1, le=60),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
@@ -86,6 +86,20 @@ async def technology_news(
         )
     ).scalars()
     return [await news_desk_public.card(session, row) for row in rows]
+
+
+@router.get(
+    "/v1/public/technology-news",
+    response_model=list[StoryCardOut],
+    include_in_schema=False,
+    dependencies=[Depends(limit("public-stories", 120, 600))],
+)
+async def technology_news_legacy(
+    limit_: int = Query(24, alias="limit", ge=1, le=60),
+    offset: int = Query(0, ge=0),
+    session: AsyncSession = Depends(get_session),
+):
+    return await cf_news(limit_, offset, session)
 
 
 @router.get(

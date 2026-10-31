@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.integrations import registry
 from app.models import NewsImage, NewsStory, NewsVideo
 
-CATEGORY = "CF Technology Breaking News"
+CATEGORY = "CF News"
 
 
 async def images(db: AsyncSession, row: NewsStory) -> list[dict]:

@@ -2959,6 +2959,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/cf-news": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cf News */
+        get: operations["cf_news_v1_public_cf_news_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/credit-options": {
         parameters: {
             query?: never;
@@ -3086,23 +3103,6 @@ export interface paths {
          *     to those crawlers only (see vercel.json); people always get the app.
          */
         get: operations["story_preview_v1_public_stories__slug__preview_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/public/technology-news": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Technology News */
-        get: operations["technology_news_v1_public_technology_news_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -12379,6 +12379,38 @@ export interface operations {
             };
         };
     };
+    cf_news_v1_public_cf_news_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryCardOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     public_options_v1_public_credit_options_get: {
         parameters: {
             query?: never;
@@ -12568,38 +12600,6 @@ export interface operations {
                 };
                 content: {
                     "text/html": string;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    technology_news_v1_public_technology_news_get: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StoryCardOut"][];
                 };
             };
             /** @description Validation Error */
