@@ -1,23 +1,12 @@
-import { BackButton } from "../../components/BackButton";
+import { AdminAuthShell } from "../components/AuthShell";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
-import { Logo } from "../components/Logo";
 import { Button, Card, ErrorBox, Field, inputCls, Notice } from "../components/ui";
 import { setToken } from "../lib/auth";
 
-function Shell({ children }: { children: ReactNode }) {
-  return (
-    <div className="cf-stripes flex min-h-screen items-center justify-center p-6">
-      <div className="w-full max-w-md space-y-6">
-        <Logo className="w-52 text-brand-green" />
-        <BackButton fallback="/login" className="text-white" />
-        {children}
-      </div>
-    </div>
-  );
-}
+
 
 // An invited team member's side: open the emailed link, choose a password, confirm the emailed code.
 export function Join() {
@@ -40,11 +29,11 @@ export function Join() {
   });
 
   if (!token || preview.isError) {
-    return <Shell><Notice tone="warn">This invitation link isn't valid or has expired. Ask the person who invited you to send a new one.</Notice></Shell>;
+    return <AdminAuthShell><Notice tone="warn">This invitation link isn't valid or has expired. Ask the person who invited you to send a new one.</Notice></AdminAuthShell>;
   }
   const p = preview.data;
   return (
-    <Shell>
+    <AdminAuthShell>
       <Card title="Join the Cover Founder team">
         {!p ? <p aria-busy="true">Checking your invitation…</p> : sent ? (
           <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); verify.mutate(); }}>
@@ -63,6 +52,6 @@ export function Join() {
           </form>
         )}
       </Card>
-    </Shell>
+    </AdminAuthShell>
   );
 }

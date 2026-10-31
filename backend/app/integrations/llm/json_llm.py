@@ -108,9 +108,10 @@ class JsonScriptLLM(ScriptLLM):
             "Never invent facts, quotes, dates or endorsements. Avoid copying the source wording except short attributed quotes. "
             "There is NO founder interview or recorded guest footage. The presenter narrates with still pictures. "
             "Return JSON: headline (5-180 chars), summary (10-500 chars), body (plain text, paragraphs separated by blank lines), "
-            "presenter_script (a complete 60-120 second spoken news report, opening and closing for Cover Founder News), "
-            "scenes (3-10 ordered objects: narration, image_hint describing an illustrative image to upload, "
-            "motion one of slow_zoom_in, slow_zoom_out, pan_left, pan_right, static, duration_s 3-60). "
+            "body must contain 200-300 words. presenter_script is a SEPARATE concise 60-95 word spoken report, natural and factual, no spoken intro/outro (those are separate branded clips). "
+            "The FINAL video is capped at 60 seconds including a 5-second intro, 2-second breaking-news sting and 6-second outro. Narration must fit in the remaining 47 seconds at a natural pace. "
+            "scenes (2-4 ordered objects: narration, image_hint describing an illustrative image to upload, "
+            "motion one of slow_zoom_in, slow_zoom_out, pan_left, pan_right, static, duration_s 3-6). "
             "Scene narration in order must contain the complete presenter script, with no added claims. "
             "Do not generate or fetch images. Output is a draft for an editor, not approval to publish. "
             + json.dumps({"source_name": source_name, "source_text": source_text})

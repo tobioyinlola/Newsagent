@@ -96,7 +96,7 @@ async def test_a_wrong_code_does_not_join_and_a_bad_link_looks_like_any_other(cl
 async def test_a_staff_member_signs_in_with_a_code_each_time_like_any_operator(client, workspace):
     await invite(client, "code@cover.example.com", "viewer")
     await join(client, "code@cover.example.com")
-    r = await client.post("/v1/auth/login", json={"email": "code@cover.example.com", "password": PW})
+    r = await client.post("/v1/auth/login", json={"email": "code@cover.example.com", "password": PW, "portal": "admin"})
     assert r.status_code == 200 and r.json()["otp_required"] is True
     tok = bearer(r.json()["token"])
     assert (await client.get("/v1/admin/overview", headers=tok)).status_code == 401  # not until the code is entered
@@ -133,10 +133,10 @@ async def test_suspend_signs_them_out_everywhere_and_blocks_sign_in_until_restor
     sid = m["member"]["id"]
     assert (await client.patch(f"/v1/admin/staff/{sid}", json={"status": "suspended"}, headers=OPS)).status_code == 200
     assert (await client.get("/v1/admin/overview", headers=tok)).status_code == 401  # session revoked
-    blocked = await client.post("/v1/auth/login", json={"email": "pause@cover.example.com", "password": PW})
+    blocked = await client.post("/v1/auth/login", json={"email": "pause@cover.example.com", "password": PW, "portal": "admin"})
     assert blocked.status_code == 401
     assert (await client.patch(f"/v1/admin/staff/{sid}", json={"status": "active"}, headers=OPS)).status_code == 200
-    again = await client.post("/v1/auth/login", json={"email": "pause@cover.example.com", "password": PW})
+    again = await client.post("/v1/auth/login", json={"email": "pause@cover.example.com", "password": PW, "portal": "admin"})
     assert again.status_code == 200
 
 
@@ -149,7 +149,7 @@ async def test_remove_then_invite_again_restores_a_clean_membership(client, work
     listing = (await client.get("/v1/admin/staff", headers=OPS)).json()
     assert "back@cover.example.com" not in [x["email"] for x in listing["members"]]
     assert (
-        await client.post("/v1/auth/login", json={"email": "back@cover.example.com", "password": PW})
+        await client.post("/v1/auth/login", json={"email": "back@cover.example.com", "password": PW, "portal": "admin"})
     ).status_code == 401
     # asked back, with a different role
     await invite(client, "back@cover.example.com", "finance")

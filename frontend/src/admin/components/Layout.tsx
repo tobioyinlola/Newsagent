@@ -1,3 +1,4 @@
+import { AdminToolbar } from "./AdminToolbar";
 import { BackButton } from "../../components/BackButton";
 import { type ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -110,7 +111,7 @@ export function Layout() {
                   to={to}
                   end={to === "/"}
                   title={rail ? label : undefined}
-                  className={({ isActive }) => `flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-bold ${rail ? "justify-center" : ""} ${isActive ? "bg-brand-purple text-white" : "text-white hover:bg-stripe"}`}
+                  className={({ isActive }) => `flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-bold ${rail ? "justify-center" : ""} ${isActive ? "bg-brand-green text-ink shadow-sm" : "text-white/85 hover:bg-white/10 hover:text-white"}`}
                 >
                   {icon}
                   <span className={rail ? "sr-only" : ""}>{label}</span>
@@ -127,8 +128,9 @@ export function Layout() {
           </div>
         </nav>
       </aside>
-      <main className="min-w-0 flex-1">
-        <div className="mx-auto max-w-6xl space-y-4 px-4 py-6">
+      <main className="admin-layout min-w-0 flex-1">
+        <AdminToolbar destinations={GROUPS.flatMap(group => group.items).filter(([, , , needs]) => !needs.length || can(...needs)).map(([to, title]) => ({ to, title }))} />
+        <div className="workspace-content admin-workspace-content space-y-5">
           <BackButton fallback="/" />
           <Outlet />
         </div>

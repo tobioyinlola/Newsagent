@@ -113,11 +113,16 @@ class MockScriptLLM(ScriptLLM):
     async def write_news(self, source_text: str, source_name: str):
         from app.integrations.llm.base import NewsDraft, NewsScene
 
-        script = f"This is Cover Founder News. According to {source_name}, {source_text[:500]} We will continue following this technology story."
+        # Deterministic demo copy within the standalone editorial word limits.
+        source_words = source_text.split()
+        body_words = (f"According to {source_name}, " + source_text + " Cover Founder News is following this technology development.").split()
+        body = " ".join((body_words * (220 // len(body_words) + 1))[:220])
+        script_words = (f"According to {source_name}, " + " ".join(source_words[:45]) + " Cover Founder News is following this developing technology story. Details are attributed to the original source. Further updates will be reported as information becomes available.").split()
+        script = " ".join((script_words * 3)[:80])
         return NewsDraft(
             headline="Technology update: a new chapter for business",
             summary=f"Cover Founder News reviews the latest technology development reported by {source_name}.",
-            body=f"According to {source_name}, {source_text[:1500]}\n\nCover Founder News is following this developing technology story.",
+            body=body,
             presenter_script=script,
             scenes=[
                 NewsScene(

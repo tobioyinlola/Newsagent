@@ -59,7 +59,7 @@ test("insufficient distribution credit opens saved-draft popup, custom top-up, t
 });
 
 test("custom credit minimum, exact USD/NGN prices, and no video estimates", async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:ops@example.com"));
+  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:customer@example.com"));
   await page.route("**/v1/billing/payment-methods", route => route.fulfill({ json: { ngn_per_usd: "1400", usd_card: true, ngn_card: true, ngn_bank_transfer: true } }));
   let checkout: Record<string, unknown> | null = null;
   await page.route("**/v1/billing/checkout", route => { checkout = route.request().postDataJSON(); return route.fulfill({ json: { checkout_id: "custom", url: "/billing?custom-complete=1" } }); });

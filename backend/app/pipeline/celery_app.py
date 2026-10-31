@@ -16,7 +16,7 @@ celery_app.conf.update(
     task_time_limit=3 * 3600 - 600,  # a hung step is killed; must stay below the visibility timeout
     timezone="UTC",
     task_default_queue="default",
-    task_queues=[Queue(lane) for lane in LANES],
+    task_queues=[Queue(lane) for lane in (*LANES, "newsdesk")],
     task_routes={"jobs.*": {"queue": "default"}},
 )
 # With acks_late, a message a dead worker never acknowledged is redelivered after the visibility timeout. It must be LONGER
@@ -93,3 +93,24 @@ def sweep() -> dict:
     from app.jobs import run_sweep
 
     return _run(run_sweep)
+
+
+# Editorial jobs have a separate implementation and table; never call the customer pipeline runner.
+@celery_app.task(name="news_desk.render")
+def news_desk_render(id: str) -> dict:
+    from app.services.news_video import run
+
+    async def go() -> dict:
+        await run(id)
+        return {"news_video_id": id}
+
+    return _run(go)
+
+
+@celery_app.task(name="news_desk.recover")
+def news_desk_recover() -> dict:
+    from app.services.news_video import recover
+    return _run(recover)
+
+
+celery_app.conf.beat_schedule["news-desk-recovery"] = {"task": "news_desk.recover", "schedule": 300.0}

@@ -8,4 +8,5 @@ export DATABASE_URL="sqlite+aiosqlite:///./e2e.db" ENVIRONMENT=local USE_MOCKS=t
   OPERATOR_EMAILS=ops@example.com APP_BASE_URL=http://localhost:5173 SIGNUP_PER_IP_PER_HOUR=1000
 uv run alembic upgrade head
 uv run python -m app.cli bootstrap-operator ops@example.com 100
+uv run python ../frontend/e2e/seed-customer.py
 exec uv run uvicorn app.main:app --port 8000

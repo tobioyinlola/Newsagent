@@ -4,7 +4,7 @@ const methods = { ngn_per_usd: "1400", usd_card: true, ngn_card: true, ngn_bank_
 const bank = { checkout_id: "bank-test", amount_usd: "10", amount_ngn: "14000", ngn_per_usd: "1400", credits: "3.70", status: "pending", reference: "CF0123456789abcdef0123456789abcdef", bank: { account_number: "0000000000", bank_name: "Test bank", beneficiary_name: null, account_label: "Test merchant" } };
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:ops@example.com"));
+  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:customer@example.com"));
   await page.route("**/v1/billing/payment-methods", route => route.fulfill({ json: methods }));
 });
 

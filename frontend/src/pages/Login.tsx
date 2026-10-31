@@ -62,7 +62,7 @@ export function Login() {
   const [password, setPassword] = useState("");
   const finish = useFinish();
   const login = useMutation({
-    mutationFn: () => unwrap(api.POST("/v1/auth/login", { body: { email, password } })),
+    mutationFn: () => unwrap(api.POST("/v1/auth/login", { body: { email, password, portal: "customer" } })),
     onSuccess: finish,
   });
   if (invite) return <Navigate to={`/signup?code=${encodeURIComponent(invite)}`} replace />;

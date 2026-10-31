@@ -1,3 +1,4 @@
+import { NewsBreaking, defaultBreakingProps, breakingFrames } from "./compositions/NewsBreaking";
 import React from "react";
 import { Composition } from "remotion";
 import { InterviewMerge, MergeProps, defaultMergeProps } from "./compositions/InterviewMerge";
@@ -46,6 +47,7 @@ const StandInAnchor: React.FC = () => (
 
 export const Root: React.FC = () => (
   <>
+    <Composition id="NewsBreaking-16x9" component={NewsBreaking} width={1920} height={1080} fps={FPS} durationInFrames={1290} defaultProps={defaultBreakingProps} calculateMetadata={({ props }) => ({ durationInFrames: breakingFrames(props) })} />
     {/* preview only: the branded opening and closing cards, not used by any video yet */}
     <Composition id="BrandIntro" component={BrandIntro} width={1920} height={1080} fps={FPS} durationInFrames={INTRO_SECONDS * FPS} />
     <Composition id="BrandOutro" component={BrandOutro} width={1920} height={1080} fps={FPS} durationInFrames={OUTRO_SECONDS * FPS} />

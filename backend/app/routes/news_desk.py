@@ -1,10 +1,11 @@
-"""Editorial news desk, shared by all active back-office members. No video jobs are started."""
+"""Editorial news desk, shared by all active back-office members. Video jobs are isolated from business generation."""
 
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import Principal, operator
@@ -12,9 +13,9 @@ from app.db import get_session
 from app.integrations import registry
 from app.integrations.llm.base import NewsDraft
 from app.integrations.storage.base import ObjectTooLarge
-from app.models import NewsImage, NewsStory
+from app.models import NewsImage, NewsStory, NewsVideo
 from app.models.base import new_id, utcnow
-from app.services import uploads
+from app.services import news_video, news_video_rules, uploads
 from app.services.audit import audit
 from app.services.ratelimit import limit
 
@@ -39,6 +40,7 @@ class DraftIn(BaseModel):
     body: str = Field(default="", max_length=20000)
     presenter_script: str = Field(default="", max_length=15000)
     scenes: list = Field(default_factory=list, max_length=20)
+    cover_image_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
     pictures: list[Picture] = Field(default_factory=list, max_length=15)
 
 
@@ -74,6 +76,8 @@ async def images_valid(db: AsyncSession, id: str, data: dict):
     scene_ids = [s["image_id"] for s in data.get("scenes", []) if s.get("image_id")]
     if not set(scene_ids).issubset(ids):
         raise HTTPException(422, "Scene pictures must be selected from this story's images")
+    if data.get("cover_image_id") and data["cover_image_id"] not in ids:
+        raise HTTPException(422, "The cover image must be one of this story’s selected and verified pictures")
     if ids:
         rows = list(
             (
@@ -97,6 +101,14 @@ async def out(db: AsyncSession, row: NewsStory):
         )
     ).scalars()
     storage = registry.get_storage()
+    video = (
+        await db.execute(
+            select(NewsVideo).where(NewsVideo.story_id == row.id).order_by(NewsVideo.story_revision.desc()).limit(1)
+        )
+    ).scalar_one_or_none()
+    video_data = await news_video.video_out(video)
+    if video_data and video:
+        video_data["matches_draft"] = video.snapshot == row.data
     return {
         "id": row.id,
         "slug": row.slug,
@@ -108,8 +120,20 @@ async def out(db: AsyncSession, row: NewsStory):
         "updated_by": row.updated_by,
         "updated_at": row.updated_at,
         "published_at": row.published_at,
-        "video_status": "on_hold",
-        "video_generation_enabled": False,
+        "video_status": video.status if video else "not_started",
+        "video_generation_enabled": True,
+        "video": video_data,
+        "limits": {
+            "max_video_seconds": 60,
+            "intro_seconds": 5,
+            "outro_seconds": 6,
+            "sting_seconds": 2,
+            "presenter_seconds": 47,
+            "article_min_words": 200,
+            "article_max_words": 300,
+            "script_min_words": 60,
+            "script_max_words": 95,
+        },
         "images": [{"id": i.id, "url": storage.presign_get(i.key, 900), "filename": i.filename} for i in images],
     }
 
@@ -195,7 +219,9 @@ async def rewrite(id: str, body: Revision, p: Principal = Depends(operator), db:
     await db.commit()  # Do not hold a database transaction while waiting for the writer.
     try:
         draft = await registry.get_llm().write_news(data["source_text"], data["source_name"])
-        data.update(draft.model_dump())
+        rewritten = draft.model_dump()
+        news_video_rules.validate_copy(rewritten)
+        data.update(rewritten)
     except Exception:
         raise HTTPException(
             502, "We couldn't rewrite this story right now. Your saved draft is safe; please retry."
@@ -221,6 +247,20 @@ async def publish(id: str, body: Publish, p: Principal = Depends(operator), db: 
             422, "Add a headline, summary, written story and presenter script before publishing"
         ) from None
     await images_valid(db, id, data)
+    try:
+        news_video_rules.validate_copy(data)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from None
+    latest = (
+        await db.execute(
+            select(NewsVideo).where(NewsVideo.story_id == id).order_by(NewsVideo.story_revision.desc()).limit(1)
+        )
+    ).scalar_one_or_none()
+    if latest and latest.snapshot == row.data and latest.status in {"queued", "running"}:
+        raise HTTPException(409, "Wait for this version’s video to finish before publishing it")
+    video = latest if latest and latest.status == "ready" and latest.snapshot == row.data else None
+    if video:
+        data["_video_id"] = video.id
     await db.commit()
     try:
         moderation = await registry.get_llm().moderate(
@@ -258,11 +298,78 @@ async def unpublish(id: str, body: Revision, p: Principal = Depends(operator), d
 
 
 @router.post("/{id}/generate-video")
-async def generate_video(id: str, _: Principal = Depends(operator), db: AsyncSession = Depends(get_session)):
-    await story(db, id)
-    raise HTTPException(
-        409, "Video generation is on hold. The presenter script and image storyboard can be prepared and saved."
+async def generate_video(
+    id: str, body: Revision, p: Principal = Depends(operator), db: AsyncSession = Depends(get_session)
+):
+    row = await story(db, id)
+    if row.revision != body.revision:
+        raise HTTPException(409, "Save and reload the current draft before generating its video")
+    data = dict(row.data)
+    try:
+        NewsDraft.model_validate(data)
+        news_video_rules.validate_copy(data)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from None
+    if not data.get("source_name") or not data.get("source_url"):
+        raise HTTPException(422, "Add the original source publisher and article URL before generating")
+    if not data.get("pictures") or not data.get("cover_image_id"):
+        raise HTTPException(422, "Select a cover image and at least one verified story picture before generating")
+    await images_valid(db, id, data)
+    await db.commit()
+    try:
+        verdict = await registry.get_llm().moderate(
+            "\n".join(data[k] for k in ["headline", "body", "presenter_script"])
+        )
+    except Exception:
+        raise HTTPException(503, "The content check is unavailable. No video job was started.") from None
+    if verdict.get("level") != "allow":
+        raise HTTPException(422, "Review and edit this content before generating its video")
+    # Serialize against draft edits as well as double clicks; immutable jobs are unique per revision.
+    row = (
+        await db.execute(
+            select(NewsStory).where(NewsStory.id == id).with_for_update().execution_options(populate_existing=True)
+        )
+    ).scalar_one()
+    if row.revision != body.revision:
+        raise HTTPException(409, "The draft changed during the content check. Review it and try again.")
+    video = (
+        await db.execute(select(NewsVideo).where(NewsVideo.story_id == id, NewsVideo.story_revision == body.revision))
+    ).scalar_one_or_none()
+    if video is None:
+        previous = (
+            await db.execute(
+                select(NewsVideo).where(NewsVideo.story_id == id).order_by(NewsVideo.story_revision.desc()).limit(1)
+            )
+        ).scalar_one_or_none()
+        if previous and previous.snapshot == data:
+            video = previous
+    if video is None:
+        video = NewsVideo(story_id=id, story_revision=body.revision, snapshot=data)
+        db.add(video)
+        try:
+            await db.flush()
+        except IntegrityError:
+            await db.rollback()
+            row = await story(db, id)
+            video = (
+                await db.execute(
+                    select(NewsVideo).where(NewsVideo.story_id == id, NewsVideo.story_revision == body.revision)
+                )
+            ).scalar_one()
+    elif video.status == "failed":
+        video.status, video.error = "queued", ""
+    audit(
+        db,
+        p.user.email,
+        "news.video_requested",
+        target_type="news_story",
+        target_id=id,
+        detail={"revision": body.revision, "video_id": video.id},
     )
+    await db.commit()
+    if video.status == "queued":
+        news_video.enqueue(video.id)
+    return await out(db, row)
 
 
 @router.post("/{id}/images")

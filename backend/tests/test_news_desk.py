@@ -46,9 +46,9 @@ async def publish(client, row):
 async def test_news_rewrite_review_publish_snapshot_unpublish_without_video_jobs(client, workspace, maker):
     row = await ready(client)
     assert row["data"]["presenter_script"] and row["data"]["scenes"]
-    assert row["video_generation_enabled"] is False and row["video_status"] == "on_hold"
+    assert row["video_generation_enabled"] is True and row["video_status"] == "not_started"
     assert (await client.get(f"/v1/public/stories/{row['slug']}")).status_code == 404
-    assert (await client.post(f"{BASE}/{row['id']}/generate-video", headers=OPS)).status_code == 409
+    assert (await client.post(f"{BASE}/{row['id']}/generate-video", headers=OPS, json={"revision": row["revision"]})).status_code == 422
     r = await publish(client, row)
     assert r.status_code == 200, r.text
     row = r.json()

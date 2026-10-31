@@ -12,7 +12,7 @@ test("News Desk source, AI rewrite, verified images, storyboard, public publicat
   await page.getByRole("button", { name: "Rewrite with AI", exact: true }).click();
   await expect(page.getByLabel("Headline", { exact: true })).toHaveValue("Technology update: a new chapter for business");
   await expect(page.getByLabel("Presenter script", { exact: true })).not.toBeEmpty();
-  await expect(page.getByRole("button", { name: "Generate presenter video — on hold", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Generate breaking-news video", exact: true })).toBeDisabled();
   await page.getByLabel("Upload story image (PNG/JPEG, up to 5 MB)", { exact: true }).setInputFiles("public/news-segment.jpg");
   await expect(page.getByLabel("Image 1 caption", { exact: true })).toBeVisible();
   await page.getByLabel("Image 1 caption", { exact: true }).fill("The technology launch");

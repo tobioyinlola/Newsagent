@@ -41,7 +41,7 @@ async def signup(client, email=NEW, password=PW):
 
 
 async def login(client, email=NEW, password=PW):
-    r = await client.post("/v1/auth/login", json={"email": email, "password": password})
+    r = await client.post("/v1/auth/login", json={"email": email, "password": password, "portal": "admin" if email.lower() == OPS_EMAIL else "customer"})
     assert r.status_code == 200, r.text
     return r.json()
 
@@ -120,8 +120,7 @@ async def test_the_password_is_checked_before_a_code_is_sent_and_never_stored_in
 async def test_a_used_invite_and_an_existing_account_are_refused(client, workspace):
     await signup(client)
     r = await client.post("/v1/admin/invites", json={"email": "ops@example.com", "workspace_name": "Dup"}, headers=OPS)
-    res = await client.post("/v1/auth/signup/start", json={"invite_code": r.json()["code"], "password": PW})
-    assert res.status_code == 409
+    assert r.status_code == 409  # team emails are refused before a customer invitation is created
 
 
 async def test_a_used_invite_cannot_be_used_again(client, workspace):

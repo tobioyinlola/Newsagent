@@ -1,3 +1,4 @@
+import { validateBreakingProps } from "../compositions/NewsBreaking";
 import { makeCancelSignal } from "@remotion/renderer";
 import express from "express";
 import crypto from "node:crypto";
@@ -94,8 +95,12 @@ export function createApp(opts: { maxQueue?: number; secret: string; maxConcurre
     const job: Job = { status: "queued", progress: 0, output_keys: [], error: null };
     jobs.set(id, job);
     try { compositionName(composition); } catch { return res.status(400).json({ error: "unknown composition" }); }
+    if (composition === "NewsBreaking") {
+      try { validateBreakingProps(props); } catch (error) { return res.status(400).json({ error: String((error as Error).message) }); }
+      if (outputs.some(o => o.format !== "16x9")) return res.status(400).json({ error: "News Desk uses widescreen output" });
+    }
     // NewsStudio takes the anchor from input_urls; InterviewMerge receives every URL inside props.scenes.
-    const merged = composition === "InterviewMerge"
+    const merged = (composition === "InterviewMerge" || composition === "NewsBreaking")
       ? (props as Record<string, unknown>)
       : ({ ...defaultProps, ...props, anchorSrc: input_urls?.anchor ?? props.anchorSrc ?? null } as NewsProps);
     const { cancelSignal, cancel } = makeCancelSignal();

@@ -1,3 +1,5 @@
+import { useMe } from "../components/RequireOperator";
+import { useCan } from "../lib/can";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -10,6 +12,8 @@ const RANGES = [30, 60, 90] as const;
 
 // The business at a glance: who signed up, who is paying, how videos are doing, what needs a person.
 export function Overview() {
+  const me = useMe();
+  const can = useCan();
   const [days, setDays] = useState<(typeof RANGES)[number]>(30);
   const q = useQuery({ queryKey: ["overview", days], queryFn: () => unwrap(api.GET("/v1/admin/overview", { params: { query: { days } } })), refetchInterval: 30000 });
   if (q.isLoading) return <p aria-busy="true">Loading…</p>;
@@ -23,16 +27,17 @@ export function Overview() {
     a.suspended_workspaces > 0 && <Notice key="s" tone="info">{a.suspended_workspaces} suspended workspace{a.suspended_workspaces === 1 ? "" : "s"}. <Link className="underline" to="/customers">Customers</Link></Notice>,
   ].filter(Boolean);
   return (
-    <>
+    <div className="admin-overview space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Overview</h1>
-        <div role="group" aria-label="Chart range" className="flex gap-1">
-          {RANGES.map((r) => <button key={r} type="button" aria-pressed={days === r} onClick={() => setDays(r)} className={`rounded-sm border-2 border-ink px-3 py-1 text-sm font-bold ${days === r ? "bg-ink text-white" : "bg-white"}`}>{r} days</button>)}
+        <div><p className="dashboard-eyebrow">YOUR CONTROL ROOM, AT A GLANCE</p><h1 className="mt-2 text-3xl font-bold">Welcome back, {me.data?.email.split("@")[0].split(/[._-]/)[0] || "team"} <span aria-hidden="true">👋</span></h1><p className="mt-2 text-sm text-muted">A clear view of your newsroom, customers and the work that needs you.</p></div>
+        <div role="group" aria-label="Chart range" className="admin-range flex gap-1 rounded-xl border border-line bg-white p-1 shadow-sm">
+          {RANGES.map((r) => <button key={r} type="button" aria-pressed={days === r} onClick={() => setDays(r)} className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${days === r ? "bg-ink text-brand-green" : "text-muted hover:bg-paper hover:text-ink"}`}>{r} days</button>)}
         </div>
       </div>
+      <section className="dashboard-hero admin-dashboard-hero cf-stripes"><div className="dashboard-hero-copy"><p className="dashboard-eyebrow">THE TEAM BEHIND THE HEADLINES</p><h2>Keep great stories moving.</h2><p>Prepare breaking news, coordinate publications and keep every customer’s next step in view.</p><div className="mt-6 flex flex-wrap gap-3"><Link className="inline-flex min-h-11 items-center rounded-lg border border-ink bg-brand-green px-4 py-3 text-sm font-bold text-ink" to="/news-desk">Open News Desk →</Link>{can("operations.view") && <Link className="dashboard-secondary" to="/distribution">Manage distribution</Link>}</div></div><div className="dashboard-hero-note" aria-hidden="true"><span className="dashboard-hero-symbol">CF</span><p>YOUR NEWSROOM.<br />ONE WORKSPACE.</p></div></section>
       {attention.length > 0 && <div className="space-y-2" aria-label="Needs attention">{attention}</div>}
 
-      <dl className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Key figures">
+      <dl className="admin-kpis grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Key figures">
         <Stat label="Customers" value={k.customers} sub={`${k.active_30d} active in the last 30 days`} />
         <Stat label="New sign-ups" value={k.signups_7d} sub={`this week · ${k.signups_30d} in 30 days`} />
         <Stat label="Paying companies" value={k.paying_companies} sub={k.customers ? `${Math.round((k.paying_companies / k.customers) * 100)}% of customers` : "no customers yet"} />
@@ -78,6 +83,6 @@ export function Overview() {
           </table>
         </Card>
       )}
-    </>
+    </div>
   );
 }

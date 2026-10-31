@@ -236,3 +236,23 @@ html { font-family: var(--font-sans); color: var(--color-navy); background: #fff
 @media (max-width: 640px) { .workspace-toolbar { margin: 12px 10px 0; padding: 8px; gap: 8px; } .workspace-search { padding: 0 10px; gap: 7px; } .workspace-search kbd, .workspace-profile-copy { display: none; } .workspace-tools .workspace-profile { width: auto; padding: 0; gap: 4px; } .workspace-tools .workspace-notifications { width: 36px; height: 36px; } .workspace-avatar { width: 32px; height: 32px; } }
 
 @media (max-width: 640px) { .workspace-content { padding: 20px 16px; } }
+
+
+/* Admin workspace polish: keep these adjustments inside the back office. */
+.admin-workspace-content { padding: 22px clamp(16px, 2vw, 30px) 40px; }
+.admin-overview { max-width: 1500px; margin-inline: auto; }
+.admin-overview > :first-child h1 { letter-spacing: -.045em; }
+.admin-overview .dashboard-eyebrow { color: #566447; }
+.admin-dashboard-hero { min-height: 250px; box-shadow: 0 12px 32px #14151114; }
+.admin-dashboard-hero .dashboard-hero-copy { max-width: 720px; align-self: center; }
+.admin-kpis .admin-stat { min-height: 136px; position: relative; overflow: hidden; }
+.admin-kpis .admin-stat::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--color-brand-green); }
+.admin-card { box-shadow: 0 2px 8px #14151108; }
+.admin-card table { border-collapse: collapse; }
+.admin-card thead th { padding: 10px 8px; font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+.admin-card tbody td { padding: 12px 8px; }
+.admin-card tbody tr:hover { background: #f7f9f2; }
+.admin-card a { text-decoration-color: #a3b18f; text-underline-offset: 3px; }
+.admin-range button[aria-pressed="true"] { box-shadow: 0 1px 2px #0002; }
+.admin-layout > .workspace-toolbar:focus-within { border-color: #b8c99e; box-shadow: 0 4px 18px #2222220b; }
+@media (max-width: 640px) { .admin-workspace-content { padding: 16px 12px 28px; } .admin-dashboard-hero { min-height: 0; } .admin-kpis .admin-stat { min-height: 120px; padding: 16px; } .admin-card { padding: 16px; } }

@@ -106,6 +106,8 @@ async def signup_start(
         await _throttle(request, "signup", email, (5, 3600), (settings.signup_per_ip_per_hour, 3600))
     if (await db.execute(select(User.id).where(User.email == email))).first():
         raise HTTPException(409, "This email already has an account. Sign in instead.")
+    if email in await rbac.team_emails(db):
+        raise HTTPException(403, "This email belongs to the Cover Founder team. Use the admin sign-in page.")
     _check_password(body.password, email)
     referrer = await referrals.resolve(db, body.referral_code) if not invite_id else None
     referral_code = body.referral_code if referrer and referrer.email.lower() != email else None
@@ -141,6 +143,8 @@ async def signup_verify(body: SignupVerifyIn, request: Request, db: AsyncSession
             raise BAD_CODE
         email = str(body.email).lower()
         await _throttle(request, "signup-verify", email, (10, 600), (30, 600))
+    if email in await rbac.team_emails(db):
+        raise HTTPException(403, "Team emails cannot create customer accounts.")
     row = await sess.check_code(db, email, "signup", body.code, invite_id=inv.id if inv else None)
     await db.commit()  # persists the failed-attempt counter too
     if row is None or not row.password_hash or (inv is None and (row.invite_id or not row.workspace_name)):
@@ -202,6 +206,11 @@ async def login(
     if not ok or user is None or await rbac.blocked(db, email):
         raise BAD_LOGIN
     operator = bool(await rbac.permissions_for(db, email))  # an owner, or an active team member
+    team_account = email in await rbac.team_emails(db) or user.role in {"staff", "admin", "operator"}
+    if team_account and not operator:
+        raise BAD_LOGIN  # A reserved team identity never falls through to customer access.
+    if (body.portal == "admin") != operator:
+        raise HTTPException(403, "Use the admin sign-in page for this team account." if operator else "This is a customer account. Please sign in on the main site.")
     ns = await sess.create_session(db, user, request, otp_verified=not operator, operator=operator)
     if operator:  # second step: operators confirm each sign-in with an emailed code
         code = await sess.issue_code(db, email, "login", ip=ratelimit.client_ip(request))

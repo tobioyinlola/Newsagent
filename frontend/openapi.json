@@ -2801,6 +2801,15 @@
             "minLength": 1,
             "title": "Password",
             "type": "string"
+          },
+          "portal": {
+            "default": "customer",
+            "enum": [
+              "customer",
+              "admin"
+            ],
+            "title": "Portal",
+            "type": "string"
           }
         },
         "required": [
@@ -6942,6 +6951,18 @@
             "title": "Body",
             "type": "string"
           },
+          "cover_image_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{32}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Id"
+          },
           "headline": {
             "default": "",
             "maxLength": 180,
@@ -9538,6 +9559,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Revision"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {

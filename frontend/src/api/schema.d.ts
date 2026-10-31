@@ -4372,6 +4372,12 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+            /**
+             * Portal
+             * @default customer
+             * @enum {string}
+             */
+            portal: "customer" | "admin";
         };
         /** ManualCreditsIn */
         ManualCreditsIn: {
@@ -5883,6 +5889,8 @@ export interface components {
              * @default
              */
             body: string;
+            /** Cover Image Id */
+            cover_image_id?: string | null;
             /**
              * Headline
              * @default
@@ -7299,7 +7307,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Revision"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

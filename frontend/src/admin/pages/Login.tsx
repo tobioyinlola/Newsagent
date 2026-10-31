@@ -1,32 +1,18 @@
-import { BackButton } from "../../components/BackButton";
+import { AdminAuthShell } from "../components/AuthShell";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { api, type Schemas, unwrap } from "../api/client";
 import { Button, Card, ErrorBox, Field, inputCls, Notice, Toast } from "../components/ui";
-import { Logo } from "../components/Logo";
 import { getToken, setToken } from "../lib/auth";
 
 type Session = Schemas["SessionOut"];
 
-function Shell({ children }: { children: ReactNode }) {
-  return (
-    <div className="cf-stripes flex min-h-screen items-center justify-center p-6">
-      <div className="w-full max-w-md space-y-6">
-        <Logo className="w-52 text-brand-green" />
-        <BackButton fallback="/login" className="text-white" />
-        {children}
-      </div>
-    </div>
-  );
-}
+
 
 function PasswordField({ label = "Password", value, onChange, autoComplete, hint }: { label?: string; value: string; onChange: (v: string) => void; autoComplete: string; hint?: string }) {
-  return (
-    <Field label={label} hint={hint}>
-      {(id) => <input id={id} type="password" required autoComplete={autoComplete} className={inputCls} value={value} onChange={(e) => onChange(e.target.value)} />}
-    </Field>
-  );
+  const [visible, setVisible] = useState(false);
+  return <Field label={label} hint={hint}>{id => <div className="relative"><input id={id} type={visible ? "text" : "password"} required autoComplete={autoComplete} className={`${inputCls} pr-20`} value={value} onChange={e => onChange(e.target.value)} /><button type="button" className="absolute inset-y-1 right-1 rounded px-3 text-xs font-bold hover:bg-paper" aria-label={`${visible ? "Hide" : "Show"} ${label.toLowerCase()}`} aria-pressed={visible} onClick={() => setVisible(v => !v)}>{visible ? "Hide" : "Show"}</button></div>}</Field>;
 }
 
 function CodeField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -53,12 +39,12 @@ export function Login() {
   const [password, setPassword] = useState("");
   const finish = useFinish();
   const login = useMutation({
-    mutationFn: () => unwrap(api.POST("/v1/auth/login", { body: { email, password } })),
+    mutationFn: () => unwrap(api.POST("/v1/auth/login", { body: { email, password, portal: "admin" } })),
     onSuccess: finish,
   });
   if (getToken()) return <Navigate to="/" replace />;
   return (
-    <Shell>
+    <AdminAuthShell>
       <Card title="Back office sign-in">
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); login.mutate(); }}>
           {params.get("expired") && <Notice tone="info">You were signed out (sessions end after an hour without activity). Please sign in again.</Notice>}
@@ -69,8 +55,8 @@ export function Login() {
         </form>
         <p className="mt-3 text-sm"><Link className="underline" to="/forgot">Forgot your password?</Link></p>
       </Card>
-      <p className="text-sm text-white">For Cover Founder operators only. A code is emailed to you each time you sign in.</p>
-    </Shell>
+      <p className="text-sm text-muted">For Cover Founder operators only. A code is emailed to you each time you sign in.</p>
+    </AdminAuthShell>
   );
 }
 
@@ -86,7 +72,7 @@ export function OtpChallenge() {
   const resend = useMutation({ mutationFn: () => unwrap(api.POST("/v1/auth/login/otp/resend")) });
   if (!getToken()) return <Navigate to="/login" replace />;
   return (
-    <Shell>
+    <AdminAuthShell>
       <Card title="Check your email">
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); verify.mutate(); }}>
           <Notice tone="ok">We emailed you a 6-digit code to finish signing in.</Notice>
@@ -100,7 +86,7 @@ export function OtpChallenge() {
           </div>
         </form>
       </Card>
-    </Shell>
+    </AdminAuthShell>
   );
 }
 
@@ -120,7 +106,7 @@ export function Forgot() {
     onSuccess: () => { setDone(true); window.setTimeout(() => nav("/login", { replace: true }), 2200); },
   });
   return (
-    <Shell>
+    <AdminAuthShell>
       {done && <Toast>Password updated. Taking you to sign in…</Toast>}
       <Card title="Reset your password">
         {sent ? (
@@ -140,6 +126,6 @@ export function Forgot() {
         )}
         <p className="mt-3 text-sm"><Link className="underline" to="/login">Back to sign in</Link></p>
       </Card>
-    </Shell>
+    </AdminAuthShell>
   );
 }

@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     # header below. The event only wakes the pipeline up (it never supplies results), so a forged event cannot inject media.
     # The look used when a project doesn't choose a presenter. Required for real runs: HeyGen needs an avatar id.
     heygen_default_avatar_id: str = ""
+    news_desk_avatar_id: str = ""  # Optional editorial presenter override; customer configuration is unchanged.
     heygen_voice_male: str = ""  # voice used when a presenter's look has no voice of its own and the presenter is a man
     heygen_voice_female: str = ""  # ... and a woman
     heygen_closing_params: str = (

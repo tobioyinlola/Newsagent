@@ -8,6 +8,7 @@
 #   avatar       presenter clips: minutes of polling the avatar vendor
 #   render       final and preview renders: minutes of waiting on the renderer
 #   default      emails, reminders and the scheduled sweeps
+#   newsdesk     isolated editorial presenter/render jobs; never blocks a customer pipeline worker
 # Size each with its env var. Each worker process is a Python process (~100 MB): keep the total within the container's memory.
 # More capacity than one container gives? Run the lanes as separate services with the same image (celery -A ... worker -Q <lane>).
 set -u
@@ -22,7 +23,7 @@ if [ -n "${BOOTSTRAP_OPERATOR_EMAIL:-}" ]; then
 fi
 
 (cd renderer && PORT=4000 RENDER_CONCURRENCY="${RENDER_CONCURRENCY:-2}" RENDER_JOBS_CONCURRENCY="${RENDER_JOBS_CONCURRENCY:-1}" RENDER_LIGHT_CONCURRENCY="${RENDER_LIGHT_CONCURRENCY:-2}" exec node_modules/.bin/tsx src/server/index.ts) &
-for spec in "interactive:${WORKER_INTERACTIVE:-3}" "avatar:${WORKER_AVATAR:-4}" "render:${WORKER_RENDER:-2}" "default:${WORKER_DEFAULT:-1}"; do
+for spec in "interactive:${WORKER_INTERACTIVE:-3}" "avatar:${WORKER_AVATAR:-4}" "render:${WORKER_RENDER:-2}" "default:${WORKER_DEFAULT:-1}" "newsdesk:${WORKER_NEWS_DESK:-1}"; do
   lane="${spec%%:*}"; n="${spec##*:}"
   celery -A app.pipeline.celery_app worker -Q "$lane" -n "$lane@%h" --concurrency "$n" --loglevel INFO &
 done

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 type Point = { label: string; value: number };
 
 // A small bar chart in the brand's colours. The data is also available as a table for screen readers.
-export function Bars({ title, points, format = (n) => String(n), color = "bg-brand-purple" }: { title: string; points: Point[]; format?: (n: number) => string; color?: string }) {
+export function Bars({ title, points, format = (n) => String(n), color = "bg-brand-green" }: { title: string; points: Point[]; format?: (n: number) => string; color?: string }) {
   const max = Math.max(1, ...points.map((p) => p.value));
   const total = points.reduce((n, p) => n + p.value, 0);
   return (
@@ -26,7 +26,7 @@ export function Bars({ title, points, format = (n) => String(n), color = "bg-bra
 }
 
 // Horizontal bars for a handful of labelled counts (a funnel, videos by state).
-export function HBars({ title, rows, color = "bg-brand-purple" }: { title: string; rows: { label: string; value: number }[]; color?: string }) {
+export function HBars({ title, rows, color = "bg-brand-green" }: { title: string; rows: { label: string; value: number }[]; color?: string }) {
   const max = Math.max(1, ...rows.map((r) => r.value));
   return (
     <figure className="space-y-2">
@@ -48,9 +48,9 @@ export function HBars({ title, rows, color = "bg-brand-purple" }: { title: strin
 
 export function Stat({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: "good" | "warn" }) {
   return (
-    <div className={`rounded-md border-2 border-ink p-4 ${tone === "warn" ? "bg-peach-tint" : "bg-white"}`}>
-      <dt className="text-sm text-muted">{label}</dt>
-      <dd className="mt-1 font-mono text-3xl font-bold tabular-nums">{value}</dd>
+    <div className={`admin-stat rounded-2xl border border-line p-5 shadow-sm ${tone === "warn" ? "bg-peach-tint" : "bg-white"}`}>
+      <dt className="text-sm font-medium text-muted">{label}</dt>
+      <dd className="mt-4 text-3xl font-semibold tracking-tight tabular-nums">{value}</dd>
       {sub && <p className="mt-1 text-xs text-muted">{sub}</p>}
     </div>
   );

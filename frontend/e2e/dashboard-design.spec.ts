@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("dashboard live activity, search, settings, top sidebar toggle and responsive layout", async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:ops@example.com"));
+  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:customer@example.com"));
   await page.route("**/v1/projects", route => route.fulfill({ json: [{ id: "ready-video", state: "final_ready", created_at: "2026-10-30T10:00:00Z", founder_name: "Ada Obi" }, { id: "draft-video", state: "draft", created_at: "2026-10-29T10:00:00Z", founder_name: "Ada Obi" }] }));
   await page.setViewportSize({ width: 1440, height: 1080 });
   await page.goto("/dashboard");

@@ -724,6 +724,7 @@ class SignupVerifyIn(BaseModel):
 
 
 class LoginIn(BaseModel):
+    portal: Literal["customer", "admin"] = "customer"
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)
 

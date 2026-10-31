@@ -1,3 +1,4 @@
+import { DistributionReadyPrompt } from "../components/DistributionReadyPrompt";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
@@ -100,6 +101,7 @@ export function ProjectDetail() {
       {p.state === "awaiting_founder" && <InterviewPanel projectId={id} />}
       {p.state === "processing_founder" && <ReviewPanel projectId={id} keepRaw={p.keep_raw_takes} />}
       {p.state === "merging" && <Card title="Making your final video"><p aria-busy="true">We're putting the interview together. You'll get an email when it is ready.</p></Card>}
+      {p.state === "final_ready" && me.data && <DistributionReadyPrompt key={id} projectId={id} workspaceId={me.data.workspace_id} />}
       {p.state === "final_ready" && <Delivery projectId={id} />}
       {p.state === "final_ready" && guided && <StoryCopy projectId={id} />}
       {p.state === "final_ready" && p.interview_enabled && <SceneEditor projectId={id} state={p.state} />}

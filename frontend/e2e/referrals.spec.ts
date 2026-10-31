@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 const API = "http://localhost:8000";
-const OPS = { Authorization: "Bearer dev:ops@example.com" };
+const OPS = { Authorization: "Bearer dev:customer@example.com" };
 
 test("shared referral link to verified business signup awards one usable wallet credit", async ({ page, browser, request }) => {
-  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:ops@example.com"));
+  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:customer@example.com"));
   await page.goto("/referrals");
   await expect(page.getByRole("heading", { name: "Invite a business. Earn a credit." })).toBeVisible();
   const link = page.getByLabel("Share this link with another business");

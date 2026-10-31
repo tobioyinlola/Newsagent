@@ -4,7 +4,7 @@ const { publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048, publicKe
 const fields = [["First name on card", "Ada"], ["Last name on card", "Obi"], ["Card number", "4111 1111 1111 1111"], ["Expiry date (MM/YY)", "12/35"], ["Security code", "123"], ["Billing address", "1 Main Street"], ["City", "Lagos"], ["State / province / region", "Lagos"], ["Country code", "NG"]];
 
 test("card failure permits fresh details only after server-authorized recovery", async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:ops@example.com"));
+  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:customer@example.com"));
   let attempts = 0;
   let payment = { checkout_id: "recover", amount_usd: "1", credits: "0.37", currency: "USD", amount: "1", status: "pending", provider_status: "requires_action", can_retry_confirmation: true, public_key: publicKey, sandbox: true, next_action_url: null, payment_error: null as { code: string; message: string } | null };
   await page.route("**/v1/billing/card/recover", route => route.fulfill({ json: payment }));
@@ -24,7 +24,7 @@ test("card failure permits fresh details only after server-authorized recovery",
 });
 
 test("customer bank claim, finance matching and customer payment confirmation", async ({ page, browser }) => {
-  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:ops@example.com"));
+  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:customer@example.com"));
   const id = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; const reference = "100004261030154115175873657637";
   let claimed = false; let matched = false; let matches = 0;
   const purchase = () => ({ checkout_id: id, amount_usd: "1", amount_ngn: "1400", ngn_per_usd: "1400", credits: "0.37", status: matched ? "paid" : "pending", reference: "CF" + id, claim: claimed ? { status: matched ? "matched" : "pending_review", reference } : null, bank: { bank_name: "Test bank", account_number: "0000000000", account_label: "Test merchant", beneficiary_name: null } });

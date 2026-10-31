@@ -2,24 +2,24 @@ import { type ButtonHTMLAttributes, type ReactNode, useId } from "react";
 
 export function Button({ variant = "primary", className = "", ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "danger" }) {
   const styles = {
-    primary: "border-2 border-ink bg-brand-green text-ink hover:bg-ink hover:text-brand-green disabled:border-line disabled:bg-line disabled:text-muted",
-    secondary: "border-2 border-ink bg-white text-ink hover:bg-ink hover:text-white disabled:border-line disabled:text-muted",
-    danger: "border-2 border-ink bg-brand-red text-ink hover:bg-ink hover:text-brand-red disabled:border-line disabled:bg-line disabled:text-muted",
+    primary: "border border-ink bg-brand-green text-ink shadow-sm hover:-translate-y-px hover:shadow-md disabled:border-line disabled:bg-line disabled:text-muted",
+    secondary: "border border-line bg-white text-ink hover:border-ink hover:bg-paper disabled:border-line disabled:text-muted",
+    danger: "border border-brand-red bg-red-tint text-ink hover:bg-brand-red disabled:border-line disabled:text-muted",
   }[variant];
   return (
     <button
       {...p}
-      className={`rounded-sm px-4 py-2 text-sm font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-purple disabled:cursor-not-allowed ${styles} ${className}`}
+      className={`rounded-lg px-4 py-2.5 text-sm font-semibold transition duration-150 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-purple disabled:cursor-not-allowed ${styles} ${className}`}
     />
   );
 }
 
 export function Card({ title, children, actions }: { title?: string; children: ReactNode; actions?: ReactNode }) {
   return (
-    <section className="rounded-md border-2 border-ink bg-white p-4 sm:p-6">
+    <section className="admin-card rounded-2xl border border-line bg-white p-4 shadow-sm sm:p-6">
       {(title || actions) && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          {title && <h2 className="text-lg font-bold text-ink">{title}</h2>}
+          {title && <h2 className="text-lg font-semibold tracking-tight text-ink">{title}</h2>}
           {actions}
         </div>
       )}
@@ -40,7 +40,7 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
 }
 
 export const inputCls =
-  "w-full rounded-sm border-2 border-ink bg-white px-3 py-2 text-sm text-ink focus:border-brand-purple focus:outline-3 focus:outline-brand-purple/40";
+  "w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm text-ink transition focus:border-ink focus:outline-3 focus:outline-brand-green/50";
 
 export function ErrorBox({ error }: { error: unknown }) {
   if (!error) return null;
@@ -65,7 +65,7 @@ export function ConfirmDialog({ title, children, confirmLabel, cancelLabel = "Ca
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4" onKeyDown={(e) => { if (e.key === "Escape") onCancel(); }}>
       <div role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" className="w-full max-w-sm rounded-sm border-2 border-ink bg-white p-5 shadow-xl">
-        <h2 id="confirm-title" className="text-lg font-bold text-ink">{title}</h2>
+        <h2 id="confirm-title" className="text-lg font-semibold tracking-tight text-ink">{title}</h2>
         {children && <div className="mt-2 text-sm text-ink">{children}</div>}
         <div className="mt-5 flex justify-end gap-3">
           <button type="button" autoFocus className="rounded-sm border-2 border-ink px-4 py-2 text-sm font-bold text-ink hover:bg-paper" onClick={onCancel}>{cancelLabel}</button>
@@ -78,7 +78,7 @@ export function ConfirmDialog({ title, children, confirmLabel, cancelLabel = "Ca
 
 export function Notice({ tone = "info", children }: { tone?: "info" | "warn" | "ok"; children: ReactNode }) {
   const c = { info: "border-brand-purple bg-lilac text-ink", warn: "border-brand-peach bg-peach-tint text-ink", ok: "border-ink bg-lime-tint text-ink" }[tone];
-  return <div role="status" className={`rounded-sm border-2 p-3 text-sm ${c}`}>{children}</div>;
+  return <div role="status" className={`rounded-xl border p-4 text-sm shadow-sm ${c}`}>{children}</div>;
 }
 
 // Mandatory disclosure (hard rule 2). Rendered wherever a finished video is shown; not configurable.

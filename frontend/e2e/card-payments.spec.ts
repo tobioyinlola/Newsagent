@@ -5,7 +5,7 @@ const { publicKey, privateKey } = generateKeyPairSync("rsa", { modulusLength: 20
 const details = { checkout_id: "card-test", amount_usd: "10", credits: "3.70", currency: "USD", status: "pending", provider_status: "requires_action", public_key: publicKey, sandbox: true, next_action_url: null };
 
 test("card details are encrypted before the API request and verified payment shows wallet confirmation", async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:ops@example.com"));
+  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:customer@example.com"));
   let payment = { ...details };
   let confirmations = 0;
   await page.route("**/v1/billing/card/card-test", route => route.fulfill({ json: payment }));
@@ -37,7 +37,7 @@ test("card details are encrypted before the API request and verified payment sho
 });
 
 test("a forged successful return URL does not show credit until the server verifies payment", async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:ops@example.com"));
+  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:customer@example.com"));
   let paid = false;
   await page.route("**/v1/billing/card/card-test", route => route.fulfill({ json: { ...details, status: paid ? "paid" : "pending", provider_status: paid ? "completed" : "processing" } }));
   await page.goto("/billing/card/card-test?status=completed&amount=1000&currency=USD");

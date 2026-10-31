@@ -15,7 +15,7 @@ async function completedProject(request: APIRequestContext) {
 
 test("closed event stream cannot leave a finished video on the creating step; existing project reopens Ready", async ({ page, request }) => {
   const project = await completedProject(request); let ready = false;
-  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:ops@example.com"));
+  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:customer@example.com"));
   await page.route(`**/v1/projects/${project.id}`, route => route.fulfill({ json: { ...project, state: ready ? "final_ready" : "merging" } }));
   await page.route(`**/v1/projects/${project.id}/events`, route => route.fulfill({ body: "", contentType: "text/event-stream" }));
   // 100% alone is not enough: the confirmed project state must be final_ready.
@@ -27,6 +27,7 @@ test("closed event stream cannot leave a finished video on the creating step; ex
   await expect(page.getByRole("heading", { name: "Your video", exact: true })).toBeVisible({ timeout: 10000 });
   await expect(page.getByRole("navigation", { name: "Progress", exact: true }).locator('[aria-current="step"]')).toContainText("Ready");
   await expect(page.getByRole("heading", { name: "Progress: 100%" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Maybe later", exact: true }).click();
   await page.reload();
   await expect(page.getByRole("heading", { name: "Your video", exact: true })).toBeVisible();
   const distribution = page.getByRole("region", { name: "Media outlet logos" });
@@ -47,7 +48,7 @@ test("closed event stream cannot leave a finished video on the creating step; ex
 
 test("completed progress refreshes the parent project immediately without an event", async ({ page, request }) => {
   const project = await completedProject(request); let refreshed = false;
-  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:ops@example.com"));
+  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:customer@example.com"));
   await page.route(`**/v1/projects/${project.id}`, route => route.fulfill({ json: { ...project, state: refreshed ? "final_ready" : "merging" } }));
   await page.route(`**/v1/projects/${project.id}/events`, route => route.abort());
   await page.route(`**/v1/projects/${project.id}/progress`, route => { refreshed = true; return route.fulfill({ json: { state: "final_ready", percent: 100, stages: [], queue_ahead: 0, cancellable: false, retryable: false } }); });

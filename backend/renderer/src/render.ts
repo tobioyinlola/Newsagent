@@ -12,7 +12,7 @@ export async function getBundle(): Promise<string> {
 
 const browserExecutable = process.env.CHROMIUM_PATH || undefined;
 
-const COMPOSITIONS = ["NewsStudio", "InterviewMerge"];
+const COMPOSITIONS = ["NewsStudio", "InterviewMerge", "NewsBreaking"];
 export function compositionName(name?: string): string {
   if (name && !COMPOSITIONS.includes(name)) throw new Error(`unknown composition: ${name}`);
   return name ?? "NewsStudio";

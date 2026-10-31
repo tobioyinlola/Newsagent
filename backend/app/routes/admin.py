@@ -20,7 +20,7 @@ from app.schemas.api import (
     WorkspacePatch,
 )
 from app.services import email_templates as templates
-from app.services import ledger, privacy, stories
+from app.services import ledger, privacy, rbac, stories
 from app.services.audit import audit
 from app.services.notifications import send_email
 from app.services.spend_guard import ensure_vendor_budget
@@ -36,6 +36,8 @@ async def create_invite(
     session: AsyncSession = Depends(get_session),
 ) -> InviteOut:
     invite_hours = max(48, get_settings().invite_ttl_hours)
+    if body.email.lower() in await rbac.team_emails(session):
+        raise HTTPException(409, "Team emails cannot be invited as customers. Use a separate email address.")
     ws = Workspace(name=body.workspace_name, credit_balance=Decimal("0"), spend_cap=body.spend_cap)
     session.add(ws)
     await session.flush()
