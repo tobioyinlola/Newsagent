@@ -5,37 +5,32 @@ import { api, type Schemas, unwrap } from "../api/client";
 import { Combobox } from "../components/Combobox";
 import { Button, Card, ErrorBox, Field, inputCls, Notice, Toast } from "../components/ui";
 import { PublicNavigation } from "../components/PublicNavigation";
+import { AuthShowcase } from "../components/AuthShowcase";
 import { getToken, setToken } from "../lib/auth";
 
 type Session = Schemas["SessionOut"];
 
 function Shell({ children, signup = false }: { children: ReactNode; signup?: boolean }) {
-  return <div className="min-h-screen bg-ink text-white"><PublicNavigation />
-    <main className="bg-paper px-4 py-8 text-navy sm:px-6 sm:py-12 lg:py-16">
-      <div className="mx-auto grid max-w-6xl items-start gap-8 lg:grid-cols-[1fr_1.05fr] lg:gap-14">
-        <section className="cf-stripes rounded-2xl border border-white/10 px-6 py-8 text-white sm:p-10 lg:sticky lg:top-28 lg:py-14">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-green">Cover Founder</p>
-          <h1 className="mt-4 max-w-md text-3xl leading-tight text-white sm:text-4xl lg:text-5xl">{signup ? "Give your business a bigger stage." : "Your next story starts here."}</h1>
-          <p className="mt-5 max-w-md leading-relaxed text-white/80">{signup ? "Create your workspace, tell your story, and bring your business to new audiences." : "Welcome back. Pick up your story, create your next video, or follow your press distribution."}</p>
-          <div className="mt-8 hidden space-y-5 border-t border-white/20 pt-6 sm:block">
-            {["Tell the story behind your business", "Create your video and announcement", "Choose where your news goes next"].map((text, i) => <div key={text} className="flex items-center gap-3 text-sm"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-brand-green/40 text-xs font-bold text-brand-green">0{i + 1}</span><span>{text}</span></div>)}
-          </div>
-          <Link className="mt-8 inline-flex min-h-11 items-center text-sm font-semibold text-brand-green underline underline-offset-4" to="/latest-stories">Explore the latest stories →</Link>
-        </section>
-        <div className="min-w-0 space-y-5 [&>section]:rounded-2xl [&>section]:border-line [&>section]:p-6 [&>section]:shadow-sm sm:[&>section]:p-8 [&_form>button[type=submit]]:min-h-12 [&_form>button[type=submit]]:w-full [&_input]:min-h-12 [&_select]:min-h-12">
-          {children}
-          <p className="text-center text-xs leading-relaxed text-muted">Your workspace for business stories, videos, and press distribution.</p>
+  return <div className="auth-page"><PublicNavigation />
+    <main className="auth-layout">
+      <AuthShowcase />
+      <section className="auth-form-panel" aria-label={signup ? "Create your account" : "Account access"} tabIndex={0}>
+        <div className="auth-form-content">
+          <div className="auth-form-intro"><span className="auth-eyebrow">YOUR COVER FOUNDER WORKSPACE</span><p>{signup ? "Let’s put your business on the map." : "Make room for your next chapter."}</p></div>
+          <div className="auth-fields">{children}</div>
+          <div className="auth-form-footer"><span aria-hidden="true">✳</span><p>Your story. Your voice. A wider audience.</p><Link to="/">Back to Cover Founder</Link></div>
         </div>
-      </div>
+      </section>
     </main>
-    <footer className="border-t border-white/10 px-4 py-6 text-center text-xs text-white/70">Cover Founder · Tell your story. Reach new audiences.</footer>
   </div>;
+
 }
 
 function PasswordField({ label = "Password", value, onChange, autoComplete, hint }: { label?: string; value: string; onChange: (v: string) => void; autoComplete: string; hint?: string }) {
+  const [visible, setVisible] = useState(false);
   return (
     <Field label={label} hint={hint}>
-      {(id) => <input id={id} type="password" required autoComplete={autoComplete} className={inputCls} value={value} onChange={(e) => onChange(e.target.value)} />}
+      {(id) => <div className="relative"><input id={id} type={visible ? "text" : "password"} required autoComplete={autoComplete} className={`${inputCls} pr-20`} value={value} onChange={(e) => onChange(e.target.value)} /><button type="button" aria-label={`${visible ? "Hide" : "Show"} ${label.toLowerCase()}`} aria-pressed={visible} className="absolute inset-y-0 right-1 my-1 rounded-md px-3 text-xs font-semibold text-muted hover:bg-paper" onClick={() => setVisible(v => !v)}>{visible ? "Hide" : "Show"}</button></div>}
     </Field>
   );
 }
@@ -73,12 +68,13 @@ export function Login() {
   return (
     <Shell>
       <Card title="Sign in">
+        <p className="auth-form-description">Welcome back. Your stories, videos and media opportunities are waiting.</p>
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); login.mutate(); }}>
           {params.get("expired") && <Notice tone="info">You were signed out (sessions end after an hour without activity). Please sign in again.</Notice>}
           <Field label="Email">{(id) => <input id={id} type="email" required autoComplete="email" className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} />}</Field>
           <PasswordField value={password} onChange={setPassword} autoComplete="current-password" />
           <ErrorBox error={login.error} />
-          <Button type="submit" disabled={login.isPending}>Sign in</Button>
+          <Button type="submit" disabled={login.isPending}>{login.isPending ? "Signing in…" : "Sign in"}</Button>
         </form>
         <p className="mt-3 text-sm"><Link className="underline" to="/forgot">Forgot your password?</Link></p>
       </Card>

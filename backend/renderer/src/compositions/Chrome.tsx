@@ -1,3 +1,4 @@
+import { broadcastClock } from "./broadcastClock";
 import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { NewsBackdrop } from "./NewsSet";
@@ -24,7 +25,7 @@ export const Chrome: React.FC<ChromeProps> = (p) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
   const u = Math.min(width, height) / 1080;
-  const ticker = p.tickerLines.join("   •   ") + "   •   ";
+  const ticker = (p.tickerLines.filter(Boolean).join("   •   ") || "Cover Founder News") + "   •   ";
   const tickerW = ticker.length * 22 * u;
   const tickerX = -((frame * 3 * u) % tickerW);
   const blink = 0.55 + 0.45 * Math.cos((frame / fps) * Math.PI * 2 * 1.1); // the "on air" light: a slow pulse, about once a second
@@ -43,12 +44,12 @@ export const Chrome: React.FC<ChromeProps> = (p) => {
                 <span style={{ color: CF.white, fontWeight: 800, fontSize: 30 * u, letterSpacing: 2 * u }}>LIVE</span>
               </div>
               <div style={{ background: CF.white, display: "flex", alignItems: "center", padding: `0 ${18 * u}px` }}>
-                <span style={{ color: CF.ink, fontWeight: 700, fontSize: 30 * u }}>{p.liveLocation}</span>
+                <span style={{ color: CF.ink, fontWeight: 700, fontSize: 28 * u, lineHeight: 1.4, maxWidth: width * .45, overflowWrap: "anywhere" }}>{p.liveLocation}</span>
               </div>
             </div>
           )}
           {p.publishedLabel && (
-            <div style={{ background: PLATE, color: CF.white, fontFamily: MONO, fontWeight: 700, fontSize: 22 * u, letterSpacing: 1.5 * u, padding: `${6 * u}px ${14 * u}px`, textTransform: "uppercase" }}>{p.publishedLabel}</div>
+            <div style={{ background: PLATE, color: CF.white, fontFamily: MONO, fontWeight: 700, fontSize: 22 * u, letterSpacing: 1.5 * u, padding: `${6 * u}px ${14 * u}px`, textTransform: "uppercase" }}>{broadcastClock(p.publishedLabel, frame / fps)}</div>
           )}
         </div>
       )}

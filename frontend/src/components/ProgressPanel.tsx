@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { api, unwrap } from "../api/client";
 import { Button, Card, ErrorBox } from "./ui";
 
@@ -18,6 +19,9 @@ export function ProgressPanel({ projectId, state }: { projectId: string; state: 
   const done = () => { void qc.invalidateQueries({ queryKey: ["project", projectId] }); void qc.invalidateQueries({ queryKey: ["progress", projectId] }); };
   const cancel = useMutation({ mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/cancel", path)), onSuccess: done });
   const retry = useMutation({ mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/retry", path)), onSuccess: done });
+  useEffect(() => {
+    if (progress.data?.state && progress.data.state !== state) void qc.invalidateQueries({ queryKey: ["project", projectId] });
+  }, [progress.data?.state, projectId, state, qc]);
   const p = progress.data;
   if (!p) return null;
   return (

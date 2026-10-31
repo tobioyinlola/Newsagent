@@ -1,0 +1,17 @@
+# News Desk and CF Technology Breaking News
+
+All active back-office members can open **Admin → News Desk**, including custom and read-only roles, as explicitly requested for this feature. Customers, unsigned visitors and suspended staff cannot use its admin endpoints. All mutations are audited with the editor and time. This access is intentionally separate from permissions on other admin tools.
+
+Create a draft, paste source article text, and record the source publisher and original URL. **Rewrite with AI** saves current edits and uses the configured OpenAI-compatible or Anthropic writing adapter to produce an original written report, complete presenter narration and ordered image scenes. Source text is treated as reference material, not model instructions. The output must be fact-checked by an editor and is never published automatically. The production adapter is real; local tests use a deterministic mock.
+
+Editors can change the headline, summary, body and presenter script. Upload PNG/JPEG pictures up to 5 MB, add captions and image credits, arrange their order, and assign them to narration scenes. Each scene stores its narration, image hint, selected image, 3–60 second duration and motion (slow zoom in/out, pan left/right or static). A browser preview shows the planned image movement without generating presenter audio or video. Reduced-motion preferences disable preview motion.
+
+Images are checked against actual bytes, declared size and the malware scanner. Confirmed bytes are copied into a separate verified object, so the original signed upload cannot alter published images. A story may select only its own verified images. The first selected image is the cover. Removing an image removes its scene assignments; it remains privately available in storage for recordkeeping. Uploaded image URLs in the admin expire after 15 minutes and are refreshed by reloading the draft.
+
+**Publish story** requires a nonempty story and presenter script, source publisher and HTTP(S) source URL, and explicit editorial confirmation of facts, attribution and image permissions. A publication moderation failure blocks publishing; a review result requires the editor confirmation. Published text and images appear in Latest Stories and the dedicated **CF Technology Breaking News** row as Cover Founder News, with a source attribution link. Private source text, editor emails, the unpublished presenter script and scene plan are excluded from public responses. These editorial pages currently do not enter the project-based customer audience counters.
+
+The published snapshot is separate from the working draft. Saving later changes leaves the public version intact until the editor publishes again. Revision checks prevent stale browser tabs and slow AI responses from overwriting newer edits. Unpublishing removes the story, images and preview metadata from public endpoints while preserving the private draft.
+
+**Video generation remains on hold.** The UI disables generation and the backend rejects generation requests without queueing jobs or charging for rendering. The narration and image timeline are saved as preparation for a future presenter-plus-stills renderer. No existing interview/video merge workflow is changed, and no guest video is required for editorial news stories.
+
+Migration `0032_news_desk` creates independent editorial stories and image records. Apply it before deploying this feature. This feature makes no live external publication or video-render calls during local tests.

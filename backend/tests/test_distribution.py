@@ -159,7 +159,7 @@ async def test_rejects_invalid_or_foreign_content(client, distribution_data, cha
     ).status_code == 422
 
 
-@pytest.mark.parametrize("field", ["contact_email", "phone", "logo_key", "announcement", "project_id", "outlet_ids"])
+@pytest.mark.parametrize("field", ["contact_email", "phone", "announcement", "project_id", "outlet_ids"])
 async def test_incomplete_submission_rolls_back(client, distribution_data, field):
     data = {**distribution_data, field: [] if field == "outlet_ids" else None if field == "project_id" else ""}
     id = await draft(client, data)
@@ -806,3 +806,17 @@ async def test_distribution_submission_needs_only_phone_not_whatsapp(client, dis
     id = await draft(client, data)
     response = await client.post(f"/v1/distribution/{id}/submit", headers=OWNER)
     assert response.status_code == 200 and response.json()["paid"], response.text
+
+
+async def test_submission_without_optional_logo_has_no_logo_charge(client, distribution_data):
+    await configure_outlet(client, "1", logo_credits="3")
+    id = await draft(client, {**distribution_data, "logo_key": ""})
+    response = await client.post(f"/v1/distribution/{id}/submit", headers=OWNER)
+    assert response.status_code == 200, response.text
+    row = response.json()
+    assert row["paid"] is True
+    assert row["data"]["logo_key"] == ""
+    line = row["data"]["outlets"][0]
+    assert line["logo_key"] is None
+    assert not line["include_logo"]
+    assert Decimal(line["logo_fee"]) == 0

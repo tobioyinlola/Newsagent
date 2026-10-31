@@ -143,8 +143,8 @@ async def test_merged_videos_mix_in_the_presenter_footage(client, workspace):
     assert await state(client, pid) == "final_ready"
     scenes = renderer.requests[-1].props["scenes"]
     kinds = [s["type"] for s in scenes]
-    # opening shot, the AI presenter, then question/answer pairs with a cutaway between answers, the sign-off, a closing shot
-    assert kinds == ["clip", "anchor"] + ["question", "answer", "clip"] * 3 + ["question", "answer", "anchor", "clip"]
+    # opening shot, the AI presenter, then question/answer pairs with a cutaway between answers, a startup recap, the sign-off, a closing shot
+    assert kinds == ["clip", "anchor"] + ["question", "answer", "clip"] * 3 + ["question", "answer", "anchor", "anchor", "clip"]
     assert all(s["seconds"] == 5 for s in scenes if s["type"] == "clip")
     total = sum(s["seconds"] for s in scenes)
     assert abs(renderer.requests[-1].props["totalSeconds"] - total) < 0.01

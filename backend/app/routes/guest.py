@@ -34,7 +34,7 @@ from app.schemas.api import (
     VoicePrepareOut,
 )
 from app.services import interview as iv
-from app.services import privacy, ratelimit, uploads
+from app.services import language_audit, privacy, ratelimit, uploads
 from app.services import state_machine as sm
 from app.services.notifications import notify_owners
 
@@ -351,6 +351,7 @@ async def submit(token: str, session: AsyncSession = Depends(get_session)) -> di
         return {"ok": True}
     script = await approved_script(session, project.id)
     takes = await latest_takes(session, project.id)
+    language_audit.enforce(takes)
     problems = []
     for i in range(len(script.interview_questions)):
         t = takes.get(i)
@@ -437,6 +438,7 @@ async def _line_items(token: str, session: AsyncSession) -> tuple[Project, list[
     lines = iv.interviewer_lines(s.founder_name, await _company(session, project), list(script.interview_questions))
     items = [("greeting", lines["greeting"])]
     items += [(f"q{i}", q) for i, q in enumerate(lines["questions"])]
+    items += [(f"bridge{i}", text) for i, text in enumerate(lines["bridges"])]
     items += [("thanks", lines["thanks"]), ("closing", lines["closing"])]
     return project, items
 

@@ -1,16 +1,18 @@
-// The interview is designed to fit in 5 minutes. This is the same rule the server documents in services/interview.py
-// (answer_window_s): each answer gets the time left, shared across the questions still to ask, minus the time the
-// interviewer needs to speak, never more than 60 s and never less than 15 s.
-export const MAX_TOTAL_S = 300;
-export const MAX_ANSWER_S = 60; // one minute per answer
+// Every answer has 60 seconds, preceded by a five-second countdown and followed by five seconds to round up.
+export const MAX_TOTAL_S = 360; // estimate for the programme, never used to shorten an answer
+export const MAX_ANSWER_S = 60;
 export const MIN_ANSWER_S = 15;
-const RESERVE_S = 14; // the closing line
-const SPEAKING_S = 9; // the interviewer speaking one question
+export const COUNTDOWN_S = 5;
+export const ROUND_UP_S = 5;
 
-export function answerWindow(elapsedS: number, questionsLeft: number, max = MAX_ANSWER_S, min = MIN_ANSWER_S): number {
-  if (questionsLeft <= 0) return 0;
-  const cap = (MAX_TOTAL_S - elapsedS - RESERVE_S) / questionsLeft - SPEAKING_S;
-  return Math.floor(Math.max(min, Math.min(max, cap)));
+export function answerWindow(_elapsedS: number, questionsLeft: number, max = MAX_ANSWER_S, _min = MIN_ANSWER_S): number {
+  void _elapsedS; void _min;
+  return questionsLeft > 0 ? Math.floor(max) : 0;
+}
+
+export function answerTiming(elapsed: number, answerSeconds = MAX_ANSWER_S) {
+  const roundingUp = elapsed >= answerSeconds;
+  return { roundingUp, remaining: Math.max(0, (roundingUp ? answerSeconds + ROUND_UP_S : answerSeconds) - elapsed), shouldStop: elapsed >= answerSeconds + ROUND_UP_S };
 }
 
 export const mmss = (s: number) => {

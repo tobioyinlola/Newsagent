@@ -124,7 +124,7 @@ async def test_approval_needs_two_or_three_pictures_then_makes_the_video_cheaply
     assert not any(
         "hear from the founder" in t.lower() for t in spy.texts
     )  # and there is no generic hand-over any more
-    assert len(spy.texts) == 6  # opening, a question for each of the four answers, the sign-off
+    assert len(spy.texts) == 7  # opening, four questions, startup recap, sign-off
     # a published story (live share link) appears in other videos' tickers; an unshared one never does
     from app.services import cf_news
 

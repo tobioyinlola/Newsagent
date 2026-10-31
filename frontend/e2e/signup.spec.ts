@@ -14,7 +14,7 @@ test("open sign-up: business name, email, password, emailed code, dashboard", as
   await page.getByLabel("Industry").selectOption("technology");
   await page.getByLabel("Work email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill("correct horse battery");
-  await page.getByLabel("Confirm password").fill("correct horse battery");
+  await page.getByLabel("Confirm password", { exact: true }).fill("correct horse battery");
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByLabel("6-digit code")).toBeVisible();
 

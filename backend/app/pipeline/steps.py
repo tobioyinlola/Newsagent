@@ -18,7 +18,7 @@ from app.integrations.avatar.base import AvatarRequest
 from app.integrations.errors import ProviderPending, classify
 from app.integrations.renderer.base import RenderRequest
 from app.models import Asset, BrandKit, InterviewSession, Job, Project, ScriptVersion, Take, Workspace
-from app.services import cf_news, provider_requests, thumbnails
+from app.services import broadcast_rules, cf_news, language_audit, provider_requests, thumbnails
 from app.services import conversation as conv
 from app.services import presenter as clip_lib
 from app.services import scene_plan as sp
@@ -203,7 +203,7 @@ async def build_overlay_props(
         "anchorDurationSeconds": anchor_duration_s,
         "tickerLines": [*script.ticker_lines, *await cf_news.ticker_items(session, exclude_project=project.id)],
         "lowerThirds": script.lower_thirds,
-        "liveLocation": get_settings().live_location,
+        "liveLocation": broadcast_rules.REPORTER_LOCATION,
         "publishedLabel": published_label(),
         "brandCards": get_settings().brand_cards,
         "brandIntroSeconds": brand_lead(),
@@ -522,7 +522,9 @@ def segment_texts(script: ScriptVersion) -> dict[str, str]:
         out[part] = polish.strip_invites(out[part]) if out[part] else out[part]
     out["outro"] = polish.one_signoff(out["outro"])
     order = ["main", "explanation", "analysis", "outro"]
-    out = dict(zip(order, polish.remove_repeats([out[k] for k in order]), strict=True))
+    original_analysis = out["analysis"]
+    out = dict(zip(order, polish.remove_repeats([out[k] if k != "analysis" else "" for k in order]), strict=True))
+    out["analysis"] = original_analysis  # the recap intentionally revisits earlier facts after the answers
     return out
 
 
@@ -601,7 +603,11 @@ def question_texts(project: Project, script: ScriptVersion, needed: list[int]) -
     out."""
     texts = segment_texts(script)
     before = [texts["main"], texts["explanation"]]
-    interview = project.flow == "guided" or getattr(project, "interview_mode", None) == "live"
+    interview = (
+        bool(getattr(project, "interview_enabled", False))
+        or project.flow == "guided"
+        or getattr(project, "interview_mode", None) == "live"
+    )
     gaps = conv.bridges(project.id or "", max(0, len(needed) - 1)) if interview else []
     out: dict[int, str] = {}
     for n, q in enumerate(needed):
@@ -609,7 +615,10 @@ def question_texts(project: Project, script: ScriptVersion, needed: list[int]) -
         if interview and n == 0:
             text = f"{conv.welcome(project.id or '', project.founder_name)} {text}"
         elif interview and n > 0:
-            text = f"{gaps[n - 1]} {text}"
+            hook = (getattr(script, "story", None) or {}).get("answer_bridges", {}).get(str(needed[n - 1])) or gaps[
+                n - 1
+            ]
+            text = f"{hook} {text}"
         fresh = polish.remove_repeats([*before, text])[-1]
         out[q] = fresh or text  # never an empty clip: a question must still be asked
         before.append(out[q])
@@ -624,6 +633,35 @@ async def question_clips(session: AsyncSession, project: Project, guard: SpendGu
     """One anchor clip per featured interview question (stage 8). Idempotent per question."""
     script = await approved_script(session, project.id)
     needed = needed_questions(project, len(script.interview_questions))
+    takes = await latest_takes(session, project.id)
+    founder_name = project.founder_name
+    if not founder_name and takes:
+        founder_name = (
+            await session.execute(
+                select(InterviewSession.founder_name)
+                .where(InterviewSession.project_id == project.id)
+                .order_by(InterviewSession.created_at.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none() or ""
+    broadcast_rules.enrich(script, founder_name, {q: takes[q].transcript or "" for q in needed if q in takes})
+    await session.flush()
+    texts = segment_texts(script)
+    summary_cost = Decimal("0")
+    if takes and texts["analysis"]:
+        summary_cost = await _paid_clips(
+            session,
+            project,
+            guard,
+            [
+                dict(
+                    atype="anchor",
+                    fmt="analysis",
+                    text=texts["analysis"],
+                    key=f"projects/{project.id}/anchor-analysis.{clip_ext(project)}",
+                )
+            ],
+        )
     spoken = question_texts(project, script, needed)
     total = await _paid_clips(
         session,
@@ -639,7 +677,7 @@ async def question_clips(session: AsyncSession, project: Project, guard: SpendGu
             for i in needed
         ],
     )
-    return StepOutcome({"questions": len(needed)}, recorded_cost=total)
+    return StepOutcome({"questions": len(needed)}, recorded_cost=total + summary_cost)
 
 
 async def question_clips_complete(session: AsyncSession, project: Project) -> bool:
@@ -837,6 +875,14 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
     """Stage 10: anchor intro, then per question [anchor asks -> founder answers (PiP/split)], then outro."""
     storage = registry.get_storage()
     script = await approved_script(session, project.id)
+    takes_for_rules = await latest_takes(session, project.id)
+    prepared_cost = Decimal("0")
+    if takes_for_rules:
+        # Invite interviews record after the initial presenter clips were made. Refresh
+        # answer-aware hooks and recap here; matching clips are reused on every retry.
+        language_audit.enforce(takes_for_rules)
+        prepared = await question_clips(session, project, guard)
+        prepared_cost = prepared.recorded_cost or Decimal("0")
     assets = {
         (a.type, a.format): a
         for a in (await session.execute(select(Asset).where(Asset.project_id == project.id))).scalars()
@@ -845,6 +891,7 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
     assert main is not None, "anchor must exist before merging"
     outro = assets.get(("anchor_outro", "outro"))
     takes = await latest_takes(session, project.id)
+    language_audit.enforce(takes)
     n = len(script.interview_questions)
     plan = project.merge_plan or default_plan(n)
     answers = {a["question_index"]: a for a in plan["answers"]}
@@ -863,7 +910,8 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
     founder = {
         "name": isession.founder_name if isession else "",
         "title": isession.founder_title if isession else "",
-        "location": ", ".join(x.strip() for x in (ws.city, ws.country) if x and x.strip()) if ws else "",
+        "location": project.founder_location
+        or (", ".join(x.strip() for x in (ws.city, ws.country) if x and x.strip()) if ws else ""),
     }
 
     texts = segment_texts(script)
@@ -948,6 +996,7 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
             asset=sp.AssetRef(kind="broll_image" if item["kind"] == "image" else "broll_video", key=item["key"]),
             provenance="synthetic" if item.get("synthetic") else "owner_media",
         )
+    spoken_questions = question_texts(project, script, shown)
     for q in shown:
         take, ans, qclip = takes[q], answers.get(q, {}), assets[("question_clip", f"q{q}")]
         trim = float(ans.get("trim_start_s", 0))
@@ -957,12 +1006,15 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
         add(
             type="anchor_question",
             duration_s=qsec,
-            narration=script.interview_questions[q],
+            narration=spoken_questions[q],
             asset=qref,
             question_index=q,
             question=script.interview_questions[q],
         )
-        cues.append((cursor - qsec, cursor, script.interview_questions[q]))
+        cues.extend(
+            (cursor - qsec + a, cursor - qsec + b, text)
+            for a, b, text in parse_srt(build_srt([{"text": spoken_questions[q]}], qsec))
+        )
         answer_start = cursor
         if take.kind == "video" and take.processed_video_key:
             main_ref = sp.AssetRef(kind="take_video", key=take.processed_video_key)
@@ -1066,7 +1118,9 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
         "scenePlanHash": project.scene_plan_hash,
     }  # no signed URLs in the DB
     return StepOutcome(
-        {"props": safe_props, "output_keys": status.output_keys, "srt_key": srt_key, "analyses": analyses}, cost
+        {"props": safe_props, "output_keys": status.output_keys, "srt_key": srt_key, "analyses": analyses},
+        cost,
+        recorded_cost=prepared_cost,
     )
 
 
@@ -1081,9 +1135,9 @@ def story_headline(script: ScriptVersion) -> str:
 
 def chyron_for(script: ScriptVersion, q: int) -> str:
     """The headline bar while the founder answers question q: a short line from what they said (written with the story),
-    else the story's headline."""
+    with a neutral answer label if legacy metadata is missing."""
     chyrons = (script.story or {}).get("chyrons") or {}
-    return str(chyrons.get(str(q)) or story_headline(script))[:90]
+    return str(chyrons.get(str(q)) or "Founder: Shares the story behind the business")[:150]
 
 
 PRESENTER_ROLES = {  # first name -> (name shown on screen, role shown under it)

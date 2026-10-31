@@ -118,3 +118,29 @@ so the pipeline avoids buying any twice:
 - **The interview itself costs nothing from HeyGen**: the founder's answers are their own recording, and product shots are
   uploaded images. The presenter speaks only the opening, a short line per question, and the sign-off.
 - Presenters are created once ($1.31 each) and reused; never recreate one.
+
+
+### Loud founder recordings
+
+A source `clipped_audio` flag is diagnostic and does not require a retake. The renderer retains the recorded answer, cleans the audio and normalizes loudness; source distortion cannot be reconstructed. The candidate is not shown the old “move back and try again” message. Other blocking flags (`no_speech`, `too_short`, `dark_video`), missing/failed recordings and owner-requested retakes retain their existing behavior. Final rendered-video quality checks, including clipping/silence checks, still apply.
+
+Data-only migration **0030** releases previously processed recordings with exactly the `clipped_audio` flag, a nonempty transcript, positive duration and the required processed media keys. Other flags, missing media and failed processing are untouched. No files are regenerated or billed again. Downgrading does not re-block accepted recordings that may have been submitted or used in a video.
+
+
+### Ready-screen status recovery
+
+The server ends each project status stream after 600 seconds. A normal stream close while the project is still active now reconnects; only an explicit terminal state ends monitoring. The project page also polls active projects every five seconds, refetches on reopen/focus, and refreshes project state when the separate progress endpoint reports a different state. A numeric 100% alone never bypasses the final-ready state/quality gate. These client changes apply to existing projects without regenerating or charging for the video. The final Ready step stays active and exposes delivery/distribution content.
+
+The delivery distribution card reuses the public distribution page's local outlet-logo assets and shared marquee component. It supports mobile widths, slow continuous motion and reduced-motion static layouts. Logos are examples from distribution networks; available channels and coverage remain governed by the actual selection catalogue.
+
+## Broadcast contract (October 2026)
+
+New interview renders apply a versioned broadcast default layer (`services/broadcast_rules.py`): each recorded answer has its own founder-labelled headline, each transition acknowledges the preceding answer with a distinct lead, and an explicit startup recap plays after the final answer and before closing and the library outro. The writing adapter requests answer-aware bridges and the recap. Missing metadata is filled from the actual transcripts, so omissions do not introduce format validation failures. Retaken transcripts invalidate generated answer graphics and hooks. Invite interviews refresh their early presenter clips at merge time, when the actual answers exist; unchanged clips remain cached and paid usage is recorded once.
+
+The first project step accepts a per-video founder city/country. Presenter shots use Toronto, Canada; founder shots use the saved location, falling back to workspace city/country on older projects, then a neutral founder-interview label. Each layout displays the answer summary. Lower-third cards ease in and out within scene boundaries, and multiline text has increased leading and spacing. Source pictures still cut cleanly, with the existing audio ramp, so the studio cannot ghost through a scene edge. The broadcast time display advances in seconds from the programme's recorded starting time; it is not a live clock or a live stream.
+
+Interview recording now uses a five-second countdown before each take, a full 60-second answer window, and five additional seconds explicitly labelled for rounding up. The active answer timer is at the top. Earlier long answers never shorten later ones. The overall clock shows elapsed interview time; the estimated programme duration is six minutes, not a hard cutoff that truncates answers.
+
+Explicit abusive/profane words in the transcript are detected with Unicode-normalized, word-boundary-aware rules (including common masked forms). The take is kept privately, marked `needs_retake`, and an audit entry records the question and action without copying the words into the audit log. The UI explains why a retake is needed and removes “use anyway” for that flag. Both guest submission and owner merge enforce the rule server-side. Technical retake flags retain their existing handling; loud audio remains accepted and normalized. This word-based screen supplements existing moderation; it is not a guarantee of detecting abuse in every language or transcription error.
+
+Migration `0033_founder_location` adds the project location with an empty default, allowing existing projects to keep working. The local renderer smoke (`renderer/src/broadcast-smoke.ts`) produces a fixture-only MP4 and landscape/portrait frames for layout verification without calling paid media providers.

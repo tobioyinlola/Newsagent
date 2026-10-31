@@ -22,7 +22,11 @@ export function ProjectDetail() {
   const qc = useQueryClient();
   const path = { params: { path: { project_id: id } } };
   const me = useMe();
-  const project = useQuery({ queryKey: ["project", id], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}", path)) });
+  const project = useQuery({
+    queryKey: ["project", id], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}", path)),
+    refetchOnMount: "always", refetchOnWindowFocus: "always",
+    refetchInterval: query => ["script_approved", "interviewing", "awaiting_founder", "processing_founder", "rendering_anchor", "anchor_ready", "merging"].includes(query.state.data?.state ?? "") ? 5000 : false,
+  });
   const state = project.data?.state;
   const script = useQuery({
     queryKey: ["script", id],
@@ -124,11 +128,11 @@ function Stepper({ labels, current, done }: { labels: string[]; current: number;
       </div>
       <ol className="flex flex-wrap items-center gap-x-1 gap-y-2">
         {labels.map((label, i) => {
-          const state = i < finished ? "done" : i === current ? "current" : "todo";
+          const state = i === current ? "current" : i < finished ? "done" : "todo";
           return (
             <li key={label} className="flex items-center gap-1" aria-current={state === "current" ? "step" : undefined}>
               <span className={`inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1 text-sm font-bold ${state === "done" ? "border-ink bg-lime-tint text-ink" : state === "current" ? "border-brand-purple bg-brand-purple text-white" : "border-line bg-white text-muted"}`}>
-                <span aria-hidden="true">{state === "done" ? "✓" : `${i + 1}.`}</span>{label}
+                <span aria-hidden="true">{state === "done" || (done && i === current) ? "✓" : `${i + 1}.`}</span>{label}
                 {state === "done" && <span className="sr-only"> (done)</span>}
               </span>
               {i < labels.length - 1 && <span aria-hidden="true" className={`px-1 font-bold ${i < finished ? "text-ink" : "text-line"}`}>»</span>}

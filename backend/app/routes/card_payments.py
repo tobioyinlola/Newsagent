@@ -80,7 +80,9 @@ def output(co: Checkout, intent: dict, provider: NuvionBilling) -> dict:
     if co.confirmation_started_at and state == "requires_action":
         state = "confirming"
     return {
-        "can_retry_confirmation": not co.confirmation_started_at
+        "card_payments_enabled": not get_settings().bank_transfer_review_enabled,
+        "can_retry_confirmation": not get_settings().bank_transfer_review_enabled
+        and not co.confirmation_started_at
         and co.status == "pending"
         and state == "requires_action",
         "payment_error": (co.payment_context or {}).get("last_payment_error"),
@@ -103,7 +105,9 @@ async def history(p: Principal = Depends(current_principal), db: AsyncSession = 
     rows = (
         await db.execute(
             select(Checkout)
-            .where(Checkout.workspace_id == p.workspace.id, Checkout.provider.in_(["nuvion", "nuvion_bank"]))
+            .where(
+                Checkout.workspace_id == p.workspace.id, Checkout.provider.in_(["nuvion", "nuvion_bank", "manual_bank"])
+            )
             .order_by(Checkout.created_at.desc())
             .limit(50)
         )
@@ -113,8 +117,9 @@ async def history(p: Principal = Depends(current_principal), db: AsyncSession = 
             "id": co.id,
             "amount_usd": str(co.amount_usd),
             "currency": co.payment_context.get("currency", "USD"),
-            "amount": co.payment_context.get("amount_ngn", str(co.amount_usd)),
-            "payment_method": "bank_transfer" if co.provider == "nuvion_bank" else "card",
+            "amount": co.payment_context.get("amount", co.payment_context.get("amount_ngn", str(co.amount_usd))),
+            "payment_method": "bank_transfer" if co.provider in {"nuvion_bank", "manual_bank"} else "card",
+            "review_required": co.provider == "manual_bank",
             "credits": str(co.credits),
             "status": co.status,
             "created_at": co.created_at,
@@ -175,11 +180,17 @@ async def confirm(
     db: AsyncSession = Depends(get_session),
 ) -> dict:
     co = await owned(db, id, p)
+    if get_settings().bank_transfer_review_enabled and not co.confirmation_started_at and not co.paid_at:
+        raise HTTPException(409, "Card payments are coming soon. Please use bank transfer.")
     provider = active_provider(co)
     if p.workspace.suspended:
         raise HTTPException(403, "This workspace is suspended")
     try:
         intent, _ = await payments.reconcile(db, co, provider)
+        if get_settings().bank_transfer_review_enabled and not co.paid_at:
+            raise HTTPException(
+                409, "Card payments are coming soon. Check any pending payment before starting a bank transfer."
+            )
         if co.status != "pending" or intent.get("status") != "requires_action" or co.confirmation_started_at:
             return output(co, intent, provider)
         claimed = (

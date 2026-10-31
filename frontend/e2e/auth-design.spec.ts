@@ -1,0 +1,37 @@
+import { expect, test } from "@playwright/test";
+
+test("account layout: carousel controls, independent form scrolling, mobile and reduced motion", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/login");
+  await expect(page.getByRole("navigation", { name: "Site", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "A big stage for your next big idea." })).toBeVisible();
+  await page.getByRole("button", { name: "Next feature", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Your ambition. In your own words." })).toBeVisible();
+  await page.getByRole("button", { name: "Show Reach further", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Good stories deserve an audience." })).toBeVisible();
+  await page.getByLabel("Password", { exact: true }).fill("my password");
+  await page.getByRole("button", { name: "Show password", exact: true }).click();
+  await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute("type", "text");
+  await page.getByRole("button", { name: "Hide password", exact: true }).click();
+  await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute("type", "password");
+  await page.getByRole("button", { name: "Show Tell your story", exact: true }).click();
+  await page.screenshot({ path: "/tmp/cover-founder-login-desktop.png", fullPage: true, animations: "disabled" });
+  await page.goto("/signup");
+  await page.setViewportSize({ width: 1280, height: 620 });
+  const pane = page.getByRole("region", { name: "Create your account", exact: true });
+  expect(await pane.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  const showcaseTop = await page.getByRole("region", { name: "Discover Cover Founder" }).evaluate(el => el.getBoundingClientRect().top);
+  await pane.evaluate(el => { el.scrollTop = el.scrollHeight; });
+  await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeInViewport();
+  expect(await page.getByRole("region", { name: "Discover Cover Founder" }).evaluate(el => el.getBoundingClientRect().top)).toBe(showcaseTop);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/login");
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: "/tmp/cover-founder-login-mobile.png", fullPage: true, animations: "disabled" });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(page.getByRole("button", { name: /Play feature carousel|Pause feature carousel/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Next feature", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Your ambition. In your own words." })).toBeVisible();
+});

@@ -212,6 +212,10 @@ async def write_story(
         "social": draft.social.model_dump(),
         "unverified": draft.unverified,
         # the headline bar for each answer, keyed by question number (answers arrive in question order)
+        "startup_summary": draft.startup_summary,
+        "answer_bridges": {
+            str(a.get("index", i)): c for i, (a, c) in enumerate(zip(answers, draft.answer_bridges, strict=False)) if c
+        },
         "chyrons": {
             str(a.get("index", i)): c for i, (a, c) in enumerate(zip(answers, draft.chyrons, strict=False)) if c
         },

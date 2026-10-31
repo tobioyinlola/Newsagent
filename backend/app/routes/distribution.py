@@ -433,12 +433,11 @@ async def submit(
                 body.contact_name,
                 body.contact_email,
                 body.phone,
-                body.logo_key,
             ]
         )
     ):
         raise HTTPException(
-            422, "Choose outlets and a completed video, add your release, company logo and all contact details"
+            422, "Choose outlets and a completed video, add your release and all contact details"
         )
     try:
         TypeAdapter(EmailStr).validate_python(body.contact_email)
@@ -481,6 +480,8 @@ async def submit(
                 "error": "insufficient_credits",
                 "message": "Top up your wallet to submit. Your draft is saved.",
                 "required": str(total),
+                "balance": str(ws.credit_balance),
+                "shortfall": str(total - ws.credit_balance),
             },
         )
     if total:

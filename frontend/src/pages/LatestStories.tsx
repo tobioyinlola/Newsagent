@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+import { api, unwrap } from "../api/client";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { PlayDisc, StoryRow, StoryThumb, storyPath, useStories, type StoryCard } from "../components/StoryCards";
@@ -33,7 +35,7 @@ function Hero({ cards }: { cards: StoryCard[] }) {
           <p className="mt-4 line-clamp-5 text-sm leading-relaxed text-white/85">{c.summary}</p>
           <p className="mt-2 text-xs text-white/60">{c.company}</p>
           <Link to={storyPath(c.slug)} className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/70 px-4 py-2 text-sm font-bold text-white hover:border-brand-green hover:text-brand-green">
-            <PlayDisc size={20} /> Watch Now
+            {c.has_video !== false ? <><PlayDisc size={20} /> Watch Now</> : "Read story →"}
           </Link>
         </div>
         <Link to={storyPath(c.slug)} className="order-1 md:order-2" aria-label={`Watch: ${c.title}`}><StoryThumb card={c} big /></Link>
@@ -50,6 +52,7 @@ function Hero({ cards }: { cards: StoryCard[] }) {
 
 export function LatestStories() {
   const q = useStories(48);
+  const news = useQuery({ queryKey: ["technology-news"], queryFn: () => unwrap(api.GET("/v1/public/technology-news")), staleTime: 60000 });
   const cards = useMemo(() => q.data ?? [], [q.data]);
   const byIndustry = useMemo(() => {
     const m = new Map<string, StoryCard[]>();
@@ -78,6 +81,7 @@ export function LatestStories() {
               </>
             )}
           </div>
+          {news.data?.length ? <StoryRow title="CF Technology Breaking News" cards={news.data} /> : <section className="mt-8 border-t border-white/15 py-8"><h2 className="text-xl text-white">CF Technology Breaking News</h2><p className="mt-3 text-sm text-white/70">{news.isError ? "Technology news is temporarily unavailable. Please try again shortly." : news.isLoading ? "Loading technology news…" : "Technology updates from the Cover Founder News Desk will appear here."}</p></section>}
         </div>
       </main>
     </SiteShell>

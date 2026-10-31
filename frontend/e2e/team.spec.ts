@@ -74,7 +74,7 @@ test("an owner invites a team member with a role; they join and only get what th
   await sam.goto("/admin");
   await expect(sam).toHaveURL(/\/admin\/login/);
   await sam.getByLabel("Email").fill(email);
-  await sam.getByLabel("Password").fill(PASSWORD);
+  await sam.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await sam.getByRole("button", { name: "Sign in" }).click();
   await expect(sam.getByRole("alert")).toContainText("don't match"); // suspended people can't sign in
   await active.getByRole("button", { name: "Restore" }).click();

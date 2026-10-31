@@ -18,4 +18,4 @@ export async function must<T>(p: Promise<{ data?: T; error?: unknown; response: 
 
 // Chunks are ~2 s each. 80 chunks is the server's cap; recordings stop at 2 minutes.
 export const CHUNK_MS = 2000;
-export const HARD_CAP_S = 120;
+export const HARD_CAP_S = 65; // 60 seconds plus 5 seconds to round up

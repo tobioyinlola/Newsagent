@@ -66,7 +66,7 @@ export function InterviewPanel({ projectId }: { projectId: string }) {
           <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); invite.mutate(); }}>
             <p className="sm:col-span-2 text-sm text-muted">Create a private link for your founder. No account is needed; it works on a phone and expires in 14 days.</p>
             <Field label="Founder's name">{(id) => <input id={id} required className={inputCls} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />}</Field>
-            <Field label="Title (shown on screen)">{(id) => <input id={id} className={inputCls} placeholder="CEO, Acme" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />}</Field>
+            <Field label="Title (shown on screen)">{(id) => <input id={id} className={inputCls} placeholder="CEO, Bybit" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />}</Field>
             <div className="sm:col-span-2"><Field label="Email (optional)" hint="We'll email the link and send gentle reminders. Or copy the link and send it yourself.">{(id) => <input id={id} type="email" className={inputCls} value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />}</Field></div>
             <div className="sm:col-span-2"><Button type="submit" disabled={invite.isPending}>Create link</Button></div>
           </form>

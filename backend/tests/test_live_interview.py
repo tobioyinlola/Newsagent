@@ -94,7 +94,7 @@ async def test_start_needs_consent_and_the_right_state_and_is_resumable(client, 
     r = await start(client, pid)
     assert r.status_code == 200, r.text
     s = r.json()
-    assert s["questions"] == QUESTIONS and s["max_total_s"] == 300 and s["max_answer_s"] == 60 and s["company"]
+    assert s["questions"] == QUESTIONS and s["max_total_s"] == 360 and s["max_answer_s"] == 60 and s["company"]
     assert (await start(client, pid)).json()["token"] == s["token"]  # reload: same room, same recorder credential
     async with maker() as db:
         sess = (await db.execute(select(InterviewSession))).scalar_one()
@@ -152,16 +152,10 @@ async def test_live_answers_are_capped_in_length(client, workspace):
     assert r.status_code == 422
 
 
-def test_answer_windows_keep_the_whole_interview_under_five_minutes():
-    # greeting + every question spoken + the answers + the closing must always fit
-    for n in (1, 3, 4, 5):
-        elapsed, total = 15.0, 15.0 + 14.0
-        for left in range(n, 0, -1):
-            w = iv.answer_window_s(elapsed, left)
-            assert iv.LIVE_MIN_ANSWER_S <= w <= iv.LIVE_MAX_ANSWER_S
-            elapsed += 9 + w
-            total += 9 + w
-        assert total <= iv.LIVE_MAX_TOTAL_S + 1, (n, total)
+def test_every_answer_has_a_full_minute_even_after_long_previous_answers():
+    for elapsed in (0, 120, 240, 500):
+        assert iv.answer_window_s(elapsed, 1) == 60
+        assert iv.answer_window_s(elapsed, 4) == 60
     assert iv.answer_window_s(0, 0) == 0
 
 
@@ -172,7 +166,7 @@ async def test_voice_lines_greet_the_founder_by_name_and_fall_back_to_the_browse
     r = await client.post(f"/v1/interview/{token}/voice")
     assert r.status_code == 200
     lines = {x["key"]: x for x in r.json()["lines"]}
-    assert list(lines) == ["greeting", "q0", "q1", "q2", "q3", "thanks", "closing"]
+    assert list(lines) == ["greeting", "q0", "q1", "q2", "q3", "bridge0", "bridge1", "bridge2", "thanks", "closing"]
     assert lines["greeting"]["text"].startswith("Hi Tobi, welcome.") and "four questions" in lines["greeting"]["text"]
     assert "Tobi" in lines["closing"]["text"] and lines["q1"]["text"] == "Why now?"
     assert all(x["audio_url"] is None for x in lines.values())  # the mock has no audio: the browser speaks
@@ -197,9 +191,9 @@ async def test_voice_audio_is_generated_once_cached_and_billed_through_the_spend
     pid = await live_project(client)
     token = (await start(client, pid)).json()["token"]
     first = (await client.post(f"/v1/interview/{token}/voice")).json()["lines"]
-    assert all(x["audio_url"] for x in first) and len(tts.calls) == 7
+    assert all(x["audio_url"] for x in first) and len(tts.calls) == 10
     second = (await client.post(f"/v1/interview/{token}/voice")).json()["lines"]
-    assert all(x["audio_url"] for x in second) and len(tts.calls) == 7  # cached by text
+    assert all(x["audio_url"] for x in second) and len(tts.calls) == 10  # cached by text
     audio = await client.get(api_path(first[0]["audio_url"]))
     assert audio.status_code == 200 and audio.content.startswith(b"ID3")
     async with maker() as s:
@@ -279,7 +273,7 @@ async def test_proceed_needs_all_answers_then_makes_the_presenter_and_merges_aut
     req = registry.get_renderer().requests[-1]
     assert req.composition == "InterviewMerge" and req.props["layout"] == "full"
     kinds = [s["type"] for s in req.props["scenes"]]
-    assert kinds == ["anchor"] + ["question", "answer"] * 4 + ["anchor"]
+    assert kinds == ["anchor"] + ["question", "answer"] * 4 + ["anchor", "anchor"]
     answers = [s for s in req.props["scenes"] if s["type"] == "answer"]
     assert [a["questionNumber"] for a in answers] == [1, 2, 3, 4] and all(a["totalQuestions"] == 4 for a in answers)
     assert answers[1]["question"] == "Why now?" and answers[0]["founder"]["name"] == "Tobi Oyinlola"
@@ -389,3 +383,35 @@ async def test_live_interview_can_retry_beyond_five_abandoned_takes(client, work
         assert (await client.delete(f"/v1/interview/{token}/takes/{r.json()['id']}")).status_code == 200
     view = (await client.get(f"/v1/interview/{token}")).json()
     assert view["questions"][0]["attempts_left"] is None
+
+
+async def test_loud_answers_are_kept_and_all_four_can_complete_to_final_video(client, workspace):
+    registry.get_renderer().process_flags = ["clipped_audio"]
+    pid, token = await interviewed_project(client)
+    guest = (await client.get(f"/v1/interview/{token}")).json()
+    for q in guest["questions"]:
+        assert q["take"]["status"] == "ready"
+        assert q["take"]["flags"] == ["clipped_audio"]
+        assert q["take"]["messages"] == []
+    response = await client.post(f"/v1/interview/{token}/submit")
+    assert response.status_code == 200, response.text
+    response = await client.post(f"/v1/projects/{pid}/interview/merge", headers=OWNER)
+    assert response.status_code == 200, response.text
+    await get_queue().drain()
+    assert await state(client, pid) == "final_ready"
+    request = registry.get_renderer().requests[-1]
+    answers = [scene for scene in request.props["scenes"] if scene["type"] == "answer"]
+    assert len(answers) == 4 and [a["questionNumber"] for a in answers] == [1, 2, 3, 4]
+
+
+@pytest.mark.parametrize("blocking_flag", ["no_speech", "too_short", "dark_video"])
+async def test_loud_audio_does_not_hide_other_recording_problems(client, workspace, blocking_flag):
+    registry.get_renderer().process_flags = ["clipped_audio", blocking_flag]
+    pid = await live_project(client)
+    token = (await start(client, pid)).json()["token"]
+    await record(client, token, 0)
+    guest = (await client.get(f"/v1/interview/{token}")).json()
+    take = guest["questions"][0]["take"]
+    assert take["status"] == "needs_retake"
+    assert take["messages"] == iv.flag_messages([blocking_flag])
+    assert (await client.post(f"/v1/interview/{token}/submit")).status_code == 422

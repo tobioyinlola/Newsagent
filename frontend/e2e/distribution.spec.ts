@@ -25,7 +25,7 @@ test("completed video to distribution draft, checked images, wallet submission, 
   await page.getByRole("button", { name: "Start a distribution request" }).click();
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(page.getByRole("alert").first()).toContainText("Choose at least one media outlet");
-  await page.getByRole("button", { name: "4. Review & pay" }).click();
+  await page.getByRole("navigation", { name: "Distribution steps", exact: true }).getByRole("button", { name: "4. Review & pay" }).click();
   await expect(page.getByRole("heading", { name: "Where would you like to distribute?" })).toBeVisible();
   await page.getByLabel("Empire Magazine Africa").check();
   await page.getByLabel("Techpoint Africa").check();
@@ -112,7 +112,7 @@ test("completed video to distribution draft, checked images, wallet submission, 
   await expect(page.getByRole("heading", { name: "Primary contact and company images" })).toBeVisible();
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(page.getByLabel("Contact name", { exact: true })).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByRole("alert").first()).toContainText("Upload your company logo");
+  await expect(page.getByRole("heading", { name: "Company logo (optional)" })).toBeVisible();
   await page.getByLabel("Contact name", { exact: true }).fill("Ada Obi");
   await page.getByLabel("Contact email", { exact: true }).fill(email);
   await expect(page.getByLabel("WhatsApp number", { exact: true })).toHaveCount(0);
@@ -136,10 +136,15 @@ test("completed video to distribution draft, checked images, wallet submission, 
   await expect(page.getByLabel("Primary phone number", { exact: true })).toHaveValue("8031234567");
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  // A valid contact can proceed without a logo; uploading one remains available.
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Review your distribution request" })).toBeVisible();
+  await expect(page.getByText("No logo added (optional)", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Edit contact and images", exact: true }).click();
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
-  await page.getByLabel(/Company logo \(required/).setInputFiles({ name: "bad.txt", mimeType: "text/plain", buffer: Buffer.from("not an image") });
+  await page.getByLabel("Company logo (optional, PNG/JPEG, up to 5 MB)", { exact: true }).setInputFiles({ name: "bad.txt", mimeType: "text/plain", buffer: Buffer.from("not an image") });
   await expect(page.getByRole("alert").last()).toContainText("PNG or JPEG");
-  await page.getByLabel(/Company logo \(required/).setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: png });
+  await page.getByLabel("Company logo (optional, PNG/JPEG, up to 5 MB)", { exact: true }).setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: png });
   await expect(page.getByText("Company logo uploaded ✓")).toBeVisible();
   await expect(page.getByAltText("Company logo preview")).toBeVisible();
   await expect(page.getByText("Replace logo", { exact: true })).toBeVisible();

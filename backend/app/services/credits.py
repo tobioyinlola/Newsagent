@@ -1,7 +1,7 @@
 """What a video costs and what credits are worth.
 
 One video costs `credits_per_video` credit (1), whatever the vendors charge us for it. One credit is sold at `usd_per_credit`
-($2.70). People buy fixed amounts (`credit_purchase_usd`: $1, $10, $50, $100, $200) and are given amount / $2.70 credits once the
+($2.70). Custom quantities use the server-quoted credit price with a $10 minimum. People can also buy fixed amounts (`credit_purchase_usd`: $1, $10, $50, $100, $200) and are given amount / $2.70 credits once the
 payment has gone through. A new workspace starts with `signup_credits` (1): one free video. After that, starting a video needs
 a credit; with none left the app asks them to buy more.
 
@@ -9,8 +9,9 @@ The price is taken once, when the video is started (the project is created), as 
 balance. Making changes to a video afterwards (a new script version, a retry, a re-render) is not a new video and costs nothing.
 """
 
+import hashlib
 from dataclasses import dataclass
-from decimal import ROUND_FLOOR, ROUND_HALF_UP, Decimal
+from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -68,6 +69,31 @@ def purchase_options() -> list[CreditOption]:
 
 def option_for(amount_usd: Decimal) -> CreditOption | None:
     return next((o for o in purchase_options() if o.amount_usd == Decimal(amount_usd)), None)
+
+
+CUSTOM_MIN_USD = Decimal("10")
+CUSTOM_MAX_USD = Decimal("99999999.99")  # Checkout's Numeric(12, 4) storage bound.
+
+
+def minimum_custom_credits() -> Decimal:
+    return (CUSTOM_MIN_USD / usd_per_credit()).quantize(CENT, rounding=ROUND_CEILING)
+
+
+def custom_option(quantity: Decimal) -> CreditOption:
+    if not quantity.is_finite() or quantity <= 0 or quantity != quantity.quantize(CENT):
+        raise ValueError("Enter a positive number of credits with up to 2 decimal places.")
+    amount = (quantity * usd_per_credit()).quantize(CENT, rounding=ROUND_HALF_UP)
+    if amount < CUSTOM_MIN_USD:
+        raise ValueError(f"Custom purchases start at $10 USD. Enter at least {minimum_custom_credits()} credits.")
+    if amount > CUSTOM_MAX_USD or quantity > CUSTOM_MAX_USD:
+        raise ValueError("This custom purchase is too large. Please enter a smaller amount.")
+    return CreditOption(amount, quantity.quantize(CENT), videos_for(quantity))
+
+
+def custom_quote_version(option: CreditOption) -> str:
+    return hashlib.sha256(
+        f"{option.credits:.2f}|{option.amount_usd:.2f}|{usd_per_credit().normalize()}".encode()
+    ).hexdigest()
 
 
 async def charge_video(session: AsyncSession, workspace_id: str, project: Project) -> None:

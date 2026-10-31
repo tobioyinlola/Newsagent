@@ -14,7 +14,6 @@ export function validateDistributionStep(d: Draft, step: string): DistributionEr
     if (!d.contact_name.trim()) e.contact_name = "Enter the primary contact’s name.";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.contact_email.trim())) e.contact_email = "Enter a valid contact email address.";
     if (!validPhone(d.phone, d.phone_country)) e.phone = "Select a country and enter a valid phone number.";
-    if (!d.logo_key) e.logo_key = "Upload your company logo before continuing.";
   }
   return e;
 }

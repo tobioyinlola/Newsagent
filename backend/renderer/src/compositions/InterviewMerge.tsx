@@ -119,7 +119,7 @@ const ColumnAnswer: React.FC<{ scene: Extract<Scene, { type: "answer" }>; founde
         <div style={{ color: CF.green, fontFamily: MONO, fontWeight: 700, fontSize: 24 * u, letterSpacing: 3 * u, textTransform: "uppercase" }}>
           Question {scene.questionNumber ?? 1} of {scene.totalQuestions ?? 1}
         </div>
-        <div style={{ color: CF.white, fontFamily: MONO, fontWeight: 700, fontSize: (portrait ? 34 : 40) * u, lineHeight: 1.2 }}>{scene.question}</div>
+        <div style={{ color: CF.white, fontFamily: MONO, fontWeight: 700, fontSize: (portrait ? 34 : 40) * u, lineHeight: 1.4 }}>{scene.question}</div>
         <div style={{ height: 4 * u, background: CF.stripe, flexShrink: 0 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 18 * u, flexShrink: 0 }}>
           {scene.posterSrc ? (
@@ -130,6 +130,7 @@ const ColumnAnswer: React.FC<{ scene: Extract<Scene, { type: "answer" }>; founde
             <div style={{ color: CF.green, fontFamily: SANS, fontSize: 24 * u }}>{[scene.founder.title, scene.founder.location].filter(Boolean).join(" · ")}</div>
           </div>
         </div>
+        {scene.headline && <div style={{ fontFamily: SANS, fontSize: (portrait ? 26 : 28) * u, fontWeight: 700, lineHeight: 1.45, color: CF.green, padding: `${12 * u}px 0`, overflowWrap: "anywhere" }}>{scene.headline}</div>}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-start", gap: 14 * u, overflow: "hidden", paddingTop: 6 * u }}>
           {shown.map((c) => {
             const isCurrent = c === current;
@@ -137,7 +138,7 @@ const ColumnAnswer: React.FC<{ scene: Extract<Scene, { type: "answer" }>; founde
               <div
                 key={`${c.start}-${c.text}`}
                 style={{
-                  fontFamily: SANS, fontSize: (portrait ? 30 : 34) * u, lineHeight: 1.3,
+                  fontFamily: SANS, fontSize: (portrait ? 30 : 34) * u, lineHeight: 1.45,
                   color: isCurrent ? CF.white : "#A9A9A0",
                   fontWeight: isCurrent ? 700 : 400,
                   borderLeft: `${6 * u}px solid ${isCurrent ? CF.green : "transparent"}`,
@@ -160,8 +161,7 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
   const { width, height, fps } = useVideoConfig();
   const portrait = height > width;
   const u = Math.min(width, height) / 1080;
-  const ltIn = interpolate(frame, [fps * 0.5, fps * 1], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const ltOut = interpolate(frame, [fps * 4, fps * 4.5], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+
 
   const volume = useEdgeVolume();
   const founder = scene.src ? (
@@ -181,14 +181,8 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
     </Freeze>
   );
 
-  const lowerThird = (
-    <div style={{ position: "absolute", left: 48 * u, bottom: (portrait ? 20 : 14) + "%", opacity: ltIn * ltOut }}>
-      <div style={{ background: CF.ink, borderLeft: `${10 * u}px solid ${brand.accent}`, padding: `${14 * u}px ${28 * u}px` }}>
-        <div style={{ color: CF.white, fontFamily: MONO, fontSize: 44 * u, fontWeight: 700 }}>{scene.founder.name}</div>
-        <div style={{ color: CF.green, fontFamily: SANS, fontSize: 28 * u }}>{[scene.founder.title, scene.founder.location].filter(Boolean).join(" · ")}</div>
-      </div>
-    </div>
-  );
+  const lowerThird = <LowerThird name={scene.founder.name} title={scene.founder.title} location={scene.founder.location} headline={scene.headline} />;
+
 
   if (layout === "full") {
     // founder_fullscreen, news-channel style: the founder fills the frame; their name box and a headline bar sit above the ticker
@@ -242,6 +236,10 @@ const UrlBadge: React.FC<{ url: string }> = ({ url }) => {
 export const InterviewMerge: React.FC<MergeProps> = (p) => {
   const { fps, height, width } = useVideoConfig();
   const portrait = height > width;
+  const frame = useCurrentFrame();
+  let start = 0;
+  const activeScene = p.scenes.find(scene => { const end = start + Math.max(1, Math.round(scene.seconds * fps)); const matches = frame >= start && frame < end; start = end; return matches; });
+  const liveLocation = activeScene?.type === "answer" ? activeScene.founder.location || "Founder interview" : "Toronto, Canada";
   return (
     <StudioProvider studio={p.studio}>
     <AbsoluteFill style={{ fontFamily: SANS, background: CF.ink }}>
@@ -258,7 +256,7 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
           </Series.Sequence>
         ))}
       </Series>
-      <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} liveLocation={p.liveLocation} publishedLabel={p.publishedLabel} />
+      <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} liveLocation={liveLocation} publishedLabel={p.publishedLabel} />
       {p.productUrl && p.productUrlFromSeconds != null && (
         <Sequence from={Math.round(p.productUrlFromSeconds * fps)} durationInFrames={Math.round(URL_SHOWN_S * fps)}>
           <UrlBadge url={p.productUrl} />

@@ -105,7 +105,10 @@ async def test_the_plan_is_saved_with_the_video_and_describes_it(client, workspa
     saved = sp.ScenePlan.model_validate(p.scene_plan)
     assert saved.hash() == p.scene_plan_hash and saved.layout == "full"
     kinds = [s.type for s in saved.scenes]
-    assert kinds == ["anchor_intro"] + ["anchor_question", "founder_fullscreen"] * 4 + ["news_closing"]
+    assert kinds == ["anchor_intro"] + ["anchor_question", "founder_fullscreen"] * 4 + [
+        "anchor_analysis",
+        "news_closing",
+    ]
     founder_scenes = [s for s in saved.scenes if s.type == "founder_fullscreen"]
     assert all(s.provenance == "founder_statement" and s.cues for s in founder_scenes)
     assert saved.scenes[0].provenance == "owner_script" and saved.captions
@@ -190,12 +193,15 @@ async def test_explanation_and_analysis_are_their_own_presenter_scenes(client, w
     start = saved.scenes[0].duration_s
     expl = [c for c in saved.captions if c.text.startswith("Acme connects smallholder")]
     assert expl and abs(expl[0].start - start) < 0.01
-    first_q = next(c for c in saved.captions if c.text == saved.scenes[2].question)
-    assert first_q.start >= expl[-1].end - 0.01
+    question_start = start + saved.scenes[1].duration_s
+    question_end = question_start + saved.scenes[2].duration_s
+    question_captions = [c for c in saved.captions if c.start >= question_start - 0.01 and c.end <= question_end + 0.01]
+    assert question_captions and saved.scenes[2].question in " ".join(c.text for c in question_captions)
+    assert question_captions[0].start >= expl[-1].end - 0.01
     assert (await client.get(f"/v1/projects/{pid}/progress", headers=OWNER)).json()["percent"] == 100
 
 
-async def test_a_script_without_those_parts_is_unchanged(client, workspace):
+async def test_a_legacy_script_without_summary_gets_a_recap_before_closing(client, workspace):
     pid, token = await interviewed_project(client, answers=(0, 1))
     for q in (2, 3):
         await record(client, token, q)
@@ -203,4 +209,4 @@ async def test_a_script_without_those_parts_is_unchanged(client, workspace):
     await client.post(f"/v1/projects/{pid}/interview/merge", headers=OWNER)
     await get_queue().drain()
     kinds = [s["type"] for s in registry.get_renderer().requests[-1].props["scenes"]]
-    assert kinds == ["anchor"] + ["question", "answer"] * 4 + ["anchor"]
+    assert kinds == ["anchor"] + ["question", "answer"] * 4 + ["anchor", "anchor"]

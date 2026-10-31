@@ -109,3 +109,19 @@ class MockScriptLLM(ScriptLLM):
                 "For Cover Founder News, thank you for watching."
             ),
         )
+
+    async def write_news(self, source_text: str, source_name: str):
+        from app.integrations.llm.base import NewsDraft, NewsScene
+
+        script = f"This is Cover Founder News. According to {source_name}, {source_text[:500]} We will continue following this technology story."
+        return NewsDraft(
+            headline="Technology update: a new chapter for business",
+            summary=f"Cover Founder News reviews the latest technology development reported by {source_name}.",
+            body=f"According to {source_name}, {source_text[:1500]}\n\nCover Founder News is following this developing technology story.",
+            presenter_script=script,
+            scenes=[
+                NewsScene(
+                    narration=script, image_hint="An editorial image illustrating the announcement", duration_s=20
+                )
+            ],
+        )

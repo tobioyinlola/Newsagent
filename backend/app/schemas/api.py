@@ -24,6 +24,7 @@ class ProjectCreate(BaseModel):
     region: str = "NG"
     voice_accent: str = "british"
     accent_override: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    founder_location: str = Field(default="", max_length=200)
     founder_name: str = Field(default="", max_length=200)  # the AI interviewer greets this person by name
     founder_title: str = Field(default="", max_length=200)
     anchor_id: str | None = Field(default=None, max_length=100)  # the chosen presenter look (from GET /v1/presenters)
@@ -59,6 +60,7 @@ class ProjectOut(BaseModel):
     failure_retryable: bool
     interview_enabled: bool = False
     interview_mode: str = "invite"
+    founder_location: str = ""
     founder_name: str = ""
     founder_title: str = ""
     anchor_id: str | None = None
@@ -270,6 +272,8 @@ class StoryCardOut(BaseModel):
     published_at: datetime
     duration_s: float | None
     thumbnail_url: str | None
+    category: str | None = None
+    has_video: bool = True
 
 
 class StoryPictureOut(BaseModel):
@@ -284,8 +288,10 @@ class StoryPageOut(StoryCardOut):
     sections: list[dict]
     about: str
     pictures: list[StoryPictureOut]
-    video_url: str
+    video_url: str | None
     disclosure: str
+    source_name: str | None = None
+    source_url: str | None = None
 
 
 class PublicationOut(BaseModel):
@@ -525,8 +531,22 @@ class BillingSummary(BaseModel):
     videos_left: int  # whole videos the balance pays for
 
 
+class CustomCreditIn(BaseModel):
+    credits: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
+
+
+class CustomCreditQuote(BaseModel):
+    credits: Decimal
+    amount_usd: Decimal
+    amount_ngn: Decimal
+    ngn_per_usd: Decimal
+    quote_version: str
+
+
 class CheckoutIn(BaseModel):
-    amount_usd: Decimal  # one of the purchase options (GET /v1/billing/options)
+    amount_usd: Decimal | None = None
+    custom_credits: Decimal | None = Field(default=None, gt=0, max_digits=10, decimal_places=2)
+    custom_quote_version: str | None = Field(default=None, max_length=64)
     currency: Literal["USD", "NGN"] = "USD"
     payment_method: Literal["card", "bank_transfer"] = "card"
     ngn_per_usd: Decimal | None = None  # client quote; stale quotes must be reviewed before checkout

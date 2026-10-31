@@ -98,6 +98,7 @@ async def create_project(
         accent_override=body.accent_override,
         founder_name=body.founder_name.strip(),
         founder_title=body.founder_title.strip(),
+        founder_location=body.founder_location.strip(),
         anchor_id=await presenters.resolve(body.anchor_id),
         flow=body.flow,
         announcement_type=body.announcement_type,

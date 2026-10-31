@@ -37,7 +37,7 @@ type Item = [string, string, ReactNode, string[]];
 const GROUPS: { title: string; items: Item[] }[] = [
   { title: "Business", items: [["/", "Overview", I.overview, ["overview.view"]], ["/customers", "Customers", I.customers, ["customers.view"]], ["/revenue", "Revenue", I.revenue, ["finance.view"]]] },
   { title: "Operations", items: [["/analytics", "Reports & analytics", I.costs, ["operations.view"]], ["/distribution", "Distribution", I.ops, ["operations.view"]], ["/operations", "Operations", I.ops, ["operations.view"]], ["/review", "Review queue", I.review, ["review.manage"]], ["/jobs", "Jobs", I.jobs, ["operations.view"]], ["/costs", "Costs", I.costs, ["finance.view"]]] },
-  { title: "Admin", items: [["/presenter", "Presenter clips", I.clips, ["presenter.manage"]], ["/billing", "Credits", I.packs, ["finance.view"]], ["/setup", "Setup", I.setup, ["customers.manage", "finance.view"]], ["/team", "Team", I.team, ["team.manage"]], ["/audit", "Audit log", I.audit, ["audit.view"]]] },
+  { title: "Admin", items: [["/news-desk", "News Desk", I.clips, []],["/presenter", "Presenter clips", I.clips, ["presenter.manage"]], ["/billing", "Credits", I.packs, ["finance.view"]], ["/setup", "Setup", I.setup, ["customers.manage", "finance.view"]], ["/team", "Team", I.team, ["team.manage"]], ["/audit", "Audit log", I.audit, ["audit.view"]]] },
   { title: "You", items: [["/security", "Security", I.security, []]] },
 ];
 
@@ -87,6 +87,18 @@ export function Layout() {
           <Link to="/" className={`mb-3 hidden items-center gap-2 px-1 py-1 text-brand-green md:flex ${rail ? "justify-center" : ""}`} aria-label="Back office home">
             {rail ? <CFSymbol className="h-8 w-auto" /> : <span className="flex flex-col items-start gap-1.5"><SecondaryLogo className="h-9 w-auto" /><span className="rounded-sm bg-brand-purple px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest text-white">Back office</span></span>}
           </Link>
+            <button
+              type="button"
+              onClick={toggle}
+              aria-expanded={!collapsed}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-controls="sidebar"
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              className={`mb-3 hidden w-fit items-center justify-center rounded-lg p-2.5 text-white hover:bg-stripe md:flex ${collapsed ? "justify-center" : ""}`}
+            >
+              <Icon>{collapsed ? <path d="M9 5l7 7-7 7" /> : <path d="M15 5l-7 7 7 7" />}</Icon>
+              <span className="sr-only">{collapsed ? "Expand sidebar" : "Collapse sidebar"}</span>
+            </button>
           {GROUPS.map((g) => ({ ...g, items: g.items.filter(([, , , need]) => need.length === 0 || can(...need)) })).filter((g) => g.items.length > 0).map((g) => (
             <div key={g.title} className="space-y-1 pb-2">
               {!rail && <p className="px-3 pt-2 font-mono text-[11px] font-bold uppercase tracking-widest text-brand-green">{g.title}</p>}
@@ -110,17 +122,7 @@ export function Layout() {
             <button type="button" onClick={() => setConfirmOut(true)} title={rail ? "Sign out" : undefined} className={`flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-bold text-brand-green hover:bg-stripe ${rail ? "justify-center" : ""}`}>
               {I.out}<span className={rail ? "sr-only" : ""}>Sign out</span>
             </button>
-            <button
-              type="button"
-              onClick={toggle}
-              aria-expanded={!collapsed}
-              aria-controls="sidebar"
-              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className={`hidden w-full items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-bold text-white hover:bg-stripe md:flex ${collapsed ? "justify-center" : ""}`}
-            >
-              <Icon>{collapsed ? <path d="M9 5l7 7-7 7" /> : <path d="M15 5l-7 7 7 7" />}</Icon>
-              <span className={collapsed ? "sr-only" : ""}>{collapsed ? "Expand sidebar" : "Collapse sidebar"}</span>
-            </button>
+
           </div>
         </nav>
       </aside>

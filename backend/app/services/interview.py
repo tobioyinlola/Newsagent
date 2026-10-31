@@ -13,13 +13,13 @@ def first_name(full: str) -> str:
 
 
 def interviewer_lines(founder_name: str, company: str, questions: list[str]) -> dict:
-    """What the AI interviewer says. The greeting names the founder; the whole interview fits in about 4 minutes."""
+    """What the AI interviewer says. The greeting names the founder; the four-question interview takes about five to six minutes."""
     who = first_name(founder_name)
     n = len(questions)
     word = {1: "one question", 2: "two questions", 3: "three questions", 4: "four questions", 5: "five questions"}.get(
         n, f"{n} questions"
     )
-    mins = max(2, min(5, round((n * 50 + 30) / 60)))
+    mins = max(2, min(8, round((n * 79 + 30) / 60)))
     return {
         "greeting": (
             f"Hi {who}, welcome. I'm your interviewer from Cover Founder. "
@@ -27,20 +27,21 @@ def interviewer_lines(founder_name: str, company: str, questions: list[str]) -> 
             "Please keep your camera on and speak naturally. Let's begin."
         ).replace("Hi ,", "Hi,"),
         "questions": list(questions),
-        "thanks": "Thank you.",
+        "thanks": "That gives us useful context.",
+        "bridges": [
+            "That gives us useful context. Let’s explore another part of the story.",
+            "I’d like to build on that and look at what comes next.",
+            "To bring this together, here’s my final question.",
+        ],
         "closing": f"That's everything{', ' + who if who else ''}. Thank you for your time. We'll now put your video together.",
     }
 
 
 def answer_window_s(elapsed_s: float, questions_left: int) -> int:
-    """How long the next answer may run so the whole interview stays under LIVE_MAX_TOTAL_S (the UI uses the same rule)."""
+    """Each answer has a full minute; countdown and the five-second rounding period are separate."""
     if questions_left <= 0:
         return 0
-    reserve = 14  # the closing line
-    per_q_overhead = 9  # the interviewer speaking each question
-    remaining = LIVE_MAX_TOTAL_S - elapsed_s - reserve
-    cap = remaining / questions_left - per_q_overhead
-    return int(max(LIVE_MIN_ANSWER_S, min(LIVE_MAX_ANSWER_S, cap)))
+    return LIVE_MAX_ANSWER_S
 
 
 def consent_text(company: str) -> str:
@@ -70,20 +71,20 @@ MAX_QUESTIONS = 5
 LAYOUTS = {"pip", "split", "column", "full"}
 
 # ---------- live (AI interviewer) limits ----------
-LIVE_MAX_TOTAL_S = 300  # the whole interview, including the interviewer speaking, is at most 5 minutes
-LIVE_MAX_ANSWER_S = 60  # one answer is never longer than this: one minute
+LIVE_MAX_TOTAL_S = 360  # six-minute estimate; answers are never shortened by an overall timer
+LIVE_MAX_ANSWER_S = 60  # main answer window; the recorder grants five seconds to round up
 LIVE_MIN_ANSWER_S = 15  # an answer window is never shorter than this
 LIVE_MAX_CHUNKS = 45  # 75 s of 2 s chunks, plus slack
 ALLOWED_VIDEO_MIME = {"video/webm": "webm", "video/mp4": "mp4"}
 ALLOWED_AUDIO_MIME = {"audio/webm": "webm", "audio/mp4": "m4a", "audio/ogg": "ogg"}
 
-# Flags that mean "please record this again" vs. ones we only mention to the owner.
-BLOCKING_FLAGS = {"no_speech", "too_short", "dark_video", "clipped_audio"}
+# Loud source audio is retained for diagnostics and normalized by the renderer; it must not force a retake.
+BLOCKING_FLAGS = {"no_speech", "too_short", "dark_video", "abusive_language"}
 FLAG_MESSAGES = {
+    "abusive_language": "Abusive language was detected in this answer. Please record it again using respectful language.",
     "no_speech": "We couldn't hear you clearly. Please check your microphone and try again.",
     "too_short": "That answer was very short. Please try again with a little more detail.",
     "dark_video": "The picture is too dark. Face a window or turn on a light and try again.",
-    "clipped_audio": "The sound was too loud and distorted. Move back a little from the microphone and try again.",
     "owner_requested": "The video owner asked for another take of this answer.",
 }
 

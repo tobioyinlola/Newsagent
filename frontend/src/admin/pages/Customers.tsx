@@ -105,7 +105,7 @@ export function CustomerDetail() {
         {c.payments.length === 0 ? <p className="text-sm text-muted">No payments yet.</p> : (
           <table className="w-full text-sm"><caption className="sr-only">Payments</caption>
             <thead><tr className="text-left text-muted"><th className="py-1">When</th><th>Type</th><th className="text-right">Amount</th><th className="text-right">Credits</th></tr></thead>
-            <tbody>{c.payments.map((p, i) => <tr key={i} className="border-t border-line"><td className="py-1.5">{date(p.when)}</td><td>{p.kind === "card" ? "Card" : "Offline"}</td><td className="text-right tabular-nums">{p.usd == null ? "not recorded" : usd(p.usd)}</td><td className="text-right tabular-nums">{num(p.credits)}</td></tr>)}</tbody>
+            <tbody>{c.payments.map((p, i) => <tr key={i} className="border-t border-line"><td className="py-1.5">{date(p.when)}</td><td>{p.kind === "bank_transfer" ? "Bank transfer" : p.kind === "card" ? "Card" : "Offline"}</td><td className="text-right tabular-nums">{p.usd == null ? "not recorded" : usd(p.usd)}</td><td className="text-right tabular-nums">{num(p.credits)}</td></tr>)}</tbody>
           </table>
         )}
       </Card>

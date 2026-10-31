@@ -102,6 +102,7 @@ class Project(Base, TimestampMixin):
     # "invite": a founder records from a private link after the anchor is made. "live": the owner is interviewed by the
     # AI interviewer on the dashboard BEFORE anything paid runs, then the anchor and the merge follow.
     interview_mode: Mapped[str] = mapped_column(String(10), default="invite")
+    founder_location: Mapped[str] = mapped_column(String(200), default="", server_default="")
     founder_name: Mapped[str] = mapped_column(String(200), default="")  # who the AI interviewer greets by name
     founder_title: Mapped[str] = mapped_column(String(200), default="")
     keep_raw_takes: Mapped[bool] = mapped_column(Boolean, default=False)

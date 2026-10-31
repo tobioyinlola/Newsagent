@@ -18,6 +18,8 @@ from app.models import Asset, Job, Project, Take
 from app.models.base import new_id
 from app.pipeline import runner
 from app.pipeline.steps import input_hash
+from app.services import language_audit
+from app.services.audit import audit
 from app.services.interview import BLOCKING_FLAGS
 from app.services.notifications import low_balance_alert, notify_owners, vendor_budget_alert
 from app.services.spend_guard import LimitReached, SpendGuard
@@ -146,7 +148,17 @@ async def process_take(take_id: str) -> None:
             take.duration_s = Decimal(str(round(pr.duration_s, 2)))
             take.transcript = transcript.text if transcript else ""
             take.srt = transcript.srt if transcript else ""
-            take.flags, take.stats, take.error = flags, pr.stats, None
+            if language_audit.has_abusive_language(take.transcript):
+                flags.append("abusive_language")
+                audit(
+                    s,
+                    "system",
+                    "interview.abusive_language",
+                    target_type="take",
+                    target_id=take.id,
+                    detail={"project_id": pid, "question_index": take.question_index, "action": "retake_required"},
+                )
+            take.flags, take.stats, take.error = sorted(set(flags)), pr.stats, None
             take.status = "needs_retake" if BLOCKING_FLAGS & set(flags) else "ready"
             s.add(
                 Asset(

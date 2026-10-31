@@ -63,7 +63,7 @@ for (const option of [{ currency: "USD", method: "card", label: "Buy $1.00 of cr
     const button = page.getByRole("button", { name: option.label, exact: true });
     const pack = page.locator("li").filter({ has: button });
     await expect(pack).toContainText("0.37 credits");
-    await expect(pack).toContainText("Adds to your existing credit balance");
+    await expect(pack).toContainText("Added to your wallet after payment");
     await button.click(); await expect(page).toHaveURL(/one-dollar-test=1/);
     expect(checkout).toEqual({ amount_usd: "1", currency: option.currency, payment_method: option.method, ...(option.currency === "NGN" ? { ngn_per_usd: "1400" } : {}) });
   });

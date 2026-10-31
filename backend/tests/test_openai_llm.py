@@ -55,3 +55,27 @@ async def test_the_story_comes_back_in_the_shape_the_app_expects():
     llm = OpenAIScriptLLM(client=fake_client(story, []))
     got = await llm.write_story({"company": "Minicor"}, "funding_round", [{"question": "Why?", "answer": "Because."}])
     assert got.headline == "Minicor raises $3.8M" and got.social.hashtags == ["#startups"] and len(got.segments) == 2
+
+
+async def test_news_rewrite_uses_editorial_prompt_and_returns_image_scenes():
+    draft = {
+        "headline": "Technology company announces a new service",
+        "summary": "An appointment service is planned for small businesses.",
+        "body": "A technology company has announced an appointment service for small businesses, according to Example News.",
+        "presenter_script": "This is Cover Founder News. A new appointment service is planned for small businesses.",
+        "scenes": [
+            {
+                "narration": "A new appointment service is planned.",
+                "image_hint": "A product screenshot",
+                "motion": "pan_left",
+                "duration_s": 8,
+            }
+        ],
+    }
+    seen = []
+    llm = OpenAIScriptLLM(client=fake_client(draft, seen))
+    result = await llm.write_news("The company announced a service.", "Example News")
+    assert result.scenes[0].motion == "pan_left" and result.presenter_script
+    prompt = seen[0][1]["messages"][1]["content"]
+    assert "NO founder interview" in prompt and "untrusted reference material" in prompt
+    assert '"source_name": "Example News"' in prompt

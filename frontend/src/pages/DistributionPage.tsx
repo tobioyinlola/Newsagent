@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { getToken } from "../lib/auth";
-import { type Outlet, OUTLETS_BOTTOM, OUTLETS_TOP } from "../lib/outlets";
+import { OutletLogoStrip } from "../components/OutletLogoStrip";
 import { CHANNELS, CardArt, Cta, Eyebrow, HeroArt, Panel, SiteShell } from "./Landing";
 
 // Dedicated page for distribution (press-distribution style): reach, how it works, coverage by region, outlet types,
@@ -53,24 +53,6 @@ function ReportMock() {
   );
 }
 
-// One row of outlet logos that glides sideways. The list is shown twice so the loop has no gap; the copy is hidden from screen readers.
-// For people who prefer less motion the row stops and wraps into a grid instead.
-function LogoRow({ outlets, reverse = false }: { outlets: Outlet[]; reverse?: boolean }) {
-  const tile = (o: Outlet, hidden: boolean) => (
-    <li key={`${hidden}-${o.slug}`} aria-hidden={hidden || undefined} className={`shrink-0 ${hidden ? "motion-reduce:hidden" : ""}`}>
-      <img src={`/outlets/${o.slug}.webp`} alt={hidden ? "" : o.name} width={200} height={86} loading="lazy" decoding="async" draggable={false} className="h-[86px] w-[200px] rounded-lg border border-black/5 bg-white object-cover shadow-sm motion-reduce:aspect-[200/86] motion-reduce:h-auto motion-reduce:w-full" />
-    </li>
-  );
-  return (
-    <div className="overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_8%,#000_92%,transparent)] motion-reduce:[mask-image:none]">
-      <ul className={`flex w-max gap-4 py-2 pr-4 motion-reduce:grid motion-reduce:w-full motion-reduce:grid-cols-3 motion-reduce:gap-2 motion-reduce:pr-0 sm:motion-reduce:grid-cols-4 lg:motion-reduce:grid-cols-6 ${reverse ? "cf-marquee-rev" : "cf-marquee"}`}>
-        {outlets.map((o) => tile(o, false))}
-        {outlets.map((o) => tile(o, true))}
-      </ul>
-    </div>
-  );
-}
-
 function OutletMarquee() {
   return (
     <section aria-labelledby="outlets-h" className="border-b border-white/10 bg-ink px-4 py-16 md:px-8">
@@ -79,8 +61,7 @@ function OutletMarquee() {
         <h2 id="outlets-h" className="mt-3 text-3xl text-white md:text-5xl">Outlets your story can reach.</h2>
       </div>
       <div className="cf-marquee-wrap mt-10 space-y-4 motion-reduce:mx-auto motion-reduce:max-w-6xl motion-reduce:space-y-0">
-        <LogoRow outlets={OUTLETS_TOP} />
-        <LogoRow outlets={OUTLETS_BOTTOM} reverse />
+        <OutletLogoStrip />
       </div>
     </section>
   );

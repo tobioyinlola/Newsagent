@@ -27,6 +27,7 @@ from app.routes import (
     guided,
     health,
     interview,
+    news_desk,
     ops,
     payment_reconciliation,
     presenter,
@@ -36,6 +37,7 @@ from app.routes import (
     staff,
     stories,
     system,
+    transfer_review,
 )
 from app.runtime_checks import assert_runtime_ok, origin_of
 
@@ -172,6 +174,8 @@ def create_app() -> FastAPI:
     for r in (
         health.router,
         auth.router,
+        transfer_review.router,
+        news_desk.router,
         referrals.router,
         brand.router,
         broll.router,

@@ -33,13 +33,13 @@ export function PlayDisc({ size = 44 }: { size?: number }) {
 /** A story's picture: the video's thumbnail with a dark fade, the play button and the length. */
 export function StoryThumb({ card, big = false }: { card: StoryCard; big?: boolean }) {
   const impression = useRef<HTMLDivElement>(null);
-  useStoryImpression(impression, card.slug);
+  useStoryImpression(impression, card.category ? "" : card.slug);
   return (
     <div ref={impression} className="relative aspect-video w-full overflow-hidden rounded-sm bg-white/5">
       {card.thumbnail_url ? <img src={card.thumbnail_url} alt="" className="h-full w-full object-cover" loading="lazy" /> : <div className="h-full w-full bg-gradient-to-br from-brand-purple/60 to-ink" />}
       <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
       <div className="absolute bottom-3 left-3 flex items-center gap-2 text-sm font-semibold text-white">
-        <PlayDisc size={big ? 56 : 40} />
+        {card.has_video !== false ? <PlayDisc size={big ? 56 : 40} /> : <span className="rounded-full border border-white/50 bg-black/40 px-3 py-1 text-xs">Read story →</span>}
         {card.duration_s != null && <span>{clock(card.duration_s)}</span>}
       </div>
     </div>

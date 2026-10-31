@@ -17,17 +17,19 @@ from app.db import get_session
 from app.integrations import registry
 from app.integrations.billing.base import InvalidSignature
 from app.integrations.billing.mock import SIGNATURE_HEADER, sign
-from app.models import Checkout, CreditTransaction, User, Workspace
+from app.models import Checkout, CreditTransaction, TransferReview, User, Workspace
 from app.schemas.api import (
     BillingSummary,
     CheckoutIn,
     CheckoutOut,
     CreditOptionOut,
+    CustomCreditIn,
+    CustomCreditQuote,
     LedgerEntry,
     UsageLine,
     UsageStatement,
 )
-from app.services import credits, ledger
+from app.services import credits, ledger, transfer_reviews
 from app.services.audit import audit
 from app.services.notifications import send_email
 from app.services.ratelimit import limit
@@ -36,8 +38,20 @@ router = APIRouter(tags=["billing"])
 
 
 @router.get("/v1/billing/payment-methods")
-async def payment_methods(_: Principal = Depends(current_principal)) -> dict:
+async def payment_methods(
+    _: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+) -> dict:
     s = get_settings()
+    if s.bank_transfer_review_enabled:
+        available = await transfer_reviews.accounts_available(session)
+        return {
+            "ngn_per_usd": str(s.ngn_per_usd),
+            "usd_card": False,
+            "ngn_card": False,
+            "usd_bank_transfer": available["USD"],
+            "ngn_bank_transfer": available["NGN"],
+            "manual_review": True,
+        }
     ngn = s.billing_provider == "nuvion" and bool(s.nuvion_ngn_account_id)
     return {
         "ngn_per_usd": str(s.ngn_per_usd),
@@ -99,18 +113,71 @@ async def summary(p: Principal = Depends(current_principal)) -> BillingSummary:
     )
 
 
+@router.post("/v1/billing/custom-quote", response_model=CustomCreditQuote)
+async def custom_quote(body: CustomCreditIn, _: Principal = Depends(current_principal)) -> CustomCreditQuote:
+    try:
+        option = credits.custom_option(body.credits)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    return CustomCreditQuote(
+        credits=option.credits,
+        amount_usd=option.amount_usd,
+        amount_ngn=credits.ngn_for_usd(option.amount_usd),
+        ngn_per_usd=get_settings().ngn_per_usd,
+        quote_version=credits.custom_quote_version(option),
+    )
+
+
 @router.post("/v1/billing/checkout", response_model=CheckoutOut, dependencies=[Depends(limit("checkout", 10, 3600))])
 async def checkout(
     body: CheckoutIn, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
 ) -> CheckoutOut:
-    if get_settings().billing_provider == "manual":
+    if get_settings().billing_provider == "manual" and not get_settings().bank_transfer_review_enabled:
         raise HTTPException(409, "Credits are added by our team. Contact us to top up your workspace.")
-    option = credits.option_for(body.amount_usd)
-    if option is None:
-        raise HTTPException(422, "Choose one of the amounts on offer.")
+    option: credits.CreditOption | None
+    if body.custom_credits is not None:
+        try:
+            option = credits.custom_option(body.custom_credits)
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+        if body.amount_usd != option.amount_usd or body.custom_quote_version != credits.custom_quote_version(option):
+            raise HTTPException(
+                409, "The custom credit price has changed. Refresh your quote and review the amount before paying."
+            )
+    else:
+        option = credits.option_for(body.amount_usd) if body.amount_usd is not None else None
+        if option is None:
+            raise HTTPException(422, "Choose one of the amounts on offer or request a custom credit quote.")
     if p.workspace.suspended:
         raise HTTPException(403, "This workspace is suspended")
     s = get_settings()
+    if s.bank_transfer_review_enabled:
+        if body.payment_method != "bank_transfer":
+            raise HTTPException(409, "Card payments are coming soon. Please choose bank transfer.")
+        if body.currency == "NGN" and body.ngn_per_usd != s.ngn_per_usd:
+            raise HTTPException(409, "The naira exchange rate has changed. Refresh billing and review the amount.")
+        bank = await transfer_reviews.receiving_account(session, body.currency)
+        co = Checkout(
+            workspace_id=p.workspace.id,
+            credits=option.credits,
+            amount_usd=option.amount_usd,
+            provider=transfer_reviews.PROVIDER,
+        )
+        session.add(co)
+        await session.flush()
+        amount = credits.ngn_for_usd(option.amount_usd) if body.currency == "NGN" else option.amount_usd
+        co.payment_context = {
+            "currency": body.currency,
+            "amount": str(amount),
+            "bank": bank,
+            "ngn_per_usd": str(s.ngn_per_usd) if body.currency == "NGN" else None,
+            "reference": "CF" + co.id,
+        }
+        session.add(
+            TransferReview(checkout_id=co.id, receiving_key=transfer_reviews.receiving_key(body.currency, bank))
+        )
+        await session.commit()
+        return CheckoutOut(checkout_id=co.id, url=f"{s.app_base_url}/billing/transfer/{co.id}")
     if body.currency == "USD" and body.payment_method != "card":
         raise HTTPException(422, "Bank transfer is available for NGN purchases only.")
     if body.currency == "NGN":

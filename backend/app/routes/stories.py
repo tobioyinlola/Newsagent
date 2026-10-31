@@ -11,9 +11,9 @@ from app.auth import Principal, current_principal
 from app.config import get_settings
 from app.db import get_session
 from app.integrations import registry
-from app.models import Asset, Project, Workspace
+from app.models import Asset, NewsStory, Project, Workspace
 from app.schemas.api import PublicationOut, StoryCardOut, StoryPageOut, StoryPictureOut
-from app.services import stories
+from app.services import news_desk_public, stories
 from app.services.ratelimit import limit
 
 router = APIRouter(tags=["stories"])
@@ -44,8 +44,7 @@ async def public_stories(
                 Workspace.deleted_at.is_(None),
             )
             .order_by(Project.published_at.desc())
-            .offset(offset)
-            .limit(limit_)
+            .limit(limit_ + offset)
         )
     ).all()
     out = []
@@ -54,13 +53,48 @@ async def public_stories(
         if not story:
             continue
         out.append(await stories.card(session, project, ws, story, await _assets(session, project.id)))
-    return out
+    editorial = (
+        await session.execute(
+            select(NewsStory)
+            .where(NewsStory.status == "published", NewsStory.published_data.is_not(None))
+            .order_by(NewsStory.published_at.desc())
+            .limit(limit_ + offset)
+        )
+    ).scalars()
+    out.extend([await news_desk_public.card(session, row) for row in editorial])
+    out.sort(key=lambda item: item["published_at"].isoformat(), reverse=True)
+    return out[offset : offset + limit_]
+
+
+@router.get(
+    "/v1/public/technology-news",
+    response_model=list[StoryCardOut],
+    dependencies=[Depends(limit("public-stories", 120, 600))],
+)
+async def technology_news(
+    limit_: int = Query(24, alias="limit", ge=1, le=60),
+    offset: int = Query(0, ge=0),
+    session: AsyncSession = Depends(get_session),
+):
+    rows = (
+        await session.execute(
+            select(NewsStory)
+            .where(NewsStory.status == "published", NewsStory.published_data.is_not(None))
+            .order_by(NewsStory.published_at.desc())
+            .offset(offset)
+            .limit(limit_)
+        )
+    ).scalars()
+    return [await news_desk_public.card(session, row) for row in rows]
 
 
 @router.get(
     "/v1/public/stories/{slug}", response_model=StoryPageOut, dependencies=[Depends(limit("public-story", 120, 600))]
 )
 async def public_story(slug: str, session: AsyncSession = Depends(get_session)) -> dict:
+    editorial = await news_desk_public.find(session, slug)
+    if editorial:
+        return await news_desk_public.page(session, editorial)
     project = (await session.execute(select(Project).where(Project.story_slug == slug))).scalar_one_or_none()
     gone = HTTPException(404, "This story isn't available")
     if project is None:
@@ -115,6 +149,12 @@ async def _listed(session: AsyncSession, slug: str) -> tuple[Project, Workspace 
 @router.get("/v1/public/stories/{slug}/image", dependencies=[Depends(limit("public-story", 120, 600))])
 async def story_image(slug: str, session: AsyncSession = Depends(get_session)) -> RedirectResponse:
     """A steady address for a story's cover picture (the stored file's own link expires), for link previews."""
+    editorial = await news_desk_public.find(session, slug)
+    if editorial:
+        pictures = await news_desk_public.images(session, editorial)
+        if not pictures:
+            raise HTTPException(404, "No picture")
+        return RedirectResponse(pictures[0]["url"], 302)
     _, _, _, assets = await _listed(session, slug)
     thumb = next((a for a in assets if a.type == "thumbnail"), None)
     if thumb is None:
@@ -130,6 +170,15 @@ async def story_image(slug: str, session: AsyncSession = Depends(get_session)) -
 async def story_preview(slug: str, session: AsyncSession = Depends(get_session)) -> HTMLResponse:
     """What WhatsApp, LinkedIn, X, Facebook and Slack read to draw a link preview. The site serves this page, instead of the app,
     to those crawlers only (see vercel.json); people always get the app."""
+    editorial = await news_desk_public.find(session, slug)
+    if editorial:
+        data = editorial.published_data or {}
+        title = escape(data["headline"], quote=True)
+        desc = escape(data["summary"], quote=True)
+        url = f"{get_settings().app_base_url.rstrip('/')}{stories.PATH_PREFIX}{editorial.slug}"
+        return HTMLResponse(
+            f'<!doctype html><html><head><title>{title}</title><meta property="og:type" content="article"><meta property="og:title" content="{title}"><meta property="og:description" content="{desc}"><link rel="canonical" href="{url}"></head><body><h1>{title}</h1><p>{desc}</p><a href="{url}">Read the story</a></body></html>'
+        )
     project, ws, story, assets = await _listed(session, slug)
     base = get_settings().app_base_url.rstrip("/")
     url = f"{base}{stories.PATH_PREFIX}{slug}"

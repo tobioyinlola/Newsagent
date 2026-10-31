@@ -5,7 +5,7 @@ import { pickMime } from "../founder/media";
 import { ChunkStore } from "../founder/store";
 import { TakeUploader } from "../founder/uploader";
 import { grabFrame, uploadSnapshot } from "./snapshot";
-import { MAX_TOTAL_S, answerWindow, mmss } from "./timing";
+import { answerTiming, COUNTDOWN_S, ROUND_UP_S, mmss } from "./timing";
 import type { Realtime } from "./realtime";
 import { type VoiceLine, speak } from "./voice";
 import { VoiceWave } from "./VoiceWave";
@@ -14,8 +14,8 @@ const store = new ChunkStore();
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const FAST = import.meta.env.VITE_INTERVIEW_FAST === "1"; // test builds only
 
-type TakeState = { takeId: string; status: "uploading" | "processing" | "ready" | "needs_retake" | "failed"; messages: string[] };
-type Phase = "starting" | "greeting" | "asking" | "answering" | "between" | "closing" | "finishing" | "attention" | "done";
+type TakeState = { takeId: string; status: "uploading" | "processing" | "ready" | "needs_retake" | "failed"; messages: string[]; flags?: string[] };
+type Phase = "starting" | "greeting" | "asking" | "countdown" | "answering" | "between" | "closing" | "finishing" | "attention" | "done";
 
 export type RoomProps = {
   token: string;
@@ -33,19 +33,19 @@ export type RoomProps = {
 };
 
 // The AI interviewer's room: it greets the person by name, asks each question aloud, records the answer on camera,
-// keeps the whole thing inside about 5 minutes, and submits when every answer has been checked.
+// gives each answer a full minute plus five seconds to round up, and submits when every answer has been checked.
 export function InterviewRoom(p: RoomProps) {
   const [phase, setPhase] = useState<Phase>("starting");
   const [pos, setPos] = useState(0);
   const [caption, setCaption] = useState("");
   const [speaking, setSpeaking] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [countdown, setCountdown] = useState(COUNTDOWN_S);
   const [ansElapsed, setAnsElapsed] = useState(0);
   const [ansWindow, setAnsWindow] = useState(0);
   const [takes, setTakes] = useState<Record<number, TakeState>>({});
   const [cameraLost, setCameraLost] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const overtime = elapsed > MAX_TOTAL_S;
 
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef(p.stream);
@@ -127,7 +127,8 @@ export function InterviewRoom(p: RoomProps) {
   const answer = async (q: number, left: number, retake = false): Promise<"ok" | "camera"> => {
     const mime = pickMime("video");
     if (!mime) throw new Error("This browser can't record video. Please use Chrome, Edge or Safari.");
-    const win = retake ? p.limits.maxAnswer : answerWindow(elapsedNow(), left, p.limits.maxAnswer, p.limits.minAnswer);
+    const win = p.limits.maxAnswer; // Every answer receives its full minute, independent of earlier answers.
+    void left; void retake;
     setAnsWindow(win); setAnsElapsed(0); setCaption(lineFor(`q${q}`).text); // the question stays on screen while they answer
     const take = await must(guest.POST("/v1/interview/{token}/takes", { params: { path: { token: p.token } }, body: { question_index: q, kind: "video", mime } }));
     await store.setMeta({ takeId: take.id, question: q, kind: "video", mime });
@@ -138,6 +139,18 @@ export function InterviewRoom(p: RoomProps) {
     let n = 0;
     rec.ondataavailable = (e) => { if (e.data.size > 0) { const i = n++; chunks[i] = e.data; void up.add(i, e.data); } };
     const stopped = new Promise<void>((resolve, reject) => { rec.onstop = () => resolve(); rec.onerror = () => reject(new Error("Your browser interrupted the recording. Please try this answer again.")); });
+    setPhase("countdown");
+    for (let seconds = COUNTDOWN_S; seconds > 0; seconds--) {
+      setCountdown(seconds);
+      await sleep(FAST ? 10 : 1000);
+      if (ctl.current.aborted || lost.current) {
+        up.dispose(); recorder.current = null;
+        await guest.DELETE("/v1/interview/{token}/takes/{take_id}", { params: { path: { token: p.token, take_id: take.id } } }).catch(() => undefined);
+        await store.deleteTake(take.id);
+        return lost.current ? "camera" : "ok";
+      }
+    }
+    setCountdown(0);
     rec.start(CHUNK_MS);
     setPhase("answering");
     const started = Date.now();
@@ -151,7 +164,7 @@ export function InterviewRoom(p: RoomProps) {
         const b = await grabFrame(video.current);
         if (b) void uploadSnapshot(p.token, take.id, b).catch(() => undefined);
       }
-      if ((s >= win) && rec.state === "recording") rec.stop();
+      if ((s >= win + ROUND_UP_S) && rec.state === "recording") rec.stop();
     }, 250);
     doneNow.current = () => { if (rec.state === "recording" && Date.now() - started > (FAST ? 0 : 3000)) rec.stop(); };
     try { await stopped; } catch (e) { up.dispose(); throw e; } finally {
@@ -182,7 +195,7 @@ export function InterviewRoom(p: RoomProps) {
       for (let i = 0; i < 240 && !ctl.current.aborted; i++) {
         const t = await must(guest.GET("/v1/interview/{token}/takes/{take_id}", { params: { path: { token: p.token, take_id: takeId } } }));
         if (t.status === "ready") { await up.clearLocal(); setTake(q, { takeId, status: "ready", messages: [] }); return; }
-        if (t.status === "needs_retake") { await up.clearLocal(); setTake(q, { takeId, status: "needs_retake", messages: t.messages }); return; }
+        if (t.status === "needs_retake") { await up.clearLocal(); setTake(q, { takeId, status: "needs_retake", messages: t.messages, flags: t.flags }); return; }
         if (t.status === "failed") { setTake(q, { takeId, status: "failed", messages: ["We couldn't process that recording."] }); return; }
         await sleep(1200);
       }
@@ -209,6 +222,7 @@ export function InterviewRoom(p: RoomProps) {
           keepAll.current = () => res("keep");
         });
         setNeedsAttention([]);
+        if (choice === "keep" && bad.some(q => takesRef.current[q]?.flags?.includes("abusive_language"))) continue;
         if (choice !== "keep") {
           setError(null);
           await say(`q${choice.q}`);
@@ -254,7 +268,7 @@ export function InterviewRoom(p: RoomProps) {
             const r = await retryable(() => answer(q, p.indices.length - n));
             if (r === "ok") break;
           }
-          if (n < p.indices.length - 1) { setPhase("between"); await say("thanks", false); }
+          if (n < p.indices.length - 1) { setPhase("between"); await say(`bridge${n % 3}`, true); }
         }
         if (c.aborted) return;
         setPhase("closing");
@@ -270,13 +284,15 @@ export function InterviewRoom(p: RoomProps) {
     return () => { c.aborted = true; retry.current?.(); if (clockRef.current !== null) window.clearInterval(clockRef.current); clearTimeout(start); speakingNow.current?.cancel(); if (recorder.current?.state === "recording") recorder.current.stop(); };
   }, []);
 
-  const remaining = MAX_TOTAL_S - elapsed;
-  const ansLeft = Math.max(0, ansWindow - ansElapsed);
+  const timing = answerTiming(ansElapsed, ansWindow);
+  const roundingUp = phase === "answering" && timing.roundingUp;
+  const ansLeft = timing.remaining;
   const total = p.indices.length;
   const status =
-    phase === "answering" ? "Your turn: answer now"
+    phase === "answering" ? (roundingUp ? "Please round up — 5 seconds extra" : "Go — your turn to answer")
+    : phase === "countdown" ? "Get ready to answer…"
     : phase === "greeting" || phase === "asking" || phase === "closing" ? "The interviewer is speaking…"
-    : phase === "finishing" ? "Checking your answers…" : phase === "between" ? "Thank you" : "";
+    : phase === "finishing" ? "Checking your answers…" : phase === "between" ? "Moving to the next question…" : "";
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-ink text-white md:flex-row" role="dialog" aria-modal="true" aria-label="AI interview">
@@ -285,26 +301,27 @@ export function InterviewRoom(p: RoomProps) {
         <div className="absolute left-3 top-3 flex items-center gap-2 rounded-sm bg-ink px-3 py-1.5 text-sm font-bold">
           {phase === "answering" ? <><span className="inline-block h-3 w-3 animate-pulse rounded-full bg-brand-red" aria-hidden /> Recording {mmss(ansElapsed)}</> : <><span className="inline-block h-3 w-3 rounded-full bg-brand-green" aria-hidden /> Camera on</>}
         </div>
-        <div className={`absolute right-3 top-3 rounded-sm px-3 py-1.5 font-mono text-sm font-bold ${overtime ? "bg-brand-red text-ink" : "bg-ink text-brand-green"}`} aria-label="Interview timing">
-          {overtime ? `Extra time · ${mmss(elapsed - MAX_TOTAL_S)}` : `${mmss(remaining)} left`}
+        <div className="absolute right-3 top-3 rounded-sm bg-ink px-3 py-1.5 font-mono text-sm font-bold text-brand-green" aria-label="Interview timing">
+          Interview · {mmss(elapsed)}
         </div>
         {["greeting", "asking", "answering", "between", "closing"].includes(phase) && !cameraLost && (
-          <div className="pointer-events-none absolute inset-x-0 top-14 flex justify-center px-3">
+          <div className={`pointer-events-none absolute inset-x-0 ${phase === "answering" ? "bottom-6" : "top-14"} flex justify-center px-3`}>
             <p className="flex items-center gap-2 rounded-sm bg-ink/85 px-3 py-2 text-center text-sm font-bold text-white shadow-lg">
               <span aria-hidden="true" className="text-brand-green">▲</span> Look into your camera, not at yourself on the screen
             </p>
           </div>
         )}
+        {phase === "countdown" && <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center bg-ink/50" role="status" aria-label="Recording countdown"><p className="text-8xl font-extrabold text-brand-green">{countdown || "Go"}</p><p className="mt-3 text-lg font-bold">Get ready — recording starts after the countdown</p></div>}
         {phase === "answering" && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center px-3">
+          <div className="pointer-events-none absolute inset-x-0 top-16 flex justify-center px-3">
             <div className={`rounded-md border-4 px-8 py-2 text-center shadow-2xl ${ansLeft <= 10 ? "animate-pulse border-brand-red bg-brand-red text-ink" : "border-brand-green bg-ink text-brand-green"}`} role="timer" aria-label="Time left for this answer">
-              <p className="font-mono text-7xl font-extrabold leading-none tabular-nums md:text-8xl">{mmss(ansLeft)}</p>
-              <p className="mt-1 text-sm font-bold uppercase tracking-widest">left for this answer</p>
+              <p className="font-mono text-5xl font-extrabold leading-none tabular-nums md:text-6xl">{mmss(ansLeft)}</p>
+              <p className="mt-1 text-sm font-bold uppercase tracking-widest">{roundingUp ? "Please round up now" : "left for this answer"}</p>
             </div>
           </div>
         )}
         {phase === "answering" && (
-          <div className="absolute inset-x-0 bottom-0 h-2 bg-ink" role="progressbar" aria-label="Time left for this answer" aria-valuemin={0} aria-valuemax={ansWindow} aria-valuenow={Math.round(ansLeft)}>
+          <div className="absolute inset-x-0 top-0 h-2 bg-ink" role="progressbar" aria-label="Time left for this answer" aria-valuemin={0} aria-valuemax={ansWindow} aria-valuenow={Math.round(ansLeft)}>
             <div className="h-full bg-brand-green transition-[width] duration-300" style={{ width: `${ansWindow ? (ansLeft / ansWindow) * 100 : 0}%` }} />
           </div>
         )}
@@ -349,7 +366,7 @@ export function InterviewRoom(p: RoomProps) {
                 <p className="mt-1">{takes[q]?.messages.join(" ") || "Please record this answer again."}</p>
                 <div className="mt-2 flex gap-2">
                   <button type="button" className="rounded-sm border-2 border-ink bg-brand-green px-3 py-2 font-bold" onClick={() => redo.current?.(q)}>Record it again</button>
-                  {takes[q]?.status === "needs_retake" && <button type="button" className="rounded-sm border-2 border-ink bg-white px-3 py-2 font-bold" onClick={() => keepAll.current?.()}>Use it anyway</button>}
+                  {takes[q]?.status === "needs_retake" && !needsAttention.some(index => takes[index]?.flags?.includes("abusive_language")) && <button type="button" className="rounded-sm border-2 border-ink bg-white px-3 py-2 font-bold" onClick={() => keepAll.current?.()}>Use it anyway</button>}
                 </div>
               </div>
             ))}

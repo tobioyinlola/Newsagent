@@ -1,3 +1,4 @@
+import { TransferApprovals } from "../components/TransferApprovals";
 import { PaymentReconciliation } from "../components/PaymentReconciliation";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -29,13 +30,14 @@ export function Revenue() {
           </table>
         )}
       </Card>
+      <TransferApprovals />
       <PaymentReconciliation />
       <Card title="Payments">
         {p.items.length === 0 ? <p className="text-sm text-muted">Nothing to show.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm"><caption className="sr-only">Payments, newest first</caption>
               <thead><tr className="text-left text-muted"><th className="py-1">When</th><th>Company</th><th>Type</th><th className="text-right">Amount</th><th className="text-right">Credits</th></tr></thead>
-              <tbody>{p.items.map((r, i) => <tr key={i} className="border-t border-line"><td className="py-1.5">{date(r.when)}</td><td><Link className="underline" to={`/customers/${r.workspace_id}`}>{r.company}</Link></td><td>{r.kind === "card" ? `Card${r.provider ? ` (${r.provider})` : ""}` : "Offline"}</td><td className="text-right tabular-nums">{r.usd == null ? "not recorded" : usd(r.usd)}</td><td className="text-right tabular-nums">{num(r.credits)}</td></tr>)}</tbody>
+              <tbody>{p.items.map((r, i) => <tr key={i} className="border-t border-line"><td className="py-1.5">{date(r.when)}</td><td><Link className="underline" to={`/customers/${r.workspace_id}`}>{r.company}</Link></td><td>{r.kind === "bank_transfer" ? "Bank transfer" : r.kind === "card" ? `Card${r.provider ? ` (${r.provider})` : ""}` : "Offline"}</td><td className="text-right tabular-nums">{r.usd == null ? "not recorded" : usd(r.usd)}</td><td className="text-right tabular-nums">{num(r.credits)}</td></tr>)}</tbody>
             </table>
           </div>
         )}

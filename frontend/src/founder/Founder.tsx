@@ -198,7 +198,7 @@ type Sub = "prompt" | "countdown" | "recording" | "review" | "checking" | "flagg
 
 function Answer({ token, q, total, stream, kind, onFinished, onBack }: { token: string; q: GuestQuestion; total: number; stream: MediaStream; kind: "video" | "audio"; onFinished: () => void | Promise<void>; onBack: () => void }) {
   const [sub, setSub] = useState<Sub>("prompt");
-  const [count, setCount] = useState(3);
+  const [count, setCount] = useState(5);
   const [elapsed, setElapsed] = useState(0);
   const [up, setUp] = useState<UploadState | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -240,8 +240,8 @@ function Answer({ token, q, total, stream, kind, onFinished, onBack }: { token: 
   }, []);
 
   const begin = () => {
-    setError(null); setSub("countdown"); setCount(3);
-    let n = 3;
+    setError(null); setSub("countdown"); setCount(5);
+    let n = 5;
     const id = window.setInterval(() => { n -= 1; setCount(n); if (n <= 0) { window.clearInterval(id); void startRecording(); } }, 1000);
   };
 
@@ -330,8 +330,9 @@ function Answer({ token, q, total, stream, kind, onFinished, onBack }: { token: 
       {sub === "countdown" && <p className="py-12 text-center text-8xl font-extrabold text-ink" aria-live="assertive">{count > 0 ? count : "Go"}</p>}
       {sub === "recording" && (
         <>
+          <p role="timer" aria-label="Answer time remaining" className="text-center text-3xl font-bold tabular-nums"><span className="mr-2 inline-block h-4 w-4 animate-pulse rounded-full bg-brand-red align-middle" aria-hidden />{mm(Math.max(0, (elapsed >= 60 ? 65 : 60) - elapsed))}<span className="ml-2 text-base font-normal text-muted">{elapsed >= 60 ? "Please round up now" : "remaining"}</span></p>
+          {elapsed >= 60 && <Note tone="warn">Please round up — you have 5 extra seconds to finish your answer.</Note>}
           {kind === "video" && <video ref={live} autoPlay muted playsInline className="aspect-[3/4] w-full rounded-xl bg-black object-cover [transform:scaleX(-1)]" aria-label="Your camera" />}
-          <p className="text-center text-3xl font-bold tabular-nums" aria-live="off"><span className="mr-2 inline-block h-4 w-4 animate-pulse rounded-full bg-brand-red align-middle" aria-hidden />{mm(elapsed)} <span className="text-base font-normal text-muted">/ {mm(HARD_CAP_S)} max</span></p>
           {up && up.pending > 3 && <Note tone="warn">Your connection is slow. Keep going: your answer is saved on this device while it uploads.</Note>}
           <button className={`${btn} bg-brand-red text-white`} onClick={stop}>Stop recording</button>
         </>
@@ -356,7 +357,7 @@ function Answer({ token, q, total, stream, kind, onFinished, onBack }: { token: 
         <>
           <Note tone="warn">{flag.messages.length ? flag.messages.join(" ") : "Please record this answer again."}</Note>
           <button className={primary} onClick={discard}>Record again</button>
-          <button className={secondary} onClick={() => void onFinished()}>Use this answer anyway</button>
+          {!flag.flags.includes("abusive_language") && <button className={secondary} onClick={() => void onFinished()}>Use this answer anyway</button>}
         </>
       )}
       {sub === "failed" && (

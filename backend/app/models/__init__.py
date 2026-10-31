@@ -30,9 +30,16 @@ from app.models.entities import (
     WebhookEvent,
     Workspace,
 )
+from app.models.news_desk import NewsImage, NewsStory
 from app.models.referral import ReferralLink, ReferralReward
+from app.models.transfer_review import PaymentProof, TransferMail, TransferReview
 
 __all__ = [
+    "NewsImage",
+    "NewsStory",
+    "PaymentProof",
+    "TransferReview",
+    "TransferMail",
     "ReferralLink",
     "ReferralReward",
     "BankReceipt",

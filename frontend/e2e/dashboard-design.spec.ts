@@ -1,0 +1,38 @@
+import { expect, test } from "@playwright/test";
+
+test("dashboard live activity, search, settings, top sidebar toggle and responsive layout", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:ops@example.com"));
+  await page.route("**/v1/projects", route => route.fulfill({ json: [{ id: "ready-video", state: "final_ready", created_at: "2026-10-30T10:00:00Z", founder_name: "Ada Obi" }, { id: "draft-video", state: "draft", created_at: "2026-10-29T10:00:00Z", founder_name: "Ada Obi" }] }));
+  await page.setViewportSize({ width: 1440, height: 1080 });
+  await page.goto("/dashboard");
+  await expect(page.getByRole("heading", { name: "Welcome, Ada" })).toBeVisible();
+  const toggle = page.getByRole("button", { name: "Collapse sidebar", exact: true });
+  await expect(toggle.locator("span")).toHaveClass("sr-only");
+  const dashboard = page.getByRole("navigation", { name: "Main", exact: true }).getByRole("link", { name: "Dashboard", exact: true });
+  expect((await toggle.boundingBox())!.y).toBeLessThan((await dashboard.boundingBox())!.y);
+  await toggle.click();
+  await expect(page.getByRole("button", { name: "Expand sidebar", exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Expand sidebar", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Expand sidebar", exact: true }).click();
+  await page.getByRole("textbox", { name: "Search your workspace" }).fill("credits");
+  await expect(page.getByRole("region", { name: "Search results" }).getByRole("link", { name: /Buy credits/ })).toHaveAttribute("href", "/billing");
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: /Notifications/ }).click();
+  await expect(page.getByRole("region", { name: "Workspace notifications" })).toContainText("Your video is ready");
+  await page.getByRole("button", { name: "Mark all as read", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Notifications", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Workspace settings" }).getByRole("link", { name: "Password and security" })).toHaveAttribute("href", "/security");
+  await page.keyboard.press("Escape");
+  await page.getByRole("textbox", { name: "Search your workspace" }).fill("");
+  await page.keyboard.press("Escape");
+  await page.getByRole("heading", { name: "Welcome, Ada" }).click();
+  await page.screenshot({ path: "/tmp/cover-founder-dashboard-desktop.png", fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: "/tmp/cover-founder-dashboard-mobile.png", fullPage: true });
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "Main", exact: true }).getByRole("link", { name: "Credits", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+});

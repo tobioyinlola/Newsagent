@@ -50,8 +50,8 @@ const StudioBody: React.FC<NewsProps> = (p) => {
       {lt && (
         <div style={{ position: "absolute", left: 48 * u, bottom: (portrait ? 20 : 11) + "%", opacity: slide(ltStart) * ltOut, transform: `translateY(${(1 - slide(ltStart)) * 30}px)` }}>
           <div style={{ background: CF.ink, borderLeft: `${10 * u}px solid ${p.brand.accent}`, padding: `${14 * u}px ${28 * u}px` }}>
-            <div style={{ color: CF.white, fontFamily: MONO, fontSize: 44 * u, fontWeight: 700 }}>{lt.title}</div>
-            <div style={{ color: CF.green, fontFamily: SANS, fontSize: 28 * u }}>{lt.subtitle}</div>
+            <div style={{ color: CF.white, fontFamily: MONO, fontSize: 40 * u, fontWeight: 700, lineHeight: 1.4 }}>{lt.title}</div>
+            <div style={{ color: CF.green, fontFamily: SANS, fontSize: 28 * u, lineHeight: 1.4, marginTop: 8 * u }}>{lt.subtitle}</div>
           </div>
         </div>
       )}

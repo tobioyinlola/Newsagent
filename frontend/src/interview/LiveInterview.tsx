@@ -97,7 +97,7 @@ export function LiveInterviewPanel({ projectId, founderName, founderTitle, guide
     <>{overlay}<Card title="Your AI interview">
       <div className="space-y-4">
         <Notice tone="ok">
-          {guided ? "Our AI interviewer will talk with you on camera: up to" : "Your script is approved. Before we make your video, our AI interviewer will talk with you on camera: up to"} {s?.questions.length ?? 4} questions, usually about 4 minutes. You can retake any answer before submitting.
+          {guided ? "Our AI interviewer will talk with you on camera: up to" : "Your script is approved. Before we make your video, our AI interviewer will talk with you on camera: up to"} {s?.questions.length ?? 4} questions, usually about 5–6 minutes. You can retake any answer before submitting.
           {" "}Your answers are woven into the video next to the AI presenter.
         </Notice>
         {facts && (facts.announcement || facts.key_facts.length > 0) && (
@@ -122,7 +122,7 @@ export function LiveInterviewPanel({ projectId, founderName, founderTitle, guide
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Your name" hint="The interviewer greets you by name.">{(id) => <input id={id} required className={inputCls} value={name} onChange={(e) => setName(e.target.value)} />}</Field>
-            <Field label="Your role (shown on screen)">{(id) => <input id={id} className={inputCls} placeholder="CEO, Acme" value={title} onChange={(e) => setTitle(e.target.value)} />}</Field>
+            <Field label="Your role (shown on screen)">{(id) => <input id={id} className={inputCls} placeholder="CEO, Bybit" value={title} onChange={(e) => setTitle(e.target.value)} />}</Field>
           </div>
         )}
         <section className="rounded-md border-2 border-ink bg-paper p-3 text-sm" aria-labelledby="consent-h">

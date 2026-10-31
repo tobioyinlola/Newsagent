@@ -71,3 +71,5 @@ def usage_accounting(monkeypatch):
     from app.config import get_settings
 
     monkeypatch.setattr(get_settings(), "credit_markup", "1")
+    # Existing tests exercise legacy automated card/NGN contracts; transfer-review tests explicitly enable the new default mode.
+    monkeypatch.setattr(get_settings(), "bank_transfer_review_enabled", False)

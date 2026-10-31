@@ -3,6 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../../backend"
 rm -f e2e.db
+export BANK_TRANSFER_REVIEW_ENABLED="${BANK_TRANSFER_REVIEW_ENABLED:-false}"
 export DATABASE_URL="sqlite+aiosqlite:///./e2e.db" ENVIRONMENT=local USE_MOCKS=true QUEUE_BACKEND=inline \
   OPERATOR_EMAILS=ops@example.com APP_BASE_URL=http://localhost:5173 SIGNUP_PER_IP_PER_HOUR=1000
 uv run alembic upgrade head

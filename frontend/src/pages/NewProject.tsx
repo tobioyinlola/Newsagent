@@ -21,13 +21,14 @@ export function NewProject() {
   const [kind, setKind] = useState("product_launch");
   const [details, setDetails] = useState("");
   const [founder, setFounder] = useState("");
+  const [location, setLocation] = useState("");
   const [role, setRole] = useState("");
   const [site, setSite] = useState("");
   const [presenter, setPresenter] = useState("");
   const m = useMutation({
     mutationFn: async () => {
       const label = KINDS.find((k) => k[0] === kind)?.[1] ?? "Announcement";
-      const p = await unwrap(api.POST("/v1/projects", { body: { brief_text: `${details.trim()}\n\nAnnouncement type: ${label}.`, website_url: site.trim() ? (/^https?:\/\//i.test(site.trim()) ? site.trim() : `https://${site.trim()}`) : null, region: "NG", voice_accent: "british", founder_name: founder.trim(), founder_title: role.trim(), anchor_id: presenter || null, flow: "guided", announcement_type: kind } }));
+      const p = await unwrap(api.POST("/v1/projects", { body: { brief_text: `${details.trim()}\n\nAnnouncement type: ${label}.`, website_url: site.trim() ? (/^https?:\/\//i.test(site.trim()) ? site.trim() : `https://${site.trim()}`) : null, region: "NG", voice_accent: "british", founder_name: founder.trim(), founder_title: role.trim(), founder_location: location.trim(), anchor_id: presenter || null, flow: "guided", announcement_type: kind } }));
       await unwrap(api.POST("/v1/projects/{project_id}/guided/start", { params: { path: { project_id: p.id } } }));
       return p;
     },
@@ -55,11 +56,12 @@ export function NewProject() {
         </Field>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Your name" hint="Our AI interviewer greets you by name.">{(id) => <input id={id} required maxLength={200} className={inputCls} value={founder} onChange={(e) => setFounder(e.target.value)} />}</Field>
-          <Field label="Your role">{(id) => <input id={id} maxLength={200} className={inputCls} placeholder="CEO, Acme" value={role} onChange={(e) => setRole(e.target.value)} />}</Field>
+          <Field label="Your role" hint="Include your company name, for example CEO, Bybit.">{(id) => <input id={id} maxLength={200} className={inputCls} placeholder="CEO, Bybit" value={role} onChange={(e) => setRole(e.target.value)} />}</Field>
         </div>
+        <Field label="Your location" hint="City and country, shown while you speak in the final video.">{(id) => <input id={id} maxLength={200} autoComplete="address-level2" placeholder="Lagos, Nigeria" className={inputCls} value={location} onChange={e => setLocation(e.target.value)} />}</Field>
         <Field label="Website (optional)">{(id) => <input id={id} type="text" inputMode="url" autoComplete="url" className={inputCls} value={site} onChange={(e) => setSite(e.target.value)} placeholder="yourbusiness.com" />}</Field>
         <PresenterPicker value={presenter} onChange={setPresenter} />
-        <p className="text-sm text-muted">Next, our AI interviewer asks you a few questions on camera (about 4 minutes). Then we write your news story and you check it. Nothing is made until you approve it.</p>
+        <p className="text-sm text-muted">Next, our AI interviewer asks you a few questions on camera (about 5–6 minutes). Then we write your news story and you check it. Nothing is made until you approve it.</p>
         <ErrorBox error={m.error} />
         <Button type="submit" disabled={m.isPending}>{m.isPending ? "Getting your interview ready…" : "Continue to the interview"}</Button>
       </form>

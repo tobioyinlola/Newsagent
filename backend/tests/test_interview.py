@@ -345,7 +345,7 @@ async def test_merge_builds_scene_timeline_and_reaches_final(client, workspace):
     req = registry.get_renderer().requests[-1]
     kinds = [s["type"] for s in req.props["scenes"]]
     assert req.composition == "InterviewMerge" and req.props["layout"] == "split"
-    assert kinds == ["anchor", "question", "answer", "question", "answer", "anchor"]
+    assert kinds == ["anchor", "question", "answer", "question", "answer", "anchor", "anchor"]
     answers = [s for s in req.props["scenes"] if s["type"] == "answer"]
     assert [round(a["seconds"], 1) for a in answers] == [4.0, 3.0]  # question 1 untrimmed first, then 0 trimmed by 1s
     assert answers[1]["startFromSeconds"] == 0.5 and answers[0]["founder"] == {
@@ -370,8 +370,9 @@ async def test_merge_captions_include_founder_words_at_the_right_time(client, wo
             .storage_key
         )
     srt = (await registry.get_storage().get(key, 1_000_000)).decode()
-    assert "mock transcript" in srt and "What problem are you solving?" in srt
     cues = iv.parse_srt(srt)
+    spoken = " ".join(text for _, _, text in cues)
+    assert "mock transcript" in spoken and "What problem are you solving?" in spoken
     assert cues == sorted(cues) and all(b > a for a, b, _ in cues)
 
 
@@ -382,7 +383,7 @@ async def test_dropping_an_answer_removes_its_question_too(client, workspace):
     await client.post(f"/v1/projects/{pid}/interview/merge", headers=OWNER)
     await get_queue().drain()
     kinds = [s["type"] for s in registry.get_renderer().requests[-1].props["scenes"]]
-    assert kinds == ["anchor", "question", "answer", "anchor"]
+    assert kinds == ["anchor", "question", "answer", "anchor", "anchor"]
 
 
 @pytest.mark.parametrize(

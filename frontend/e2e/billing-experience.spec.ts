@@ -1,0 +1,83 @@
+import { expect, test } from "@playwright/test";
+const API = "http://localhost:8000";
+const OPS = { Authorization: "Bearer dev:ops@example.com" };
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+
+test("insufficient distribution credit opens saved-draft popup, custom top-up, then successful submission", async ({ page, request }) => {
+  const email = `funding${Date.now()}@example.com`;
+  const invited = await (await request.post(`${API}/v1/admin/invites`, { headers: OPS, data: { email, workspace_name: "Funding Journey", credits: "2", spend_cap: "100" } })).json();
+  await request.post(`${API}/v1/auth/signup/start`, { data: { invite_code: invited.code, password: "correct horse battery" } });
+  const mail = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: email } })).json();
+  const signup = await (await request.post(`${API}/v1/auth/signup/verify`, { data: { invite_code: invited.code, code: /\b(\d{6})\b/.exec(mail.text)![1] } })).json();
+  const headers = { Authorization: `Bearer ${signup.token}` };
+  for (const vendor of ["mock", "renderer"]) await request.put(`${API}/v1/admin/vendor-budgets`, { headers: OPS, data: { vendor, limit: "1000" } });
+  const project = await (await request.post(`${API}/v1/projects`, { headers, data: { brief_text: "Acme helps farmers sell produce to businesses." } })).json();
+  const script = await (await request.post(`${API}/v1/projects/${project.id}/script/generate`, { headers })).json();
+  await request.put(`${API}/v1/projects/${project.id}/script`, { headers, data: { segments: [{ kind: "intro", text: "Acme helps farmers." }], ticker_lines: script.ticker_lines, lower_thirds: script.lower_thirds, interview_questions: script.interview_questions } });
+  expect((await request.post(`${API}/v1/projects/${project.id}/script/approve`, { headers })).ok()).toBeTruthy();
+  await expect.poll(async () => (await (await request.get(`${API}/v1/projects/${project.id}`, { headers })).json()).state).toBe("final_ready");
+  const upload = await (await request.post(`${API}/v1/brand-kit/uploads`, { headers, data: { kind: "product_image", content_type: "image/png", size_bytes: PNG.length } })).json();
+  await request.put(upload.upload_url, { data: PNG, headers: { "Content-Type": "image/png" } });
+  expect((await request.post(`${API}/v1/brand-kit/uploads/confirm`, { headers, data: { key: upload.key } })).ok()).toBeTruthy();
+  const draft = await (await request.post(`${API}/v1/distribution`, { headers })).json();
+  expect((await request.put(`${API}/v1/distribution/${draft.id}`, { headers, data: { ...draft.data, stage: "review", outlet_ids: ["23"], project_id: project.id, headline: "Our announcement", announcement: "Our business is launching its new service.", contact_name: "Ada Obi", contact_email: email, phone: "+2348031234567", phone_country: "NG", logo_key: upload.key } })).ok()).toBeTruthy();
+  await page.addInitScript(t => localStorage.setItem("newsagent.token", t), signup.token);
+  let submissions = 0;
+  await page.route(`**/v1/distribution/${draft.id}/submit`, route => { submissions++; return route.continue(); });
+  await page.goto(`/distribution/request?draft=${draft.id}`);
+  for (const name of ["Distribution steps", "Distribution steps (bottom)"]) {
+    await expect(page.getByRole("navigation", { name, exact: true }).locator('[aria-current="step"]')).toContainText("Review & pay");
+  }
+  await page.getByRole("button", { name: "Pay and submit", exact: true }).click();
+  const popup = page.getByRole("dialog", { name: "Not enough credits" });
+  await expect(popup).toBeVisible();
+  await expect(popup).toContainText("18.8 credits");
+  await expect(popup).toContainText("17.8 credits");
+  expect(submissions).toBe(0);
+  expect((await (await request.get(`${API}/v1/distribution/${draft.id}`, { headers })).json()).paid).toBe(false);
+  await popup.screenshot({ path: "/tmp/distribution-funding-popup.png" });
+  // A second tab can spend credits after preflight. The atomic server check must open the same popup.
+  await popup.getByRole("button", { name: "Keep editing" }).click();
+  const wallet = await (await request.get(`${API}/v1/billing/summary`, { headers })).json();
+  await page.route("**/v1/billing/summary", route => route.fulfill({ json: { ...wallet, credit_balance: "999" } }));
+  await page.getByRole("button", { name: "Pay and submit", exact: true }).click();
+  await expect(popup).toBeVisible();
+  await expect(popup).toContainText("17.8 credits");
+  expect(submissions).toBe(1);
+  await page.unroute("**/v1/billing/summary");
+  await popup.getByRole("link", { name: "Buy credits" }).click();
+  await expect(page.getByLabel("Credits to buy")).toHaveValue("17.8");
+  await expect(page.getByLabel("Custom credit quote")).toContainText("$48.06");
+  await page.getByRole("button", { name: "Buy custom credits" }).click();
+  await expect(page.getByRole("heading", { name: "Test payment" })).toBeVisible();
+  await page.getByRole("button", { name: "Pay now (test)" }).click();
+  await page.getByRole("link", { name: "Return to your saved distribution request" }).click();
+  await expect(page.getByRole("heading", { name: "Review your distribution request" })).toBeVisible();
+  await page.getByRole("button", { name: "Pay and submit", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Distribution submitted" })).toBeVisible();
+  expect(submissions).toBe(2);
+});
+
+test("custom credit minimum, exact USD/NGN prices, and no video estimates", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:ops@example.com"));
+  await page.route("**/v1/billing/payment-methods", route => route.fulfill({ json: { ngn_per_usd: "1400", usd_card: true, ngn_card: true, ngn_bank_transfer: true } }));
+  let checkout: Record<string, unknown> | null = null;
+  await page.route("**/v1/billing/checkout", route => { checkout = route.request().postDataJSON(); return route.fulfill({ json: { checkout_id: "custom", url: "/billing?custom-complete=1" } }); });
+  await page.goto("/billing");
+  await expect(page.getByText(/\b\d+ videos?\b/)).toHaveCount(0);
+  await page.getByLabel("Credits to buy").fill("1");
+  await expect(page.getByRole("alert")).toContainText("Custom purchases start at $10 USD");
+  await expect(page.getByRole("button", { name: "Buy custom credits" })).toBeDisabled();
+  await page.getByLabel("Credits to buy").fill("220");
+  await expect(page.getByLabel("Custom credit quote")).toContainText("$594.00");
+  await page.getByRole("radio", { name: "Nigerian naira (NGN)" }).check();
+  await page.getByRole("radio", { name: /Bank transfer/ }).check();
+  await expect(page.getByLabel("Custom credit quote")).toContainText("₦831,600.00");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: "/tmp/custom-credit-mobile.png", fullPage: true });
+  await page.getByRole("button", { name: "Buy custom credits" }).click();
+  await expect(page).toHaveURL(/custom-complete=1/);
+  expect(checkout).toMatchObject({ amount_usd: "594.00", custom_credits: "220.00", currency: "NGN", payment_method: "bank_transfer", ngn_per_usd: "1400" });
+  expect(String(checkout?.custom_quote_version)).toHaveLength(64);
+});

@@ -870,3 +870,75 @@ async def test_unknown_action_list_cannot_authorize_retry(acquiring, monkeypatch
 
     monkeypatch.setattr(billing, "call", unknown_response)
     assert await billing.has_actions({"id": "test-intent", "intent_action": None}) is True
+
+
+@pytest.mark.parametrize(("currency", "method"), [("USD", "card"), ("NGN", "card"), ("NGN", "bank_transfer")])
+async def test_custom_credit_purchase_is_verified_and_settles_exact_quantity(
+    client, workspace, naira, maker, currency, method
+):
+    quote = (await client.post("/v1/billing/custom-quote", headers=OWNER, json={"credits": "220"})).json()
+    body = {
+        "amount_usd": quote["amount_usd"],
+        "custom_credits": quote["credits"],
+        "custom_quote_version": quote["quote_version"],
+        "currency": currency,
+        "payment_method": method,
+    }
+    if currency == "NGN":
+        body["ngn_per_usd"] = quote["ngn_per_usd"]
+    response = await client.post("/v1/billing/checkout", headers=OWNER, json=body)
+    assert response.status_code == 200, response.text
+    id = response.json()["checkout_id"]
+    if method == "bank_transfer":
+        transfer = {
+            "id": "custom-credit-transfer",
+            "account_id": "test-ngn-account",
+            "entity_id": "test-entity",
+            "currency": "NGN",
+            "amount": 83160000,
+            "type": "inflow",
+            "payment_type": "bank-transfer",
+            "status": "successful",
+            "narration": "CF" + id,
+            "created": int(datetime.now(UTC).timestamp() * 1000) + 1000,
+        }
+        naira["transfers"][transfer["id"]] = transfer
+        content, headers = signed(transfer, event="inflows.completed")
+        for _ in range(2):
+            r = await client.post("/v1/webhooks/nuvion", content=content, headers=headers)
+            assert r.status_code == 200, r.text
+    else:
+        naira["mode"] = "paid"
+        assert (await client.get(f"/v1/billing/card/{id}", headers=OWNER)).status_code == 200
+        r = await client.post(f"/v1/billing/card/{id}/confirm", headers=OWNER, json=confirmation())
+        assert r.status_code == 200 and r.json()["status"] == "paid", r.text
+        assert (await client.get(f"/v1/billing/card/{id}", headers=OWNER)).json()["status"] == "paid"
+    assert await balance(maker, workspace) == Decimal("230")
+    async with maker() as db:
+        co = await db.get(Checkout, id)
+        assert co.credits == 220 and co.amount_usd == 594
+        if currency == "NGN":
+            assert Decimal(co.payment_context["amount_ngn"]) == 831600
+        assert await ledger.ledger_sum(db, workspace) == Decimal("230")
+
+
+async def test_transfer_mode_blocks_new_card_charges_but_settles_old_completed_payments(
+    client, workspace, acquiring, maker, monkeypatch
+):
+    id = await start(client)
+    monkeypatch.setattr(get_settings(), "bank_transfer_review_enabled", True)
+    rejected = await client.post(f"/v1/billing/card/{id}/confirm", headers=OWNER, json=confirmation())
+    assert rejected.status_code == 409
+    assert acquiring["confirmations"] == 0
+    status = (await client.get(f"/v1/billing/card/{id}", headers=OWNER)).json()
+    assert status["card_payments_enabled"] is False
+    assert status["can_retry_confirmation"] is False
+    # A charge that already completed at the provider must not lose its credits during rollout.
+    intent = next(iter(acquiring["intents"].values()))
+    intent["status"] = "completed"
+    intent["intent_action"] = acquiring["action"](intent, "completed")
+    body, headers = signed(intent)
+    for _ in range(2):
+        response = await client.post("/v1/webhooks/nuvion", content=body, headers=headers)
+        assert response.status_code == 200, response.text
+    assert await balance(maker, workspace) == Decimal("13.70")

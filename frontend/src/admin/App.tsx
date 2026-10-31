@@ -1,3 +1,4 @@
+import { NewsDesk } from "./pages/NewsDesk";
 import { AnalyticsAdmin } from "./pages/Analytics";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Audit } from "./components/admin/Audit";
@@ -48,6 +49,7 @@ export function App() {
       <Route element={<RequireOperator />}>
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
+          <Route path="/news-desk" element={<NewsDesk />} />
           <Route path="/customers" element={<Guard any={["customers.view"]}><Customers /></Guard>} />
           <Route path="/customers/:id" element={<Guard any={["customers.view"]}><CustomerDetail /></Guard>} />
           <Route path="/revenue" element={<Guard any={["finance.view"]}><Revenue /></Guard>} />

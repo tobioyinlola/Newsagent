@@ -142,7 +142,8 @@ class Settings(BaseSettings):
     local_storage_dir: str = ""  # shared folder for LocalStorage so a local renderer can read/write the same files
     mock_anchor_file: str = ""  # a real .webm the mock avatar copies as its output, for local end-to-end renders
     # Credits: a video costs `credits_per_video` credit (one), whatever the vendors charge; one credit is sold at `usd_per_credit`.
-    # Customers buy fixed amounts (`credit_purchase_usd`) and get amount / usd_per_credit credits, rounded to 0.01.
+    # Preset purchases get amount / usd_per_credit credits, rounded to 0.01; custom quantities have a $10 minimum.
+    bank_transfer_review_enabled: bool = True  # New purchases use bank transfer and finance approval; cards are coming soon.
     usd_per_credit: str = "2.70"
     credits_per_video: str = "1"
     credit_purchase_usd: str = "1,10,50,100,200"

@@ -1,3 +1,4 @@
+import { TransferCheckout } from "./pages/TransferCheckout";
 import { Referrals } from "./pages/Referrals";
 import { Analytics } from "./pages/Analytics";
 import { Suspense, lazy } from "react";
@@ -64,6 +65,7 @@ export function App() {
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/billing/card/:checkoutId" element={<CardCheckout />} />
+          <Route path="/billing/transfer/:checkoutId" element={<TransferCheckout />} />
           <Route path="/billing/bank/:checkoutId" element={<BankCheckout />} />
           <Route path="/account" element={<Account />} />
           <Route path="/security" element={<Security />} />

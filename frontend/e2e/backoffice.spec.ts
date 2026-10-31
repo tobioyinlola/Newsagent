@@ -130,10 +130,10 @@ test("operators sign in with a password and a code emailed to them, and are sign
   await page.goto("/admin");
   await expect(page).toHaveURL(/\/admin\/login/);
   await page.getByLabel("Email").fill("ops@example.com");
-  await page.getByLabel("Password").fill("not the password");
+  await page.getByLabel("Password", { exact: true }).fill("not the password");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByRole("alert")).toContainText("don't match");
-  await page.getByLabel("Password").fill(PASSWORD);
+  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
   await page.getByLabel("6-digit code").fill("000000");

@@ -1,0 +1,406 @@
+{
+  "Condia": {
+    "src": "/distribution-logos/condia.png",
+    "source": "https://thecondia.com/wp-content/uploads/2026/02/cropped-Frame-1686560458-192x192.png",
+    "website": "https://thecondia.com/",
+    "dimensions": [
+      192,
+      192
+    ]
+  },
+  "Nairametrics": {
+    "src": "/distribution-logos/nairametrics.jpg",
+    "source": "https://cdn.nairametrics.com/wp-content/uploads/2026/09/nairametrics_logo.jpg",
+    "website": "https://nairametrics.com/",
+    "dimensions": [
+      664,
+      75
+    ]
+  },
+  "Tech Cabal": {
+    "src": "/distribution-logos/tech-cabal.png",
+    "source": "https://c76c7bbc41.mjedge.net/wp-content/uploads/tc/2025/11/tc-logo-3-300x67-1.png",
+    "website": "https://techcabal.com/",
+    "dimensions": [
+      300,
+      67
+    ]
+  },
+  "Empire Magazine Africa": {
+    "src": "/distribution-logos/empire-magazine-africa.png",
+    "source": "https://empiremagazineafrica.com/wp-content/uploads/Empire-Magazine-Africa-logo.png",
+    "website": "https://empiremagazineafrica.com/",
+    "dimensions": [
+      600,
+      124
+    ],
+    "tone": "dark"
+  },
+  "Street Insider": {
+    "src": "/distribution-logos/street-insider.png",
+    "source": "https://www.streetinsider.com/images/silogo-new.png",
+    "website": "https://www.streetinsider.com/",
+    "dimensions": [
+      232,
+      79
+    ]
+  },
+  "Crest Africa": {
+    "src": "/distribution-logos/crest-africa.webp",
+    "source": "https://crestafrica.com/wp-content/uploads/2024/11/crest.africa.logo_.webp",
+    "website": "https://crestafrica.com/",
+    "dimensions": [
+      600,
+      273
+    ]
+  },
+  "88 Lately": {
+    "src": "/distribution-logos/88-lately.png",
+    "source": "https://88lately.com/wp-content/uploads/2024/10/88lately-Logo.png",
+    "website": "https://88lately.com/",
+    "dimensions": [
+      118,
+      50
+    ]
+  },
+  "The Coins Insider": {
+    "src": "/distribution-logos/the-coins-insider.svg",
+    "source": "https://www.coininsider.org/wp-content/uploads/2026/05/COIN-INSIDER.svg",
+    "website": "https://www.coininsider.com/",
+    "dimensions": [
+      "187",
+      "20"
+    ]
+  },
+  "Tribune": {
+    "src": "/distribution-logos/tribune.png",
+    "source": "https://tribuneonlineng.com/wp-content/uploads/2023/02/Tribune-Online-Cropped-Logo-e1675299213489.png",
+    "website": "https://tribuneonlineng.com/",
+    "dimensions": [
+      300,
+      83
+    ]
+  },
+  "Sun": {
+    "src": "/distribution-logos/sun.png",
+    "source": "https://d1jcea4y7xhp7l.cloudfront.net/wp-content/uploads/2026/03/Csb8PaFt-sun-logo.png",
+    "website": "https://thesun.ng/",
+    "dimensions": [
+      326,
+      106
+    ]
+  },
+  "Techeconomy": {
+    "src": "/distribution-logos/techeconomy.svg",
+    "source": "https://techeconomy.ng/brand/techeconomy-logo-blue.svg",
+    "website": "https://techeconomy.ng/",
+    "dimensions": [
+      "945",
+      "155"
+    ]
+  },
+  "Benzinga": {
+    "src": "/distribution-logos/benzinga.png",
+    "source": "https://www.benzinga.com/next-assets/images/apple-touch-icon.png",
+    "website": "https://www.benzinga.com/",
+    "dimensions": [
+      180,
+      180
+    ]
+  },
+  "New Telegraph": {
+    "src": "/distribution-logos/new-telegraph.png",
+    "source": "https://newtelegraphng.com/wp-content/uploads/2024/10/new-telegraph-laurel-logo.png",
+    "website": "https://newtelegraphng.com/",
+    "dimensions": [
+      685,
+      109
+    ]
+  },
+  "Vanguard": {
+    "src": "/distribution-logos/vanguard.webp",
+    "source": "https://cdn.vanguardngr.com/wp-content/uploads/2025/12/vanguard-icon-200x200-ezgif.com-webp-to-png-converter-150x150-1.webp",
+    "website": "https://www.vanguardngr.com/",
+    "dimensions": [
+      150,
+      150
+    ]
+  },
+  "ThisDay": {
+    "src": "/distribution-logos/thisday.png",
+    "source": "https://www.thisdaylive.com/wp-content/themes/thisdaylive/library/favicons/apple-icon-180x180.png",
+    "website": "https://www.thisdaylive.com/",
+    "dimensions": [
+      180,
+      180
+    ]
+  },
+  "Daily Trust": {
+    "src": "/distribution-logos/daily-trust.png",
+    "source": "https://dailytrust.com/wp-content/uploads/2022/06/cropped-Daily-Trust-Icon-03-192x192.png",
+    "website": "https://dailytrust.com/",
+    "dimensions": [
+      192,
+      192
+    ]
+  },
+  "Punch": {
+    "src": "/distribution-logos/punch.webp",
+    "source": "https://punchng.com/wp-content/uploads/2026/07/cropped-faviconV2_1783778672-192x192.webp",
+    "website": "https://punchng.com/",
+    "dimensions": [
+      192,
+      192
+    ]
+  },
+  "The Coins Report": {
+    "src": "/distribution-logos/the-coins-report.png",
+    "source": "https://www.coinreporter.io/wp-content/uploads/2022/02/coinreporter-logo-1.png",
+    "website": "https://www.coinreporter.io/",
+    "dimensions": [
+      1391,
+      168
+    ]
+  },
+  "P.M. News": {
+    "src": "/distribution-logos/p-m-news.png",
+    "source": "https://pmnewsnigeria.com/wp-content/themes/pmnews2025/assets/images/png/logo.png",
+    "website": "https://pmnewsnigeria.com/",
+    "dimensions": [
+      88,
+      54
+    ]
+  },
+  "Premium Times": {
+    "src": "/distribution-logos/premium-times.png",
+    "source": "https://media.premiumtimesng.com/wp-content/files/2020/09/ptn-logo.png",
+    "website": "https://www.premiumtimesng.com/",
+    "dimensions": [
+      272,
+      100
+    ]
+  },
+  "Independent": {
+    "src": "/distribution-logos/independent.jpg",
+    "source": "https://independent.ng/wp-content/uploads/INL-MASTHEAD-Logo-scaled-NEW-1-1024x154.jpg",
+    "website": "https://independent.ng/",
+    "dimensions": [
+      1024,
+      154
+    ]
+  },
+  "Tooxclusive": {
+    "src": "/distribution-logos/tooxclusive.png",
+    "source": "https://tooxclusive.com/wp-content/uploads/2024/08/TX_LOGO1-300x178_3_cropped.png",
+    "website": "https://tooxclusive.com/",
+    "dimensions": [
+      150,
+      89
+    ]
+  },
+  "AlbumTalks": {
+    "src": "/distribution-logos/albumtalks.jpg",
+    "source": "https://albumtalks.com/wp-content/uploads/2022/06/albumtalks.jpg",
+    "website": "https://albumtalks.com/",
+    "dimensions": [
+      1489,
+      252
+    ]
+  },
+  "9jaflaver": {
+    "src": "/distribution-logos/9jaflaver.png",
+    "source": "https://9jaflaver.com/wp-content/uploads/2023/02/9jaflaver_ico-200x200.png",
+    "website": "https://9jaflaver.com/",
+    "dimensions": [
+      200,
+      200
+    ]
+  },
+  "The Guardian": {
+    "src": "/distribution-logos/the-guardian.png",
+    "source": "https://guardian.ng/wp-content/themes/guardian_ng/assets/build/images/logo-black.png",
+    "website": "https://guardian.ng/",
+    "dimensions": [
+      699,
+      111
+    ]
+  },
+  "NotJustOk": {
+    "src": "/distribution-logos/notjustok.png",
+    "source": "https://notjustok.com/wp-content/uploads/2022/10/cropped-njo-favicon-192x192.png",
+    "website": "https://notjustok.com/",
+    "dimensions": [
+      192,
+      192
+    ]
+  },
+  "TVC News": {
+    "src": "/distribution-logos/tvc-news.png",
+    "source": "https://tvcnews.tv/wp-content/uploads/2025/07/logo.png",
+    "website": "https://www.tvcnews.tv/",
+    "dimensions": [
+      462,
+      112
+    ]
+  },
+  "The Daily Times": {
+    "src": "/distribution-logos/the-daily-times.png",
+    "source": "https://dailytimesng.com/wp-content/themes/DailyTimes/assets/images/common/logo.png",
+    "website": "https://dailytimesng.com/",
+    "dimensions": [
+      503,
+      108
+    ]
+  },
+  "Daily Post": {
+    "src": "/distribution-logos/daily-post.png",
+    "source": "https://dailypost.ng/wp-content/uploads/2017/08/Daily_Post_Logo_Transparent_200x30-1.png",
+    "website": "https://dailypost.ng/",
+    "dimensions": [
+      204,
+      36
+    ],
+    "tone": "dark"
+  },
+  "Leadership Newspaper": {
+    "src": "/distribution-logos/leadership-newspaper.png",
+    "source": "https://leadership.ng/wp-content/uploads/2025/10/LeadershipLogoB.png",
+    "website": "https://leadership.ng/",
+    "dimensions": [
+      600,
+      149
+    ]
+  },
+  "AIT News": {
+    "src": "/distribution-logos/ait-news.png",
+    "source": "https://ait.live/wp-content/uploads/2024/05/AIT-Offical-Logo.png",
+    "website": "https://ait.live/",
+    "dimensions": [
+      150,
+      80
+    ]
+  },
+  "Mp3bullet": {
+    "src": "/distribution-logos/mp3bullet.webp",
+    "source": "https://mp3bullet.ng/wp-content/uploads/2022/07/Mp3bullet-Logo.webp",
+    "website": "https://mp3bullet.ng/",
+    "dimensions": [
+      159,
+      60
+    ]
+  },
+  "Business Day": {
+    "src": "/distribution-logos/business-day.png",
+    "source": "https://businessday.ng/wp-content/themes/bday_aero/assets/build/images/bd-logo.png",
+    "website": "https://businessday.ng/",
+    "dimensions": [
+      4027,
+      687
+    ]
+  },
+  "Naijaloaded": {
+    "src": "/distribution-logos/naijaloaded.png",
+    "source": "https://www.naijaloaded.com.ng/naijaloaded-site-logo.png",
+    "website": "https://www.naijaloaded.com.ng/",
+    "dimensions": [
+      400,
+      78
+    ]
+  },
+  "Business Insider": {
+    "src": "/outlets/business-insider.webp",
+    "source": "Existing public distribution logo asset",
+    "website": "https://africa.businessinsider.com/"
+  },
+  "Techpoint Africa": {
+    "src": "/distribution-logos/techpoint-africa.webp",
+    "source": "https://techpoint.africa/wp-content/uploads/2025/05/Techpoint-logo-copy-2-3.png.webp",
+    "website": "https://techpoint.africa/",
+    "dimensions": [
+      640,
+      192
+    ]
+  },
+  "Daily Nation": {
+    "src": "/distribution-logos/daily-nation.jpg",
+    "source": "https://upload.wikimedia.org/wikipedia/commons/a/a1/Nationlogo.jpg",
+    "website": "https://en.wikipedia.org/wiki/Daily_Nation",
+    "dimensions": [
+      526,
+      124
+    ]
+  },
+  "The Globe and Mail": {
+    "src": "/distribution-logos/the-globe-and-mail.jpg",
+    "source": "https://www.google.com/s2/favicons?domain=theglobeandmail.com&sz=128",
+    "website": "https://www.theglobeandmail.com/",
+    "dimensions": [
+      128,
+      128
+    ]
+  },
+  "The Nation": {
+    "src": "/distribution-logos/the-nation.jpg",
+    "source": "https://www.google.com/s2/favicons?domain=thenationonlineng.net&sz=128",
+    "website": "https://thenationonlineng.net/",
+    "dimensions": [
+      128,
+      128
+    ]
+  },
+  "Tech Next": {
+    "src": "/distribution-logos/tech-next.png",
+    "source": "https://www.google.com/s2/favicons?domain=technext24.com&sz=128",
+    "website": "https://technext24.com/",
+    "dimensions": [
+      128,
+      128
+    ]
+  },
+  "Talented Women Network": {
+    "src": "/distribution-logos/talented-women-network.png",
+    "source": "https://talentedwomennetwork.com/wp-content/uploads/talentedwomennetwokr-logo-green.png",
+    "website": "https://talentedwomennetwork.com/",
+    "dimensions": [
+      775,
+      299
+    ]
+  },
+  "The Cryptofy": {
+    "src": "/distribution-logos/the-cryptofy.ico",
+    "source": "https://cryptofydigital.com/favicon.ico",
+    "website": "https://cryptofydigital.com/",
+    "dimensions": [
+      256,
+      256
+    ]
+  },
+  "The Crypto Reporters": {
+    "src": "/distribution-logos/the-crypto-reporters.ico",
+    "source": "https://www.crypto-reporter.com/favicon.ico",
+    "website": "https://www.crypto-reporter.com/",
+    "dimensions": [
+      32,
+      32
+    ],
+    "tone": "dark"
+  },
+  "CoinSpeaks": {
+    "src": "/distribution-logos/coin-speaks.png",
+    "source": "https://coinspeaks.com/wp-content/uploads/2024/08/CS-Logo.png",
+    "website": "https://coinspeaks.com/",
+    "dimensions": [
+      185,
+      80
+    ]
+  },
+  "Bar Chart": {
+    "src": "/distribution-logos/bar-chart.ico",
+    "source": "https://www.barchart.com/favicon.ico",
+    "website": "https://www.barchart.com/",
+    "dimensions": [
+      256,
+      256
+    ]
+  }
+}

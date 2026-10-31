@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
-import { PressRelease, type Story } from "../components/PressRelease";
+import { PressRelease, placePictures, type Story } from "../components/PressRelease";
 import { clock, dayOf, STORIES_PATH, StoryRow, useStories } from "../components/StoryCards";
 import { ShareLinks } from "../components/ShareLinks";
 import { usePageAudience, useVideoAudience } from "../lib/audience";
@@ -33,8 +33,8 @@ export function StoryPage() {
   }, [silent]);
   const soundOn = () => { const v = video.current; if (!v) return; v.muted = false; v.volume = 1; setSilent(false); void v.play().catch(() => undefined); };
   const s = q.data;
-  usePageAudience(slug, !!s);
-  useVideoAudience(video, slug, !!s);
+  usePageAudience(slug, !!s && !s.category);
+  useVideoAudience(video, slug, !!s && !s.category);
   return (
     <SiteShell>
       <main className="px-4 py-8 md:px-8">
@@ -50,13 +50,15 @@ export function StoryPage() {
           )}
           {s && (
             <>
-              <div className="mt-4 overflow-hidden rounded-sm border border-white/15 bg-black">
-                <video ref={video} src={s.video_url} poster={s.thumbnail_url ?? undefined} controls autoPlay playsInline preload="auto" onVolumeChange={(e) => { if (!e.currentTarget.muted) setSilent(false); }} className="aspect-video w-full bg-black" aria-label={`Video: ${s.title}`} />
-              </div>
+              {s.category && <header className="mt-6"><p className="text-xs font-bold uppercase tracking-widest text-brand-green">{s.category}</p><h1 className="mt-4 text-3xl leading-tight text-white md:text-5xl">{s.title}</h1><p className="mt-5 text-lg leading-relaxed text-white/75">{s.summary}</p></header>}
+              {s.video_url ? <div className="mt-4 overflow-hidden rounded-sm border border-white/15 bg-black">
+                <video ref={video} src={s.video_url || undefined} poster={s.thumbnail_url ?? undefined} controls autoPlay playsInline preload="auto" onVolumeChange={(e) => { if (!e.currentTarget.muted) setSilent(false); }} className="aspect-video w-full bg-black" aria-label={`Video: ${s.title}`} />
+              </div> : s.thumbnail_url ? <figure className="mt-6"><img src={s.thumbnail_url} alt={s.pictures[0]?.caption || s.title} className="aspect-video w-full rounded-lg object-cover" />{s.pictures[0]?.caption && <figcaption className="mt-2 text-xs text-white/60">{s.pictures[0].caption}</figcaption>}</figure> : null}
               <p className="mt-2 text-xs text-white/60">
                 {silent && <button type="button" className="mr-2 rounded-sm bg-brand-green px-2 py-1 font-bold text-ink" onClick={soundOn}>Turn sound on</button>}
                 {silent ? "Your browser started it without sound. " : ""}{s.disclosure}
               </p>
+              {s.source_url && <p className="mt-4 text-sm text-white/70">Source reporting: <a href={s.source_url} target="_blank" rel="noopener noreferrer" className="underline">{s.source_name}</a> · Reported by Cover Founder News</p>}
               <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/70">
                 <span className="font-semibold text-white">{s.company}</span>
                 {s.industry && <span>· {s.industry}</span>}
@@ -65,12 +67,12 @@ export function StoryPage() {
               </div>
               <div className="mt-6"><ShareLinks tone="dark" url={window.location.href} title={s.title} text={`${s.title} (${s.company}) on Cover Founder News`} /></div>
               <div className="mt-8 border-t border-white/10 pt-8">
-                <PressRelease
+                {s.category ? <article aria-label="Technology news report" className="space-y-6">{s.sections.flatMap(section => (section.paragraphs ?? []) as string[]).map((paragraph, i, paragraphs) => <div key={i} className="space-y-5"><p className="text-base leading-relaxed text-white/90">{paragraph}</p>{placePictures(paragraphs, s.pictures.slice(1)).filter(x => x.after === i + 1).map(x => <figure key={x.picture.url}><img src={x.picture.url} alt={x.picture.caption || "Story illustration"} className="max-h-96 w-full rounded-lg object-cover" loading="lazy" /><figcaption className="mt-2 text-xs text-white/60">{x.picture.caption}</figcaption></figure>)}</div>)}</article> : <PressRelease
                   tone="dark"
                   headingLevel={2}
                   story={{ headline: s.title, dek: s.summary, sections: s.sections as Story["sections"], dateline: s.dateline, about: s.about, company: s.company, social: { hook: "", post: "", hashtags: [] } }}
                   pictures={s.pictures.map((p) => ({ url: p.url, caption: p.caption ?? "" }))}
-                />
+                />}
               </div>
               <div className="mt-12 border border-white/15 p-6 text-center">
                 <p className="text-lg font-bold text-white">Have news of your own?</p>

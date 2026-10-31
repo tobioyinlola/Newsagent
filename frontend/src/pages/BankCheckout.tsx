@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { DistributionReturnLink } from "../components/DistributionReturnLink";
 import { api, unwrap } from "../api/client";
 import { Button, Card, ErrorBox, Notice } from "../components/ui";
 
@@ -43,6 +44,7 @@ export function BankCheckout() {
         <ol className="mb-5 list-inside list-decimal space-y-2 text-sm"><li>Open your Nigerian banking app and transfer the exact amount below.</li><li>Copy the payment reference into the transfer narration or description, with no extra text.</li><li>Return here to check your payment. Credits appear after Nuvion verifies the matching transfer.</li></ol>
         <dl className="space-y-4">
           {[{ label: "Amount", value: ngn(payment.amount_ngn), copy: payment.amount_ngn }, { label: "Bank", value: payment.bank.bank_name }, { label: "Account number", value: payment.bank.account_number, copy: payment.bank.account_number },
+            { label: "Payment recipient", value: [payment.bank.beneficiary_name || payment.bank.account_label, /sydney money technology/i.test(payment.bank.beneficiary_name || payment.bank.account_label) ? "" : "Sydney Money Technology Inc"].filter(Boolean).join(" / ") },
             ...(payment.bank.beneficiary_name ? [{ label: "Account name", value: payment.bank.beneficiary_name }] : [{ label: "Receiving account label", value: payment.bank.account_label }]),
             { label: "Payment reference / narration", value: payment.reference, copy: payment.reference }].map(row => <div key={row.label} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line p-3"><div className="min-w-0"><dt className="text-sm text-muted">{row.label}</dt><dd className="mt-1 break-all font-semibold tabular-nums">{row.value}</dd></div>{row.copy && <Button variant="secondary" onClick={() => void copy(row.label, row.copy!)}>Copy {row.label.toLowerCase()}</Button>}</div>)}
         </dl>
@@ -60,5 +62,5 @@ export function BankCheckout() {
     </Card>}
     {!paid && <Button variant="secondary" onClick={() => void query.refetch()} disabled={query.isFetching}>{query.isFetching ? "Checking…" : "Check transfer status"}</Button>}
     <Link className="block min-h-11 py-2 font-semibold underline" to="/billing">{paid ? "View wallet and continue" : "Back to billing"}</Link>
-  </div>;
+  {paid && <DistributionReturnLink />}</div>;
 }

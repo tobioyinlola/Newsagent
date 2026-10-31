@@ -15,8 +15,8 @@ describe("distribution step validation", () => {
     expect(validateDistributionStep({ ...complete, announcement_source: "platform", story_project_id: "story" }, "content")).toEqual({});
     expect(validateDistributionStep({ ...complete, announcement_source: "custom" }, "content")).toEqual({});
   });
-  it("requires usable contact details and a checked logo, while pictures stay optional", () => {
-    expect(Object.keys(validateDistributionStep({ ...complete, contact_name: "", contact_email: "wrong", phone: "abc1234567", whatsapp: "123", logo_key: "" }, "contact"))).toHaveLength(4);
-    expect(validateDistributionStep(complete, "contact")).toEqual({});
+  it("requires usable contact details, while logo and pictures stay optional", () => {
+    expect(Object.keys(validateDistributionStep({ ...complete, contact_name: "", contact_email: "wrong", phone: "abc1234567", whatsapp: "123", logo_key: "" }, "contact"))).toHaveLength(3);
+    expect(validateDistributionStep({ ...complete, logo_key: "", picture_keys: [] }, "contact")).toEqual({});
   });
 });

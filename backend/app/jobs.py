@@ -142,8 +142,15 @@ async def run_sweep() -> dict:
     """Every few minutes: re-send work whose queue message was lost (broker restart, failed publish, killed worker)."""
     from app.services.distribution import retry_confirmations
     from app.services.payments import reconcile_pending
+    from app.services.transfer_reviews import deliver_notifications
 
-    return {"stuck_projects": await reconcile_projects(), "requeued": await requeue_stuck(), "distribution_emails": await retry_confirmations(), "payments_reconciled": await reconcile_pending()}
+    return {
+        "stuck_projects": await reconcile_projects(),
+        "requeued": await requeue_stuck(),
+        "distribution_emails": await retry_confirmations(),
+        "payments_reconciled": await reconcile_pending(),
+        "transfer_emails": await deliver_notifications(),
+    }
 
 
 async def run_hourly() -> dict:
@@ -157,4 +164,5 @@ async def run_hourly() -> dict:
 
 async def run_daily() -> dict:
     from app.services.analytics import prune_events
+
     return {"purged_takes": await purge_old_raw_takes(), "analytics_session_markers_pruned": await prune_events()}

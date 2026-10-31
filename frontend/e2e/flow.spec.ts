@@ -17,7 +17,7 @@ test("invite to shared video", async ({ page, browser }) => {
   await expect(fp.getByRole("heading", { name: "Create your workspace" })).toBeVisible();
   await expect(fp.getByText("Acme Farms")).toBeVisible();
   await fp.getByLabel("Password", { exact: true }).fill("correct horse battery");
-  await fp.getByLabel("Confirm password").fill("correct horse battery");
+  await fp.getByLabel("Confirm password", { exact: true }).fill("correct horse battery");
   await fp.getByRole("button", { name: "Continue" }).click();
   await expect(fp.getByLabel("6-digit code")).toBeVisible();
   const mail = await (await fp.request.get("http://localhost:8000/v1/dev/last-email", { params: { to: "founder@startup.example.com" } })).json();
@@ -78,7 +78,7 @@ test("invite to shared video", async ({ page, browser }) => {
 test("a wrong password gets one generic message", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("Email").fill("stranger@example.com");
-  await page.getByLabel("Password").fill("not the password");
+  await page.getByLabel("Password", { exact: true }).fill("not the password");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByRole("alert")).toContainText("don't match");
   await expect(page).toHaveURL(/\/login/);
@@ -93,9 +93,9 @@ test("sign up with a password, verify the emailed code, sign out, sign back in, 
 
   await page.goto(`/login?invite=${inv.code}`);
   await page.getByLabel("Password", { exact: true }).fill(pw);
-  await page.getByLabel("Confirm password").fill(pw + "x");
+  await page.getByLabel("Confirm password", { exact: true }).fill(pw + "x");
   await expect(page.getByText("The passwords don’t match.")).toBeVisible();
-  await page.getByLabel("Confirm password").fill(pw);
+  await page.getByLabel("Confirm password", { exact: true }).fill(pw);
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByLabel("6-digit code")).toBeVisible();
   await page.getByLabel("6-digit code").fill("000000");
@@ -109,7 +109,7 @@ test("sign up with a password, verify the emailed code, sign out, sign back in, 
   await page.getByRole("navigation", { name: "Main" }).getByRole("button", { name: "Sign out" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Sign out" }).click(); // the confirmation
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(pw);
+  await page.getByLabel("Password", { exact: true }).fill(pw);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByRole("link", { name: "Videos" })).toBeVisible();
 });

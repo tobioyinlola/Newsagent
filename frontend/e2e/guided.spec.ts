@@ -32,6 +32,8 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await page.getByLabel("Tell us the key details").fill("Acme Farms helps smallholder farmers sell produce to verified buyers on their phones. We raised a seed round to open in Kumasi.");
   await page.getByLabel("Your name").fill("Ada Obi");
   await page.getByLabel("Your role").fill("CEO, Acme Farms");
+  await expect(page.getByLabel("Your role")).toHaveAttribute("placeholder", "CEO, Bybit");
+  await page.getByLabel("Your location", { exact: true }).fill("Lagos, Nigeria");
   await page.getByRole("button", { name: "Continue to the interview" }).click();
 
   // 2. the AI interview opens straight away, four questions on camera
@@ -42,11 +44,11 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await page.getByRole("button", { name: "Start the interview" }).click();
   const room = page.getByRole("dialog", { name: "AI interview" });
   for (let q = 1; q <= 4; q++) {
-    await expect(room.getByText("Your turn: answer now")).toBeVisible({ timeout: 20_000 });
+    await expect(room.getByText("Go — your turn to answer")).toBeVisible({ timeout: 20_000 });
     await expect(room.getByText(`Question ${q} of 4`)).toBeVisible();
     await page.waitForTimeout(1500);
     await room.getByRole("button", { name: "I’m done answering" }).click();
-    if (q < 4) await expect(room.getByText("Your turn: answer now")).toBeHidden();
+    if (q < 4) await expect(room.getByText("Go — your turn to answer")).toBeHidden();
   }
 
   // 3. every answer is featured by default, then the story is written
@@ -114,8 +116,7 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await distribution.getByLabel("Contact name", { exact: true }).fill("Ada Obi");
   await distribution.getByLabel("Contact email", { exact: true }).fill("ada@example.com");
   await distribution.getByLabel("Primary phone number", { exact: true }).fill("+2348012345678");
-  await distribution.getByLabel("WhatsApp number", { exact: true }).fill("+2348012345678");
-  await distribution.getByLabel(/Company logo \(required/).setInputFiles({ name: "company.png", mimeType: "image/png", buffer: PNG });
+  await distribution.getByLabel("Company logo (optional, PNG/JPEG, up to 5 MB)", { exact: true }).setInputFiles({ name: "company.png", mimeType: "image/png", buffer: PNG });
   await expect(distribution.getByText("Company logo uploaded ✓")).toBeVisible();
   await distribution.getByRole("button", { name: "Continue", exact: true }).click();
   await distribution.setViewportSize({ width: 390, height: 844 });

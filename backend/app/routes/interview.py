@@ -25,7 +25,7 @@ from app.schemas.api import (
     RetakeIn,
     TakeOut,
 )
-from app.services import crypto, guided, moderation_flow
+from app.services import crypto, guided, language_audit, moderation_flow
 from app.services import interview as iv
 from app.services import state_machine as sm
 from app.services.moderation import fingerprint
@@ -231,6 +231,7 @@ async def make_final(
     plan_now = project.merge_plan or default_plan(len(takes_now))
     included = {a["question_index"] for a in plan_now["answers"] if a.get("include", True)}
     s = await active_session(session, project_id)
+    language_audit.enforce(takes_now, included)
     spoken = " ".join(t.transcript or "" for q, t in sorted(takes_now.items()) if q in included)
     who = f"{s.founder_name} {s.founder_title}" if s else ""
     await moderation_flow.enforce(  # what the founder SAID is published too, so it is screened before the final render
@@ -267,6 +268,7 @@ async def _proceed_live(session: AsyncSession, project: Project, p: Principal) -
     if not included:
         raise HTTPException(409, "Include at least one answer, or skip the interview.")
     s = await active_session(session, project.id)
+    language_audit.enforce(takes, included)
     spoken = " ".join(t.transcript or "" for q, t in sorted(takes.items()) if q in included)
     await moderation_flow.enforce(
         session,

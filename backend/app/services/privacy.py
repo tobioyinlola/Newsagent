@@ -26,6 +26,7 @@ from app.models import (
     Invite,
     Job,
     ModerationCase,
+    PaymentProof,
     Project,
     ProviderRequest,
     PublisherSnapshot,
@@ -34,6 +35,8 @@ from app.models import (
     ScriptVersion,
     ShareLink,
     Take,
+    TransferMail,
+    TransferReview,
     User,
     UserSession,
     Workspace,
@@ -100,6 +103,20 @@ async def delete_workspace(session: AsyncSession, ws: Workspace) -> None:
         await purge_project(session, p)
     for a in (await session.execute(select(BrandAsset).where(BrandAsset.workspace_id == ws.id))).scalars():
         await storage.delete(a.key)
+    checkout_ids = select(Checkout.id).where(Checkout.workspace_id == ws.id)
+    proofs = (
+        (await session.execute(select(PaymentProof).where(PaymentProof.checkout_id.in_(checkout_ids)))).scalars().all()
+    )
+    for proof in proofs:
+        await storage.delete(proof.key)
+        await storage.delete(proof.key.replace("/verified.", "/upload."))
+    await session.execute(delete(TransferMail).where(TransferMail.checkout_id.in_(checkout_ids)))
+    await session.execute(
+        update(TransferReview)
+        .where(TransferReview.checkout_id.in_(checkout_ids))
+        .values(proof_id=None, submitted_by=None, reason="")
+    )
+    await session.execute(delete(PaymentProof).where(PaymentProof.checkout_id.in_(checkout_ids)))
     distribution_ids = select(DistributionRequest.id).where(DistributionRequest.workspace_id == ws.id)
     await session.execute(delete(PublisherSnapshot).where(PublisherSnapshot.workspace_id == ws.id))
     for model in (DistributionActivity, DistributionMail, DistributionPlacement):
@@ -237,7 +254,28 @@ async def export_workspace(session: AsyncSession, ws: Workspace, user: User) -> 
         .scalars()
         .all()
     )
+    transfer_reviews = (
+        await session.execute(
+            select(TransferReview, PaymentProof)
+            .outerjoin(PaymentProof, PaymentProof.id == TransferReview.proof_id)
+            .join(Checkout, Checkout.id == TransferReview.checkout_id)
+            .where(Checkout.workspace_id == ws.id)
+        )
+    ).all()
     return {
+        "bank_transfer_reviews": [
+            {
+                "checkout_id": r.checkout_id,
+                "status": r.status,
+                "submitted_at": dt(r.submitted_at),
+                "reviewed_at": dt(r.reviewed_at),
+                "payment_reference": r.payment_reference,
+                "receipt": {"filename": proof.filename, "url": storage.presign_get(proof.key, 600)}
+                if proof and proof.status == "clean"
+                else None,
+            }
+            for r, proof in transfer_reviews
+        ],
         "referrals": [
             {
                 "id": r.id,

@@ -1,6 +1,47 @@
 {
   "components": {
     "schemas": {
+      "Approval": {
+        "properties": {
+          "funds_confirmed": {
+            "const": true,
+            "title": "Funds Confirmed",
+            "type": "boolean"
+          },
+          "payment_reference": {
+            "maxLength": 100,
+            "minLength": 6,
+            "pattern": "^[A-Za-z0-9 /_.:-]+$",
+            "title": "Payment Reference",
+            "type": "string"
+          },
+          "proof_id": {
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Proof Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "proof_id",
+          "revision",
+          "funds_confirmed",
+          "payment_reference",
+          "reason"
+        ],
+        "title": "Approval",
+        "type": "object"
+      },
       "ApproveIn": {
         "properties": {
           "interview_mode": {
@@ -138,6 +179,75 @@
           "detail"
         ],
         "title": "AuditOut",
+        "type": "object"
+      },
+      "BankAccount": {
+        "properties": {
+          "account_label": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Account Label",
+            "type": "string"
+          },
+          "account_number": {
+            "maxLength": 100,
+            "minLength": 3,
+            "title": "Account Number",
+            "type": "string"
+          },
+          "bank_address": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Bank Address",
+            "type": "string"
+          },
+          "bank_name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Bank Name",
+            "type": "string"
+          },
+          "beneficiary_name": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Beneficiary Name",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "iban": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Iban",
+            "type": "string"
+          },
+          "instructions": {
+            "default": "",
+            "maxLength": 1500,
+            "title": "Instructions",
+            "type": "string"
+          },
+          "routing_number": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Routing Number",
+            "type": "string"
+          },
+          "swift_code": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Swift Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bank_name",
+          "account_number"
+        ],
+        "title": "BankAccount",
         "type": "object"
       },
       "BillingSummary": {
@@ -920,6 +1030,9 @@
               },
               {
                 "type": "string"
+              },
+              {
+                "type": "null"
               }
             ],
             "title": "Amount Usd"
@@ -932,6 +1045,33 @@
             ],
             "title": "Currency",
             "type": "string"
+          },
+          "custom_credits": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Credits"
+          },
+          "custom_quote_version": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Quote Version"
           },
           "ngn_per_usd": {
             "anyOf": [
@@ -957,9 +1097,6 @@
             "type": "string"
           }
         },
-        "required": [
-          "amount_usd"
-        ],
         "title": "CheckoutIn",
         "type": "object"
       },
@@ -1057,6 +1194,20 @@
           "chunk_count"
         ],
         "title": "CompleteIn",
+        "type": "object"
+      },
+      "ConfirmIn": {
+        "properties": {
+          "image_id": {
+            "pattern": "^[a-f0-9]{32}$",
+            "title": "Image Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "image_id"
+        ],
+        "title": "ConfirmIn",
         "type": "object"
       },
       "ContrastCheck": {
@@ -1313,6 +1464,60 @@
           "videos"
         ],
         "title": "CreditOptionOut",
+        "type": "object"
+      },
+      "CustomCreditIn": {
+        "properties": {
+          "credits": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Credits"
+          }
+        },
+        "required": [
+          "credits"
+        ],
+        "title": "CustomCreditIn",
+        "type": "object"
+      },
+      "CustomCreditQuote": {
+        "properties": {
+          "amount_ngn": {
+            "title": "Amount Ngn",
+            "type": "string"
+          },
+          "amount_usd": {
+            "title": "Amount Usd",
+            "type": "string"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "string"
+          },
+          "ngn_per_usd": {
+            "title": "Ngn Per Usd",
+            "type": "string"
+          },
+          "quote_version": {
+            "title": "Quote Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "credits",
+          "amount_usd",
+          "amount_ngn",
+          "ngn_per_usd",
+          "quote_version"
+        ],
+        "title": "CustomCreditQuote",
         "type": "object"
       },
       "CustomerDetail": {
@@ -1673,132 +1878,6 @@
           "disclosure"
         ],
         "title": "DownloadsOut",
-        "type": "object"
-      },
-      "DraftIn": {
-        "properties": {
-          "announcement": {
-            "default": "",
-            "maxLength": 50000,
-            "title": "Announcement",
-            "type": "string"
-          },
-          "announcement_source": {
-            "default": "custom",
-            "enum": [
-              "platform",
-              "custom"
-            ],
-            "title": "Announcement Source",
-            "type": "string"
-          },
-          "contact_email": {
-            "default": "",
-            "maxLength": 320,
-            "title": "Contact Email",
-            "type": "string"
-          },
-          "contact_name": {
-            "default": "",
-            "maxLength": 200,
-            "title": "Contact Name",
-            "type": "string"
-          },
-          "headline": {
-            "default": "",
-            "maxLength": 300,
-            "title": "Headline",
-            "type": "string"
-          },
-          "logo_key": {
-            "default": "",
-            "maxLength": 500,
-            "title": "Logo Key",
-            "type": "string"
-          },
-          "media_options": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/MediaChoice"
-            },
-            "maxProperties": 100,
-            "title": "Media Options",
-            "type": "object"
-          },
-          "outlet_ids": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 100,
-            "title": "Outlet Ids",
-            "type": "array"
-          },
-          "phone": {
-            "default": "",
-            "maxLength": 40,
-            "title": "Phone",
-            "type": "string"
-          },
-          "phone_country": {
-            "default": "",
-            "pattern": "^(?:[A-Z]{2})?$",
-            "title": "Phone Country",
-            "type": "string"
-          },
-          "picture_keys": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 10,
-            "title": "Picture Keys",
-            "type": "array"
-          },
-          "project_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Project Id"
-          },
-          "stage": {
-            "default": "outlets",
-            "enum": [
-              "outlets",
-              "content",
-              "contact",
-              "review"
-            ],
-            "title": "Stage",
-            "type": "string"
-          },
-          "story_project_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Story Project Id"
-          },
-          "whatsapp": {
-            "default": "",
-            "maxLength": 40,
-            "title": "Whatsapp",
-            "type": "string"
-          },
-          "whatsapp_country": {
-            "default": "",
-            "pattern": "^(?:[A-Z]{2})?$",
-            "title": "Whatsapp Country",
-            "type": "string"
-          }
-        },
-        "title": "DraftIn",
         "type": "object"
       },
       "EventIn": {
@@ -2993,6 +3072,37 @@
         "title": "ModerationDecisionIn",
         "type": "object"
       },
+      "NewsUploadIn": {
+        "properties": {
+          "content_type": {
+            "enum": [
+              "image/png",
+              "image/jpeg"
+            ],
+            "title": "Content Type",
+            "type": "string"
+          },
+          "filename": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Filename",
+            "type": "string"
+          },
+          "size_bytes": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 5242880.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "filename",
+          "content_type",
+          "size_bytes"
+        ],
+        "title": "NewsUploadIn",
+        "type": "object"
+      },
       "OtpIn": {
         "properties": {
           "code": {
@@ -3380,6 +3490,32 @@
           "content_type"
         ],
         "title": "PhotoIn",
+        "type": "object"
+      },
+      "Picture": {
+        "properties": {
+          "caption": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Caption",
+            "type": "string"
+          },
+          "credit": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Credit",
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^[a-f0-9]{32}$",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "Picture",
         "type": "object"
       },
       "PlacementUpdate": {
@@ -3922,6 +4058,12 @@
             "title": "Flow",
             "type": "string"
           },
+          "founder_location": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Founder Location",
+            "type": "string"
+          },
           "founder_name": {
             "default": "",
             "maxLength": 200,
@@ -4058,6 +4200,11 @@
             "title": "Flow",
             "type": "string"
           },
+          "founder_location": {
+            "default": "",
+            "title": "Founder Location",
+            "type": "string"
+          },
           "founder_name": {
             "default": "",
             "title": "Founder Name",
@@ -4113,6 +4260,20 @@
         "title": "ProjectOut",
         "type": "object"
       },
+      "ProofId": {
+        "properties": {
+          "proof_id": {
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Proof Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "proof_id"
+        ],
+        "title": "ProofId",
+        "type": "object"
+      },
       "PublicationOut": {
         "properties": {
           "path": {
@@ -4161,6 +4322,26 @@
           "published_at"
         ],
         "title": "PublicationOut",
+        "type": "object"
+      },
+      "Publish": {
+        "properties": {
+          "editorial_confirmed": {
+            "const": true,
+            "title": "Editorial Confirmed",
+            "type": "boolean"
+          },
+          "revision": {
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "editorial_confirmed"
+        ],
+        "title": "Publish",
         "type": "object"
       },
       "QueueOut": {
@@ -4271,6 +4452,65 @@
         "title": "ReceiptMatch",
         "type": "object"
       },
+      "ReceiptUpload": {
+        "properties": {
+          "content_type": {
+            "enum": [
+              "image/png",
+              "image/jpeg",
+              "application/pdf"
+            ],
+            "title": "Content Type",
+            "type": "string"
+          },
+          "filename": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Filename",
+            "type": "string"
+          },
+          "size_bytes": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 5242880.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "content_type",
+          "filename",
+          "size_bytes"
+        ],
+        "title": "ReceiptUpload",
+        "type": "object"
+      },
+      "Rejection": {
+        "properties": {
+          "proof_id": {
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Proof Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "proof_id",
+          "revision",
+          "reason"
+        ],
+        "title": "Rejection",
+        "type": "object"
+      },
       "ResetIn": {
         "properties": {
           "code": {
@@ -4317,6 +4557,20 @@
           "question_index"
         ],
         "title": "RetakeIn",
+        "type": "object"
+      },
+      "Revision": {
+        "properties": {
+          "revision": {
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision"
+        ],
+        "title": "Revision",
         "type": "object"
       },
       "RoleOut": {
@@ -5615,6 +5869,17 @@
       "StoryCardOut": {
         "description": "One story in the public Latest Stories lists.",
         "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
           "company": {
             "title": "Company",
             "type": "string"
@@ -5629,6 +5894,11 @@
               }
             ],
             "title": "Duration S"
+          },
+          "has_video": {
+            "default": true,
+            "title": "Has Video",
+            "type": "boolean"
           },
           "industry": {
             "anyOf": [
@@ -5690,6 +5960,17 @@
             "title": "About",
             "type": "string"
           },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
           "company": {
             "title": "Company",
             "type": "string"
@@ -5719,6 +6000,11 @@
               }
             ],
             "title": "Duration S"
+          },
+          "has_video": {
+            "default": true,
+            "title": "Has Video",
+            "type": "boolean"
           },
           "industry": {
             "anyOf": [
@@ -5755,6 +6041,28 @@
             "title": "Slug",
             "type": "string"
           },
+          "source_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Name"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
           "summary": {
             "title": "Summary",
             "type": "string"
@@ -5775,8 +6083,15 @@
             "type": "string"
           },
           "video_url": {
-            "title": "Video Url",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Url"
           }
         },
         "required": [
@@ -5847,6 +6162,26 @@
           }
         },
         "title": "SubmissionQuote",
+        "type": "object"
+      },
+      "SubmitProof": {
+        "properties": {
+          "proof_id": {
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Proof Id",
+            "type": "string"
+          },
+          "sender_reference": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Sender Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "proof_id"
+        ],
+        "title": "SubmitProof",
         "type": "object"
       },
       "TakeOut": {
@@ -6471,6 +6806,210 @@
           }
         },
         "title": "WorkspacePatch",
+        "type": "object"
+      },
+      "app__routes__distribution__DraftIn": {
+        "properties": {
+          "announcement": {
+            "default": "",
+            "maxLength": 50000,
+            "title": "Announcement",
+            "type": "string"
+          },
+          "announcement_source": {
+            "default": "custom",
+            "enum": [
+              "platform",
+              "custom"
+            ],
+            "title": "Announcement Source",
+            "type": "string"
+          },
+          "contact_email": {
+            "default": "",
+            "maxLength": 320,
+            "title": "Contact Email",
+            "type": "string"
+          },
+          "contact_name": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "headline": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Headline",
+            "type": "string"
+          },
+          "logo_key": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Logo Key",
+            "type": "string"
+          },
+          "media_options": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/MediaChoice"
+            },
+            "maxProperties": 100,
+            "title": "Media Options",
+            "type": "object"
+          },
+          "outlet_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Outlet Ids",
+            "type": "array"
+          },
+          "phone": {
+            "default": "",
+            "maxLength": 40,
+            "title": "Phone",
+            "type": "string"
+          },
+          "phone_country": {
+            "default": "",
+            "pattern": "^(?:[A-Z]{2})?$",
+            "title": "Phone Country",
+            "type": "string"
+          },
+          "picture_keys": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Picture Keys",
+            "type": "array"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "stage": {
+            "default": "outlets",
+            "enum": [
+              "outlets",
+              "content",
+              "contact",
+              "review"
+            ],
+            "title": "Stage",
+            "type": "string"
+          },
+          "story_project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Story Project Id"
+          },
+          "whatsapp": {
+            "default": "",
+            "maxLength": 40,
+            "title": "Whatsapp",
+            "type": "string"
+          },
+          "whatsapp_country": {
+            "default": "",
+            "pattern": "^(?:[A-Z]{2})?$",
+            "title": "Whatsapp Country",
+            "type": "string"
+          }
+        },
+        "title": "DraftIn",
+        "type": "object"
+      },
+      "app__routes__news_desk__DraftIn": {
+        "properties": {
+          "body": {
+            "default": "",
+            "maxLength": 20000,
+            "title": "Body",
+            "type": "string"
+          },
+          "headline": {
+            "default": "",
+            "maxLength": 180,
+            "title": "Headline",
+            "type": "string"
+          },
+          "pictures": {
+            "items": {
+              "$ref": "#/components/schemas/Picture"
+            },
+            "maxItems": 15,
+            "title": "Pictures",
+            "type": "array"
+          },
+          "presenter_script": {
+            "default": "",
+            "maxLength": 15000,
+            "title": "Presenter Script",
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "scenes": {
+            "items": {},
+            "maxItems": 20,
+            "title": "Scenes",
+            "type": "array"
+          },
+          "source_name": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Source Name",
+            "type": "string"
+          },
+          "source_text": {
+            "default": "",
+            "maxLength": 30000,
+            "title": "Source Text",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "format": "uri",
+                "maxLength": 2083,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "summary": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision"
+        ],
+        "title": "DraftIn",
         "type": "object"
       }
     }
@@ -7181,6 +7720,302 @@
         "summary": "Audit Log",
         "tags": [
           "ops"
+        ]
+      }
+    },
+    "/v1/admin/bank-transfer-accounts": {
+      "get": {
+        "operationId": "get_accounts_v1_admin_bank_transfer_accounts_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Accounts",
+        "tags": [
+          "bank-transfer-review"
+        ]
+      }
+    },
+    "/v1/admin/bank-transfer-accounts/{currency}": {
+      "put": {
+        "operationId": "set_account_v1_admin_bank_transfer_accounts__currency__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "currency",
+            "required": true,
+            "schema": {
+              "enum": [
+                "USD",
+                "NGN"
+              ],
+              "title": "Currency",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BankAccount"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Account",
+        "tags": [
+          "bank-transfer-review"
+        ]
+      }
+    },
+    "/v1/admin/bank-transfers": {
+      "get": {
+        "operationId": "overview_v1_admin_bank_transfers_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Overview",
+        "tags": [
+          "bank-transfer-review"
+        ]
+      }
+    },
+    "/v1/admin/bank-transfers/{id}/approve": {
+      "post": {
+        "operationId": "approve_v1_admin_bank_transfers__id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Approval"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve",
+        "tags": [
+          "bank-transfer-review"
+        ]
+      }
+    },
+    "/v1/admin/bank-transfers/{id}/reject": {
+      "post": {
+        "operationId": "reject_v1_admin_bank_transfers__id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Rejection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject",
+        "tags": [
+          "bank-transfer-review"
         ]
       }
     },
@@ -8458,6 +9293,604 @@
         "summary": "Moderation Decision",
         "tags": [
           "ops"
+        ]
+      }
+    },
+    "/v1/admin/news-desk": {
+      "get": {
+        "operationId": "listing_v1_admin_news_desk_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Listing",
+        "tags": [
+          "news-desk"
+        ]
+      },
+      "post": {
+        "operationId": "create_v1_admin_news_desk_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create",
+        "tags": [
+          "news-desk"
+        ]
+      }
+    },
+    "/v1/admin/news-desk/{id}": {
+      "get": {
+        "operationId": "detail_v1_admin_news_desk__id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Detail",
+        "tags": [
+          "news-desk"
+        ]
+      },
+      "put": {
+        "operationId": "save_v1_admin_news_desk__id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__routes__news_desk__DraftIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save",
+        "tags": [
+          "news-desk"
+        ]
+      }
+    },
+    "/v1/admin/news-desk/{id}/generate-video": {
+      "post": {
+        "operationId": "generate_video_v1_admin_news_desk__id__generate_video_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate Video",
+        "tags": [
+          "news-desk"
+        ]
+      }
+    },
+    "/v1/admin/news-desk/{id}/images": {
+      "post": {
+        "operationId": "upload_image_v1_admin_news_desk__id__images_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewsUploadIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Image",
+        "tags": [
+          "news-desk"
+        ]
+      }
+    },
+    "/v1/admin/news-desk/{id}/images/confirm": {
+      "post": {
+        "operationId": "confirm_image_v1_admin_news_desk__id__images_confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Image",
+        "tags": [
+          "news-desk"
+        ]
+      }
+    },
+    "/v1/admin/news-desk/{id}/publish": {
+      "post": {
+        "operationId": "publish_v1_admin_news_desk__id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Publish"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Publish",
+        "tags": [
+          "news-desk"
+        ]
+      }
+    },
+    "/v1/admin/news-desk/{id}/rewrite": {
+      "post": {
+        "operationId": "rewrite_v1_admin_news_desk__id__rewrite_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Revision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rewrite",
+        "tags": [
+          "news-desk"
+        ]
+      }
+    },
+    "/v1/admin/news-desk/{id}/unpublish": {
+      "post": {
+        "operationId": "unpublish_v1_admin_news_desk__id__unpublish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Revision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unpublish",
+        "tags": [
+          "news-desk"
         ]
       }
     },
@@ -11498,6 +12931,65 @@
         ]
       }
     },
+    "/v1/billing/custom-quote": {
+      "post": {
+        "operationId": "custom_quote_v1_billing_custom_quote_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomCreditIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomCreditQuote"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Custom Quote",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/v1/billing/dev/pay/{checkout_id}": {
       "post": {
         "description": "Local development only: plays the part of the payment provider by sending our own signed webhook.",
@@ -11773,6 +13265,260 @@
         "summary": "Summary",
         "tags": [
           "billing"
+        ]
+      }
+    },
+    "/v1/billing/transfer/{id}": {
+      "get": {
+        "operationId": "status_v1_billing_transfer__id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Status",
+        "tags": [
+          "bank-transfer-review"
+        ]
+      }
+    },
+    "/v1/billing/transfer/{id}/submit": {
+      "post": {
+        "operationId": "submit_v1_billing_transfer__id__submit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitProof"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit",
+        "tags": [
+          "bank-transfer-review"
+        ]
+      }
+    },
+    "/v1/billing/transfer/{id}/uploads": {
+      "post": {
+        "operationId": "start_upload_v1_billing_transfer__id__uploads_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiptUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Upload",
+        "tags": [
+          "bank-transfer-review"
+        ]
+      }
+    },
+    "/v1/billing/transfer/{id}/uploads/confirm": {
+      "post": {
+        "operationId": "confirm_upload_v1_billing_transfer__id__uploads_confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProofId"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Upload",
+        "tags": [
+          "bank-transfer-review"
         ]
       }
     },
@@ -12774,7 +14520,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DraftIn"
+                "$ref": "#/components/schemas/app__routes__distribution__DraftIn"
               }
             }
           },
@@ -16588,6 +18334,66 @@
           }
         },
         "summary": "Story Preview",
+        "tags": [
+          "stories"
+        ]
+      }
+    },
+    "/v1/public/technology-news": {
+      "get": {
+        "operationId": "technology_news_v1_public_technology_news_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "maximum": 60,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StoryCardOut"
+                  },
+                  "title": "Response Technology News V1 Public Technology News Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Technology News",
         "tags": [
           "stories"
         ]

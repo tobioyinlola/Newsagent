@@ -178,6 +178,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/bank-transfer-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Accounts */
+        get: operations["get_accounts_v1_admin_bank_transfer_accounts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/bank-transfer-accounts/{currency}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Account */
+        put: operations["set_account_v1_admin_bank_transfer_accounts__currency__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/bank-transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overview */
+        get: operations["overview_v1_admin_bank_transfers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/bank-transfers/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve */
+        post: operations["approve_v1_admin_bank_transfers__id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/bank-transfers/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject */
+        post: operations["reject_v1_admin_bank_transfers__id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/cost-report": {
         parameters: {
             query?: never;
@@ -484,6 +569,144 @@ export interface paths {
         put?: never;
         /** Moderation Decision */
         post: operations["moderation_decision_v1_admin_moderation__case_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/news-desk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listing */
+        get: operations["listing_v1_admin_news_desk_get"];
+        put?: never;
+        /** Create */
+        post: operations["create_v1_admin_news_desk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/news-desk/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detail */
+        get: operations["detail_v1_admin_news_desk__id__get"];
+        /** Save */
+        put: operations["save_v1_admin_news_desk__id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/news-desk/{id}/generate-video": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate Video */
+        post: operations["generate_video_v1_admin_news_desk__id__generate_video_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/news-desk/{id}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload Image */
+        post: operations["upload_image_v1_admin_news_desk__id__images_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/news-desk/{id}/images/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Image */
+        post: operations["confirm_image_v1_admin_news_desk__id__images_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/news-desk/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish */
+        post: operations["publish_v1_admin_news_desk__id__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/news-desk/{id}/rewrite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rewrite */
+        post: operations["rewrite_v1_admin_news_desk__id__rewrite_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/news-desk/{id}/unpublish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unpublish */
+        post: operations["unpublish_v1_admin_news_desk__id__unpublish_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1314,6 +1537,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/billing/custom-quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Custom Quote */
+        post: operations["custom_quote_v1_billing_custom_quote_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/billing/dev/pay/{checkout_id}": {
         parameters: {
             query?: never;
@@ -1399,6 +1639,74 @@ export interface paths {
         get: operations["summary_v1_billing_summary_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/transfer/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status */
+        get: operations["status_v1_billing_transfer__id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/transfer/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit */
+        post: operations["submit_v1_billing_transfer__id__submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/transfer/{id}/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Upload */
+        post: operations["start_upload_v1_billing_transfer__id__uploads_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/transfer/{id}/uploads/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Upload */
+        post: operations["confirm_upload_v1_billing_transfer__id__uploads_confirm_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2786,6 +3094,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/technology-news": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Technology News */
+        get: operations["technology_news_v1_public_technology_news_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/referrals": {
         parameters: {
             query?: never;
@@ -2920,6 +3245,22 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Approval */
+        Approval: {
+            /**
+             * Funds Confirmed
+             * @constant
+             */
+            funds_confirmed: true;
+            /** Payment Reference */
+            payment_reference: string;
+            /** Proof Id */
+            proof_id: string;
+            /** Reason */
+            reason: string;
+            /** Revision */
+            revision: number;
+        };
         /** ApproveIn */
         ApproveIn: {
             /**
@@ -2976,6 +3317,53 @@ export interface components {
             target_id: string | null;
             /** Target Type */
             target_type: string | null;
+        };
+        /** BankAccount */
+        BankAccount: {
+            /**
+             * Account Label
+             * @default
+             */
+            account_label: string;
+            /** Account Number */
+            account_number: string;
+            /**
+             * Bank Address
+             * @default
+             */
+            bank_address: string;
+            /** Bank Name */
+            bank_name: string;
+            /**
+             * Beneficiary Name
+             * @default
+             */
+            beneficiary_name: string;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Iban
+             * @default
+             */
+            iban: string;
+            /**
+             * Instructions
+             * @default
+             */
+            instructions: string;
+            /**
+             * Routing Number
+             * @default
+             */
+            routing_number: string;
+            /**
+             * Swift Code
+             * @default
+             */
+            swift_code: string;
         };
         /** BillingSummary */
         BillingSummary: {
@@ -3299,13 +3687,17 @@ export interface components {
         /** CheckoutIn */
         CheckoutIn: {
             /** Amount Usd */
-            amount_usd: number | string;
+            amount_usd?: number | string | null;
             /**
              * Currency
              * @default USD
              * @enum {string}
              */
             currency: "USD" | "NGN";
+            /** Custom Credits */
+            custom_credits?: number | string | null;
+            /** Custom Quote Version */
+            custom_quote_version?: string | null;
             /** Ngn Per Usd */
             ngn_per_usd?: number | string | null;
             /**
@@ -3350,6 +3742,11 @@ export interface components {
         CompleteIn: {
             /** Chunk Count */
             chunk_count: number;
+        };
+        /** ConfirmIn */
+        ConfirmIn: {
+            /** Image Id */
+            image_id: string;
         };
         /** ContrastCheck */
         ContrastCheck: {
@@ -3441,6 +3838,24 @@ export interface components {
             credits: string;
             /** Videos */
             videos: number;
+        };
+        /** CustomCreditIn */
+        CustomCreditIn: {
+            /** Credits */
+            credits: number | string;
+        };
+        /** CustomCreditQuote */
+        CustomCreditQuote: {
+            /** Amount Ngn */
+            amount_ngn: string;
+            /** Amount Usd */
+            amount_usd: string;
+            /** Credits */
+            credits: string;
+            /** Ngn Per Usd */
+            ngn_per_usd: string;
+            /** Quote Version */
+            quote_version: string;
         };
         /** CustomerDetail */
         CustomerDetail: {
@@ -3581,78 +3996,6 @@ export interface components {
             disclosure: string;
             /** Items */
             items: components["schemas"]["DownloadItem"][];
-        };
-        /** DraftIn */
-        DraftIn: {
-            /**
-             * Announcement
-             * @default
-             */
-            announcement: string;
-            /**
-             * Announcement Source
-             * @default custom
-             * @enum {string}
-             */
-            announcement_source: "platform" | "custom";
-            /**
-             * Contact Email
-             * @default
-             */
-            contact_email: string;
-            /**
-             * Contact Name
-             * @default
-             */
-            contact_name: string;
-            /**
-             * Headline
-             * @default
-             */
-            headline: string;
-            /**
-             * Logo Key
-             * @default
-             */
-            logo_key: string;
-            /** Media Options */
-            media_options?: {
-                [key: string]: components["schemas"]["MediaChoice"];
-            };
-            /** Outlet Ids */
-            outlet_ids?: string[];
-            /**
-             * Phone
-             * @default
-             */
-            phone: string;
-            /**
-             * Phone Country
-             * @default
-             */
-            phone_country: string;
-            /** Picture Keys */
-            picture_keys?: string[];
-            /** Project Id */
-            project_id?: string | null;
-            /**
-             * Stage
-             * @default outlets
-             * @enum {string}
-             */
-            stage: "outlets" | "content" | "contact" | "review";
-            /** Story Project Id */
-            story_project_id?: string | null;
-            /**
-             * Whatsapp
-             * @default
-             */
-            whatsapp: string;
-            /**
-             * Whatsapp Country
-             * @default
-             */
-            whatsapp_country: string;
         };
         /** EventIn */
         EventIn: {
@@ -4138,6 +4481,18 @@ export interface components {
              */
             note: string;
         };
+        /** NewsUploadIn */
+        NewsUploadIn: {
+            /**
+             * Content Type
+             * @enum {string}
+             */
+            content_type: "image/png" | "image/jpeg";
+            /** Filename */
+            filename: string;
+            /** Size Bytes */
+            size_bytes: number;
+        };
         /** OtpIn */
         OtpIn: {
             /** Code */
@@ -4306,6 +4661,21 @@ export interface components {
         PhotoIn: {
             /** Content Type */
             content_type: string;
+        };
+        /** Picture */
+        Picture: {
+            /**
+             * Caption
+             * @default
+             */
+            caption: string;
+            /**
+             * Credit
+             * @default
+             */
+            credit: string;
+            /** Id */
+            id: string;
         };
         /** PlacementUpdate */
         PlacementUpdate: {
@@ -4477,6 +4847,11 @@ export interface components {
              */
             flow: string;
             /**
+             * Founder Location
+             * @default
+             */
+            founder_location: string;
+            /**
              * Founder Name
              * @default
              */
@@ -4541,6 +4916,11 @@ export interface components {
              */
             flow: string;
             /**
+             * Founder Location
+             * @default
+             */
+            founder_location: string;
+            /**
              * Founder Name
              * @default
              */
@@ -4574,6 +4954,11 @@ export interface components {
             /** Voice Accent */
             voice_accent: string;
         };
+        /** ProofId */
+        ProofId: {
+            /** Proof Id */
+            proof_id: string;
+        };
         /** PublicationOut */
         PublicationOut: {
             /** Path */
@@ -4584,6 +4969,16 @@ export interface components {
             published_at: string | null;
             /** Slug */
             slug: string | null;
+        };
+        /** Publish */
+        Publish: {
+            /**
+             * Editorial Confirmed
+             * @constant
+             */
+            editorial_confirmed: true;
+            /** Revision */
+            revision: number;
         };
         /** QueueOut */
         QueueOut: {
@@ -4630,6 +5025,27 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** ReceiptUpload */
+        ReceiptUpload: {
+            /**
+             * Content Type
+             * @enum {string}
+             */
+            content_type: "image/png" | "image/jpeg" | "application/pdf";
+            /** Filename */
+            filename: string;
+            /** Size Bytes */
+            size_bytes: number;
+        };
+        /** Rejection */
+        Rejection: {
+            /** Proof Id */
+            proof_id: string;
+            /** Reason */
+            reason: string;
+            /** Revision */
+            revision: number;
+        };
         /** ResetIn */
         ResetIn: {
             /** Code */
@@ -4651,6 +5067,11 @@ export interface components {
             note: string;
             /** Question Index */
             question_index: number;
+        };
+        /** Revision */
+        Revision: {
+            /** Revision */
+            revision: number;
         };
         /** RoleOut */
         RoleOut: {
@@ -5083,10 +5504,17 @@ export interface components {
          * @description One story in the public Latest Stories lists.
          */
         StoryCardOut: {
+            /** Category */
+            category?: string | null;
             /** Company */
             company: string;
             /** Duration S */
             duration_s: number | null;
+            /**
+             * Has Video
+             * @default true
+             */
+            has_video: boolean;
             /** Industry */
             industry: string | null;
             /**
@@ -5110,6 +5538,8 @@ export interface components {
         StoryPageOut: {
             /** About */
             about: string;
+            /** Category */
+            category?: string | null;
             /** Company */
             company: string;
             /** Dateline */
@@ -5118,6 +5548,11 @@ export interface components {
             disclosure: string;
             /** Duration S */
             duration_s: number | null;
+            /**
+             * Has Video
+             * @default true
+             */
+            has_video: boolean;
             /** Industry */
             industry: string | null;
             /** Pictures */
@@ -5133,6 +5568,10 @@ export interface components {
             }[];
             /** Slug */
             slug: string;
+            /** Source Name */
+            source_name?: string | null;
+            /** Source Url */
+            source_url?: string | null;
             /** Summary */
             summary: string;
             /** Thumbnail Url */
@@ -5140,7 +5579,7 @@ export interface components {
             /** Title */
             title: string;
             /** Video Url */
-            video_url: string;
+            video_url: string | null;
         };
         /** StoryPictureOut */
         StoryPictureOut: {
@@ -5158,6 +5597,16 @@ export interface components {
             expected_total?: number | string | null;
             /** Quote Version */
             quote_version?: string | null;
+        };
+        /** SubmitProof */
+        SubmitProof: {
+            /** Proof Id */
+            proof_id: string;
+            /**
+             * Sender Reference
+             * @default
+             */
+            sender_reference: string;
         };
         /** TakeOut */
         TakeOut: {
@@ -5354,6 +5803,119 @@ export interface components {
             spend_cap?: number | string | null;
             /** Suspended */
             suspended?: boolean | null;
+        };
+        /** DraftIn */
+        app__routes__distribution__DraftIn: {
+            /**
+             * Announcement
+             * @default
+             */
+            announcement: string;
+            /**
+             * Announcement Source
+             * @default custom
+             * @enum {string}
+             */
+            announcement_source: "platform" | "custom";
+            /**
+             * Contact Email
+             * @default
+             */
+            contact_email: string;
+            /**
+             * Contact Name
+             * @default
+             */
+            contact_name: string;
+            /**
+             * Headline
+             * @default
+             */
+            headline: string;
+            /**
+             * Logo Key
+             * @default
+             */
+            logo_key: string;
+            /** Media Options */
+            media_options?: {
+                [key: string]: components["schemas"]["MediaChoice"];
+            };
+            /** Outlet Ids */
+            outlet_ids?: string[];
+            /**
+             * Phone
+             * @default
+             */
+            phone: string;
+            /**
+             * Phone Country
+             * @default
+             */
+            phone_country: string;
+            /** Picture Keys */
+            picture_keys?: string[];
+            /** Project Id */
+            project_id?: string | null;
+            /**
+             * Stage
+             * @default outlets
+             * @enum {string}
+             */
+            stage: "outlets" | "content" | "contact" | "review";
+            /** Story Project Id */
+            story_project_id?: string | null;
+            /**
+             * Whatsapp
+             * @default
+             */
+            whatsapp: string;
+            /**
+             * Whatsapp Country
+             * @default
+             */
+            whatsapp_country: string;
+        };
+        /** DraftIn */
+        app__routes__news_desk__DraftIn: {
+            /**
+             * Body
+             * @default
+             */
+            body: string;
+            /**
+             * Headline
+             * @default
+             */
+            headline: string;
+            /** Pictures */
+            pictures?: components["schemas"]["Picture"][];
+            /**
+             * Presenter Script
+             * @default
+             */
+            presenter_script: string;
+            /** Revision */
+            revision: number;
+            /** Scenes */
+            scenes?: unknown[];
+            /**
+             * Source Name
+             * @default
+             */
+            source_name: string;
+            /**
+             * Source Text
+             * @default
+             */
+            source_text: string;
+            /** Source Url */
+            source_url?: string | null;
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
         };
     };
     responses: never;
@@ -5711,6 +6273,179 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_accounts_v1_admin_bank_transfer_accounts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_account_v1_admin_bank_transfer_accounts__currency__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                currency: "USD" | "NGN";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankAccount"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overview_v1_admin_bank_transfers_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_v1_admin_bank_transfers__id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Approval"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_v1_admin_bank_transfers__id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Rejection"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -6408,6 +7143,356 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listing_v1_admin_news_desk_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_v1_admin_news_desk_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detail_v1_admin_news_desk__id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_v1_admin_news_desk__id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["app__routes__news_desk__DraftIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_video_v1_admin_news_desk__id__generate_video_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_image_v1_admin_news_desk__id__images_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewsUploadIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_image_v1_admin_news_desk__id__images_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_v1_admin_news_desk__id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Publish"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rewrite_v1_admin_news_desk__id__rewrite_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Revision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unpublish_v1_admin_news_desk__id__unpublish_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Revision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -8255,6 +9340,41 @@ export interface operations {
             };
         };
     };
+    custom_quote_v1_billing_custom_quote_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomCreditIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomCreditQuote"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     dev_pay_v1_billing_dev_pay__checkout_id__post: {
         parameters: {
             query?: never;
@@ -8405,6 +9525,150 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BillingSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    status_v1_billing_transfer__id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_v1_billing_transfer__id__submit_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitProof"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_upload_v1_billing_transfer__id__uploads_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReceiptUpload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_upload_v1_billing_transfer__id__uploads_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProofId"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -9029,7 +10293,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DraftIn"];
+                "application/json": components["schemas"]["app__routes__distribution__DraftIn"];
             };
         };
         responses: {
@@ -11292,6 +12556,38 @@ export interface operations {
                 };
                 content: {
                     "text/html": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    technology_news_v1_public_technology_news_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryCardOut"][];
                 };
             };
             /** @description Validation Error */

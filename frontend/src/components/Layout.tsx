@@ -5,6 +5,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import { api, unwrap } from "../api/client";
 import { signOut } from "../lib/auth";
 import { CFSymbol, SecondaryLogo } from "./Logo";
+import { WorkspaceToolbar } from "./WorkspaceToolbar";
 import { ConfirmDialog } from "./ui";
 
 export function useMe() {
@@ -65,7 +66,7 @@ export function Layout() {
       to={to}
       title={rail ? label : undefined}
       className={({ isActive }) =>
-        `flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-bold ${rail ? "justify-center" : ""} ${isActive ? "bg-brand-green text-ink" : "text-white hover:bg-stripe"}`
+        `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold ${rail ? "justify-center" : ""} ${isActive ? "bg-brand-green text-ink" : "text-white hover:bg-stripe"}`
       }
     >
       {icon}
@@ -105,6 +106,18 @@ export function Layout() {
             {rail ? <CFSymbol className="h-8 w-auto" /> : <SecondaryLogo className="h-9 w-auto" />}
           </Link>
 
+            <button
+              type="button"
+              onClick={toggle}
+              aria-expanded={!collapsed}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-controls="sidebar"
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              className={`mb-4 hidden w-fit items-center justify-center rounded-lg p-2.5 text-white hover:bg-stripe md:flex ${collapsed ? "justify-center" : ""}`}
+            >
+              <Icon>{collapsed ? <path d="M9 5l7 7-7 7" /> : <path d="M15 5l-7 7 7 7" />}</Icon>
+              <span className="sr-only">{collapsed ? "Expand sidebar" : "Collapse sidebar"}</span>
+            </button>
           {item("/dashboard", "Dashboard", ICONS.home)}
           {item("/ai-newsroom/videos", "Videos", ICONS.videos)}
           {item("/brand", "Brand kit", ICONS.brand)}
@@ -128,27 +141,18 @@ export function Layout() {
                 <span className="sr-only"> credits in {me.data.workspace_name}</span>
               </p>
             )}
-            <button type="button" onClick={() => setConfirmOut(true)} title={rail ? "Sign out" : undefined} className={`flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-bold text-brand-green hover:bg-stripe ${rail ? "justify-center" : ""}`}>
+            <button type="button" onClick={() => setConfirmOut(true)} title={rail ? "Sign out" : undefined} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold text-brand-green hover:bg-stripe ${rail ? "justify-center" : ""}`}>
               {ICONS.out}
               <span className={rail ? "sr-only" : ""}>Sign out</span>
             </button>
-            <button
-              type="button"
-              onClick={toggle}
-              aria-expanded={!collapsed}
-              aria-controls="sidebar"
-              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className={`hidden w-full items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-bold text-white hover:bg-stripe md:flex ${collapsed ? "justify-center" : ""}`}
-            >
-              <Icon>{collapsed ? <path d="M9 5l7 7-7 7" /> : <path d="M15 5l-7 7 7 7" />}</Icon>
-              <span className={collapsed ? "sr-only" : ""}>{collapsed ? "Expand sidebar" : "Collapse sidebar"}</span>
-            </button>
+
           </div>
         </nav>
       </aside>
 
       <main className="min-w-0 flex-1">
-        <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
+        <WorkspaceToolbar />
+        <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-7">
           <DemoBanner />
           <Outlet />
           <OutOfCredits />

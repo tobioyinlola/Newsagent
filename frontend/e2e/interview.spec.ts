@@ -99,12 +99,12 @@ test("AI interview: understands the announcement, interviews on camera, then mak
   await expect(room.getByRole("alert")).toContainText("Temporary recording interruption");
   await room.getByRole("button", { name: "Try again", exact: true }).click();
   for (let q = 1; q <= 4; q++) {
-    await expect(room.getByText("Your turn: answer now")).toBeVisible({ timeout: 20_000 });
+    await expect(room.getByText("Go — your turn to answer")).toBeVisible({ timeout: 20_000 });
     await expect(room.getByText(`Question ${q} of 4`)).toBeVisible();
     await expect(room.getByText(/Recording/)).toBeVisible();
     await page.waitForTimeout(1500); // speak for a moment (the fake microphone makes a tone)
     await room.getByRole("button", { name: "I’m done answering" }).click();
-    if (q < 4) await expect(room.getByText("Your turn: answer now")).toBeHidden();
+    if (q < 4) await expect(room.getByText("Go — your turn to answer")).toBeHidden();
   }
 
   expect(rejectedStart).toBe(true);

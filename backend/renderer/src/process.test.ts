@@ -5,6 +5,7 @@ import path from "node:path";
 import http from "node:http";
 import { AddressInfo } from "node:net";
 import { afterAll, describe, expect, it } from "vitest";
+import { analyzeFile } from "./media";
 import { parseSilences, processTake, speechWindow } from "./process";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "proc-test-"));
@@ -71,11 +72,19 @@ describe("processTake", () => {
     fs.rmSync(r.dir, { recursive: true, force: true });
   }, 60_000);
 
-  it("flags clipped audio", async () => {
+  it("keeps loud recordings with normalized playable audio and a diagnostic flag", async () => {
     const s = serve(recording("clip.webm", { gain: 8 }));
     servers.push(s);
     const r = await processTake({ chunkUrls: s.urls, kind: "video", ext: "webm" });
     expect(r.flags).toContain("clipped_audio");
+    expect(r.video_path).not.toBeNull();
+    const output = await analyzeFile(r.video_path!);
+    expect(output.has_audio).toBe(true);
+    expect(output.duration_s).toBeGreaterThan(2);
+    expect(output.true_peak_db).not.toBeNull();
+    expect(output.true_peak_db!).toBeLessThan(-0.1);
+    expect(output.loudness_lufs!).toBeGreaterThan(-18);
+    expect(output.loudness_lufs!).toBeLessThan(-14);
     fs.rmSync(r.dir, { recursive: true, force: true });
   }, 60_000);
 
