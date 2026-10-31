@@ -1,3 +1,4 @@
+import { BackButton } from "../../components/BackButton";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -11,6 +12,7 @@ function Shell({ children }: { children: ReactNode }) {
     <div className="cf-stripes flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-md space-y-6">
         <Logo className="w-52 text-brand-green" />
+        <BackButton fallback="/login" className="text-white" />
         {children}
       </div>
     </div>

@@ -5,6 +5,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import { api, unwrap } from "../api/client";
 import { signOut } from "../lib/auth";
 import { CFSymbol, SecondaryLogo } from "./Logo";
+import { BackButton, workspaceBackFallback } from "./BackButton";
 import { WorkspaceToolbar } from "./WorkspaceToolbar";
 import { ConfirmDialog } from "./ui";
 
@@ -123,10 +124,7 @@ export function Layout() {
           {item("/brand", "Brand kit", ICONS.brand)}
           {item("/distribution/request", "Distribution", ICONS.videos)}
           {item("/analytics", "Analytics", ICONS.videos)}
-          {item("/billing", "Credits", ICONS.credits)}
-          {item("/referrals", "Referrals", ICONS.credits)}
-          {item("/account", "Your data", ICONS.data)}
-          {item("/security", "Security", ICONS.security)}
+          {item("/settings", "Settings", <Icon><circle cx="12" cy="12" r="3" /><path d="m9 3 6 0 1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1Z" /></Icon>)}
 
           <div className="mt-auto space-y-2 border-t-2 border-stripe pt-3">
             {me.data && !rail && (
@@ -153,6 +151,7 @@ export function Layout() {
       <main className="min-w-0 flex-1">
         <WorkspaceToolbar />
         <div className="workspace-content space-y-6">
+          <BackButton fallback={workspaceBackFallback(loc.pathname)} />
           <DemoBanner />
           <Outlet />
           <OutOfCredits />

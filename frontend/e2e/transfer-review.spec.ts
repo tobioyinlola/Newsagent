@@ -31,8 +31,8 @@ test("USD and NGN transfers require receipts and admin approval before wallet cr
     await expect(page.getByText(currency === "USD" ? "$594.00" : "₦831,600.00", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "I have paid", exact: true }).click();
     await expect(page.getByRole("button", { name: "Submit receipt for approval" })).toBeDisabled();
-    await page.getByLabel("Payment receipt (PNG, JPEG or PDF, up to 5 MB)").setInputFiles({ name: `${currency}-receipt.png`, mimeType: "image/png", buffer: Buffer.concat([PNG, Buffer.from(currency)]) });
-    await expect(page.getByText(`Receipt uploaded: ${currency}-receipt.png`)).toBeVisible();
+    await page.getByLabel("Payment receipt", { exact: true }).setInputFiles({ name: `${currency}-receipt.png`, mimeType: "image/png", buffer: Buffer.concat([PNG, Buffer.from(currency)]) });
+    await expect(page.getByText(`${currency}-receipt.png`, { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Submit receipt for approval" }).click();
     await expect(page.getByRole("heading", { name: "Receipt submitted — awaiting approval" })).toBeVisible();
     expect(Number((await (await request.get(`${API}/v1/billing/summary`, { headers })).json()).credit_balance)).toBe(expectedCredits);

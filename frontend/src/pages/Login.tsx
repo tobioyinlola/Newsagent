@@ -5,6 +5,7 @@ import { api, type Schemas, unwrap } from "../api/client";
 import { Combobox } from "../components/Combobox";
 import { Button, Card, ErrorBox, Field, inputCls, Notice, Toast } from "../components/ui";
 import { PublicNavigation } from "../components/PublicNavigation";
+import { BackButton } from "../components/BackButton";
 import { AuthShowcase } from "../components/AuthShowcase";
 import { getToken, setToken } from "../lib/auth";
 
@@ -16,6 +17,7 @@ function Shell({ children, signup = false }: { children: ReactNode; signup?: boo
       <AuthShowcase />
       <section className="auth-form-panel" aria-label={signup ? "Create your account" : "Account access"} tabIndex={0}>
         <div className="auth-form-content">
+          <BackButton fallback="/" className="mb-4" />
           <div className="auth-form-intro"><span className="auth-eyebrow">YOUR COVER FOUNDER WORKSPACE</span><p>{signup ? "Let’s put your business on the map." : "Make room for your next chapter."}</p></div>
           <div className="auth-fields">{children}</div>
           <div className="auth-form-footer"><span aria-hidden="true">✳</span><p>Your story. Your voice. A wider audience.</p><Link to="/">Back to Cover Founder</Link></div>

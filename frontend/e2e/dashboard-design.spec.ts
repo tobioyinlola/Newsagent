@@ -18,14 +18,14 @@ test("dashboard live activity, search, settings, top sidebar toggle and responsi
   await page.keyboard.press("/");
   await expect(page.getByRole("textbox", { name: "Search your workspace" })).toBeFocused();
   await page.getByRole("textbox", { name: "Search your workspace" }).fill("credits");
-  await expect(page.getByRole("region", { name: "Search results" }).getByRole("link", { name: /Buy credits/ })).toHaveAttribute("href", "/billing");
+  await expect(page.getByRole("region", { name: "Search results" }).getByRole("link", { name: /Buy credits/ })).toHaveAttribute("href", "/settings/billing");
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: /Notifications/ }).click();
   await expect(page.getByRole("region", { name: "Workspace notifications" })).toContainText("Your video is ready");
   await page.getByRole("button", { name: "Mark all as read", exact: true }).click();
   await expect(page.getByRole("button", { name: "Notifications", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Profile and settings", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Workspace settings" }).getByRole("link", { name: "Password and security" })).toHaveAttribute("href", "/security");
+  await expect(page.getByRole("region", { name: "Workspace settings" }).getByRole("link", { name: "Password and security" })).toHaveAttribute("href", "/settings/password");
   await page.keyboard.press("Escape");
   await page.getByRole("textbox", { name: "Search your workspace" }).fill("");
   await page.keyboard.press("Escape");
@@ -35,6 +35,6 @@ test("dashboard live activity, search, settings, top sidebar toggle and responsi
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: "/tmp/cover-founder-dashboard-mobile.png", fullPage: true });
   await page.getByRole("button", { name: "Menu", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Main", exact: true }).getByRole("link", { name: "Credits", exact: true })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Main", exact: true }).getByRole("link", { name: "Settings", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Close", exact: true }).click();
 });

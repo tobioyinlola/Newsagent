@@ -1,3 +1,4 @@
+import { BackButton } from "../../components/BackButton";
 import { type ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
@@ -128,6 +129,7 @@ export function Layout() {
       </aside>
       <main className="min-w-0 flex-1">
         <div className="mx-auto max-w-6xl space-y-4 px-4 py-6">
+          <BackButton fallback="/" />
           <Outlet />
         </div>
       </main>

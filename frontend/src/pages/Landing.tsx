@@ -1,3 +1,5 @@
+import { BackButton } from "../components/BackButton";
+import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -458,7 +460,8 @@ function LatestStoriesRow() {
 }
 
 export function SiteShell({ children }: { children: ReactNode }) {
-  return <div className="min-h-screen bg-ink text-white"><PublicNavigation />{children}<Footer /></div>;
+  const location = useLocation();
+  return <div className="min-h-screen bg-ink text-white"><PublicNavigation />{location.pathname !== "/" && <div className="px-4 pt-4 md:px-8"><BackButton fallback={location.pathname.startsWith("/latest-stories/") ? "/latest-stories" : "/"} /></div>}{children}<Footer /></div>;
 }
 
 export function Landing() {

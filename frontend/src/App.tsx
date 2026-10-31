@@ -1,11 +1,12 @@
+import { BackButton } from "./components/BackButton";
 import { TransferCheckout } from "./pages/TransferCheckout";
 import { Referrals } from "./pages/Referrals";
 import { Analytics } from "./pages/Analytics";
 import { Suspense, lazy } from "react";
-import { Navigate, Route, Routes, useParams } from "react-router-dom";
+import { Navigate, Route, Routes, useParams, useLocation } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { RequireAuth } from "./components/RequireAuth";
-import { Account } from "./pages/Account";
+import { ProfileSettings, Settings } from "./pages/Settings";
 import { Security } from "./pages/Security";
 import { CardCheckout } from "./pages/CardCheckout";
 import { BankCheckout } from "./pages/BankCheckout";
@@ -19,6 +20,11 @@ import { ProjectDetail } from "./pages/ProjectDetail";
 import { DistributionRequestPage } from "./pages/DistributionRequest";
 import { Projects } from "./pages/Projects";
 import { Share } from "./pages/Share";
+
+function SettingsRedirect({ tab }: { tab: string }) {
+  const location = useLocation();
+  return <Navigate replace to={`/settings/${tab}${location.search}${location.hash}`} />;
+}
 
 // The founder page is its own chunk so a phone on 4G downloads as little as possible before the camera starts.
 const Founder = lazy(() => import("./founder/Founder"));
@@ -49,13 +55,13 @@ export function App() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/otp" element={<OtpChallenge />} />
       <Route path="/forgot" element={<Forgot />} />
-      <Route path="/s/:token" element={<Share />} />
-      <Route path="/i/:token" element={<Suspense fallback={<p className="p-6">Loading…</p>}><Founder /></Suspense>} />
-      <Route path="/billing/pay/:checkoutId" element={<MockPay />} />
+      <Route path="/s/:token" element={<><div className="px-4 pt-4"><BackButton fallback="/" /></div><Share /></>} />
+      <Route path="/i/:token" element={<><div className="bg-ink px-4 pt-2 text-white"><BackButton fallback="/" /></div><Suspense fallback={<p className="p-6">Loading…</p>}><Founder /></Suspense></>} />
+      <Route path="/billing/pay/:checkoutId" element={<><div className="px-4 pt-4"><BackButton fallback="/settings/billing" /></div><MockPay /></>} />
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
           <Route path="/distribution/request" element={<DistributionRequestPage />} />
-          <Route path="/referrals" element={<Referrals />} />
+          <Route path="/referrals" element={<SettingsRedirect tab="referral" />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/ai-newsroom/videos" element={<Projects />} />
           <Route path="/ai-newsroom/new" element={<NewProject />} />
@@ -63,12 +69,19 @@ export function App() {
           <Route path="/ai-newsroom/:id" element={<ProjectDetail />} />
           <Route path="/brand" element={<Brand />} />
           <Route path="/analytics" element={<Analytics />} />
-          <Route path="/billing" element={<Billing />} />
+          <Route path="/billing" element={<SettingsRedirect tab="billing" />} />
           <Route path="/billing/card/:checkoutId" element={<CardCheckout />} />
           <Route path="/billing/transfer/:checkoutId" element={<TransferCheckout />} />
           <Route path="/billing/bank/:checkoutId" element={<BankCheckout />} />
-          <Route path="/account" element={<Account />} />
-          <Route path="/security" element={<Security />} />
+          <Route path="/account" element={<SettingsRedirect tab="profile" />} />
+          <Route path="/security" element={<SettingsRedirect tab="password" />} />
+          <Route path="/settings" element={<Settings />}>
+            <Route index element={<Navigate to="profile" replace />} />
+            <Route path="profile" element={<ProfileSettings />} />
+            <Route path="password" element={<Security />} />
+            <Route path="billing" element={<Billing />} />
+            <Route path="referral" element={<Referrals />} />
+          </Route>
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
