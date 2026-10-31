@@ -77,6 +77,16 @@ async def test_news_rewrite_review_publish_snapshot_unpublish_without_video_jobs
         assert not list((await db.execute(select(Job))).scalars())
 
 
+async def test_operator_can_delete_a_news_story_and_remove_its_publication(client, workspace):
+    row = await ready(client)
+    assert (await publish(client, row)).status_code == 200
+    deleted = await client.delete(f"{BASE}/{row['id']}", headers=OPS)
+    assert deleted.status_code == 204
+    assert (await client.get(BASE, headers=OPS)).json() == []
+    assert (await client.get("/v1/public/cf-news")).json() == []
+    assert (await client.get(f"/v1/public/stories/{row['slug']}")).status_code == 404
+
+
 async def test_all_active_admin_roles_can_use_news_desk_customers_cannot(client, workspace, maker):
     assert (await client.post(BASE, headers=OWNER)).status_code == 403
     assert (await client.get(BASE)).status_code == 401

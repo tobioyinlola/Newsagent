@@ -2,9 +2,9 @@
 
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -295,6 +295,40 @@ async def unpublish(id: str, body: Revision, p: Principal = Depends(operator), d
     audit(db, p.user.email, "news.unpublished", target_type="news_story", target_id=id)
     await db.commit()
     return await out(db, row)
+
+
+@router.delete("/{id}", status_code=204)
+async def delete_story(
+    id: str, request: Request, p: Principal = Depends(operator), db: AsyncSession = Depends(get_session)
+) -> None:
+    row = await story(db, id)
+    videos = list((await db.execute(select(NewsVideo).where(NewsVideo.story_id == id))).scalars())
+    active = next((video for video in videos if video.status in {"queued", "running"}), None)
+    if active:
+        raise HTTPException(409, "Wait for the Breaking Story video to finish before deleting this story")
+    images = list((await db.execute(select(NewsImage).where(NewsImage.story_id == id))).scalars())
+    storage = registry.get_storage()
+    keys = {image.key for image in images}
+    for video in videos:
+        for key_name in ("anchor_key", "output_key"):
+            key = video.media.get(key_name) if video.media else None
+            if key:
+                keys.add(key)
+    for key in keys:
+        await storage.delete(key)
+    audit(
+        db,
+        p.user.email,
+        "news.deleted",
+        target_type="news_story",
+        target_id=id,
+        detail={"slug": row.slug, "status": row.status},
+        request=request,
+    )
+    await db.execute(delete(NewsVideo).where(NewsVideo.story_id == id))
+    await db.execute(delete(NewsImage).where(NewsImage.story_id == id))
+    await db.delete(row)
+    await db.commit()
 
 
 @router.post("/{id}/generate-video")
