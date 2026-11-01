@@ -46,9 +46,11 @@ export function StoryThumb({ card, big = false }: { card: StoryCard; big?: boole
   );
 }
 
-export function StoryTile({ card }: { card: StoryCard }) {
+/** `fluid`: fills its grid cell instead of the fixed width a sideways row needs. */
+export function StoryTile({ card, fluid = false }: { card: StoryCard; fluid?: boolean }) {
+  const size = fluid ? "w-full" : "w-[78vw] shrink-0 snap-start sm:w-[320px]";
   return (
-    <Link to={storyPath(card.slug)} className="group block w-[78vw] shrink-0 snap-start rounded-sm border border-white/15 bg-white/[0.03] p-0 hover:border-brand-green sm:w-[320px]">
+    <Link to={storyPath(card.slug)} className={`group block ${size} rounded-sm border border-white/15 bg-white/[0.03] p-0 hover:border-brand-green`}>
       <StoryThumb card={card} />
       <div className="space-y-1 p-3">
         {card.industry && <p className="font-mono text-[11px] font-bold uppercase tracking-wider text-brand-green">{card.industry}</p>}
