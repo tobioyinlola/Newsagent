@@ -45,10 +45,7 @@ export function PressRelease({ story: s, pictures = [], showContact = false, ton
         <div key={i} className="space-y-3">
           <p className={t.body}>{i === 0 && s.dateline ? <><strong className="italic">{s.dateline}</strong> — {p}</> : p}</p>
           {at.filter((x) => x.after === i + 1).map((x) => (
-            <figure key={x.picture.url} className="my-1">
-              <img src={x.picture.url} alt={x.picture.caption || "Picture for the story"} className={`max-h-80 w-full rounded-sm border object-cover ${t.frame}`} loading="lazy" />
-              {x.picture.caption && <figcaption className={`mt-1 text-xs italic ${t.caption}`}>{x.picture.caption}</figcaption>}
-            </figure>
+            <StoryPicture key={x.picture.url} url={x.picture.url} caption={x.picture.caption} alt="Picture for the story" frame={t.frame} captionClass={`italic ${t.caption}`} />
           ))}
         </div>
       ))}
@@ -65,5 +62,16 @@ export function PressRelease({ story: s, pictures = [], showContact = false, ton
         </section>
       )}
     </article>
+  );
+}
+
+/** A picture inside a story's text. The whole picture is always shown in its own shape (a portrait headshot is never cut to a strip):
+ * as wide as the column allows, never taller than about a screen, centred, and never enlarged past its real size. */
+export function StoryPicture({ url, caption, alt, frame = "border-white/15", captionClass = "text-white/60" }: { url: string; caption?: string | null; alt: string; frame?: string; captionClass?: string }) {
+  return (
+    <figure className="mx-auto my-1 w-fit max-w-full">
+      <img src={url} alt={caption || alt} className={`block h-auto max-h-[min(34rem,80vh)] w-auto max-w-full rounded-sm border object-contain ${frame}`} loading="lazy" />
+      {caption && <figcaption className={`mt-1 text-xs ${captionClass}`}>{caption}</figcaption>}
+    </figure>
   );
 }
