@@ -55,8 +55,10 @@ export async function normalizeAudio(file: string): Promise<void> {
 // The "light" download: the same video and sound, re-encoded for a much smaller file. Same picture size and frame rate; a
 // constant-quality encode (CRF 24, slow preset) with a bitrate ceiling, which keeps a talking-head broadcast looking the same
 // to the eye at a fraction of the bytes. Made from the finished HD file (already loudness-normalised), never from a new render.
+// The sound is copied, not re-encoded: a second lossy AAC pass pushes the normalised peaks over 0 dBFS, and the quality gate
+// then fails the whole video for clipping (the HD file measured -0.6 dBTP, its 128k re-encode +0.2).
 export async function makeLight(input: string, output: string): Promise<void> {
-  await run("ffmpeg", ["-y", "-i", input, "-c:v", "libx264", "-preset", "slow", "-profile:v", "high", "-crf", "24", "-maxrate", "4M", "-bufsize", "8M", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", output], { maxBuffer: 64 * 1024 * 1024 });
+  await run("ffmpeg", ["-y", "-i", input, "-c:v", "libx264", "-preset", "slow", "-profile:v", "high", "-crf", "24", "-maxrate", "4M", "-bufsize", "8M", "-pix_fmt", "yuv420p", "-c:a", "copy", "-movflags", "+faststart", output], { maxBuffer: 64 * 1024 * 1024 });
 }
 
 export async function analyzeUrl(url: string): Promise<Analysis> {

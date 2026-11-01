@@ -45,7 +45,7 @@ test("guided flow, recorded for real, merged into the final video", async ({ bro
   await page.getByRole("button", { name: "Start the interview" }).click();
   const room = page.getByRole("dialog", { name: "AI interview" });
   for (let q = 1; q <= 4; q++) {
-    await expect(room.getByText("Your turn: answer now")).toBeVisible({ timeout: 30_000 });
+    await expect(room.getByText("Go — your turn to answer")).toBeVisible({ timeout: 30_000 });
     if (q === 2) await shot("3-interview-room");
     await page.waitForTimeout(5000);
     await room.getByRole("button", { name: "I’m done answering" }).click();
