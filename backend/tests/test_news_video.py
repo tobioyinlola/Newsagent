@@ -1,10 +1,10 @@
 import pytest
 from sqlalchemy import select
 
+from app.config import get_settings
 from app.integrations import registry
 from app.integrations.avatar.base import AvatarResult
 from app.integrations.renderer.base import Analysis
-from app.config import get_settings
 from app.models import Job, NewsVideo, Project, Workspace
 from app.services import news_video
 from app.services import news_video_rules as rules
