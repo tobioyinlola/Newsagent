@@ -442,7 +442,7 @@ function LatestStoriesRow() {
     <section className="border-b border-white/10 bg-ink px-4 py-12 md:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="mb-5 flex items-end justify-between gap-4">
-          <div><Eyebrow>CF Featured Stories</Eyebrow><h2 className="mt-2 text-2xl text-white md:text-3xl">Fresh from the newsroom</h2></div>
+          <div><Eyebrow>CF Featured Stories</Eyebrow><h2 className="mt-2 text-2xl text-white md:text-3xl">Business Interviews</h2></div>
           <Link to="/latest-stories" className="whitespace-nowrap text-sm font-bold text-brand-green hover:underline">See all stories →</Link>
         </div>
         {cards.length ? (
@@ -462,7 +462,7 @@ function LatestStoriesRow() {
 function CFNewsRow() {
   const q = useQuery({ queryKey: ["cf-news"], queryFn: () => unwrap(api.GET("/v1/public/cf-news")), staleTime: 60_000 });
   const cards = (q.data ?? []).slice(0, 8);
-  return <section className="border-b border-white/10 bg-ink px-4 py-10 md:px-8"><div className="mx-auto max-w-6xl"><div className="mb-5 flex items-end justify-between gap-4"><div><Eyebrow>CF News</Eyebrow><h2 className="mt-2 text-2xl text-white md:text-3xl">Breaking news from Cover Founder</h2></div><Link to="/cf-news" className="whitespace-nowrap text-sm font-bold text-brand-green hover:underline">See CF News →</Link></div>{cards.length ? <ScrollRow label="CF News" count={cards.length}>{cards.map(c => <StoryTile key={c.slug} card={c} />)}</ScrollRow> : <p className="text-sm text-white/60">CF News will appear here as stories are published.</p>}</div></section>;
+  return <section className="border-b border-white/10 bg-ink px-4 py-10 md:px-8"><div className="mx-auto max-w-6xl"><div className="mb-5 flex items-end justify-between gap-4"><div><Eyebrow>CF News</Eyebrow><h2 className="mt-2 text-2xl text-white md:text-3xl">Top stories</h2></div><Link to="/cf-news" className="whitespace-nowrap text-sm font-bold text-brand-green hover:underline">See CF News →</Link></div>{cards.length ? <ScrollRow label="CF News" count={cards.length}>{cards.map(c => <StoryTile key={c.slug} card={c} />)}</ScrollRow> : <p className="text-sm text-white/60">CF News will appear here as stories are published.</p>}</div></section>;
 }
 
 export function SiteShell({ children }: { children: ReactNode }) {
