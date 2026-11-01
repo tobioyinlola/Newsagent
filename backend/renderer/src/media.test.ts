@@ -44,4 +44,14 @@ describe("media analysis", () => {
     expect(b).toMatchObject({ width: 1280, height: 720, has_audio: true });
     expect(Math.abs(b.duration_s - a.duration_s)).toBeLessThan(0.2);
   }, 120_000); // a slow-preset x264 encode: about 8 s on a busy machine, so the default 5 s limit made it fail at random
+  it("keeps the HD file's normalised sound in the light version, so it cannot clip where the HD file does not", async () => {
+    // loud, peaky noise normalised the way finished renders are: the light file must not re-encode it past the quality gate's -0.1 dB
+    const hd = path.join(dir, "loud-hd.mp4");
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=blue:s=320x180:r=30:d=4", "-f", "lavfi", "-i", "anoisesrc=d=4:c=pink:a=0.9", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", hd]);
+    await normalizeAudio(hd);
+    const light = path.join(dir, "loud-light.mp4");
+    await makeLight(hd, light);
+    const [a, b] = [await analyzeFile(hd), await analyzeFile(light)];
+    expect(b.true_peak_db!).toBeCloseTo(a.true_peak_db!, 1);
+  }, 120_000);
 });

@@ -605,7 +605,8 @@ export interface paths {
         /** Save */
         put: operations["save_v1_admin_news_desk__id__put"];
         post?: never;
-        delete?: never;
+        /** Delete Story */
+        delete: operations["delete_story_v1_admin_news_desk__id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3005,7 +3006,7 @@ export interface paths {
         };
         /**
          * Public Stats
-         * @description Live numbers for the public site: videos finished, and how often shared videos have been opened.
+         * @description Live numbers for the public site: customer and Breaking Story videos finished, plus shared opens.
          */
         get: operations["public_stats_v1_public_stats_get"];
         put?: never;
@@ -7284,6 +7285,37 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_story_v1_admin_news_desk__id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

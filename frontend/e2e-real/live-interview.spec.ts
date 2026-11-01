@@ -69,7 +69,7 @@ test("AI interview, recorded for real, merged with the answers column", async ({
 
   const room = page.getByRole("dialog", { name: "AI interview" });
   for (let q = 1; q <= QUESTIONS.length; q++) {
-    await expect(room.getByText("Your turn: answer now")).toBeVisible({ timeout: 30_000 });
+    await expect(room.getByText("Go — your turn to answer")).toBeVisible({ timeout: 30_000 });
     await expect(room.getByText(`Question ${q} of ${QUESTIONS.length}`)).toBeVisible();
     await page.waitForTimeout(5000); // real speech from the fake microphone, real video from the fake camera
     await room.getByRole("button", { name: "I’m done answering" }).click();

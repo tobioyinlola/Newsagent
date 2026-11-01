@@ -9410,6 +9410,55 @@
       }
     },
     "/v1/admin/news-desk/{id}": {
+      "delete": {
+        "operationId": "delete_story_v1_admin_news_desk__id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Story",
+        "tags": [
+          "news-desk"
+        ]
+      },
       "get": {
         "operationId": "detail_v1_admin_news_desk__id__get",
         "parameters": [
@@ -18171,7 +18220,7 @@
     },
     "/v1/public/stats": {
       "get": {
-        "description": "Live numbers for the public site: videos finished, and how often shared videos have been opened.",
+        "description": "Live numbers for the public site: customer and Breaking Story videos finished, plus shared opens.",
         "operationId": "public_stats_v1_public_stats_get",
         "responses": {
           "200": {
