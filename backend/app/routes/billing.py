@@ -91,12 +91,15 @@ async def public_options() -> list[CreditOptionOut]:
 
 @router.get("/v1/public/stats", dependencies=[Depends(limit("public-packs", 120, 600))])
 async def public_stats(session: AsyncSession = Depends(get_session)) -> dict:
-    """Live numbers for the public site: videos finished, and how often shared videos have been opened."""
-    from app.models import Project, ShareLink
+    """Live numbers for the public site: customer and Breaking Story videos finished, plus shared opens."""
+    from app.models import NewsVideo, Project, ShareLink
 
-    videos = (await session.execute(select(func.count()).where(Project.state == "final_ready"))).scalar_one()
+    customer_videos = (await session.execute(select(func.count()).where(Project.state == "final_ready"))).scalar_one()
+    breaking_story_videos = (
+        await session.execute(select(func.count()).where(NewsVideo.status == "ready"))
+    ).scalar_one()
     views = (await session.execute(select(func.coalesce(func.sum(ShareLink.views), 0)))).scalar_one()
-    return {"videos": int(videos), "impressions": int(views)}
+    return {"videos": int(customer_videos + breaking_story_videos), "impressions": int(views)}
 
 
 @router.get("/v1/billing/summary", response_model=BillingSummary)

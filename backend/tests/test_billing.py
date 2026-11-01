@@ -183,9 +183,17 @@ async def test_the_amounts_on_sale_are_public_for_the_landing_page(client, works
     assert [Decimal(o["amount_usd"]) for o in r.json()] == [Decimal(a) for a in (1, 10, 50, 100, 200)]
 
 
-async def test_public_stats_count_finished_videos_and_shared_video_views(client, workspace):
+async def test_public_stats_count_customer_and_breaking_story_videos_and_shared_video_views(client, workspace, maker):
+    from app.models import NewsStory, NewsVideo
+
+    async with maker() as db:
+        story = NewsStory(id="a" * 32, slug="cf-stats-story", created_by="ops@example.com", updated_by="ops@example.com")
+        db.add(story)
+        db.add(NewsVideo(story_id=story.id, story_revision=1, snapshot={}, status="ready"))
+        await db.commit()
     r = await client.get("/v1/public/stats")
     assert r.status_code == 200 and set(r.json()) == {"videos", "impressions"}
+    assert r.json()["videos"] == 1
 
 
 async def test_there_is_no_daily_video_limit(client, workspace):
