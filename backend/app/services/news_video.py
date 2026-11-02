@@ -20,6 +20,19 @@ from app.models import NewsImage, NewsVideo, VendorBudget
 from app.models.base import utcnow
 from app.services import news_video_rules as rules
 
+
+def news_desk_avatar() -> str:
+    """The presenter look the News Desk uses (NEWS_DESK_AVATAR_ID, else the default presenter)."""
+    return get_settings().news_desk_avatar_id or get_settings().heygen_default_avatar_id or ""
+
+
+def news_desk_covers() -> bool:
+    """Does the News Desk presenter's studio picture need our boards over its own screens? Same setting as the business videos
+    (HEYGEN_FULLFRAME_AVATAR_IDS: a look listed without ':plain' has screens to cover). Unlisted looks are left as they are."""
+    from app.pipeline.steps import _fullframe_entries
+
+    return _fullframe_entries().get(news_desk_avatar(), False)
+
 log = logging.getLogger("news_video")
 _tasks: set[asyncio.Task] = set()
 
@@ -102,8 +115,9 @@ async def generate(db, row: NewsVideo):
     request = AvatarRequest(
         script_text=data["presenter_script"],
         voice_accent="british",
-        avatar_id=get_settings().news_desk_avatar_id or get_settings().heygen_default_avatar_id or None,
+        avatar_id=news_desk_avatar() or None,
         transparent=False,
+        voice_gender=get_settings().news_desk_voice_gender or None,  # a female voice for the News Desk presenter
     )
     media = dict(row.media)
     if not media.get("anchor_key"):
@@ -209,6 +223,8 @@ async def generate(db, row: NewsVideo):
             "anchorSrc": storage.presign_get(media["anchor_key"], 21600),
             "presenterFrames": frames,
             "pictures": pictures,
+            # a look whose studio picture has its own screens (with text that is not ours) gets our boards over them
+            "anchorCovers": news_desk_covers(),
             "anchorDurationSeconds": frames / 30,
             "brandIntroSeconds": rules.INTRO_SECONDS + rules.STING_SECONDS,
             "brandOutroSeconds": rules.OUTRO_SECONDS,

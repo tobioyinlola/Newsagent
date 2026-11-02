@@ -1,5 +1,7 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { breakingCutaways, breakingFrames, defaultBreakingProps, validateBreakingProps } from "./NewsBreaking";
+import { breakingCutaways, breakingFrames, defaultBreakingProps, validateBreakingProps, SCREEN_TEXT } from "./NewsBreaking";
 describe("isolated breaking-news duration contract", () => {
   it("includes the five-second intro, two-second sting and six-second outro", () => {
     expect(breakingFrames({ ...defaultBreakingProps, presenterFrames: 1410 })).toBe(1800);
@@ -18,5 +20,13 @@ describe("isolated breaking-news duration contract", () => {
   it("rejects missing presenter footage or images before rendering", () => {
     expect(() => validateBreakingProps(defaultBreakingProps)).toThrow();
     expect(() => validateBreakingProps({ ...defaultBreakingProps, anchorSrc: "https://example.com/clip.mp4", pictures: [{ src: "https://example.com/image.png", caption: "", motion: "slow_zoom_in" }] })).not.toThrow();
+  });
+});
+
+describe("News Desk presenter screens", () => {
+  it("covers a presenter's own studio screens with correctly spelled boards when asked", () => {
+    expect(SCREEN_TEXT).toBe("Breaking News");
+    const code = fs.readFileSync(path.resolve(__dirname, "NewsBreaking.tsx"), "utf8");
+    expect(code).toMatch(/p\.anchorCovers \? <FullFrameAnchor src=\{p\.anchorSrc\} covers screenText=\{SCREEN_TEXT\} \/>/);
   });
 });

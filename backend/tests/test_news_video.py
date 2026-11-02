@@ -105,7 +105,8 @@ async def test_breaking_story_uses_the_female_news_desk_presenter(client, worksp
     job = await start(client, row, monkeypatch)
     await news_video.run(job)
     assert seen and seen[0].avatar_id == get_settings().news_desk_avatar_id
-    assert get_settings().news_desk_avatar_id == "56f77809cfb5befeec11d8820fef119f"
+    assert get_settings().news_desk_avatar_id == "294e7a4a0fc0e8bc6d4990e34f5365fc"  # the Studio anchor (chosen 2026-11-02)
+    assert seen[0].voice_gender == "female"  # always a female voice
 
 
 async def test_publish_waits_for_inflight_video_and_stale_copy_is_rejected(client, workspace, monkeypatch):
@@ -265,3 +266,19 @@ async def test_cover_selection_is_independent_of_gallery_order(client, workspace
     assert (await publish(client, response.json())).status_code == 200
     public = (await client.get(f"/v1/public/stories/{row['slug']}")).json()
     assert second["image_id"] in public["thumbnail_url"]
+
+
+def test_a_news_desk_presenter_with_screens_in_her_studio_gets_our_boards(monkeypatch):
+    # The Studio anchor look's own screens carry misspelled AI-made text ("BEAING NEWS"): News Desk covers them with our boards;
+    # the plain news-desk looks (Elena, Marcus) have no screens to cover.
+    from app.config import get_settings
+    from app.services import news_video as nv
+
+    looks = "294e7a4a0fc0e8bc6d4990e34f5365fc,ca98f45881f1ba5ee6ad7a44d64855e5:plain,56f77809cfb5befeec11d8820fef119f:plain"
+    monkeypatch.setattr(get_settings(), "heygen_fullframe_avatar_ids", looks)
+    monkeypatch.setattr(get_settings(), "news_desk_avatar_id", "294e7a4a0fc0e8bc6d4990e34f5365fc")
+    assert nv.news_desk_covers() is True
+    monkeypatch.setattr(get_settings(), "news_desk_avatar_id", "56f77809cfb5befeec11d8820fef119f")
+    assert nv.news_desk_covers() is False
+    monkeypatch.setattr(get_settings(), "news_desk_avatar_id", "unlisted-look")
+    assert nv.news_desk_covers() is False
