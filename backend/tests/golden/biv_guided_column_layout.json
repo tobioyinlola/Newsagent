@@ -1,0 +1,675 @@
+{
+ "presenter_lines": [
+  "That adds context to the story, especially “mock transcript”. Let’s look at another part of the business. What has surprised you most since you launched?",
+  "The point about “mock transcript” stands out. To bring this together, here’s my final question. Where do you want this to be in a year?",
+  "This is Cover Founder News. Want to join us as a guest on the show? Visit coverfounder.com to sign up and produce your news coverage for free. Until our next story, have a great day!",
+  "To recap, the founder describes the business this way: mock transcript; mock transcript; mock transcript; mock transcript.",
+  "Tobi, welcome to our studio at Cover Founder. We're excited to have you here. What problem are you solving, and who feels it most?",
+  "Tonight's featured startup: Acme Farms. Acme Farms raised a seed round to help farmers sell produce online Joining us in the studio is Tobi Oyinlola.",
+  "You’ve highlighted “mock transcript”. I’d like to explore what comes next. What made you start this company?"
+ ],
+ "render_props": {
+  "anchorCovers": true,
+  "anchorDurationSeconds": 83.2,
+  "anchorFullFrame": false,
+  "brand": {
+   "accent": "#F5A623",
+   "primary": "#0B3D91"
+  },
+  "brandCards": true,
+  "brandIntroSeconds": 5.0,
+  "brandOutroSeconds": 6.0,
+  "channel": {
+   "locked": true,
+   "name": "Cover Founder"
+  },
+  "disclosures": {
+   "anchor": "AI-generated anchor",
+   "tag": "Featured"
+  },
+  "headline": "Acme Farms: Acme Farms raised a seed round to help farmers sell produce online",
+  "layout": "column",
+  "liveLocation": "Toronto, Canada",
+  "lowerThirds": [
+   {
+    "subtitle": "Funding Round",
+    "title": "Acme Farms"
+   }
+  ],
+  "presenter": {
+   "name": "",
+   "title": ""
+  },
+  "publishedLabel": "<published-label>",
+  "scenes": [
+   {
+    "seconds": 10.0,
+    "src": "<url:projects/<id>/anchor.webm>",
+    "type": "anchor"
+   },
+   {
+    "seconds": 9.6,
+    "src": "<url:projects/<id>/question-0.webm>",
+    "type": "question"
+   },
+   {
+    "cues": [
+     {
+      "end": 2.0,
+      "start": 0.0,
+      "text": "mock transcript"
+     }
+    ],
+    "founder": {
+     "location": "",
+     "name": "Tobi Oyinlola",
+     "title": "CEO, Acme"
+    },
+    "headline": "OYINLOLA: MOCK TRANSCRIPT",
+    "layout": "column",
+    "pipSrc": "<url:projects/<id>/question-0.webm>",
+    "question": "What problem are you solving, and who feels it most?",
+    "questionNumber": 1,
+    "seconds": 4.0,
+    "src": "<url:projects/<id>/takes/<id>/out/answer.mp4>",
+    "startFromSeconds": 0.0,
+    "totalQuestions": 4,
+    "type": "answer"
+   },
+   {
+    "seconds": 6.8,
+    "src": "<url:projects/<id>/question-1.webm>",
+    "type": "question"
+   },
+   {
+    "cues": [
+     {
+      "end": 2.0,
+      "start": 0.0,
+      "text": "mock transcript"
+     }
+    ],
+    "founder": {
+     "location": "",
+     "name": "Tobi Oyinlola",
+     "title": "CEO, Acme"
+    },
+    "headline": "OYINLOLA: mock transcript",
+    "layout": "column",
+    "pipSrc": "<url:projects/<id>/question-1.webm>",
+    "question": "What made you start this company?",
+    "questionNumber": 2,
+    "seconds": 4.0,
+    "src": "<url:projects/<id>/takes/<id>/out/answer.mp4>",
+    "startFromSeconds": 0.0,
+    "totalQuestions": 4,
+    "type": "answer"
+   },
+   {
+    "seconds": 10.0,
+    "src": "<url:projects/<id>/question-2.webm>",
+    "type": "question"
+   },
+   {
+    "cues": [
+     {
+      "end": 2.0,
+      "start": 0.0,
+      "text": "mock transcript"
+     }
+    ],
+    "founder": {
+     "location": "",
+     "name": "Tobi Oyinlola",
+     "title": "CEO, Acme"
+    },
+    "headline": "OYINLOLA: mock transcript",
+    "layout": "column",
+    "pipSrc": "<url:projects/<id>/question-2.webm>",
+    "question": "What has surprised you most since you launched?",
+    "questionNumber": 3,
+    "seconds": 4.0,
+    "src": "<url:projects/<id>/takes/<id>/out/answer.mp4>",
+    "startFromSeconds": 0.0,
+    "totalQuestions": 4,
+    "type": "answer"
+   },
+   {
+    "seconds": 10.0,
+    "src": "<url:projects/<id>/question-3.webm>",
+    "type": "question"
+   },
+   {
+    "cues": [
+     {
+      "end": 2.0,
+      "start": 0.0,
+      "text": "mock transcript"
+     }
+    ],
+    "founder": {
+     "location": "",
+     "name": "Tobi Oyinlola",
+     "title": "CEO, Acme"
+    },
+    "headline": "OYINLOLA: mock transcript",
+    "layout": "column",
+    "pipSrc": "<url:projects/<id>/question-3.webm>",
+    "question": "Where do you want this to be in a year?",
+    "questionNumber": 4,
+    "seconds": 4.0,
+    "src": "<url:projects/<id>/takes/<id>/out/answer.mp4>",
+    "startFromSeconds": 0.0,
+    "totalQuestions": 4,
+    "type": "answer"
+   },
+   {
+    "seconds": 6.8,
+    "src": "<url:projects/<id>/anchor-analysis.webm>",
+    "type": "anchor"
+   },
+   {
+    "seconds": 14.0,
+    "src": "<url:projects/<id>/anchor-outro.webm>",
+    "type": "anchor"
+   }
+  ],
+  "studio": "default",
+  "thumbnailAtSeconds": 26.2,
+  "tickerLines": [
+   "FEATURED: Acme Farms"
+  ],
+  "totalSeconds": 83.2
+ },
+ "scene_plan": {
+  "aspect": "16:9",
+  "captions": [
+   {
+    "end": 3.2,
+    "start": 0.0,
+    "text": "Tonight's featured startup: Acme Farms. Acme Farms raised"
+   },
+   {
+    "end": 6.4,
+    "start": 3.2,
+    "text": "a seed round to help farmers sell produce"
+   },
+   {
+    "end": 9.6,
+    "start": 6.4,
+    "text": "online Joining us in the studio is Tobi"
+   },
+   {
+    "end": 10.0,
+    "start": 9.6,
+    "text": "Oyinlola."
+   },
+   {
+    "end": 13.2,
+    "start": 10.0,
+    "text": "Tobi, welcome to our studio at Cover Founder."
+   },
+   {
+    "end": 16.4,
+    "start": 13.2,
+    "text": "We're excited to have you here. What problem"
+   },
+   {
+    "end": 19.6,
+    "start": 16.4,
+    "text": "are you solving, and who feels it most?"
+   },
+   {
+    "end": 21.6,
+    "start": 19.6,
+    "text": "mock transcript"
+   },
+   {
+    "end": 26.8,
+    "start": 23.6,
+    "text": "You’ve highlighted “mock transcript”. I’d like to explore"
+   },
+   {
+    "end": 30.0,
+    "start": 26.8,
+    "text": "what comes next. What made you start this"
+   },
+   {
+    "end": 30.4,
+    "start": 30.0,
+    "text": "company?"
+   },
+   {
+    "end": 32.4,
+    "start": 30.4,
+    "text": "mock transcript"
+   },
+   {
+    "end": 37.6,
+    "start": 34.4,
+    "text": "That adds context to the story, especially “mock"
+   },
+   {
+    "end": 40.8,
+    "start": 37.6,
+    "text": "transcript”. Let’s look at another part of the"
+   },
+   {
+    "end": 44.0,
+    "start": 40.8,
+    "text": "business. What has surprised you most since you"
+   },
+   {
+    "end": 44.4,
+    "start": 44.0,
+    "text": "launched?"
+   },
+   {
+    "end": 46.4,
+    "start": 44.4,
+    "text": "mock transcript"
+   },
+   {
+    "end": 51.6,
+    "start": 48.4,
+    "text": "The point about “mock transcript” stands out. To"
+   },
+   {
+    "end": 54.8,
+    "start": 51.6,
+    "text": "bring this together, here’s my final question. Where"
+   },
+   {
+    "end": 58.0,
+    "start": 54.8,
+    "text": "do you want this to be in a"
+   },
+   {
+    "end": 58.4,
+    "start": 58.0,
+    "text": "year?"
+   },
+   {
+    "end": 60.4,
+    "start": 58.4,
+    "text": "mock transcript"
+   },
+   {
+    "end": 65.6,
+    "start": 62.4,
+    "text": "To recap, the founder describes the business this"
+   },
+   {
+    "end": 68.8,
+    "start": 65.6,
+    "text": "way: mock transcript; mock transcript; mock transcript; mock"
+   },
+   {
+    "end": 69.2,
+    "start": 68.8,
+    "text": "transcript."
+   },
+   {
+    "end": 72.4,
+    "start": 69.2,
+    "text": "This is Cover Founder News. Want to join"
+   },
+   {
+    "end": 75.6,
+    "start": 72.4,
+    "text": "us as a guest on the show? Visit"
+   },
+   {
+    "end": 78.8,
+    "start": 75.6,
+    "text": "coverfounder.com to sign up and produce your news"
+   },
+   {
+    "end": 82.0,
+    "start": 78.8,
+    "text": "coverage for free. Until our next story, have"
+   },
+   {
+    "end": 83.2,
+    "start": 82.0,
+    "text": "a great day!"
+   }
+  ],
+  "layout": "column",
+  "project_id": "<id>",
+  "rules_version": 1,
+  "scenes": [
+   {
+    "asset": {
+     "key": "projects/<id>/anchor.webm",
+     "kind": "anchor"
+    },
+    "captions": true,
+    "cues": [],
+    "duration_s": 10.0,
+    "founder": null,
+    "headline": null,
+    "id": "s1",
+    "narration": "Tonight's featured startup: Acme Farms. Acme Farms raised a seed round to help farmers sell produce online Joining us in the studio is Tobi Oyinlola.",
+    "order": 0,
+    "poster": null,
+    "provenance": "owner_script",
+    "question": null,
+    "question_asset": null,
+    "question_index": null,
+    "question_number": null,
+    "requirements": [],
+    "total_questions": null,
+    "transition": "cut",
+    "trim_start_s": 0.0,
+    "type": "anchor_intro"
+   },
+   {
+    "asset": {
+     "key": "projects/<id>/question-0.webm",
+     "kind": "question_clip"
+    },
+    "captions": true,
+    "cues": [],
+    "duration_s": 9.6,
+    "founder": null,
+    "headline": null,
+    "id": "s2",
+    "narration": "Tobi, welcome to our studio at Cover Founder. We're excited to have you here. What problem are you solving, and who feels it most?",
+    "order": 1,
+    "poster": null,
+    "provenance": "owner_script",
+    "question": "What problem are you solving, and who feels it most?",
+    "question_asset": null,
+    "question_index": 0,
+    "question_number": null,
+    "requirements": [],
+    "total_questions": null,
+    "transition": "cut",
+    "trim_start_s": 0.0,
+    "type": "anchor_question"
+   },
+   {
+    "asset": {
+     "key": "projects/<id>/takes/<id>/out/answer.mp4",
+     "kind": "take_video"
+    },
+    "captions": true,
+    "cues": [
+     {
+      "end": 2.0,
+      "start": 0.0,
+      "text": "mock transcript"
+     }
+    ],
+    "duration_s": 4.0,
+    "founder": {
+     "location": "",
+     "name": "Tobi Oyinlola",
+     "title": "CEO, Acme"
+    },
+    "headline": "OYINLOLA: MOCK TRANSCRIPT",
+    "id": "s3",
+    "narration": null,
+    "order": 2,
+    "poster": null,
+    "provenance": "founder_statement",
+    "question": "What problem are you solving, and who feels it most?",
+    "question_asset": {
+     "key": "projects/<id>/question-0.webm",
+     "kind": "question_clip"
+    },
+    "question_index": 0,
+    "question_number": 1,
+    "requirements": [],
+    "total_questions": 4,
+    "transition": "cut",
+    "trim_start_s": 0.0,
+    "type": "founder_column"
+   },
+   {
+    "asset": {
+     "key": "projects/<id>/question-1.webm",
+     "kind": "question_clip"
+    },
+    "captions": true,
+    "cues": [],
+    "duration_s": 6.8,
+    "founder": null,
+    "headline": null,
+    "id": "s4",
+    "narration": "You’ve highlighted “mock transcript”. I’d like to explore what comes next. What made you start this company?",
+    "order": 3,
+    "poster": null,
+    "provenance": "owner_script",
+    "question": "What made you start this company?",
+    "question_asset": null,
+    "question_index": 1,
+    "question_number": null,
+    "requirements": [],
+    "total_questions": null,
+    "transition": "cut",
+    "trim_start_s": 0.0,
+    "type": "anchor_question"
+   },
+   {
+    "asset": {
+     "key": "projects/<id>/takes/<id>/out/answer.mp4",
+     "kind": "take_video"
+    },
+    "captions": true,
+    "cues": [
+     {
+      "end": 2.0,
+      "start": 0.0,
+      "text": "mock transcript"
+     }
+    ],
+    "duration_s": 4.0,
+    "founder": {
+     "location": "",
+     "name": "Tobi Oyinlola",
+     "title": "CEO, Acme"
+    },
+    "headline": "OYINLOLA: mock transcript",
+    "id": "s5",
+    "narration": null,
+    "order": 4,
+    "poster": null,
+    "provenance": "founder_statement",
+    "question": "What made you start this company?",
+    "question_asset": {
+     "key": "projects/<id>/question-1.webm",
+     "kind": "question_clip"
+    },
+    "question_index": 1,
+    "question_number": 2,
+    "requirements": [],
+    "total_questions": 4,
+    "transition": "cut",
+    "trim_start_s": 0.0,
+    "type": "founder_column"
+   },
+   {
+    "asset": {
+     "key": "projects/<id>/question-2.webm",
+     "kind": "question_clip"
+    },
+    "captions": true,
+    "cues": [],
+    "duration_s": 10.0,
+    "founder": null,
+    "headline": null,
+    "id": "s6",
+    "narration": "That adds context to the story, especially “mock transcript”. Let’s look at another part of the business. What has surprised you most since you launched?",
+    "order": 5,
+    "poster": null,
+    "provenance": "owner_script",
+    "question": "What has surprised you most since you launched?",
+    "question_asset": null,
+    "question_index": 2,
+    "question_number": null,
+    "requirements": [],
+    "total_questions": null,
+    "transition": "cut",
+    "trim_start_s": 0.0,
+    "type": "anchor_question"
+   },
+   {
+    "asset": {
+     "key": "projects/<id>/takes/<id>/out/answer.mp4",
+     "kind": "take_video"
+    },
+    "captions": true,
+    "cues": [
+     {
+      "end": 2.0,
+      "start": 0.0,
+      "text": "mock transcript"
+     }
+    ],
+    "duration_s": 4.0,
+    "founder": {
+     "location": "",
+     "name": "Tobi Oyinlola",
+     "title": "CEO, Acme"
+    },
+    "headline": "OYINLOLA: mock transcript",
+    "id": "s7",
+    "narration": null,
+    "order": 6,
+    "poster": null,
+    "provenance": "founder_statement",
+    "question": "What has surprised you most since you launched?",
+    "question_asset": {
+     "key": "projects/<id>/question-2.webm",
+     "kind": "question_clip"
+    },
+    "question_index": 2,
+    "question_number": 3,
+    "requirements": [],
+    "total_questions": 4,
+    "transition": "cut",
+    "trim_start_s": 0.0,
+    "type": "founder_column"
+   },
+   {
+    "asset": {
+     "key": "projects/<id>/question-3.webm",
+     "kind": "question_clip"
+    },
+    "captions": true,
+    "cues": [],
+    "duration_s": 10.0,
+    "founder": null,
+    "headline": null,
+    "id": "s8",
+    "narration": "The point about “mock transcript” stands out. To bring this together, here’s my final question. Where do you want this to be in a year?",
+    "order": 7,
+    "poster": null,
+    "provenance": "owner_script",
+    "question": "Where do you want this to be in a year?",
+    "question_asset": null,
+    "question_index": 3,
+    "question_number": null,
+    "requirements": [],
+    "total_questions": null,
+    "transition": "cut",
+    "trim_start_s": 0.0,
+    "type": "anchor_question"
+   },
+   {
+    "asset": {
+     "key": "projects/<id>/takes/<id>/out/answer.mp4",
+     "kind": "take_video"
+    },
+    "captions": true,
+    "cues": [
+     {
+      "end": 2.0,
+      "start": 0.0,
+      "text": "mock transcript"
+     }
+    ],
+    "duration_s": 4.0,
+    "founder": {
+     "location": "",
+     "name": "Tobi Oyinlola",
+     "title": "CEO, Acme"
+    },
+    "headline": "OYINLOLA: mock transcript",
+    "id": "s9",
+    "narration": null,
+    "order": 8,
+    "poster": null,
+    "provenance": "founder_statement",
+    "question": "Where do you want this to be in a year?",
+    "question_asset": {
+     "key": "projects/<id>/question-3.webm",
+     "kind": "question_clip"
+    },
+    "question_index": 3,
+    "question_number": 4,
+    "requirements": [],
+    "total_questions": 4,
+    "transition": "cut",
+    "trim_start_s": 0.0,
+    "type": "founder_column"
+   },
+   {
+    "asset": {
+     "key": "projects/<id>/anchor-analysis.webm",
+     "kind": "anchor"
+    },
+    "captions": true,
+    "cues": [],
+    "duration_s": 6.8,
+    "founder": null,
+    "headline": null,
+    "id": "s10",
+    "narration": "To recap, the founder describes the business this way: mock transcript; mock transcript; mock transcript; mock transcript.",
+    "order": 9,
+    "poster": null,
+    "provenance": "owner_script",
+    "question": null,
+    "question_asset": null,
+    "question_index": null,
+    "question_number": null,
+    "requirements": [],
+    "total_questions": null,
+    "transition": "cut",
+    "trim_start_s": 0.0,
+    "type": "anchor_analysis"
+   },
+   {
+    "asset": {
+     "key": "projects/<id>/anchor-outro.webm",
+     "kind": "anchor"
+    },
+    "captions": true,
+    "cues": [],
+    "duration_s": 14.0,
+    "founder": null,
+    "headline": null,
+    "id": "s11",
+    "narration": "This is Cover Founder News. Want to join us as a guest on the show? Visit coverfounder.com to sign up and produce your news coverage for free. Until our next story, have a great day!",
+    "order": 10,
+    "poster": null,
+    "provenance": "owner_script",
+    "question": null,
+    "question_asset": null,
+    "question_index": null,
+    "question_number": null,
+    "requirements": [],
+    "total_questions": null,
+    "transition": "cut",
+    "trim_start_s": 0.0,
+    "type": "news_closing"
+   }
+  ],
+  "script_version_id": "<id>",
+  "total_s": 83.2,
+  "unconfirmed_claims": [],
+  "version": 1
+ }
+}

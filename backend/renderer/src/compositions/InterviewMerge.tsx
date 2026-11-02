@@ -8,6 +8,7 @@ import { NewsDesk, SOFT_TOP, StudioProvider } from "./NewsSet";
 import { CF, Fonts, MONO, SANS } from "./theme";
 import { LowerThird } from "./LowerThird";
 import { SceneEdge, useEdgeVolume } from "./SceneEdge";
+import { rule } from "../videoRules";
 
 export type Scene =
   | { type: "anchor" | "question"; src: string; seconds: number; headline?: string }
@@ -217,7 +218,7 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
 
 // The product's web address, top-right while the presenter signs off, for anyone who wants to look it up. (Top right so it never
 // sits on the presenter's name box or the headline bar at the bottom.)
-const URL_SHOWN_S = 5;
+export const URL_SHOWN_S: number = rule<number>("BIV-GFX-006");
 const UrlBadge: React.FC<{ url: string }> = ({ url }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
@@ -239,7 +240,7 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
   const frame = useCurrentFrame();
   let start = 0;
   const activeScene = p.scenes.find(scene => { const end = start + Math.max(1, Math.round(scene.seconds * fps)); const matches = frame >= start && frame < end; start = end; return matches; });
-  const liveLocation = activeScene?.type === "answer" ? activeScene.founder.location || "Founder interview" : "Toronto, Canada";
+  const liveLocation = activeScene?.type === "answer" ? activeScene.founder.location || "Founder interview" : rule<string>("BIV-GFX-002");
   return (
     <StudioProvider studio={p.studio}>
     <AbsoluteFill style={{ fontFamily: SANS, background: CF.ink }}>

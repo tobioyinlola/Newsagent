@@ -44,6 +44,7 @@ describe("silence parsing", () => {
 
 describe("processTake", () => {
   it("joins chunks, trims silence, normalises loudness and reports no flags for a good take", async () => {
+    // covers: BIV-INT-011
     const s = serve(recording("good.webm"));
     servers.push(s);
     const r = await processTake({ chunkUrls: s.urls, kind: "video", ext: "webm" });
@@ -57,6 +58,7 @@ describe("processTake", () => {
   }, 60_000);
 
   it("flags a silent take as no_speech", async () => {
+    // covers: BIV-INT-010
     const s = serve(recording("silent.webm", { tone: false }));
     servers.push(s);
     const r = await processTake({ chunkUrls: s.urls, kind: "video", ext: "webm" });
@@ -65,6 +67,7 @@ describe("processTake", () => {
   }, 60_000);
 
   it("flags a black picture as dark_video", async () => {
+    // covers: BIV-INT-010
     const s = serve(recording("dark.webm", { color: "black" }));
     servers.push(s);
     const r = await processTake({ chunkUrls: s.urls, kind: "video", ext: "webm" });
@@ -73,6 +76,7 @@ describe("processTake", () => {
   }, 60_000);
 
   it("keeps loud recordings with normalized playable audio and a diagnostic flag", async () => {
+    // covers: BIV-INT-010
     const s = serve(recording("clip.webm", { gain: 8 }));
     servers.push(s);
     const r = await processTake({ chunkUrls: s.urls, kind: "video", ext: "webm" });

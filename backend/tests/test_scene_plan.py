@@ -77,6 +77,7 @@ def test_product_footage_needs_its_media_and_synthetic_shots_are_marked():
 
 
 async def test_missing_media_is_found_before_rendering(client, workspace):
+    # covers("BIV-QC-006")
     storage = registry.get_storage()
     await storage.put("here.webm", b"x", "video/webm")
     ok = plan([anchor(0, key="here.webm")])
@@ -96,6 +97,7 @@ async def finished(client, answers=(0, 1, 2, 3)):
 
 
 async def test_the_plan_is_saved_with_the_video_and_describes_it(client, workspace, maker):
+    # covers("BIV-SCR-010")
     pid = await finished(client)
     assert (await client.post(f"/v1/projects/{pid}/interview/merge", headers=OWNER)).status_code == 200
     await get_queue().drain()

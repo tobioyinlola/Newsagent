@@ -97,6 +97,7 @@ async def test_bad_files_are_refused_and_removed(client, workspace, maker):
 
 
 async def test_clips_must_suit_their_role_and_the_screen(client, workspace):
+    # covers("BIV-SCN-006")
     renderer = registry.get_renderer()
     renderer.analysis_override = good(45)
     assert "must last between" in (await add_clip(client, "intro")).json()["detail"]

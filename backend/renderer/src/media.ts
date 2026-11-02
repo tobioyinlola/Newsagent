@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { assertAllowedUrl } from "./urlguard";
 import { promisify } from "node:util";
+import { rule } from "./videoRules";
 
 const run = promisify(execFile);
 const MAX_BYTES = 1024 ** 3; // 1 GB cap on anything we download for analysis
@@ -45,10 +46,13 @@ export async function analyzeFile(file: string): Promise<Analysis> {
   };
 }
 
-// Broadcast-style loudness (-16 LUFS, -1.5 dBTP). Video is stream-copied, so this is fast.
+const LOUD = rule<{ loudness_lufs: number; true_peak_db: number; lra: number }>("BIV-AUD-001");
+export const BROADCAST_LOUDNESS = `loudnorm=I=${LOUD.loudness_lufs}:TP=${LOUD.true_peak_db}:LRA=${LOUD.lra}`;
+
+// Broadcast-style loudness (-16 LUFS, -1.5 dBTP; Video Rulebook BIV-AUD-001). Video is stream-copied, so this is fast.
 export async function normalizeAudio(file: string): Promise<void> {
   const tmp = `${file}.norm.mp4`;
-  await run("ffmpeg", ["-y", "-i", file, "-c:v", "copy", "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-c:a", "aac", "-b:a", "192k", tmp], { maxBuffer: 64 * 1024 * 1024 });
+  await run("ffmpeg", ["-y", "-i", file, "-c:v", "copy", "-af", BROADCAST_LOUDNESS, "-c:a", "aac", "-b:a", "192k", tmp], { maxBuffer: 64 * 1024 * 1024 });
   fs.renameSync(tmp, file);
 }
 

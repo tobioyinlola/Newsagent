@@ -60,6 +60,7 @@ async def interviewed_project(client, answers=(0, 1, 2, 3), segments=None):
 
 # ---------- approval: nothing paid runs before the interview ----------
 async def test_live_approval_waits_for_the_interview_and_spends_nothing(client, workspace, maker):
+    # covers("BIV-SCR-001")
     pid = await live_project(client)
     p = (await client.get(f"/v1/projects/{pid}", headers=OWNER)).json()
     assert p["state"] == "interviewing" and p["interview_mode"] == "live" and p["founder_name"] == "Tobi Oyinlola"
@@ -122,6 +123,7 @@ async def test_only_the_owner_can_open_the_room(client, workspace, maker):
 
 # ---------- recording: camera required, 5 minute design ----------
 async def test_live_recording_requires_the_camera(client, workspace):
+    # covers("BIV-INT-003")
     pid = await live_project(client)
     token = (await start(client, pid)).json()["token"]
     v = (await client.get(f"/v1/interview/{token}")).json()
@@ -153,6 +155,7 @@ async def test_live_answers_are_capped_in_length(client, workspace):
 
 
 def test_every_answer_has_a_full_minute_even_after_long_previous_answers():
+    # covers("BIV-INT-004", "BIV-INT-005", "BIV-INT-008")
     for elapsed in (0, 120, 240, 500):
         assert iv.answer_window_s(elapsed, 1) == 60
         assert iv.answer_window_s(elapsed, 4) == 60

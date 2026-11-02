@@ -54,6 +54,7 @@ def test_normal_business_words_are_not_flagged(text):
 async def test_abusive_take_requires_retake_keeps_media_and_audits_without_logging_words(
     client, workspace, maker, monkeypatch
 ):
+    # covers("BIV-INT-009")
     pid = await live_project(client)
     token = (await start(client, pid)).json()["token"]
     original = registry.get_transcription().transcribe

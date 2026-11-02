@@ -3,8 +3,10 @@
 import hashlib
 import re
 
+from app.video_rules import value as rule_value
+
 VERSION = 1
-REPORTER_LOCATION = "Toronto, Canada"
+REPORTER_LOCATION: str = rule_value("BIV-GFX-002")
 
 
 def excerpt(text: str, words: int = 18) -> str:

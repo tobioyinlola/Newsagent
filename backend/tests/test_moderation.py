@@ -124,6 +124,7 @@ async def test_rejection_explains_and_editing_requires_a_fresh_review(client, wo
 
 
 async def test_blocked_script_never_runs_and_is_recorded(client, workspace, maker):
+    # covers("BIV-SAFE-002")
     pid, _ = await make_script(client, "We are selling firearms to anyone who asks.")
     r = await client.post(f"/v1/projects/{pid}/script/approve", headers=OWNER)
     assert r.status_code == 422 and r.json()["detail"]["error"] == "content_blocked"
@@ -168,6 +169,7 @@ async def test_llm_verdict_is_merged_and_an_llm_outage_fails_safe(client, worksp
 
 
 async def test_founder_words_are_screened_before_the_final_render(client, workspace):
+    # covers("BIV-SAFE-002")
     from app.integrations.transcription.base import Transcript
 
     class Pitchy:

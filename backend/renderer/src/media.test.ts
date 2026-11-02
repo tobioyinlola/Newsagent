@@ -20,6 +20,7 @@ describe("media analysis", () => {
     expect(a.loudness_lufs!).toBeLessThan(-20);
   });
   it("normalizes quiet audio to about -16 LUFS without changing duration", async () => {
+    // covers: BIV-AUD-001
     const f = make("quiet2.mp4", "volume=0.05", 6);
     await normalizeAudio(f);
     const a = await analyzeFile(f);
@@ -45,6 +46,7 @@ describe("media analysis", () => {
     expect(Math.abs(b.duration_s - a.duration_s)).toBeLessThan(0.2);
   }, 120_000); // a slow-preset x264 encode: about 8 s on a busy machine, so the default 5 s limit made it fail at random
   it("keeps the HD file's normalised sound in the light version, so it cannot clip where the HD file does not", async () => {
+    // covers: BIV-AUD-003
     // loud, peaky noise normalised the way finished renders are: the light file must not re-encode it past the quality gate's -0.1 dB
     const hd = path.join(dir, "loud-hd.mp4");
     execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=blue:s=320x180:r=30:d=4", "-f", "lavfi", "-i", "anoisesrc=d=4:c=pink:a=0.9", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", hd]);

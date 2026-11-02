@@ -20,9 +20,10 @@ from app.services import script_polish as polish
 from app.services import state_machine as sm
 from app.services.claims import detect_claims
 from app.services.safety import find_banned
+from app.video_rules import value as rule_value
 
 MAX_FEATURED = iv.MAX_QUESTIONS  # every answer can be in the video; each one costs a presenter question clip
-PRESENTER_WORDS = 65  # the opening the presenter speaks; every second of it is paid for
+PRESENTER_WORDS: int = rule_value("BIV-SCR-002")  # the opening the presenter speaks; every second of it is paid for
 
 TYPES = {
     "product_launch": "Product launch",

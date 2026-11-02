@@ -128,6 +128,7 @@ def test_rate_limit_hint_is_kept_and_capped():
 
 # ---------- never pay twice ----------
 async def test_a_crash_while_waiting_resumes_the_same_vendor_job(client, workspace, maker):
+    # covers("BIV-COST-005")
     vendor = AsyncVendor()
     vendor.crash_on_poll = 1  # first attempt dies after the vendor accepted the job
     registry.override(avatar=vendor)
@@ -142,6 +143,7 @@ async def test_a_crash_while_waiting_resumes_the_same_vendor_job(client, workspa
 
 
 async def test_the_same_request_twice_is_one_paid_generation(client, workspace, maker):
+    # covers("BIV-COST-005")
     vendor = AsyncVendor()
     vendor.pending_polls = 0
     registry.override(avatar=vendor)
@@ -171,6 +173,7 @@ async def _false():
 
 
 async def test_vendor_concurrency_is_capped(client, workspace, maker):
+    # covers("BIV-COST-003")
     vendor = AsyncVendor()
     registry.override(avatar=vendor)
     pid = await approved_project(client)

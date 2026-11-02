@@ -2,6 +2,7 @@ import { cardMotion } from "./broadcastMotion";
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { CF, CFSymbol, SANS } from "./theme";
+import { rule } from "../videoRules";
 
 // Broadcast lower third (news-channel style): a name box above the right end of a full-width headline bar, the bar opening
 // with a Cover Founder NEWS block. Sits just above the ticker. The name box slides in after half a second; the headline stays.
@@ -11,7 +12,8 @@ export const LowerThird: React.FC<{ name?: string; title?: string; location?: st
   const portrait = height > width;
   const u = Math.min(width, height) / 1080;
   const barIn = cardMotion(frame, durationInFrames, fps);
-  const nameIn = cardMotion(frame, durationInFrames, fps, .5, 6);
+  const card = rule<{ delay: number; hold: number }>("BIV-GFX-007");
+  const nameIn = cardMotion(frame, durationInFrames, fps, card.delay, card.hold);
   const left = 48 * u, right = 48 * u, bottom = 72 * u + 26 * u; // clear of the ticker
   const barH = (portrait ? 96 : 78) * u;
   const headlineWidth = Math.max(240 * u, width - left - right - 282 * u);

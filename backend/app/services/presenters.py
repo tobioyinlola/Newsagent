@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from app.config import get_settings
 from app.integrations import registry
 from app.integrations.avatar.base import Presenter
+from app.video_rules import value as rule_value
 
 TTL_S = 900
 _cache: dict[str, tuple[float, list[Presenter]]] = {}
@@ -69,7 +70,4 @@ async def resolve(requested: str | None) -> str | None:
 
 # The sign-off every video ends with. It is the same words each time on purpose: the presenter clip for it is made once per
 # presenter and voice, then reused by every later video at no vendor cost. (An owner who edits it pays for the new words.)
-STANDARD_OUTRO = (
-    "This is Cover Founder News. Want to join us as a guest on the show? Visit coverfounder.com to sign up and produce "
-    "your news coverage for free. Until our next story, have a great day!"
-)
+STANDARD_OUTRO: str = rule_value("BIV-SCR-003")

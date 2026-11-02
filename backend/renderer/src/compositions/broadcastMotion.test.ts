@@ -4,6 +4,7 @@ import { broadcastClock } from "./broadcastClock";
 
 describe("broadcast graphics", () => {
   it("brings cards in and out smoothly without shifting scene timing", () => {
+    // covers: BIV-GFX-007
     const values = Array.from({ length: 240 }, (_, f) => cardMotion(f, 240, 30, .5, 6));
     expect(values[0]).toBe(0); expect(values[60]).toBe(1); expect(values[239]).toBe(0);
     expect(values.every(v => Number.isFinite(v) && v >= 0 && v <= 1)).toBe(true);

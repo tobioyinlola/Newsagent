@@ -34,6 +34,7 @@ async def test_interview_pipeline_reaches_awaiting_founder_with_clips(client, wo
 
 
 async def test_clips_are_not_regenerated_or_recharged_on_rerun(client, workspace, maker):
+    # covers("BIV-COST-002")
     from app.pipeline.runner import run_step
 
     pid = await make_awaiting_founder(client)
@@ -45,6 +46,7 @@ async def test_clips_are_not_regenerated_or_recharged_on_rerun(client, workspace
 
 
 async def test_interview_questions_validated_at_approval(client, workspace):
+    # covers("BIV-INT-002")
     r = await client.post("/v1/projects", json={"brief_text": "Acme sells farm produce online."}, headers=OWNER)
     pid = r.json()["id"]
     s = (await client.post(f"/v1/projects/{pid}/script/generate", headers=OWNER)).json()
@@ -246,6 +248,7 @@ async def test_retake_supersedes_previous(client, workspace, maker):
 
 # ---------- quality flags ----------
 async def test_bad_take_is_flagged_with_plain_message(client, workspace):
+    # covers("BIV-INT-009")
     pid = await make_awaiting_founder(client)
     token = await invite(client, pid)
     registry.get_renderer().process_flags = ["dark_video", "no_speech"]

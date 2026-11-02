@@ -6,6 +6,7 @@ from abc import abstractmethod
 
 from app.integrations.llm.base import NewsDraft, ScriptDraft, ScriptLLM, StoryDraft
 from app.services.claims import detect_claims
+from app.video_rules import value as rule_value
 
 SYSTEM = (
     "You write scripts for a short news-style video on the Cover Founder channel, which features a startup. "
@@ -56,7 +57,7 @@ class JsonScriptLLM(ScriptLLM):
         raw = await self._json(
             "Write a 60-90 second anchor script as JSON with keys segments [{kind,text}], "
             "ticker_lines [str], lower_thirds [{title,subtitle}], interview_questions [str]. "
-            "interview_questions: exactly 4 short, open questions (each under 25 words, never yes/no) that a "
+            f"interview_questions: exactly {rule_value('BIV-INT-001')} short, open questions (each under 25 words, never yes/no) that a "
             "presenter would ask the founder about THIS announcement, each answerable in about 40 seconds, "
             "ordered from the story to the vision; no two questions may ask the same thing; address the founder directly, do not name them in the questions. "
             f"Tone: {tone}. Facts: {json.dumps(facts)}"
@@ -94,7 +95,7 @@ class JsonScriptLLM(ScriptLLM):
             "numbers, names or quotes. "
             "Also return answer_bridges: one distinct, natural acknowledgement per interview answer, grounded in that answer, "
             "leading smoothly into the next question without repeating the same opening or generic thank-you. "
-            "Return startup_summary: 50-80 spoken words recapping the business after the final answer, before a separate closing. "
+            f"Return startup_summary: {rule_value('BIV-SCR-007')[0]}-{rule_value('BIV-SCR-007')[1]} spoken words recapping the business after the final answer, before a separate closing. "
             "Each chyron must include the founder surname and a short sentence summarizing THAT answer, never the overall story headline. "
             f"Announcement type: {announcement_type}. Facts: {json.dumps(facts)}\nInterview:\n{said}"
         )

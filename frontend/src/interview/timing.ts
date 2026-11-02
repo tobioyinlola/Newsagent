@@ -1,9 +1,12 @@
+import { rule } from "../lib/videoRules";
+
 // Every answer has 60 seconds, preceded by a five-second countdown and followed by five seconds to round up.
-export const MAX_TOTAL_S = 360; // estimate for the programme, never used to shorten an answer
-export const MAX_ANSWER_S = 60;
-export const MIN_ANSWER_S = 15;
-export const COUNTDOWN_S = 5;
-export const ROUND_UP_S = 5;
+// The values come from the Video Rulebook (backend/app/video_rules/rulebook.py).
+export const MAX_TOTAL_S = rule<number>("BIV-INT-008"); // estimate for the programme, never used to shorten an answer
+export const MAX_ANSWER_S = rule<number>("BIV-INT-004");
+export const MIN_ANSWER_S = rule<number>("BIV-INT-005");
+export const COUNTDOWN_S = rule<number>("BIV-INT-006");
+export const ROUND_UP_S = rule<number>("BIV-INT-007");
 
 export function answerWindow(_elapsedS: number, questionsLeft: number, max = MAX_ANSWER_S, _min = MIN_ANSWER_S): number {
   void _elapsedS; void _min;

@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import video_rules
 from app.config import VENDOR_POLICIES, get_settings
 from app.db import session_maker
 from app.integrations import registry
@@ -30,6 +31,7 @@ from app.services.interview import answer_cues, merge_srt, parse_srt, shifted_cu
 from app.services.notifications import low_balance_alert, notify_operators, vendor_budget_alert
 from app.services.safety import find_banned
 from app.services.spend_guard import LimitReached, SpendGuard
+from app.video_rules import value as rule_value
 
 log = logging.getLogger("pipeline")
 
@@ -168,7 +170,7 @@ def published_label(now: datetime | None = None) -> str:
     return f"{t:%b} {t.day}, {t.year} · {t.hour % 12 or 12}:{t:%M} {'AM' if t.hour < 12 else 'PM'} {t.tzname()}".upper()
 
 
-BRAND_INTRO_S, BRAND_OUTRO_S = 5.0, 6.0  # keep in step with renderer/src/compositions/brand.ts
+BRAND_INTRO_S, BRAND_OUTRO_S = float(rule_value("BIV-SCN-005")["intro"]), float(rule_value("BIV-SCN-005")["outro"])  # keep in step with renderer/src/compositions/brand.ts
 
 
 def brand_lead() -> float:
@@ -461,7 +463,7 @@ async def _paid_avatar_asset(
     return cost
 
 
-PARALLEL_CLIPS = 3  # presenter clips made at once (the avatar vendor's own concurrency limit)
+PARALLEL_CLIPS: int = rule_value("BIV-COST-003")  # presenter clips made at once (the avatar vendor's own concurrency limit)
 
 
 async def _paid_clips(session: AsyncSession, project: Project, guard: SpendGuard, jobs: list[dict]) -> Decimal:
@@ -930,7 +932,7 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
             or qclip is None
         ):
             return False
-        return float(take.duration_s or 0) - ans.get("trim_start_s", 0) - ans.get("trim_end_s", 0) >= 1.0
+        return float(take.duration_s or 0) - ans.get("trim_start_s", 0) - ans.get("trim_end_s", 0) >= rule_value("BIV-SCN-003")
 
     shown = [q for q in plan["order"] if usable(q)]
     layout = plan["layout"] if plan["layout"] in sp.LAYOUT_SCENE else "pip"
@@ -1082,7 +1084,9 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
     await sp.validate_assets(
         scene_plan, storage
     )  # missing media fails now, with a message, before any render time is spent
-    project.scene_plan, project.scene_plan_hash = scene_plan.model_dump(mode="json"), scene_plan.hash()
+    # which rulebook made this video (kept beside the plan, outside its hash, so recording it never forces a re-render)
+    stored = scene_plan.model_dump(mode="json") | {"rules_version": video_rules.VERSION}
+    project.scene_plan, project.scene_plan_hash = stored, scene_plan.hash()
     t_cursor = scene_plan.total_s
     scenes_out = sp.to_render_scenes(scene_plan, lambda k: storage.presign_get(k, RENDER_LINK_S))
     base = await build_overlay_props(session, project, script, t_cursor)
@@ -1137,7 +1141,7 @@ def chyron_for(script: ScriptVersion, q: int) -> str:
     """The headline bar while the founder answers question q: a short line from what they said (written with the story),
     with a neutral answer label if legacy metadata is missing."""
     chyrons = (script.story or {}).get("chyrons") or {}
-    return str(chyrons.get(str(q)) or "Founder: Shares the story behind the business")[:150]
+    return str(chyrons.get(str(q)) or rule_value("BIV-GFX-005"))[:150]
 
 
 PRESENTER_ROLES = {  # first name -> (name shown on screen, role shown under it)
@@ -1223,15 +1227,16 @@ def quality_gate(result: dict, outputs: int) -> list[str]:  # outputs = expected
     )
     for key, a in result.get("analyses", {}).items():
         name = key.rsplit("/", 1)[-1]
-        if abs(a["duration_s"] - expected) > max(1.0, 0.05 * expected):
+        length = rule_value("BIV-QC-001")
+        if abs(a["duration_s"] - expected) > max(length["min_s"], length["ratio"] * expected):
             problems.append(f"{name}: length {a['duration_s']:.1f}s does not match the {expected:.1f}s planned")
         if not a["has_audio"]:
             problems.append(f"{name}: no audio track")
         peak = a.get("true_peak_db")
-        if peak is not None and peak > -0.1:
+        if peak is not None and peak > rule_value("BIV-QC-003"):
             problems.append(f"{name}: audio is clipping ({peak:.1f} dB)")
         av, aa = a.get("video_duration_s"), a.get("audio_duration_s")
-        if av is not None and aa is not None and abs(av - aa) > 0.5:
+        if av is not None and aa is not None and abs(av - aa) > rule_value("BIV-QC-004"):
             problems.append(f"{name}: audio and video lengths differ by {abs(av - aa):.1f}s")
     return problems
 

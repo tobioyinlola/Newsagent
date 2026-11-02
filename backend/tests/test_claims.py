@@ -2,6 +2,7 @@ from app.services.claims import detect_claims
 
 
 def test_flags_numbers_and_superlatives():
+    # covers("BIV-SCR-008")
     cats = {
         c.category
         for c in detect_claims(

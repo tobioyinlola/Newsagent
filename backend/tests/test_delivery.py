@@ -26,6 +26,7 @@ async def test_downloads_signed_urls_and_disclosure(client, workspace):
 
 
 async def test_every_video_is_offered_as_hd_and_light_and_the_light_one_is_made_from_the_hd_file(client, workspace):
+    # covers("BIV-SCN-009")
     from app.integrations import registry
 
     pid = await make_final_ready(client)
@@ -148,6 +149,7 @@ async def test_email_failure_does_not_break_pipeline(client, workspace):
 
 
 async def test_real_network_names_blocked_before_any_spend(client, workspace, maker):
+    # covers("BIV-SAFE-001")
     from app.models import Workspace
     from app.services.safety import find_banned
 
@@ -219,6 +221,7 @@ def test_quality_gate_passes_good_media():
     ],
 )
 def test_quality_gate_catches_bad_media(bad, needle):
+    # covers("BIV-QC-001", "BIV-QC-002", "BIV-QC-003", "BIV-QC-004")
     from app.pipeline.steps import quality_gate
 
     assert any(needle in p for p in quality_gate(_result(**bad), 3))
@@ -253,6 +256,7 @@ async def test_renderer_receives_real_anchor_duration(client, workspace, maker):
 
 
 async def test_text_overflow_blocked_at_approval(client, workspace):
+    # covers("BIV-GFX-003", "BIV-GFX-004")
     r = await client.post("/v1/projects", json={"brief_text": "Acme helps farmers sell produce online."}, headers=OWNER)
     pid = r.json()["id"]
     script = (await client.post(f"/v1/projects/{pid}/script/generate", headers=OWNER)).json()

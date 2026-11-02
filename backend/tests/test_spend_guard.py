@@ -33,6 +33,7 @@ async def test_reserve_and_settle_refunds_difference(maker, workspace):
     ],
 )
 async def test_refused_step_costs_nothing(maker, workspace, setup, code):
+    # covers("BIV-COST-004")
     async with maker() as s:
         ws = await s.get(Workspace, workspace)
         vb = (await s.execute(select(VendorBudget).where(VendorBudget.vendor == "heygen"))).scalar_one()
@@ -51,6 +52,7 @@ async def test_refused_step_costs_nothing(maker, workspace, setup, code):
 
 
 async def test_missing_vendor_budget_fails_closed(maker, workspace):
+    # covers("BIV-COST-004")
     async with maker() as s:
         with pytest.raises(LimitReached) as e:
             await SpendGuard(s).reserve(workspace, "unknown", 0.01)

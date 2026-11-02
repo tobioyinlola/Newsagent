@@ -39,6 +39,7 @@ async def interviewed(client, answers=(0, 1, 2, 3)):
 
 
 async def test_details_open_the_interview_and_spend_nothing(client, workspace, maker):
+    # covers("BIV-INT-001", "BIV-SCR-001")
     pid = await guided_project(client)
     p = (await client.get(f"/v1/projects/{pid}", headers=OWNER)).json()
     assert p["state"] == "interviewing" and p["flow"] == "guided" and p["announcement_type"] == "funding_round"
@@ -50,6 +51,7 @@ async def test_details_open_the_interview_and_spend_nothing(client, workspace, m
 
 
 async def test_finishing_the_interview_writes_the_story_for_review(client, workspace, maker):
+    # covers("BIV-SCR-009")
     pid = await interviewed(client)
     r = await client.post(f"/v1/projects/{pid}/interview/merge", headers=OWNER)
     assert r.status_code == 200, r.text
@@ -158,6 +160,7 @@ def test_the_product_address_is_shown_the_way_people_type_it():
 
 
 def test_the_presenter_always_has_an_opening():
+    # covers("BIV-SCR-002")
     from app.integrations.llm.base import ScriptSegment
     from app.services.guided import _trim_words
 
