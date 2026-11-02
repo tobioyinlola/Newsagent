@@ -69,8 +69,8 @@ async def test_full_mock_pipeline_run(client, workspace, maker, monkeypatch, ver
         ws = await s.get(Workspace, workspace)
         assert ws.credit_balance == Decimal("10") - VIDEO - Decimal(data["cost_total"])
         job = next(j for j in jobs if j.stage == "final_render")
-        # hard rule 2: disclosures are always in the render props
-        assert job.result["props"]["disclosures"] == {"tag": "Featured", "anchor": "AI-generated anchor"}
+        # no "Featured" / "AI-generated anchor" labels in the render data (Video Rulebook BIV-GFX-009)
+        assert "disclosures" not in job.result["props"]
 
 
 async def test_rerun_is_idempotent_and_does_not_double_charge(client, workspace, maker):
