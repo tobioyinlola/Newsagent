@@ -48,8 +48,10 @@ export type MergeProps = {
   totalSeconds: number;
   headline?: string; // the story's headline: the bar under the presenter
   presenter?: { name: string; title: string }; // the presenter's name box
-  productUrl?: string; // the product's address, shown in the top-right corner from `productUrlFromSeconds` (the sign-off) to the end
+  productUrl?: string; // the product's address, shown in the top-right corner from `productUrlFromSeconds` for `productUrlSeconds`
   productUrlFromSeconds?: number;
+  productUrlSeconds?: number; // how long the card is on screen (v4: the whole closing remark; older videos: a few seconds)
+  productUrlStatic?: boolean; // v4 (BIV-GFX-011): the card comes in once and stays still to the end of the line, no slide-out
   liveLocation?: string; // LIVE badge text, top-right
   publishedLabel?: string; // date and time stamp
   brandCards?: boolean; // open with the Cover Founder intro and close with the outro
@@ -215,15 +217,21 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
   );
 };
 
-// The product's web address, top-right while the presenter signs off, for anyone who wants to look it up. (Top right so it never
-// sits on the presenter's name box or the headline bar at the bottom.)
-export const URL_SHOWN_S: number = rule<number>("BIV-GFX-006");
-const UrlBadge: React.FC<{ url: string }> = ({ url }) => {
+// The product's web address, top-right, for anyone who wants to look it up. (Top right so it never sits on a name box or the
+// headline bar at the bottom.) Video Rulebook v4 (BIV-GFX-011): it comes in with the closing remark and stays still until that
+// line ends. Older videos keep their few seconds at the sign-off, sliding back out.
+export const LEGACY_URL_SECONDS = 5; // props from before the backend sent productUrlSeconds (e.g. Remotion studio samples)
+/** How far the card has gone back out (0 = fully shown). A still card never leaves while its line plays. */
+export function urlBadgeOut(frame: number, fps: number, seconds: number, still: boolean): number {
+  if (still) return 0;
+  return interpolate(frame, [fps * (seconds - 0.6), fps * seconds], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+}
+const UrlBadge: React.FC<{ url: string; seconds: number; still: boolean }> = ({ url, seconds, still }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
   const u = Math.min(width, height) / 1080;
   const inn = spring({ frame, fps, config: { damping: 16, stiffness: 140 }, durationInFrames: Math.round(fps * 0.7) });
-  const out = interpolate(frame, [fps * (URL_SHOWN_S - 0.6), fps * URL_SHOWN_S], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const out = urlBadgeOut(frame, fps, seconds, still);
   const slide = (1 - inn) * 120 + out * 120; // % of its own width: in from the right, and back out
   return (
     <div style={{ position: "absolute", right: 36 * u, top: (TOP_RIGHT_STACK + 28) * u, opacity: Math.min(inn, 1 - out), transform: `translateX(${slide}%)`, background: CF.ink, border: `${4 * u}px solid ${CF.green}`, borderRadius: 6 * u, padding: `${10 * u}px ${22 * u}px` }}>
@@ -259,8 +267,8 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
       </Series>
       <Chrome channel={p.channel} brand={p.brand} tickerLines={p.tickerLines} liveLocation={liveLocation} publishedLabel={p.publishedLabel} />
       {p.productUrl && p.productUrlFromSeconds != null && (
-        <Sequence from={Math.round(p.productUrlFromSeconds * fps)} durationInFrames={Math.round(URL_SHOWN_S * fps)}>
-          <UrlBadge url={p.productUrl} />
+        <Sequence from={Math.round(p.productUrlFromSeconds * fps)} durationInFrames={Math.max(1, Math.round((p.productUrlSeconds ?? LEGACY_URL_SECONDS) * fps))}>
+          <UrlBadge url={p.productUrl} seconds={p.productUrlSeconds ?? LEGACY_URL_SECONDS} still={!!p.productUrlStatic} />
         </Sequence>
       )}
     </AbsoluteFill>

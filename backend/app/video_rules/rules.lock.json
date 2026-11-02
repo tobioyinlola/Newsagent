@@ -1487,6 +1487,578 @@
     "title": "Moderation",
     "area": "safety"
    }
+  },
+  "4": {
+   "BIV-INT-001": {
+    "value": 4,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Questions asked",
+    "area": "interview"
+   },
+   "BIV-INT-002": {
+    "value": 5,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Most questions in one interview",
+    "area": "interview"
+   },
+   "BIV-INT-003": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Camera required",
+    "area": "interview"
+   },
+   "BIV-INT-004": {
+    "value": 60,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Answer window (seconds)",
+    "area": "interview"
+   },
+   "BIV-INT-005": {
+    "value": 15,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Shortest answer window (seconds)",
+    "area": "interview"
+   },
+   "BIV-INT-006": {
+    "value": 5,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Countdown before each answer (seconds)",
+    "area": "interview"
+   },
+   "BIV-INT-007": {
+    "value": 5,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Round-up time after the window (seconds)",
+    "area": "interview"
+   },
+   "BIV-INT-008": {
+    "value": 360,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Interview length estimate (seconds)",
+    "area": "interview"
+   },
+   "BIV-INT-009": {
+    "value": [
+     "abusive_language",
+     "dark_video",
+     "no_speech",
+     "too_short"
+    ],
+    "status": "active",
+    "replaced_by": null,
+    "title": "Answers that must be recorded again",
+    "area": "interview"
+   },
+   "BIV-INT-010": {
+    "value": {
+     "min_speech_s": 1.0,
+     "min_mean_db": -50,
+     "min_span_s": 2,
+     "min_brightness": 25
+    },
+    "status": "active",
+    "replaced_by": null,
+    "title": "Answer checks (thresholds)",
+    "area": "interview"
+   },
+   "BIV-INT-011": {
+    "value": {
+     "loudness_lufs": -16,
+     "true_peak_db": -1.5,
+     "lra": 11
+    },
+    "status": "active",
+    "replaced_by": null,
+    "title": "Answer clean-up",
+    "area": "interview"
+   },
+   "BIV-SCR-001": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Nothing paid before approval",
+    "area": "script"
+   },
+   "BIV-SCR-002": {
+    "value": 65,
+    "status": "retired",
+    "replaced_by": "BIV-SCR-011",
+    "title": "Presenter opening length (words)",
+    "area": "script"
+   },
+   "BIV-SCR-003": {
+    "value": "This is Cover Founder News. Want to join us as a guest on the show? Visit coverfounder.com to sign up and produce your news coverage for free. Until our next story, have a great day!",
+    "status": "retired",
+    "replaced_by": "BIV-SCR-014",
+    "title": "Fixed sign-off",
+    "area": "script"
+   },
+   "BIV-SCR-004": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Nothing said twice",
+    "area": "script"
+   },
+   "BIV-SCR-005": {
+    "value": true,
+    "status": "retired",
+    "replaced_by": "BIV-SCR-011",
+    "title": "Welcome before the first question",
+    "area": "script"
+   },
+   "BIV-SCR-006": {
+    "value": true,
+    "status": "retired",
+    "replaced_by": "BIV-SCR-012",
+    "title": "Hand-over to the next question",
+    "area": "script"
+   },
+   "BIV-SCR-007": {
+    "value": [
+     50,
+     80
+    ],
+    "status": "retired",
+    "replaced_by": "BIV-SCR-013",
+    "title": "Recap after the last answer (words)",
+    "area": "script"
+   },
+   "BIV-SCR-008": {
+    "value": [
+     "revenue",
+     "funding",
+     "users",
+     "ranking",
+     "superlative"
+    ],
+    "status": "active",
+    "replaced_by": null,
+    "title": "Claims are flagged, not asserted",
+    "area": "script"
+   },
+   "BIV-SCR-009": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Nothing made up in the press release",
+    "area": "script"
+   },
+   "BIV-SCR-010": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "The founder's words are never rewritten",
+    "area": "script"
+   },
+   "BIV-SCN-001": {
+    "value": [
+     "brand_intro",
+     "presenter_clip:opening shot",
+     "anchor_intro",
+     "anchor_explanation",
+     "anchor_question+founder_answer+presenter_clip:cutaway",
+     "anchor_analysis",
+     "news_closing",
+     "presenter_clip:sign-off",
+     "brand_outro"
+    ],
+    "status": "retired",
+    "replaced_by": "BIV-SCN-010",
+    "title": "Scene order",
+    "area": "scene-order"
+   },
+   "BIV-SCN-002": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "No cutaway after the last answer",
+    "area": "scene-order"
+   },
+   "BIV-SCN-003": {
+    "value": 1.0,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Shortest answer kept (seconds)",
+    "area": "scene-order"
+   },
+   "BIV-SCN-004": {
+    "value": {
+     "default": "full",
+     "allowed": [
+      "column",
+      "full",
+      "pip",
+      "split"
+     ]
+    },
+    "status": "active",
+    "replaced_by": null,
+    "title": "Answer layouts",
+    "area": "scene-order"
+   },
+   "BIV-SCN-005": {
+    "value": {
+     "intro": 5.0,
+     "outro": 6.0
+    },
+    "status": "active",
+    "replaced_by": null,
+    "title": "Brand intro and outro (seconds)",
+    "area": "scene-order"
+   },
+   "BIV-SCN-006": {
+    "value": {
+     "intro": [
+      3.0,
+      20.0
+     ],
+     "cutaway": [
+      2.0,
+      10.0
+     ],
+     "outro": [
+      3.0,
+      20.0
+     ],
+     "max_cutaways": 4,
+     "min_height": 720
+    },
+    "status": "active",
+    "replaced_by": null,
+    "title": "Presenter library clips (seconds)",
+    "area": "scene-order"
+   },
+   "BIV-SCN-007": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Product pictures belong to the written story",
+    "area": "scene-order"
+   },
+   "BIV-SCN-008": {
+    "value": {
+     "max_items": 5,
+     "image_s": [
+      3.0,
+      8.0
+     ],
+     "video_s": [
+      2.0,
+      8.0
+     ]
+    },
+    "status": "active",
+    "replaced_by": null,
+    "title": "Product footage (classic flow)",
+    "area": "scene-order"
+   },
+   "BIV-SCN-009": {
+    "value": [
+     "16x9",
+     "16x9-light",
+     "thumbnail",
+     "captions"
+    ],
+    "status": "active",
+    "replaced_by": null,
+    "title": "Files delivered",
+    "area": "scene-order"
+   },
+   "BIV-GFX-001": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "No AI-anchor or 'Featured' labels on screen",
+    "area": "graphics"
+   },
+   "BIV-GFX-009": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "No 'Featured' or 'AI-generated anchor' wording around the video",
+    "area": "graphics"
+   },
+   "BIV-GFX-002": {
+    "value": "Toronto, Canada",
+    "status": "active",
+    "replaced_by": null,
+    "title": "LIVE badge location",
+    "area": "graphics"
+   },
+   "BIV-GFX-003": {
+    "value": {
+     "max_lines": 8,
+     "max_chars": 90
+    },
+    "status": "active",
+    "replaced_by": null,
+    "title": "Ticker limits",
+    "area": "graphics"
+   },
+   "BIV-GFX-004": {
+    "value": {
+     "title": 40,
+     "subtitle": 60
+    },
+    "status": "active",
+    "replaced_by": null,
+    "title": "Lower-third text limits",
+    "area": "graphics"
+   },
+   "BIV-GFX-005": {
+    "value": "Founder: Shares the story behind the business",
+    "status": "active",
+    "replaced_by": null,
+    "title": "Answer headline bar",
+    "area": "graphics"
+   },
+   "BIV-GFX-006": {
+    "value": 5,
+    "status": "retired",
+    "replaced_by": "BIV-GFX-011",
+    "title": "Product web address at the sign-off (seconds)",
+    "area": "graphics"
+   },
+   "BIV-GFX-007": {
+    "value": {
+     "delay": 0.5,
+     "hold": 6,
+     "ramp_max": 0.4
+    },
+    "status": "retired",
+    "replaced_by": "BIV-GFX-010",
+    "title": "Name card timing (seconds)",
+    "area": "graphics"
+   },
+   "BIV-GFX-010": {
+    "value": {
+     "name_delay": 0.5,
+     "ramp": 0.4
+    },
+    "status": "active",
+    "replaced_by": null,
+    "title": "Name card stays for the whole speaker turn (seconds)",
+    "area": "graphics"
+   },
+   "BIV-GFX-008": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Pictures cut, never fade",
+    "area": "graphics"
+   },
+   "BIV-AUD-001": {
+    "value": {
+     "loudness_lufs": -16,
+     "true_peak_db": -1.5,
+     "lra": 11
+    },
+    "status": "active",
+    "replaced_by": null,
+    "title": "Broadcast loudness",
+    "area": "audio"
+   },
+   "BIV-AUD-002": {
+    "value": 5,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Sound ramp at each cut (frames)",
+    "area": "audio"
+   },
+   "BIV-AUD-003": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Light version keeps the HD sound",
+    "area": "audio"
+   },
+   "BIV-QC-001": {
+    "value": {
+     "ratio": 0.05,
+     "min_s": 1.0
+    },
+    "status": "active",
+    "replaced_by": null,
+    "title": "Length matches the plan",
+    "area": "quality"
+   },
+   "BIV-QC-002": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Has sound",
+    "area": "quality"
+   },
+   "BIV-QC-003": {
+    "value": -0.1,
+    "status": "active",
+    "replaced_by": null,
+    "title": "No clipping (dB)",
+    "area": "quality"
+   },
+   "BIV-QC-004": {
+    "value": 0.5,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Sound and picture in step (seconds)",
+    "area": "quality"
+   },
+   "BIV-QC-005": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "All files rendered",
+    "area": "quality"
+   },
+   "BIV-QC-006": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Media checked before rendering",
+    "area": "quality"
+   },
+   "BIV-COST-001": {
+    "value": "1",
+    "status": "active",
+    "replaced_by": null,
+    "title": "Price of a video (credits)",
+    "area": "cost"
+   },
+   "BIV-COST-002": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Identical presenter clips are never bought twice",
+    "area": "cost"
+   },
+   "BIV-COST-003": {
+    "value": 3,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Presenter clips made at once",
+    "area": "cost"
+   },
+   "BIV-COST-004": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Paid steps reserve budget first",
+    "area": "cost"
+   },
+   "BIV-COST-005": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Retries never pay twice",
+    "area": "cost"
+   },
+   "BIV-SAFE-001": {
+    "value": [
+     "cnn",
+     "bbc",
+     "fox news",
+     "sky news",
+     "al jazeera",
+     "msnbc",
+     "reuters",
+     "bloomberg tv",
+     "nbc news",
+     "abc news",
+     "cbs news",
+     "channels tv",
+     "arise news",
+     "dw news",
+     "france 24",
+     "cnbc"
+    ],
+    "status": "active",
+    "replaced_by": null,
+    "title": "No real news network names",
+    "area": "safety"
+   },
+   "BIV-SAFE-002": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Moderation",
+    "area": "safety"
+   },
+   "BIV-SCN-010": {
+    "value": [
+     "brand_intro",
+     "presenter_clip:opening shot",
+     "anchor_intro:opening",
+     "anchor_question+founder_answer",
+     "handover+anchor_question+founder_answer+presenter_clip:cutaway",
+     "anchor_analysis:closing_remark+url_card",
+     "news_closing:sign_off",
+     "presenter_clip:sign-off",
+     "brand_outro"
+    ],
+    "status": "active",
+    "replaced_by": null,
+    "title": "Running order (guided business interview videos)",
+    "area": "scene-order"
+   },
+   "BIV-SCR-011": {
+    "value": {
+     "with_name": "Joining us in the studio today is {name}{role}. Welcome to Cover Founder News, {first_name}. We're glad to have you.",
+     "without_name": "Joining us in the studio today is {role}. Welcome to Cover Founder News. We're glad to have you.",
+     "default_role": "founder of {company}",
+     "role_of": "{title} of {company}"
+    },
+    "status": "active",
+    "replaced_by": null,
+    "title": "The opening",
+    "area": "script"
+   },
+   "BIV-SCR-012": {
+    "value": [
+     "Thanks for sharing that.",
+     "That's an interesting insight.",
+     "Thanks for the insight.",
+     "That's really helpful, thank you.",
+     "Great point, thank you.",
+     "I appreciate you sharing that."
+    ],
+    "status": "active",
+    "replaced_by": null,
+    "title": "Hand-over lines between answers",
+    "area": "script"
+   },
+   "BIV-SCR-013": {
+    "value": {
+     "max_words": 25,
+     "address": "Find out more at {address}."
+    },
+    "status": "active",
+    "replaced_by": null,
+    "title": "Closing remark",
+    "area": "script"
+   },
+   "BIV-SCR-014": {
+    "value": "This is Cover Founder News. Until we bring you our next story, have a good day!",
+    "status": "active",
+    "replaced_by": null,
+    "title": "The sign-off",
+    "area": "script"
+   },
+   "BIV-GFX-011": {
+    "value": true,
+    "status": "active",
+    "replaced_by": null,
+    "title": "Web address card for the whole closing remark",
+    "area": "graphics"
+   }
   }
  }
 }

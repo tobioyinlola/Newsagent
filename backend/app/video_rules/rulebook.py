@@ -42,7 +42,7 @@ class Rule:
     enforced_in: tuple[str, ...] = field(default_factory=tuple)  # where the code applies it
 
 
-VERSION = 3
+VERSION = 4
 CHANGELOG: list[str] = [
     "v1 (2026-11-02): rulebook created. Every business interview video rule recorded exactly as the code behaved on this date; "
     "no behaviour changed.",
@@ -52,6 +52,11 @@ CHANGELOG: list[str] = [
     "v3 (2026-11-02): added BIV-GFX-010, retiring BIV-GFX-007. A speaker's name card and headline bar now come in once when "
     "their turn starts and stay still on screen until the turn ends (no 6-second fade-out, no re-entry between the "
     "presenter's own scenes).",
+    "v4 (2026-11-02): one fixed running order for guided business interview videos (BIV-SCN-010): a set opening that names "
+    "the founder and the business (BIV-SCR-011), a hand-over line from a pool of six between answers (BIV-SCR-012), a one-line "
+    "closing remark with the web address said and shown on a card for the whole line (BIV-SCR-013, BIV-GFX-011), and a new "
+    "sign-off (BIV-SCR-014). Retires BIV-SCR-002, BIV-SCR-003, BIV-SCR-005, BIV-SCR-006, BIV-SCR-007, BIV-GFX-006 and "
+    "BIV-SCN-001. Videos written before v4 keep their old running order.",
 ]
 
 RULES: list[Rule] = [
@@ -97,11 +102,13 @@ RULES: list[Rule] = [
          True, enforced_in=("services/guided.py",)),
     Rule("BIV-SCR-002", "script", "Presenter opening length (words)",
          "The presenter's opening is cut to at most this many words: every second of presenter video is paid for.",
-         65, enforced_in=("services/guided.py",)),
+         65, status="retired", replaced_by="BIV-SCR-011",
+         enforced_in=("services/guided.py",)),
     Rule("BIV-SCR-003", "script", "Fixed sign-off",
          "Every video ends with the same sign-off words, so the closing clip is made once per presenter and reused.",
          "This is Cover Founder News. Want to join us as a guest on the show? Visit coverfounder.com to sign up and produce "
          "your news coverage for free. Until our next story, have a great day!",
+         status="retired", replaced_by="BIV-SCR-014",
          enforced_in=("services/presenters.py", "services/guided.py")),
     Rule("BIV-SCR-004", "script", "Nothing said twice",
          "No sentence is repeated from the opening to the sign-off (the recap is allowed to revisit facts), and the press "
@@ -109,14 +116,17 @@ RULES: list[Rule] = [
          True, enforced_in=("services/script_polish.py", "services/guided.py", "pipeline/steps.py")),
     Rule("BIV-SCR-005", "script", "Welcome before the first question",
          "The presenter welcomes the founder by first name before the first question, with a line chosen per video.",
-         True, enforced_in=("services/conversation.py", "pipeline/steps.py")),
+         True, status="retired", replaced_by="BIV-SCR-011",
+         enforced_in=("services/conversation.py", "pipeline/steps.py")),
     Rule("BIV-SCR-006", "script", "Hand-over to the next question",
          "Between answers the presenter acknowledges the previous answer, using a line the writer grounded in that answer; "
          "if there is none, a short line from the standard pool. Then straight into the next question.",
-         True, enforced_in=("services/broadcast_rules.py", "pipeline/steps.py")),
+         True, status="retired", replaced_by="BIV-SCR-012",
+         enforced_in=("services/broadcast_rules.py", "pipeline/steps.py")),
     Rule("BIV-SCR-007", "script", "Recap after the last answer (words)",
          "After the last answer the presenter recaps the business in this many spoken words, before the sign-off.",
-         [50, 80], enforced_in=("integrations/llm/json_llm.py", "services/broadcast_rules.py", "pipeline/steps.py")),
+         [50, 80], status="retired", replaced_by="BIV-SCR-013",
+         enforced_in=("integrations/llm/json_llm.py", "services/broadcast_rules.py", "pipeline/steps.py")),
     Rule("BIV-SCR-008", "script", "Claims are flagged, not asserted",
          "Sentences with money, funding, user numbers, rankings or superlatives are flagged for review; claims a founder makes "
          "are listed as unconfirmed, never stated as fact.",
@@ -135,6 +145,7 @@ RULES: list[Rule] = [
          ["brand_intro", "presenter_clip:opening shot", "anchor_intro", "anchor_explanation",
           "anchor_question+founder_answer+presenter_clip:cutaway", "anchor_analysis", "news_closing",
           "presenter_clip:sign-off", "brand_outro"],
+         status="retired", replaced_by="BIV-SCN-010",
          enforced_in=("pipeline/steps.py",)),
     Rule("BIV-SCN-002", "scene-order", "No cutaway after the last answer",
          "Library cutaways go between answers only, never after the last one.",
@@ -188,7 +199,8 @@ RULES: list[Rule] = [
          "Founder: Shares the story behind the business", enforced_in=("services/broadcast_rules.py", "pipeline/steps.py")),
     Rule("BIV-GFX-006", "graphics", "Product web address at the sign-off (seconds)",
          "The product's web address shows top right for this long, starting when the presenter signs off.",
-         5, enforced_in=("renderer/src/compositions/InterviewMerge.tsx",)),
+         5, status="retired", replaced_by="BIV-GFX-011",
+         enforced_in=("renderer/src/compositions/InterviewMerge.tsx",)),
     Rule("BIV-GFX-007", "graphics", "Name card timing (seconds)",
          "A speaker's name card slides in after a short delay and holds for a fixed time, then slides out, in every scene.",
          {"delay": 0.5, "hold": 6, "ramp_max": 0.4}, status="retired", replaced_by="BIV-GFX-010",
@@ -254,6 +266,45 @@ RULES: list[Rule] = [
     Rule("BIV-SAFE-002", "safety", "Moderation",
          "Briefs, scripts and founder transcripts are moderated: clearly disallowed content is blocked, borderline content "
          "waits for a person (MODERATION_HOLD_FOR_REVIEW).", True, enforced_in=("services/moderation_flow.py",)),
+    # ---- v4: one fixed running order for guided business interview videos ----
+    Rule("BIV-SCN-010", "scene-order", "Running order (guided business interview videos)",
+         "Brand intro, opening shot (if any), the presenter's opening, then for each answer: the presenter asks (from the "
+         "second question on, after a hand-over line), the founder answers, a cutaway (if any, never after the last answer); "
+         "then the closing remark with the web address card, the sign-off, the sign-off shot (if any) and the brand outro. "
+         "Videos written before rulebook v4 keep their old running order.",
+         ["brand_intro", "presenter_clip:opening shot", "anchor_intro:opening", "anchor_question+founder_answer",
+          "handover+anchor_question+founder_answer+presenter_clip:cutaway", "anchor_analysis:closing_remark+url_card",
+          "news_closing:sign_off", "presenter_clip:sign-off", "brand_outro"],
+         since=4, enforced_in=("services/guided.py", "pipeline/steps.py")),
+    Rule("BIV-SCR-011", "script", "The opening",
+         "Right after the brand intro the presenter welcomes the founder by name and names the business. Name, role and business "
+         "come from that video's details: role is 'founder of <business>' when no role is given, '<role> of <business>' when "
+         "one is, and just '<role>' when the role already names the business (it contains a comma, as in 'CEO, Acme', or the "
+         "business's first word).",
+         {"with_name": "Joining us in the studio today is {name}{role}. Welcome to Cover Founder News, {first_name}. "
+                       "We're glad to have you.",
+          "without_name": "Joining us in the studio today is {role}. Welcome to Cover Founder News. We're glad to have you.",
+          "default_role": "founder of {company}", "role_of": "{title} of {company}"},
+         since=4, enforced_in=("services/conversation.py", "services/guided.py")),
+    Rule("BIV-SCR-012", "script", "Hand-over lines between answers",
+         "From the second question on, the presenter opens with one of these lines, then asks the question. Each video takes "
+         "its own order from its id, so videos differ, and never uses a line twice.",
+         ["Thanks for sharing that.", "That's an interesting insight.", "Thanks for the insight.",
+          "That's really helpful, thank you.", "Great point, thank you.", "I appreciate you sharing that."],
+         since=4, enforced_in=("services/conversation.py", "pipeline/steps.py")),
+    Rule("BIV-SCR-013", "script", "Closing remark",
+         "After the last answer the presenter says one line about the business (written from that video's own story, facts "
+         "only, at most this many words), then the web address the way people say it. No website: no address sentence.",
+         {"max_words": 25, "address": "Find out more at {address}."},
+         since=4, enforced_in=("services/guided.py", "integrations/llm/json_llm.py", "services/conversation.py")),
+    Rule("BIV-SCR-014", "script", "The sign-off",
+         "Every video ends with these words, so the sign-off clip is made once per presenter and voice, then reused.",
+         "This is Cover Founder News. Until we bring you our next story, have a good day!",
+         since=4, enforced_in=("services/presenters.py", "services/guided.py")),
+    Rule("BIV-GFX-011", "graphics", "Web address card for the whole closing remark",
+         "The business's web address card comes in when the closing remark starts and stays still on screen until that line "
+         "ends (no website, no card).",
+         True, since=4, enforced_in=("pipeline/steps.py", "renderer/src/compositions/InterviewMerge.tsx")),
 ]
 
 _BY_ID = {r.id: r for r in RULES}

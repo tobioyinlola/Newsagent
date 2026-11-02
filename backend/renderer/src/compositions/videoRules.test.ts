@@ -1,8 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { rule } from "../videoRules";
-import { URL_SHOWN_S } from "./InterviewMerge";
+import { LEGACY_URL_SECONDS, urlBadgeOut } from "./InterviewMerge";
 
 const code = (f: string) => fs.readFileSync(path.resolve(__dirname, f), "utf8").replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
 
@@ -14,10 +13,12 @@ describe("Video Rulebook rules drawn by the renderer", () => {
       expect(code(f)).not.toMatch(/>\s*(AI-generated anchor|Featured)\s*</i);
     }
   });
-  it("shows the product's web address for the rulebook's time at the sign-off", () => {
-    // covers: BIV-GFX-006
-    expect(URL_SHOWN_S).toBe(rule<number>("BIV-GFX-006"));
-    expect(code("InterviewMerge.tsx")).toMatch(/durationInFrames=\{Math\.round\(URL_SHOWN_S \* fps\)\}/);
+  it("the web address card stays still for the whole closing remark (v4); older videos keep their short slide-out", () => {
+    // covers: BIV-GFX-011
+    const fps = 30, line = 7; // a 7 s closing remark
+    for (let f = 0; f < line * fps; f++) expect(urlBadgeOut(f, fps, line, true)).toBe(0); // never leaves while the line plays
+    expect(urlBadgeOut(Math.round(4.9 * fps), fps, LEGACY_URL_SECONDS, false)).toBeGreaterThan(0); // older videos still slide out
+    expect(code("InterviewMerge.tsx")).toMatch(/durationInFrames=\{Math\.max\(1, Math\.round\(\(p\.productUrlSeconds \?\? LEGACY_URL_SECONDS\) \* fps\)\)\}/);
   });
 });
 

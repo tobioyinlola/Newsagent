@@ -4,6 +4,7 @@ Nothing paid runs until the owner has reviewed the story. The only vendor spend 
 opening, a hand-over line plus a question for each of the answers that are featured, and the standard sign-off.
 """
 
+import re
 from datetime import UTC, datetime
 
 from fastapi import HTTPException
@@ -14,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.integrations import registry
 from app.integrations.llm.base import ScriptSegment
 from app.models import Project, ScriptVersion, User, Workspace
+from app.services import conversation as conv
 from app.services import interview as iv
 from app.services import presenters
 from app.services import script_polish as polish
@@ -23,7 +25,8 @@ from app.services.safety import find_banned
 from app.video_rules import value as rule_value
 
 MAX_FEATURED = iv.MAX_QUESTIONS  # every answer can be in the video; each one costs a presenter question clip
-PRESENTER_WORDS: int = rule_value("BIV-SCR-002")  # the opening the presenter speaks; every second of it is paid for
+VIDEO_FLOW = 2  # the running order of Video Rulebook v4 (BIV-SCN-010), stamped on every story written from now on
+PRESENTER_WORDS: int = rule_value("BIV-SCR-002")  # retired rule: kept for stories written before v4 # the opening the presenter speaks; every second of it is paid for
 
 TYPES = {
     "product_launch": "Product launch",
@@ -184,24 +187,18 @@ async def write_story(
                     502, "We couldn't finish writing your story just now. Please press “Produce my story” again."
                 ) from None
     assert draft is not None
-    segments = _trim_words(draft.segments, PRESENTER_WORDS)
-    if (
-        not segments
-    ):  # the writer gave no usable opening: build one from the story itself so the presenter always has words
-        lead = [draft.dek] + [p for sec in draft.sections[:2] for p in sec.paragraphs[:1]]
-        segments = _trim_words([ScriptSegment(kind="intro", text=" ".join(x for x in lead if x))], PRESENTER_WORDS)
-    if segments and segments[0]["kind"] != "intro":
-        segments[0]["kind"] = "intro"
-    segments.append(
-        {"kind": "outro", "text": presenters.STANDARD_OUTRO}
-    )  # always the same closing words, not the writer's
-    cleaned = polish.remove_repeats(
-        [s["text"] for s in segments]
-    )  # nothing said twice, from the opening to the sign-off
-    segments = [{**s, "text": t} for s, t in zip(segments, cleaned, strict=True) if t]
     company = str(facts.get("company") or "")
     ws = await session.get(Workspace, project.workspace_id)
     company = company or (ws.name if ws else "")
+    # Video Rulebook v4 (BIV-SCN-010): the presenter's words are fixed parts filled with THIS video's founder and business; the
+    # writer supplies only the one line about the business in the closing remark.
+    line = (draft.closing_line or "").strip() or re.split(r"(?<=[.!?])\s+", draft.dek.strip())[0]
+    segments = [
+        {"kind": "intro", "text": conv.opening(project.founder_name, project.founder_title, company)},  # BIV-SCR-011
+        {"kind": "analysis", "text": conv.closing_remark(line, facts.get("website"))},  # BIV-SCR-013
+        {"kind": "outro", "text": presenters.STANDARD_OUTRO},  # BIV-SCR-014
+    ]
+    segments = [s for s in segments if s["text"].strip()]
     sections = _unrepeated_sections([s.model_dump() for s in draft.sections])
     story = {
         **await press_release_details(session, project, company),
@@ -212,11 +209,8 @@ async def write_story(
         "sections": sections,
         "social": draft.social.model_dump(),
         "unverified": draft.unverified,
+        "video_flow": VIDEO_FLOW,  # the v4 running order; videos written before it keep their old one
         # the headline bar for each answer, keyed by question number (answers arrive in question order)
-        "startup_summary": draft.startup_summary,
-        "answer_bridges": {
-            str(a.get("index", i)): c for i, (a, c) in enumerate(zip(answers, draft.answer_bridges, strict=False)) if c
-        },
         "chyrons": {
             str(a.get("index", i)): c for i, (a, c) in enumerate(zip(answers, draft.chyrons, strict=False)) if c
         },

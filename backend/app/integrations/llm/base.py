@@ -41,7 +41,7 @@ class StoryDraft(BaseModel):
     dek: str
     sections: list[StorySection]
     social: SocialPost
-    segments: list[ScriptSegment]  # intro + body only; the standard sign-off is added by the caller
+    segments: list[ScriptSegment] = []  # stories written before Video Rulebook v4 only; v4 builds the presenter's words itself
     ticker_lines: list[str]
     lower_thirds: list[dict]
     about: str = ""  # the "About <company>" boilerplate paragraph of the press release
@@ -49,6 +49,7 @@ class StoryDraft(BaseModel):
     chyrons: list[str] = []  # one per answer, in order: the headline bar shown while the founder speaks
     answer_bridges: list[str] = []
     startup_summary: str = ""
+    closing_line: str = ""  # BIV-SCR-013: one line about the business for the closing remark (facts only)
     outro: str = ""  # the presenter's closing words (a natural wrap-up that points viewers to the product's website)
 
     @field_validator("unverified", "chyrons", "ticker_lines", "answer_bridges", mode="before")

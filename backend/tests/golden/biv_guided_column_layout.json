@@ -1,16 +1,16 @@
 {
  "presenter_lines": [
-  "That adds context to the story, especially “mock transcript”. Let’s look at another part of the business. What has surprised you most since you launched?",
-  "The point about “mock transcript” stands out. To bring this together, here’s my final question. Where do you want this to be in a year?",
-  "This is Cover Founder News. Want to join us as a guest on the show? Visit coverfounder.com to sign up and produce your news coverage for free. Until our next story, have a great day!",
-  "To recap, the founder describes the business this way: mock transcript; mock transcript; mock transcript; mock transcript.",
-  "Tobi, welcome to our studio at Cover Founder. We're excited to have you here. What problem are you solving, and who feels it most?",
-  "Tonight's featured startup: Acme Farms. Acme Farms raised a seed round to help farmers sell produce online Joining us in the studio is Tobi Oyinlola.",
-  "You’ve highlighted “mock transcript”. I’d like to explore what comes next. What made you start this company?"
+  "Acme Farms is building for the people it serves, one funding round at a time.",
+  "Joining us in the studio today is Tobi Oyinlola, CEO, Acme. Welcome to Cover Founder News, Tobi. We're glad to have you.",
+  "Thanks for sharing that. What made you start this company?",
+  "Thanks for the insight. Where do you want this to be in a year?",
+  "That's an interesting insight. What has surprised you most since you launched?",
+  "This is Cover Founder News. Until we bring you our next story, have a good day!",
+  "What problem are you solving, and who feels it most?"
  ],
  "render_props": {
   "anchorCovers": true,
-  "anchorDurationSeconds": 83.2,
+  "anchorDurationSeconds": 55.6,
   "anchorFullFrame": false,
   "brand": {
    "accent": "#F5A623",
@@ -39,12 +39,12 @@
   "publishedLabel": "<published-label>",
   "scenes": [
    {
-    "seconds": 10.0,
+    "seconds": 8.8,
     "src": "<url:projects/<id>/anchor.webm>",
     "type": "anchor"
    },
    {
-    "seconds": 9.6,
+    "seconds": 4.0,
     "src": "<url:projects/<id>/question-0.webm>",
     "type": "question"
    },
@@ -73,7 +73,7 @@
     "type": "answer"
    },
    {
-    "seconds": 6.8,
+    "seconds": 4.0,
     "src": "<url:projects/<id>/question-1.webm>",
     "type": "question"
    },
@@ -102,7 +102,7 @@
     "type": "answer"
    },
    {
-    "seconds": 10.0,
+    "seconds": 4.8,
     "src": "<url:projects/<id>/question-2.webm>",
     "type": "question"
    },
@@ -131,7 +131,7 @@
     "type": "answer"
    },
    {
-    "seconds": 10.0,
+    "seconds": 5.6,
     "src": "<url:projects/<id>/question-3.webm>",
     "type": "question"
    },
@@ -160,22 +160,22 @@
     "type": "answer"
    },
    {
-    "seconds": 6.8,
+    "seconds": 6.0,
     "src": "<url:projects/<id>/anchor-analysis.webm>",
     "type": "anchor"
    },
    {
-    "seconds": 14.0,
+    "seconds": 6.4,
     "src": "<url:projects/<id>/anchor-outro.webm>",
     "type": "anchor"
    }
   ],
   "studio": "default",
-  "thumbnailAtSeconds": 26.2,
+  "thumbnailAtSeconds": 19.4,
   "tickerLines": [
    "FEATURED: Acme Farms"
   ],
-  "totalSeconds": 83.2
+  "totalSeconds": 55.6
  },
  "scene_plan": {
   "aspect": "16:9",
@@ -183,157 +183,102 @@
    {
     "end": 3.2,
     "start": 0.0,
-    "text": "Tonight's featured startup: Acme Farms. Acme Farms raised"
+    "text": "Joining us in the studio today is Tobi"
    },
    {
     "end": 6.4,
     "start": 3.2,
-    "text": "a seed round to help farmers sell produce"
+    "text": "Oyinlola, CEO, Acme. Welcome to Cover Founder News,"
    },
    {
-    "end": 9.6,
+    "end": 8.8,
     "start": 6.4,
-    "text": "online Joining us in the studio is Tobi"
+    "text": "Tobi. We're glad to have you."
    },
    {
-    "end": 10.0,
-    "start": 9.6,
-    "text": "Oyinlola."
+    "end": 12.0,
+    "start": 8.8,
+    "text": "What problem are you solving, and who feels"
    },
    {
-    "end": 13.2,
-    "start": 10.0,
-    "text": "Tobi, welcome to our studio at Cover Founder."
+    "end": 12.8,
+    "start": 12.0,
+    "text": "it most?"
    },
    {
-    "end": 16.4,
-    "start": 13.2,
-    "text": "We're excited to have you here. What problem"
-   },
-   {
-    "end": 19.6,
-    "start": 16.4,
-    "text": "are you solving, and who feels it most?"
-   },
-   {
-    "end": 21.6,
-    "start": 19.6,
+    "end": 14.8,
+    "start": 12.8,
     "text": "mock transcript"
    },
    {
-    "end": 26.8,
-    "start": 23.6,
-    "text": "You’ve highlighted “mock transcript”. I’d like to explore"
+    "end": 20.0,
+    "start": 16.8,
+    "text": "Thanks for sharing that. What made you start"
    },
    {
-    "end": 30.0,
-    "start": 26.8,
-    "text": "what comes next. What made you start this"
+    "end": 20.8,
+    "start": 20.0,
+    "text": "this company?"
    },
    {
-    "end": 30.4,
-    "start": 30.0,
-    "text": "company?"
-   },
-   {
-    "end": 32.4,
-    "start": 30.4,
+    "end": 22.8,
+    "start": 20.8,
     "text": "mock transcript"
    },
    {
-    "end": 37.6,
-    "start": 34.4,
-    "text": "That adds context to the story, especially “mock"
+    "end": 28.0,
+    "start": 24.8,
+    "text": "That's an interesting insight. What has surprised you"
    },
    {
-    "end": 40.8,
-    "start": 37.6,
-    "text": "transcript”. Let’s look at another part of the"
+    "end": 29.6,
+    "start": 28.0,
+    "text": "most since you launched?"
    },
    {
-    "end": 44.0,
-    "start": 40.8,
-    "text": "business. What has surprised you most since you"
+    "end": 31.6,
+    "start": 29.6,
+    "text": "mock transcript"
    },
    {
-    "end": 44.4,
-    "start": 44.0,
-    "text": "launched?"
+    "end": 36.8,
+    "start": 33.6,
+    "text": "Thanks for the insight. Where do you want"
+   },
+   {
+    "end": 39.2,
+    "start": 36.8,
+    "text": "this to be in a year?"
+   },
+   {
+    "end": 41.2,
+    "start": 39.2,
+    "text": "mock transcript"
    },
    {
     "end": 46.4,
-    "start": 44.4,
-    "text": "mock transcript"
+    "start": 43.2,
+    "text": "Acme Farms is building for the people it"
    },
    {
-    "end": 51.6,
-    "start": 48.4,
-    "text": "The point about “mock transcript” stands out. To"
+    "end": 49.2,
+    "start": 46.4,
+    "text": "serves, one funding round at a time."
    },
    {
-    "end": 54.8,
-    "start": 51.6,
-    "text": "bring this together, here’s my final question. Where"
+    "end": 52.4,
+    "start": 49.2,
+    "text": "This is Cover Founder News. Until we bring"
    },
    {
-    "end": 58.0,
-    "start": 54.8,
-    "text": "do you want this to be in a"
-   },
-   {
-    "end": 58.4,
-    "start": 58.0,
-    "text": "year?"
-   },
-   {
-    "end": 60.4,
-    "start": 58.4,
-    "text": "mock transcript"
-   },
-   {
-    "end": 65.6,
-    "start": 62.4,
-    "text": "To recap, the founder describes the business this"
-   },
-   {
-    "end": 68.8,
-    "start": 65.6,
-    "text": "way: mock transcript; mock transcript; mock transcript; mock"
-   },
-   {
-    "end": 69.2,
-    "start": 68.8,
-    "text": "transcript."
-   },
-   {
-    "end": 72.4,
-    "start": 69.2,
-    "text": "This is Cover Founder News. Want to join"
-   },
-   {
-    "end": 75.6,
-    "start": 72.4,
-    "text": "us as a guest on the show? Visit"
-   },
-   {
-    "end": 78.8,
-    "start": 75.6,
-    "text": "coverfounder.com to sign up and produce your news"
-   },
-   {
-    "end": 82.0,
-    "start": 78.8,
-    "text": "coverage for free. Until our next story, have"
-   },
-   {
-    "end": 83.2,
-    "start": 82.0,
-    "text": "a great day!"
+    "end": 55.6,
+    "start": 52.4,
+    "text": "you our next story, have a good day!"
    }
   ],
   "layout": "column",
   "project_id": "<id>",
-  "rules_version": 3,
+  "rules_version": 4,
   "scenes": [
    {
     "asset": {
@@ -342,11 +287,11 @@
     },
     "captions": true,
     "cues": [],
-    "duration_s": 10.0,
+    "duration_s": 8.8,
     "founder": null,
     "headline": null,
     "id": "s1",
-    "narration": "Tonight's featured startup: Acme Farms. Acme Farms raised a seed round to help farmers sell produce online Joining us in the studio is Tobi Oyinlola.",
+    "narration": "Joining us in the studio today is Tobi Oyinlola, CEO, Acme. Welcome to Cover Founder News, Tobi. We're glad to have you.",
     "order": 0,
     "poster": null,
     "provenance": "owner_script",
@@ -367,11 +312,11 @@
     },
     "captions": true,
     "cues": [],
-    "duration_s": 9.6,
+    "duration_s": 4.0,
     "founder": null,
     "headline": null,
     "id": "s2",
-    "narration": "Tobi, welcome to our studio at Cover Founder. We're excited to have you here. What problem are you solving, and who feels it most?",
+    "narration": "What problem are you solving, and who feels it most?",
     "order": 1,
     "poster": null,
     "provenance": "owner_script",
@@ -430,11 +375,11 @@
     },
     "captions": true,
     "cues": [],
-    "duration_s": 6.8,
+    "duration_s": 4.0,
     "founder": null,
     "headline": null,
     "id": "s4",
-    "narration": "You’ve highlighted “mock transcript”. I’d like to explore what comes next. What made you start this company?",
+    "narration": "Thanks for sharing that. What made you start this company?",
     "order": 3,
     "poster": null,
     "provenance": "owner_script",
@@ -493,11 +438,11 @@
     },
     "captions": true,
     "cues": [],
-    "duration_s": 10.0,
+    "duration_s": 4.8,
     "founder": null,
     "headline": null,
     "id": "s6",
-    "narration": "That adds context to the story, especially “mock transcript”. Let’s look at another part of the business. What has surprised you most since you launched?",
+    "narration": "That's an interesting insight. What has surprised you most since you launched?",
     "order": 5,
     "poster": null,
     "provenance": "owner_script",
@@ -556,11 +501,11 @@
     },
     "captions": true,
     "cues": [],
-    "duration_s": 10.0,
+    "duration_s": 5.6,
     "founder": null,
     "headline": null,
     "id": "s8",
-    "narration": "The point about “mock transcript” stands out. To bring this together, here’s my final question. Where do you want this to be in a year?",
+    "narration": "Thanks for the insight. Where do you want this to be in a year?",
     "order": 7,
     "poster": null,
     "provenance": "owner_script",
@@ -619,11 +564,11 @@
     },
     "captions": true,
     "cues": [],
-    "duration_s": 6.8,
+    "duration_s": 6.0,
     "founder": null,
     "headline": null,
     "id": "s10",
-    "narration": "To recap, the founder describes the business this way: mock transcript; mock transcript; mock transcript; mock transcript.",
+    "narration": "Acme Farms is building for the people it serves, one funding round at a time.",
     "order": 9,
     "poster": null,
     "provenance": "owner_script",
@@ -644,11 +589,11 @@
     },
     "captions": true,
     "cues": [],
-    "duration_s": 14.0,
+    "duration_s": 6.4,
     "founder": null,
     "headline": null,
     "id": "s11",
-    "narration": "This is Cover Founder News. Want to join us as a guest on the show? Visit coverfounder.com to sign up and produce your news coverage for free. Until our next story, have a great day!",
+    "narration": "This is Cover Founder News. Until we bring you our next story, have a good day!",
     "order": 10,
     "poster": null,
     "provenance": "owner_script",
@@ -664,7 +609,7 @@
    }
   ],
   "script_version_id": "<id>",
-  "total_s": 83.2,
+  "total_s": 55.6,
   "unconfirmed_claims": [],
   "version": 1
  }

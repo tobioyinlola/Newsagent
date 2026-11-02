@@ -74,3 +74,53 @@ def bridges(project_id: str, count: int) -> list[str]:
     # a step of 3 through ten lines never lands on the same one twice before ten are used
     middle = [BRIDGES[(seed + 3 * i) % len(BRIDGES)] for i in range(count - 1)]
     return middle + [LAST_BRIDGES[seed % len(LAST_BRIDGES)]]
+
+
+# ---- Video Rulebook v4: the fixed running order for guided business interview videos ----
+from app.video_rules import value as rule_value  # noqa: E402
+
+
+def opening(full_name: str | None, title: str | None, company: str | None) -> str:
+    """BIV-SCR-011: the presenter's opening, filled with THIS video's founder and business."""
+    t = rule_value("BIV-SCR-011")
+    name, title, company = (full_name or "").strip(), (title or "").strip(), (company or "").strip()
+    first_word = (company.split() or [""])[0].lower()
+    names_business = bool(title) and ("," in title or (len(first_word) >= 3 and first_word in title.lower()))
+    if title and company and not names_business:
+        role = t["role_of"].format(title=title, company=company)
+    elif title:
+        role = title  # the role already names the business ("CEO, Minicor", "Founder of Acme"): never say it twice
+    elif company:
+        role = t["default_role"].format(company=company)
+    else:
+        role = ""
+    if name:
+        return t["with_name"].format(name=name, role=f", {role}" if role else "", first_name=first_name(name))
+    return t["without_name"].format(role=f"the {role}" if role else "our guest")
+
+
+def handovers(project_id: str, count: int) -> list[str]:
+    """BIV-SCR-012: `count` hand-over lines for the gaps between answers. Each video starts at its own place in the pool (from its
+    id), so videos differ; within a video no line repeats (it wraps only past six gaps, which five questions never reach)."""
+    pool = list(rule_value("BIV-SCR-012"))
+    seed = _seed(project_id)
+    return [pool[(seed + i) % len(pool)] for i in range(max(0, count))]
+
+
+def spoken_address(url: str | None) -> str:
+    """The web address the way a presenter says it: 'acmefarms dot com' (the site's name only, no path)."""
+    from app.pipeline.steps import display_url
+
+    host = display_url(url or "").split("/")[0].strip()
+    return host.replace(".", " dot ") if host else ""
+
+
+def closing_remark(line: str | None, website: str | None) -> str:
+    """BIV-SCR-013: one line about the business, then its web address said aloud (left out when there is no website)."""
+    rule = rule_value("BIV-SCR-013")
+    words = " ".join((line or "").split()).split(" ")
+    text = " ".join(words[: rule["max_words"]]).strip()
+    if text and text[-1] not in ".!?":
+        text += "."
+    address = spoken_address(website)
+    return " ".join(x for x in (text, rule["address"].format(address=address) if address else "") if x)

@@ -20,8 +20,9 @@ from app.models import Project
 from app.pipeline.queue import get_queue
 from app.services import conversation
 from tests.conftest import OWNER
-from tests.test_guided_flow import interviewed
-from tests.test_live_interview import state
+from tests.helpers import record
+from tests.test_guided_flow import DETAILS, interviewed
+from tests.test_live_interview import start, state
 
 GOLDEN = Path(__file__).parent / "golden"
 _ID = re.compile(r"\b[0-9a-f]{32}\b")
@@ -54,10 +55,20 @@ class _Spy(MockAvatarProvider):
         return await super().generate(req)
 
 
-async def _make(client, maker, *, plan: dict | None = None) -> dict:
+async def _interviewed_with_website(client) -> str:
+    details = {**DETAILS, "website_url": "https://www.acmefarms.com/"}
+    pid = (await client.post("/v1/projects", json=details, headers=OWNER)).json()["id"]
+    assert (await client.post(f"/v1/projects/{pid}/guided/start", headers=OWNER)).status_code == 200
+    token = (await start(client, pid)).json()["token"]
+    for q in range(4):
+        await record(client, token, q)
+    return pid
+
+
+async def _make(client, maker, *, plan: dict | None = None, website: bool = False) -> dict:
     spy = _Spy()
     registry.override(avatar=spy)
-    pid = await interviewed(client)
+    pid = await (_interviewed_with_website(client) if website else interviewed(client))
     if plan is not None:
         r = await client.put(f"/v1/projects/{pid}/interview/plan", json=plan, headers=OWNER)
         assert r.status_code == 200, r.text
@@ -117,3 +128,8 @@ async def test_golden_guided_video_in_the_column_layout(client, workspace, maker
     # covers("BIV-SCN-004")
     plan = {"layout": "column", "order": [0, 1, 2, 3], "answers": [{"question_index": q} for q in range(4)]}
     _compare("biv_guided_column_layout", await _make(client, maker, plan=plan))
+
+
+async def test_golden_guided_video_with_a_website(client, workspace, maker):
+    # covers("BIV-SCN-010", "BIV-SCR-011", "BIV-SCR-012", "BIV-SCR-013", "BIV-SCR-014", "BIV-GFX-011")
+    _compare("biv_guided_with_website", await _make(client, maker, website=True))

@@ -1,5 +1,5 @@
 {
- "version": 3,
+ "version": 4,
  "rules": {
   "BIV-INT-001": 4,
   "BIV-INT-002": 5,
@@ -27,15 +27,7 @@
    "lra": 11
   },
   "BIV-SCR-001": true,
-  "BIV-SCR-002": 65,
-  "BIV-SCR-003": "This is Cover Founder News. Want to join us as a guest on the show? Visit coverfounder.com to sign up and produce your news coverage for free. Until our next story, have a great day!",
   "BIV-SCR-004": true,
-  "BIV-SCR-005": true,
-  "BIV-SCR-006": true,
-  "BIV-SCR-007": [
-   50,
-   80
-  ],
   "BIV-SCR-008": [
    "revenue",
    "funding",
@@ -45,17 +37,6 @@
   ],
   "BIV-SCR-009": true,
   "BIV-SCR-010": true,
-  "BIV-SCN-001": [
-   "brand_intro",
-   "presenter_clip:opening shot",
-   "anchor_intro",
-   "anchor_explanation",
-   "anchor_question+founder_answer+presenter_clip:cutaway",
-   "anchor_analysis",
-   "news_closing",
-   "presenter_clip:sign-off",
-   "brand_outro"
-  ],
   "BIV-SCN-002": true,
   "BIV-SCN-003": 1.0,
   "BIV-SCN-004": {
@@ -117,7 +98,6 @@
    "subtitle": 60
   },
   "BIV-GFX-005": "Founder: Shares the story behind the business",
-  "BIV-GFX-006": 5,
   "BIV-GFX-010": {
    "name_delay": 0.5,
    "ramp": 0.4
@@ -162,6 +142,37 @@
    "france 24",
    "cnbc"
   ],
-  "BIV-SAFE-002": true
+  "BIV-SAFE-002": true,
+  "BIV-SCN-010": [
+   "brand_intro",
+   "presenter_clip:opening shot",
+   "anchor_intro:opening",
+   "anchor_question+founder_answer",
+   "handover+anchor_question+founder_answer+presenter_clip:cutaway",
+   "anchor_analysis:closing_remark+url_card",
+   "news_closing:sign_off",
+   "presenter_clip:sign-off",
+   "brand_outro"
+  ],
+  "BIV-SCR-011": {
+   "with_name": "Joining us in the studio today is {name}{role}. Welcome to Cover Founder News, {first_name}. We're glad to have you.",
+   "without_name": "Joining us in the studio today is {role}. Welcome to Cover Founder News. We're glad to have you.",
+   "default_role": "founder of {company}",
+   "role_of": "{title} of {company}"
+  },
+  "BIV-SCR-012": [
+   "Thanks for sharing that.",
+   "That's an interesting insight.",
+   "Thanks for the insight.",
+   "That's really helpful, thank you.",
+   "Great point, thank you.",
+   "I appreciate you sharing that."
+  ],
+  "BIV-SCR-013": {
+   "max_words": 25,
+   "address": "Find out more at {address}."
+  },
+  "BIV-SCR-014": "This is Cover Founder News. Until we bring you our next story, have a good day!",
+  "BIV-GFX-011": true
  }
 }

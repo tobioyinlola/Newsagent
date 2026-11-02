@@ -70,4 +70,4 @@ async def resolve(requested: str | None) -> str | None:
 
 # The sign-off every video ends with. It is the same words each time on purpose: the presenter clip for it is made once per
 # presenter and voice, then reused by every later video at no vendor cost. (An owner who edits it pays for the new words.)
-STANDARD_OUTRO: str = rule_value("BIV-SCR-003")
+STANDARD_OUTRO: str = rule_value("BIV-SCR-014")  # the sign-off (Video Rulebook v4)

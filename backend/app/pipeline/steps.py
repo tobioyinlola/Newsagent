@@ -507,6 +507,18 @@ def segment_texts(script: ScriptVersion) -> dict[str, str]:
     def join(pred) -> str:
         return " ".join(sg["text"] for sg in script.segments if pred(sg.get("kind")))
 
+    if running_order_v4(script):
+        # Video Rulebook v4: the opening and sign-off are fixed wording from the rulebook, said exactly as written (the
+        # repeat filter would otherwise cut "This is Cover Founder News." as an echo of the opening's welcome). Only the
+        # writer's one line in the closing remark is screened for invitations.
+        remark = join(lambda k: k == "analysis")
+        return {
+            "main": join(lambda k: k != "outro" and k not in EXTRA_KINDS),
+            "explanation": "",
+            "analysis": polish.strip_invites(remark) if remark else remark,
+            "outro": join(lambda k: k == "outro"),
+        }
+
     out = {
         "main": join(lambda k: k != "outro" and k not in EXTRA_KINDS),
         "explanation": join(lambda k: k == "explanation"),
@@ -597,6 +609,11 @@ def needed_questions(project: Project, count: int) -> list[int]:
     return list(dict.fromkeys(q for q in plan.get("order", range(count)) if q in include and q < count))
 
 
+def running_order_v4(script: ScriptVersion) -> bool:
+    """Is this video's script written for the fixed running order of Video Rulebook v4 (BIV-SCN-010)? Older scripts keep theirs."""
+    return (getattr(script, "story", None) or {}).get("video_flow") == 2
+
+
 def question_texts(project: Project, script: ScriptVersion, needed: list[int]) -> dict[int, str]:
     """What the presenter says for each question, in the order they play. In an interview the first welcomes the guest by name
     into the studio, and each later one opens with a short acknowledgement of the answer before it (a different line for each
@@ -609,6 +626,17 @@ def question_texts(project: Project, script: ScriptVersion, needed: list[int]) -
         or project.flow == "guided"
         or getattr(project, "interview_mode", None) == "live"
     )
+    if running_order_v4(script):
+        # Video Rulebook v4: the opening already welcomed the guest, so question 1 is the bare question (BIV-SCR-011); each
+        # later question opens with a hand-over line from the fixed pool (BIV-SCR-012).
+        lines = conv.handovers(project.id or "", max(0, len(needed) - 1))
+        out_v4: dict[int, str] = {}
+        for n, q in enumerate(needed):
+            text = script.interview_questions[q] if n == 0 else f"{lines[n - 1]} {script.interview_questions[q]}"
+            fresh = polish.remove_repeats([*before, text])[-1]
+            out_v4[q] = fresh or text
+            before.append(out_v4[q])
+        return out_v4
     gaps = conv.bridges(project.id or "", max(0, len(needed) - 1)) if interview else []
     out: dict[int, str] = {}
     for n, q in enumerate(needed):
@@ -1054,7 +1082,9 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
         ]
         if clips.cutaways and q != shown[-1]:  # a cutaway to the presenter between answers, never after the last one
             clip_scene(clips.cutaways[shown.index(q) % len(clips.cutaways)], "cutaway")
+    remark_at = cursor
     presenter_part("analysis", "anchor_analysis")
+    remark_s = cursor - remark_at  # the closing remark (v4) or recap (older videos); 0 when the script has none
     closing_at: float | None = None
     if outro:
         start = closing_at = cursor
@@ -1101,8 +1131,20 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
     cover_at = thumbnails.guest_moment_s(project.scene_plan, brand_lead())
     if cover_at is not None:  # the cover is the guest talking, not the presenter every video opens on
         props["thumbnailAtSeconds"] = cover_at
-    if site and closing_at is not None:  # shown in a corner while the presenter signs off
-        props |= {"productUrl": display_url(site), "productUrlFromSeconds": closing_at}
+    if site and running_order_v4(script) and remark_s > 0:
+        # BIV-GFX-011: the web address card comes in with the closing remark and stays, still, until that line ends
+        props |= {
+            "productUrl": display_url(site),
+            "productUrlFromSeconds": remark_at,
+            "productUrlSeconds": remark_s,
+            "productUrlStatic": True,
+        }
+    elif site and closing_at is not None:  # older videos: shown in a corner for a few seconds while the presenter signs off
+        props |= {
+            "productUrl": display_url(site),
+            "productUrlFromSeconds": closing_at,
+            "productUrlSeconds": float(rule_value("BIV-GFX-006")),
+        }
     status, cost = await _submit_render(
         guard,
         project,

@@ -84,6 +84,7 @@ class MockScriptLLM(ScriptLLM):
                 )
             ],
             about=f"{company} is a company that shares its {kind} with Cover Founder.",
+            closing_line=f"{company} is building for the people it serves, one {kind} at a time.",
             social=SocialPost(
                 hook=f"{company} just made a move.",
                 post=f"{company}: {facts.get('announcement', kind)}. Watch the full story on Cover Founder.",
