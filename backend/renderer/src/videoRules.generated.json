@@ -1,5 +1,5 @@
 {
- "version": 2,
+ "version": 3,
  "rules": {
   "BIV-INT-001": 4,
   "BIV-INT-002": 5,
@@ -118,10 +118,9 @@
   },
   "BIV-GFX-005": "Founder: Shares the story behind the business",
   "BIV-GFX-006": 5,
-  "BIV-GFX-007": {
-   "delay": 0.5,
-   "hold": 6,
-   "ramp_max": 0.4
+  "BIV-GFX-010": {
+   "name_delay": 0.5,
+   "ramp": 0.4
   },
   "BIV-GFX-008": true,
   "BIV-AUD-001": {

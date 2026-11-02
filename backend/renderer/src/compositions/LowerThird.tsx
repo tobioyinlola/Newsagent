@@ -1,19 +1,20 @@
-import { cardMotion } from "./broadcastMotion";
+import { turnCard } from "./broadcastMotion";
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { CF, CFSymbol, SANS } from "./theme";
 import { rule } from "../videoRules";
 
 // Broadcast lower third (news-channel style): a name box above the right end of a full-width headline bar, the bar opening
-// with a Cover Founder NEWS block. Sits just above the ticker. The name box slides in after half a second; the headline stays.
-export const LowerThird: React.FC<{ name?: string; title?: string; location?: string; headline?: string }> = ({ name, title, location, headline }) => {
+// with a Cover Founder NEWS block. Sits just above the ticker. Both come in once when a speaker's turn starts (`enters`) and then
+// stay still on screen to the end of that turn (Video Rulebook BIV-GFX-010).
+export const LowerThird: React.FC<{ name?: string; title?: string; location?: string; headline?: string; enters?: boolean }> = ({ name, title, location, headline, enters = true }) => {
   const frame = useCurrentFrame();
   const { width, height, fps, durationInFrames } = useVideoConfig();
   const portrait = height > width;
   const u = Math.min(width, height) / 1080;
-  const barIn = cardMotion(frame, durationInFrames, fps);
-  const card = rule<{ delay: number; hold: number }>("BIV-GFX-007");
-  const nameIn = cardMotion(frame, durationInFrames, fps, card.delay, card.hold);
+  const card = rule<{ name_delay: number; ramp: number }>("BIV-GFX-010");
+  const barIn = turnCard(frame, durationInFrames, fps, enters, 0, card.ramp);
+  const nameIn = turnCard(frame, durationInFrames, fps, enters, card.name_delay, card.ramp);
   const left = 48 * u, right = 48 * u, bottom = 72 * u + 26 * u; // clear of the ticker
   const barH = (portrait ? 96 : 78) * u;
   const headlineWidth = Math.max(240 * u, width - left - right - 282 * u);

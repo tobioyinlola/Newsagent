@@ -9,6 +9,7 @@ import { CF, Fonts, MONO, SANS } from "./theme";
 import { LowerThird } from "./LowerThird";
 import { SceneEdge, useEdgeVolume } from "./SceneEdge";
 import { rule } from "../videoRules";
+import { turnStarts } from "./broadcastMotion";
 
 export type Scene =
   | { type: "anchor" | "question"; src: string; seconds: number; headline?: string }
@@ -155,7 +156,7 @@ const ColumnAnswer: React.FC<{ scene: Extract<Scene, { type: "answer" }>; founde
   );
 };
 
-const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout: MergeProps["layout"]; brand: MergeProps["brand"]; fullFrame?: boolean }> = ({ scene, layout, brand, fullFrame }) => {
+const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout: MergeProps["layout"]; brand: MergeProps["brand"]; fullFrame?: boolean; enters?: boolean }> = ({ scene, layout, brand, fullFrame, enters = true }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
   const portrait = height > width;
@@ -180,7 +181,7 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
     </Freeze>
   );
 
-  const lowerThird = <LowerThird name={scene.founder.name} title={scene.founder.title} location={scene.founder.location} headline={scene.headline} />;
+  const lowerThird = <LowerThird name={scene.founder.name} title={scene.founder.title} location={scene.founder.location} headline={scene.headline} enters={enters} />;
 
 
   if (layout === "full") {
@@ -188,7 +189,7 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
     return (
       <AbsoluteFill>
         <div style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 72 * u, background: "#000" }}>{founder}</div>
-        <LowerThird name={scene.founder.name} title={scene.founder.title} location={scene.founder.location} headline={scene.headline} />
+        <LowerThird name={scene.founder.name} title={scene.founder.title} location={scene.founder.location} headline={scene.headline} enters={enters} />
       </AbsoluteFill>
     );
   }
@@ -238,6 +239,7 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
   const frame = useCurrentFrame();
   let start = 0;
   const activeScene = p.scenes.find(scene => { const end = start + Math.max(1, Math.round(scene.seconds * fps)); const matches = frame >= start && frame < end; start = end; return matches; });
+  const starts = turnStarts(p.scenes.map((s) => s.type)); // where each speaker's turn begins (BIV-GFX-010)
   const liveLocation = activeScene?.type === "answer" ? activeScene.founder.location || "Founder interview" : rule<string>("BIV-GFX-002");
   return (
     <StudioProvider studio={p.studio}>
@@ -250,7 +252,7 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
         {p.scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={Math.max(1, Math.round(s.seconds * fps))}>
             <SceneEdge>
-            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} fullFrame={p.anchorFullFrame} /> : s.type === "clip" ? <ClipScene src={s.src} /> : s.type === "broll" ? <BrollScene scene={s} /> : <><AnchorScene src={s.src} portrait={portrait} fullFrame={p.anchorFullFrame} covers={p.anchorCovers} /><LowerThird name={p.presenter?.name} title={p.presenter?.title} headline={s.headline ?? p.headline} /></>}
+            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} fullFrame={p.anchorFullFrame} enters={starts[i]} /> : s.type === "clip" ? <ClipScene src={s.src} /> : s.type === "broll" ? <BrollScene scene={s} /> : <><AnchorScene src={s.src} portrait={portrait} fullFrame={p.anchorFullFrame} covers={p.anchorCovers} /><LowerThird name={p.presenter?.name} title={p.presenter?.title} headline={s.headline ?? p.headline} enters={starts[i]} /></>}
             </SceneEdge>
           </Series.Sequence>
         ))}

@@ -333,7 +333,7 @@
   ],
   "layout": "column",
   "project_id": "<id>",
-  "rules_version": 2,
+  "rules_version": 3,
   "scenes": [
    {
     "asset": {

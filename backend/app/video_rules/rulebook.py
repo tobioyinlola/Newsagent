@@ -42,13 +42,16 @@ class Rule:
     enforced_in: tuple[str, ...] = field(default_factory=tuple)  # where the code applies it
 
 
-VERSION = 2
+VERSION = 3
 CHANGELOG: list[str] = [
     "v1 (2026-11-02): rulebook created. Every business interview video rule recorded exactly as the code behaved on this date; "
     "no behaviour changed.",
     "v2 (2026-11-02): added BIV-GFX-009. The 'Featured' / 'AI-generated anchor' wording that was left after the on-screen "
     "labels were removed is gone from the render data, the quality check, social captions, the download and share pages "
     "and the presenter-only video's 'Featured startup' banner. Founder consent text is unchanged.",
+    "v3 (2026-11-02): added BIV-GFX-010, retiring BIV-GFX-007. A speaker's name card and headline bar now come in once when "
+    "their turn starts and stay still on screen until the turn ends (no 6-second fade-out, no re-entry between the "
+    "presenter's own scenes).",
 ]
 
 RULES: list[Rule] = [
@@ -188,7 +191,17 @@ RULES: list[Rule] = [
          5, enforced_in=("renderer/src/compositions/InterviewMerge.tsx",)),
     Rule("BIV-GFX-007", "graphics", "Name card timing (seconds)",
          "A speaker's name card slides in after a short delay and holds for a fixed time, then slides out, in every scene.",
-         {"delay": 0.5, "hold": 6, "ramp_max": 0.4}, enforced_in=("renderer/src/compositions/LowerThird.tsx",)),
+         {"delay": 0.5, "hold": 6, "ramp_max": 0.4}, status="retired", replaced_by="BIV-GFX-010",
+         enforced_in=("renderer/src/compositions/LowerThird.tsx",)),
+    Rule("BIV-GFX-010", "graphics", "Name card stays for the whole speaker turn (seconds)",
+         "When a speaker's turn starts (presenter: opening, questions, recap, sign-off; founder: an answer), their name card "
+         "slides in after a short delay and the headline bar comes in with it. Both then stay fully on screen, still, until "
+         "that speaker's turn ends. Back-to-back presenter scenes are one turn: no re-entry between them. Nothing fades out "
+         "while someone is talking; the card leaves with the cut to the next speaker. Library clips and product footage have "
+         "no card.",
+         {"name_delay": 0.5, "ramp": 0.4}, since=3,
+         enforced_in=("renderer/src/compositions/broadcastMotion.ts", "renderer/src/compositions/LowerThird.tsx",
+                      "renderer/src/compositions/InterviewMerge.tsx")),
     Rule("BIV-GFX-008", "graphics", "Pictures cut, never fade",
          "Scenes join with a clean picture cut. Only the sound gets a very short ramp at the join.",
          True, enforced_in=("renderer/src/compositions/SceneEdge.tsx",)),

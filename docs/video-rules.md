@@ -1,6 +1,6 @@
 # Video rules: business interview videos
 
-Generated from `backend/app/video_rules/rulebook.py` (rulebook version 2). Do not edit by hand: change the
+Generated from `backend/app/video_rules/rulebook.py` (rulebook version 3). Do not edit by hand: change the
 rulebook, then run `uv run python ../scripts/export_video_rules.py` from `backend/`. How rules may change is written at
 the top of the rulebook; in short, rules are added, never deleted, and every change is versioned and tested.
 
@@ -60,7 +60,7 @@ the top of the rulebook; in short, rules are added, never deleted, and every cha
 | `BIV-GFX-004` | **Lower-third text limits.** Lower-third title up to 40 characters, subtitle up to 60. | {"title": 40, "subtitle": 60} |
 | `BIV-GFX-005` | **Answer headline bar.** Each answer has its own headline bar: the founder's surname and a short line from that answer. | Founder: Shares the story behind the business |
 | `BIV-GFX-006` | **Product web address at the sign-off (seconds).** The product's web address shows top right for this long, starting when the presenter signs off. | 5 |
-| `BIV-GFX-007` | **Name card timing (seconds).** A speaker's name card slides in after a short delay and holds for a fixed time, then slides out, in every scene. | {"delay": 0.5, "hold": 6, "ramp_max": 0.4} |
+| `BIV-GFX-010` | **Name card stays for the whole speaker turn (seconds).** When a speaker's turn starts (presenter: opening, questions, recap, sign-off; founder: an answer), their name card slides in after a short delay and the headline bar comes in with it. Both then stay fully on screen, still, until that speaker's turn ends. Back-to-back presenter scenes are one turn: no re-entry between them. Nothing fades out while someone is talking; the card leaves with the cut to the next speaker. Library clips and product footage have no card. | {"name_delay": 0.5, "ramp": 0.4} |
 | `BIV-GFX-008` | **Pictures cut, never fade.** Scenes join with a clean picture cut. Only the sound gets a very short ramp at the join. | true |
 
 ## Sound
@@ -99,7 +99,14 @@ the top of the rulebook; in short, rules are added, never deleted, and every cha
 | `BIV-SAFE-001` | **No real news network names.** Briefs, overlays and graphics may not name real news networks. | ["cnn", "bbc", "fox news", "sky news", "al jazeera", "msnbc", "reuters", "bloomberg tv", "nbc news", "abc news", "cbs news", "channels tv", "arise news", "dw news", "france 24", "cnbc"] |
 | `BIV-SAFE-002` | **Moderation.** Briefs, scripts and founder transcripts are moderated: clearly disallowed content is blocked, borderline content waits for a person (MODERATION_HOLD_FOR_REVIEW). | true |
 
+## Retired rules (kept as history)
+
+| Id | Rule | Replaced by |
+|---|---|---|
+| `BIV-GFX-007` | **Name card timing (seconds).** A speaker's name card slides in after a short delay and holds for a fixed time, then slides out, in every scene. | `BIV-GFX-010` |
+
 ## Changelog
 
 - v1 (2026-11-02): rulebook created. Every business interview video rule recorded exactly as the code behaved on this date; no behaviour changed.
 - v2 (2026-11-02): added BIV-GFX-009. The 'Featured' / 'AI-generated anchor' wording that was left after the on-screen labels were removed is gone from the render data, the quality check, social captions, the download and share pages and the presenter-only video's 'Featured startup' banner. Founder consent text is unchanged.
+- v3 (2026-11-02): added BIV-GFX-010, retiring BIV-GFX-007. A speaker's name card and headline bar now come in once when their turn starts and stay still on screen until the turn ends (no 6-second fade-out, no re-entry between the presenter's own scenes).
