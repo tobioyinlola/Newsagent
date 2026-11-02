@@ -3,13 +3,16 @@ import { AbsoluteFill, Audio, Easing, Img, OffthreadVideo, Sequence, Series, int
 import { BrandIntro } from "./BrandIntro";
 import { BrandOutro } from "./BrandOutro";
 import { INTRO_SECONDS, OUTRO_SECONDS } from "./brand";
+import { FullFrameAnchor } from "./FullFrameAnchor";
 import { Fonts, SANS } from "./theme";
 
 // Isolated composition: never used by NewsStudio or InterviewMerge.
 export const BREAKING_FPS = 30;
 export const STING_SECONDS = 2;
 type Picture = { src: string; caption: string; motion: string; duration_s?: number };
-export type BreakingProps = { headline: string; summary: string; anchorSrc: string; presenterFrames: number; pictures: Picture[] };
+export type BreakingProps = { headline: string; summary: string; anchorSrc: string; presenterFrames: number; pictures: Picture[]; anchorCovers?: boolean };
+// The words on our boards when a presenter's studio picture has its own screens to cover (their AI-made text is misspelled).
+export const SCREEN_TEXT = "Breaking News";
 export const defaultBreakingProps: BreakingProps = { headline: "CF Technology Breaking News", summary: "Cover Founder News", anchorSrc: "", presenterFrames: 900, pictures: [] };
 export function breakingFrames(props: BreakingProps): number {
   if (!Number.isInteger(props.presenterFrames) || props.presenterFrames <= 0 || props.presenterFrames > 47 * BREAKING_FPS) throw new Error("News Desk presenter must fit within 47 seconds");
@@ -63,7 +66,7 @@ const Report: React.FC<BreakingProps> = p => {
   const cutaways = breakingCutaways(p.presenterFrames, p.pictures.length, p.pictures.map(picture => picture.duration_s || 5));
   const card = interpolate(f, [0, 18], [height * .24, 0], { ...clamp, easing: ease });
   return <AbsoluteFill style={{ background: "#191a30", fontFamily: SANS }}>
-    {p.anchorSrc && <OffthreadVideo src={p.anchorSrc} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+    {p.anchorSrc && (p.anchorCovers ? <FullFrameAnchor src={p.anchorSrc} covers screenText={SCREEN_TEXT} /> : <OffthreadVideo src={p.anchorSrc} style={{ width: "100%", height: "100%", objectFit: "cover" }} />)}
     {cutaways.map(c => <Sequence key={c.from} from={c.from} durationInFrames={c.duration}><MotionPicture picture={p.pictures[c.picture]} frames={c.duration} /></Sequence>)}
     <div style={{ position: "absolute", top: "4%", left: "4%", background: "#222", border: "2px solid #c0fe73", color: "#c0fe73", padding: "12px 18px", fontSize: width * .018, fontWeight: 800 }}>CF NEWS</div>
     <div style={{ position: "absolute", top: "4%", right: "4%", background: "#eb464b", color: "white", padding: "12px 18px", fontSize: width * .015, fontWeight: 800 }}>BREAKING NEWS</div>

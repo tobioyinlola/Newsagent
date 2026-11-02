@@ -26,7 +26,8 @@ const useFit = () => {
   return { s, ox: (width - SRC_W * s) / 2, oy: (height - SRC_H * s) / 2 };
 };
 
-export const FullFrameAnchor: React.FC<{ src: string; muted?: boolean; covers?: boolean }> = ({ src, muted, covers = true }) => {
+// `screenText`: optional words drawn on our boards (the News Desk shows "BREAKING NEWS"); business videos leave them plain.
+export const FullFrameAnchor: React.FC<{ src: string; muted?: boolean; covers?: boolean; screenText?: string }> = ({ src, muted, covers = true, screenText }) => {
   const volume = useEdgeVolume();
   const { s, ox, oy } = useFit();
   const at = (r: { x: number; y: number; w: number; h: number }) => ({ left: ox + r.x * s, top: oy + r.y * s, width: r.w * s, height: r.h * s });
@@ -39,6 +40,11 @@ export const FullFrameAnchor: React.FC<{ src: string; muted?: boolean; covers?: 
       {covers && SCREENS.map((r, i) => (
         <div key={i} style={{ position: "absolute", ...at(r), overflow: "hidden", background: "linear-gradient(180deg,#eaf1ff 0%,#9db8ec 55%,#3a5fb0 100%)", border: `${3 * s}px solid #dfe9fb` }}>
           <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(90deg, rgba(20,50,120,.22) 0 14%, rgba(255,255,255,.12) 14% 20%)" }} />
+          {screenText && (
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 * s }}>
+              <div style={{ background: "#eb464b", color: "white", fontFamily: SANS, fontWeight: 900, fontSize: 46 * s, lineHeight: 1.05, letterSpacing: 1 * s, textAlign: "center", padding: `${10 * s}px ${18 * s}px`, textTransform: "uppercase", boxShadow: `0 ${4 * s}px ${14 * s}px rgba(0,0,0,.35)` }}>{screenText}</div>
+            </div>
+          )}
         </div>
       ))}
     </AbsoluteFill>
