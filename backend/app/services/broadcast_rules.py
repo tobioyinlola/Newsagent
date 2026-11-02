@@ -3,8 +3,10 @@
 import hashlib
 import re
 
+from app.video_rules import value as rule_value
+
 VERSION = 1
-REPORTER_LOCATION = "Toronto, Canada"
+REPORTER_LOCATION: str = rule_value("BIV-GFX-002")
 
 
 def excerpt(text: str, words: int = 18) -> str:
@@ -78,6 +80,11 @@ def enrich(script, founder: str, answers: dict[int, str]) -> None:
     data.update(
         chyrons=chyrons, answer_bridges=hooks, broadcast_rules_version=VERSION, answer_fingerprints=fingerprints
     )
+    if data.get("video_flow") == 2:
+        # Video Rulebook v4: the hand-overs come from the fixed pool and the closing remark is already in the script; no AI
+        # recap is added (and nothing here may remove the closing remark when an answer is recorded again).
+        script.story = data
+        return
     summary = str(data.get("startup_summary") or "").strip()
     if changed and data.get("generated_summary"):
         summary = ""

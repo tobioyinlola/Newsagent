@@ -168,6 +168,7 @@ def test_plain_fullframe_look_skips_the_screen_covers(monkeypatch):
 
 async def test_the_standard_sign_off_is_paid_for_once_and_reused(client, workspace):
     """The closing line is the same words every time, so its presenter clip is bought once and copied to later videos."""
+    # covers("BIV-COST-002", "BIV-SCR-003")
     from app.integrations import registry
     from app.integrations.avatar.mock import MockAvatarProvider
     from app.pipeline.queue import get_queue

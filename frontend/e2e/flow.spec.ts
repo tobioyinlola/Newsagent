@@ -62,10 +62,10 @@ test("invite to shared video", async ({ page, browser }) => {
 
   // --- render completes (mock vendors), live status
   await expect(fp.getByRole("heading", { name: "Your video", exact: true })).toBeVisible({ timeout: 60_000 });
-  await expect(fp.getByText("AI-generated anchor").first()).toBeVisible();
+  await expect(fp.getByText("AI-generated anchor")).toHaveCount(0); // no label wording around the video (covers: BIV-GFX-009)
   await expect(fp.getByRole("link", { name: "Download" })).toHaveCount(4); // widescreen HD, widescreen light, thumbnail, captions (vertical only with RENDER_VERTICAL)
   await expect(fp.getByRole("heading", { name: "Suggested captions" })).toBeVisible();
-  await expect(fp.locator("pre").first()).toContainText("AI-generated anchor");
+  await expect(fp.locator("pre").first()).not.toContainText("AI-generated anchor"); // captions carry no label wording either
 
   // --- the original script-first video has no written story, so there is nothing to publish on Latest Stories
   await expect(fp.getByRole("heading", { name: "Your story on Cover Founder" })).toBeVisible();
@@ -111,7 +111,7 @@ test("sign up with a password, verify the emailed code, sign out, sign back in, 
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(pw);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("link", { name: "Videos" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Videos" })).toBeVisible();
 });
 
 test("an expired session sends you back to sign in", async ({ page }) => {

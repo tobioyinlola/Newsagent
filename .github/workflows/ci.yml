@@ -21,6 +21,10 @@ jobs:
       - uses: astral-sh/setup-uv@v3
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg # the cover tests cut a frame from a real video with it
       - run: uv sync
+      - name: Video Rulebook outputs must be up to date (rules are add-on only; see app/video_rules/rulebook.py)
+        run: |
+          uv run python ../scripts/export_video_rules.py
+          git diff --exit-code app/video_rules/rules.lock.json renderer/src/videoRules.generated.json ../frontend/src/lib/videoRules.generated.json ../docs/video-rules.md
       - run: uv run ruff check .
       - run: uv run mypy app
       - run: uv run pytest -q

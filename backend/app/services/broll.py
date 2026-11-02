@@ -6,10 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.integrations import registry
 from app.models import Asset, BrandAsset, Project
+from app.video_rules import value as rule_value
 
-MAX_ITEMS = 5
-IMAGE_SECONDS = (3.0, 8.0)
-VIDEO_SECONDS = (2.0, 8.0)  # a clip plays from its start for at most this long
+_BROLL = rule_value("BIV-SCN-008")  # the Video Rulebook
+MAX_ITEMS: int = _BROLL["max_items"]
+IMAGE_SECONDS: tuple[float, float] = (float(_BROLL["image_s"][0]), float(_BROLL["image_s"][1]))
+VIDEO_SECONDS: tuple[float, float] = (float(_BROLL["video_s"][0]), float(_BROLL["video_s"][1]))  # a clip plays from its start for at most this long
 GENERATED_TYPE = "broll_generated"
 
 

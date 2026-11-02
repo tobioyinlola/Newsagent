@@ -5,6 +5,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { analyzeFile } from "./media";
 import { assertAllowedUrl } from "./urlguard";
+import { rule } from "./videoRules";
 
 const run = promisify(execFile);
 const BUF = { maxBuffer: 128 * 1024 * 1024 };
@@ -97,13 +98,15 @@ export async function processTake(opts: { chunkUrls: string[]; kind: "video" | "
   const dark = opts.kind === "video" ? await brightness(raw) : null;
 
   const flags: Flag[] = [];
-  if (win.speech_s < 1.0 || (audio.mean !== null && audio.mean < -50)) flags.push("no_speech");
+  const check = rule<{ min_speech_s: number; min_mean_db: number; min_span_s: number; min_brightness: number }>("BIV-INT-010");
+  if (win.speech_s < check.min_speech_s || (audio.mean !== null && audio.mean < check.min_mean_db)) flags.push("no_speech");
   if (audio.max !== null && audio.max >= -0.1) flags.push("clipped_audio");
-  if (dark !== null && dark < 25) flags.push("dark_video");
-  if (win.end - win.start < 2) flags.push("too_short");
+  if (dark !== null && dark < check.min_brightness) flags.push("dark_video");
+  if (win.end - win.start < check.min_span_s) flags.push("too_short");
 
   // Clean-up chain: remove rumble, denoise, then loudness-normalise to -16 LUFS. Trim applies to audio AND video.
-  const af = "highpass=f=80,afftdn=nf=-30,loudnorm=I=-16:TP=-1.5:LRA=11";
+  const level = rule<{ loudness_lufs: number; true_peak_db: number; lra: number }>("BIV-INT-011");
+  const af = `highpass=f=80,afftdn=nf=-30,loudnorm=I=${level.loudness_lufs}:TP=${level.true_peak_db}:LRA=${level.lra}`;
   const trim = ["-ss", win.start.toFixed(2), "-to", win.end.toFixed(2)];
   const videoPath = opts.kind === "video" ? path.join(dir, "answer.mp4") : null;
   if (videoPath) {

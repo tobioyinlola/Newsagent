@@ -17,6 +17,7 @@ def test_sentences_keep_abbreviations_together():
 
 
 def test_repeats_are_removed_across_pieces_but_different_sentences_stay():
+    # covers("BIV-SCR-004")
     out = polish.remove_repeats(
         [
             "Onyeka and Sons raised one hundred million dollars. The company makes radios.",
@@ -131,6 +132,7 @@ def test_with_no_name_the_welcome_still_reads_naturally():
 
 
 def test_the_new_flow_never_costs_the_presenter_vendor_more_words_than_the_old_one():
+    # covers("BIV-SCR-002")
     """Presenter clips are paid for by the second. The old programme: an opening up to 90 words ending with a hand-over, four
     questions (the first prefixed with a 5-word hand-over), and a closing of up to 140 words plus the 23-word invitation. The new
     one welcomes and bridges (a few words per question) but has shorter, single-purpose opening and closing."""

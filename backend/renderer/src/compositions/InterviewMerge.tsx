@@ -8,6 +8,8 @@ import { NewsDesk, SOFT_TOP, StudioProvider } from "./NewsSet";
 import { CF, Fonts, MONO, SANS } from "./theme";
 import { LowerThird } from "./LowerThird";
 import { SceneEdge, useEdgeVolume } from "./SceneEdge";
+import { rule } from "../videoRules";
+import { turnStarts } from "./broadcastMotion";
 
 export type Scene =
   | { type: "anchor" | "question"; src: string; seconds: number; headline?: string }
@@ -36,7 +38,6 @@ export type Scene =
 
 export type MergeProps = {
   channel: { name: string };
-  disclosures: { tag: string; anchor: string };
   brand: { primary: string; accent: string };
   tickerLines: string[];
   layout: "pip" | "split" | "column" | "full";
@@ -47,8 +48,10 @@ export type MergeProps = {
   totalSeconds: number;
   headline?: string; // the story's headline: the bar under the presenter
   presenter?: { name: string; title: string }; // the presenter's name box
-  productUrl?: string; // the product's address, shown in the top-right corner from `productUrlFromSeconds` (the sign-off) to the end
+  productUrl?: string; // the product's address, shown in the top-right corner from `productUrlFromSeconds` for `productUrlSeconds`
   productUrlFromSeconds?: number;
+  productUrlSeconds?: number; // how long the card is on screen (v4: the whole closing remark; older videos: a few seconds)
+  productUrlStatic?: boolean; // v4 (BIV-GFX-011): the card comes in once and stays still to the end of the line, no slide-out
   liveLocation?: string; // LIVE badge text, top-right
   publishedLabel?: string; // date and time stamp
   brandCards?: boolean; // open with the Cover Founder intro and close with the outro
@@ -56,7 +59,6 @@ export type MergeProps = {
 
 export const defaultMergeProps: MergeProps = {
   channel: { name: "Cover Founder" },
-  disclosures: { tag: "Featured", anchor: "AI-generated anchor" },
   brand: { primary: "#0B3D91", accent: "#F5A623" },
   tickerLines: ["FEATURED: Interview"],
   layout: "pip",
@@ -156,7 +158,7 @@ const ColumnAnswer: React.FC<{ scene: Extract<Scene, { type: "answer" }>; founde
   );
 };
 
-const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout: MergeProps["layout"]; brand: MergeProps["brand"]; fullFrame?: boolean }> = ({ scene, layout, brand, fullFrame }) => {
+const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout: MergeProps["layout"]; brand: MergeProps["brand"]; fullFrame?: boolean; enters?: boolean }> = ({ scene, layout, brand, fullFrame, enters = true }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
   const portrait = height > width;
@@ -181,7 +183,7 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
     </Freeze>
   );
 
-  const lowerThird = <LowerThird name={scene.founder.name} title={scene.founder.title} location={scene.founder.location} headline={scene.headline} />;
+  const lowerThird = <LowerThird name={scene.founder.name} title={scene.founder.title} location={scene.founder.location} headline={scene.headline} enters={enters} />;
 
 
   if (layout === "full") {
@@ -189,7 +191,7 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
     return (
       <AbsoluteFill>
         <div style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 72 * u, background: "#000" }}>{founder}</div>
-        <LowerThird name={scene.founder.name} title={scene.founder.title} location={scene.founder.location} headline={scene.headline} />
+        <LowerThird name={scene.founder.name} title={scene.founder.title} location={scene.founder.location} headline={scene.headline} enters={enters} />
       </AbsoluteFill>
     );
   }
@@ -215,15 +217,21 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
   );
 };
 
-// The product's web address, top-right while the presenter signs off, for anyone who wants to look it up. (Top right so it never
-// sits on the presenter's name box or the headline bar at the bottom.)
-const URL_SHOWN_S = 5;
-const UrlBadge: React.FC<{ url: string }> = ({ url }) => {
+// The product's web address, top-right, for anyone who wants to look it up. (Top right so it never sits on a name box or the
+// headline bar at the bottom.) Video Rulebook v4 (BIV-GFX-011): it comes in with the closing remark and stays still until that
+// line ends. Older videos keep their few seconds at the sign-off, sliding back out.
+export const LEGACY_URL_SECONDS = 5; // props from before the backend sent productUrlSeconds (e.g. Remotion studio samples)
+/** How far the card has gone back out (0 = fully shown). A still card never leaves while its line plays. */
+export function urlBadgeOut(frame: number, fps: number, seconds: number, still: boolean): number {
+  if (still) return 0;
+  return interpolate(frame, [fps * (seconds - 0.6), fps * seconds], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+}
+const UrlBadge: React.FC<{ url: string; seconds: number; still: boolean }> = ({ url, seconds, still }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
   const u = Math.min(width, height) / 1080;
   const inn = spring({ frame, fps, config: { damping: 16, stiffness: 140 }, durationInFrames: Math.round(fps * 0.7) });
-  const out = interpolate(frame, [fps * (URL_SHOWN_S - 0.6), fps * URL_SHOWN_S], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const out = urlBadgeOut(frame, fps, seconds, still);
   const slide = (1 - inn) * 120 + out * 120; // % of its own width: in from the right, and back out
   return (
     <div style={{ position: "absolute", right: 36 * u, top: (TOP_RIGHT_STACK + 28) * u, opacity: Math.min(inn, 1 - out), transform: `translateX(${slide}%)`, background: CF.ink, border: `${4 * u}px solid ${CF.green}`, borderRadius: 6 * u, padding: `${10 * u}px ${22 * u}px` }}>
@@ -239,7 +247,8 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
   const frame = useCurrentFrame();
   let start = 0;
   const activeScene = p.scenes.find(scene => { const end = start + Math.max(1, Math.round(scene.seconds * fps)); const matches = frame >= start && frame < end; start = end; return matches; });
-  const liveLocation = activeScene?.type === "answer" ? activeScene.founder.location || "Founder interview" : "Toronto, Canada";
+  const starts = turnStarts(p.scenes.map((s) => s.type)); // where each speaker's turn begins (BIV-GFX-010)
+  const liveLocation = activeScene?.type === "answer" ? activeScene.founder.location || "Founder interview" : rule<string>("BIV-GFX-002");
   return (
     <StudioProvider studio={p.studio}>
     <AbsoluteFill style={{ fontFamily: SANS, background: CF.ink }}>
@@ -251,15 +260,15 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
         {p.scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={Math.max(1, Math.round(s.seconds * fps))}>
             <SceneEdge>
-            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} fullFrame={p.anchorFullFrame} /> : s.type === "clip" ? <ClipScene src={s.src} /> : s.type === "broll" ? <BrollScene scene={s} /> : <><AnchorScene src={s.src} portrait={portrait} fullFrame={p.anchorFullFrame} covers={p.anchorCovers} /><LowerThird name={p.presenter?.name} title={p.presenter?.title} headline={s.headline ?? p.headline} /></>}
+            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} fullFrame={p.anchorFullFrame} enters={starts[i]} /> : s.type === "clip" ? <ClipScene src={s.src} /> : s.type === "broll" ? <BrollScene scene={s} /> : <><AnchorScene src={s.src} portrait={portrait} fullFrame={p.anchorFullFrame} covers={p.anchorCovers} /><LowerThird name={p.presenter?.name} title={p.presenter?.title} headline={s.headline ?? p.headline} enters={starts[i]} /></>}
             </SceneEdge>
           </Series.Sequence>
         ))}
       </Series>
-      <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} liveLocation={liveLocation} publishedLabel={p.publishedLabel} />
+      <Chrome channel={p.channel} brand={p.brand} tickerLines={p.tickerLines} liveLocation={liveLocation} publishedLabel={p.publishedLabel} />
       {p.productUrl && p.productUrlFromSeconds != null && (
-        <Sequence from={Math.round(p.productUrlFromSeconds * fps)} durationInFrames={Math.round(URL_SHOWN_S * fps)}>
-          <UrlBadge url={p.productUrl} />
+        <Sequence from={Math.round(p.productUrlFromSeconds * fps)} durationInFrames={Math.max(1, Math.round((p.productUrlSeconds ?? LEGACY_URL_SECONDS) * fps))}>
+          <UrlBadge url={p.productUrl} seconds={p.productUrlSeconds ?? LEGACY_URL_SECONDS} still={!!p.productUrlStatic} />
         </Sequence>
       )}
     </AbsoluteFill>

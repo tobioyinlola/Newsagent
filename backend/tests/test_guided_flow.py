@@ -39,6 +39,7 @@ async def interviewed(client, answers=(0, 1, 2, 3)):
 
 
 async def test_details_open_the_interview_and_spend_nothing(client, workspace, maker):
+    # covers("BIV-INT-001", "BIV-SCR-001")
     pid = await guided_project(client)
     p = (await client.get(f"/v1/projects/{pid}", headers=OWNER)).json()
     assert p["state"] == "interviewing" and p["flow"] == "guided" and p["announcement_type"] == "funding_round"
@@ -50,6 +51,7 @@ async def test_details_open_the_interview_and_spend_nothing(client, workspace, m
 
 
 async def test_finishing_the_interview_writes_the_story_for_review(client, workspace, maker):
+    # covers("BIV-SCR-009")
     pid = await interviewed(client)
     r = await client.post(f"/v1/projects/{pid}/interview/merge", headers=OWNER)
     assert r.status_code == 200, r.text
@@ -115,16 +117,12 @@ async def test_approval_needs_two_or_three_pictures_then_makes_the_video_cheaply
     assert r.status_code == 200, r.text
     await get_queue().drain()
     assert await state(client, pid) == "final_ready"
-    from app.services import conversation as conv
-
-    welcome = conv.welcome(pid, "Tobi Oyinlola")
-    assert (
-        len([t for t in spy.texts if t.startswith(welcome)]) == 1
-    )  # the guest is welcomed once, by the first question
+    # Video Rulebook v4: the guest is welcomed once, by name, in the opening (not in a question)
+    assert len([t for t in spy.texts if t.startswith("Joining us in the studio today is Tobi Oyinlola")]) == 1
     assert not any(
         "hear from the founder" in t.lower() for t in spy.texts
     )  # and there is no generic hand-over any more
-    assert len(spy.texts) == 7  # opening, four questions, startup recap, sign-off
+    assert len(spy.texts) == 7  # opening, four questions, closing remark, sign-off
     # a published story (live share link) appears in other videos' tickers; an unshared one never does
     from app.services import cf_news
 
@@ -158,6 +156,7 @@ def test_the_product_address_is_shown_the_way_people_type_it():
 
 
 def test_the_presenter_always_has_an_opening():
+    # covers("BIV-SCR-002")
     from app.integrations.llm.base import ScriptSegment
     from app.services.guided import _trim_words
 

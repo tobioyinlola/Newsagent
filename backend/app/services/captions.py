@@ -1,6 +1,5 @@
-"""SRT generation and copy-ready social captions. Disclosure text is always included (hard rule 2)."""
+"""SRT generation and copy-ready social captions. No "Featured" / "AI-generated anchor" wording (Video Rulebook BIV-GFX-009)."""
 
-DISCLOSURE = "Featured startup · AI-generated anchor"
 HASHTAGS = {
     "linkedin": ["#startups", "#founders", "#innovation"],
     "instagram": ["#startup", "#founderstory", "#entrepreneur", "#innovation"],
@@ -33,6 +32,6 @@ def build_srt(segments: list[dict], duration_s: float, max_words: int = 8) -> st
 
 def suggested_captions(company: str, hook: str, share_url: str | None = None) -> dict[str, str]:
     link = f"\n{share_url}" if share_url else ""
-    return {platform: f"{hook}\n\n{DISCLOSURE}{link}\n\n{' '.join(tags)}" for platform, tags in HASHTAGS.items()} | {
+    return {platform: f"{hook}{link}\n\n{' '.join(tags)}" for platform, tags in HASHTAGS.items()} | {
         "company": company
     }

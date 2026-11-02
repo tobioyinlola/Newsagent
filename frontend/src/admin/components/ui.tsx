@@ -81,12 +81,3 @@ export function Notice({ tone = "info", children }: { tone?: "info" | "warn" | "
   return <div role="status" className={`rounded-xl border p-4 text-sm shadow-sm ${c}`}>{children}</div>;
 }
 
-// Mandatory disclosure (hard rule 2). Rendered wherever a finished video is shown; not configurable.
-export function DisclosureBadge({ text }: { text: string }) {
-  return (
-    <p className="flex flex-wrap items-center gap-2 text-sm text-ink">
-      <span className="rounded-sm bg-brand-peach px-2 py-0.5 font-mono text-xs font-bold uppercase tracking-wide text-ink">Featured</span>
-      <span>{text}</span>
-    </p>
-  );
-}

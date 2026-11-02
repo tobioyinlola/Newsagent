@@ -263,6 +263,7 @@ async def test_a_new_business_gets_one_free_video_then_has_to_buy_credits(client
 
 
 async def test_a_video_costs_one_credit_once_and_the_ledger_shows_it(client, workspace, maker, monkeypatch):
+    # covers("BIV-COST-001")
     from app.config import get_settings
     from tests.helpers import BRIEF
 

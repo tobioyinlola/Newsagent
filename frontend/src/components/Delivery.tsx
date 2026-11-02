@@ -3,7 +3,7 @@ import { useState } from "react";
 import { api, unwrap } from "../api/client";
 import { OutletLogoStrip } from "./OutletLogoStrip";
 import { ShareLinks } from "./ShareLinks";
-import { Button, Card, DisclosureBadge, ErrorBox } from "./ui";
+import { Button, Card, ErrorBox } from "./ui";
 
 export function Delivery({ projectId }: { projectId: string }) {
   const p = { params: { path: { project_id: projectId } } };
@@ -28,7 +28,6 @@ export function Delivery({ projectId }: { projectId: string }) {
     <>
       <Card title="Your video">
         {videoUrl && <video controls className="w-full rounded-md bg-black" src={videoUrl} poster={poster} aria-label="Finished video" />}
-        {dl.data && <div className="mt-3"><DisclosureBadge text={dl.data.disclosure} /></div>}
         <ErrorBox error={dl.error} />
       </Card>
       <Card title="Downloads">
@@ -70,7 +69,7 @@ export function Delivery({ projectId }: { projectId: string }) {
       </Card>
       <section aria-labelledby="ready-distribution-heading" className="min-w-0 overflow-hidden rounded-xl border border-line bg-white"><div className="p-5 sm:p-7"><p className="text-xs font-bold uppercase tracking-widest text-muted">Take your story further</p><h2 id="ready-distribution-heading" className="mt-3 text-2xl font-bold sm:text-3xl">Distribute to over 20,000 media outlets</h2><p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">Your video is ready. Share your video and announcement with selected media outlets, and review each channel’s credit cost before submitting.</p><a className="mt-5 inline-flex min-h-12 items-center justify-center rounded-lg border-2 border-ink bg-brand-green px-5 py-3 text-sm font-bold text-ink hover:bg-ink hover:text-brand-green" href={`/distribution/request?project=${projectId}`}>Choose distribution outlets <span aria-hidden="true" className="ml-3">→</span></a></div><div className="border-t border-line bg-paper px-3 py-4 sm:px-5"><OutletLogoStrip compact /><p className="mt-2 px-2 text-xs leading-relaxed text-muted">Examples from distribution networks. Available outlets and coverage are shown before you submit.</p></div></section>
       <Card title="Suggested captions">
-        <p className="mb-3 text-sm text-muted">Copy-ready text for each platform. The disclosure is included and can't be removed.</p>
+        <p className="mb-3 text-sm text-muted">Copy-ready text for each platform.</p>
         <div className="space-y-4">
           {Object.entries(caps.data?.captions ?? {}).map(([platform, text]) => (
             <div key={platform} className="space-y-1">

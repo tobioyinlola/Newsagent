@@ -106,7 +106,7 @@ export function Presenter() {
   return (
     <>
       <h1 className="text-2xl font-bold">Presenter clips</h1>
-      <Notice>Real presenter footage is mixed around the AI presenter in interview videos: an opening shot, cutaways between the founder’s answers and a sign-off. Each video picks from what is switched on here. The “AI-generated anchor” label stays on screen throughout.</Notice>
+      <Notice>Real presenter footage is mixed around the AI presenter in interview videos: an opening shot, cutaways between the founder’s answers and a sign-off. Each video picks from what is switched on here.</Notice>
       <AddClip />
       <Library />
     </>

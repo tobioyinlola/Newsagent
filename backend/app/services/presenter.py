@@ -6,12 +6,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import PresenterClip
+from app.video_rules import value as rule_value
 
 ROLES = ("intro", "cutaway", "outro")
 # seconds a clip of each role may last: long enough to be a shot, short enough not to bury the founder
-DURATION_LIMITS = {"intro": (3.0, 20.0), "cutaway": (2.0, 10.0), "outro": (3.0, 20.0)}
-MIN_HEIGHT = 720
-MAX_CUTAWAYS = 4
+_CLIPS = rule_value("BIV-SCN-006")  # the Video Rulebook
+DURATION_LIMITS: dict[str, tuple[float, float]] = {r: (float(_CLIPS[r][0]), float(_CLIPS[r][1])) for r in ROLES}
+MIN_HEIGHT: int = _CLIPS["min_height"]
+MAX_CUTAWAYS: int = _CLIPS["max_cutaways"]
 
 
 @dataclass

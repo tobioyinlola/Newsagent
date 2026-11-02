@@ -1,0 +1,178 @@
+{
+ "version": 4,
+ "rules": {
+  "BIV-INT-001": 4,
+  "BIV-INT-002": 5,
+  "BIV-INT-003": true,
+  "BIV-INT-004": 60,
+  "BIV-INT-005": 15,
+  "BIV-INT-006": 5,
+  "BIV-INT-007": 5,
+  "BIV-INT-008": 360,
+  "BIV-INT-009": [
+   "abusive_language",
+   "dark_video",
+   "no_speech",
+   "too_short"
+  ],
+  "BIV-INT-010": {
+   "min_speech_s": 1.0,
+   "min_mean_db": -50,
+   "min_span_s": 2,
+   "min_brightness": 25
+  },
+  "BIV-INT-011": {
+   "loudness_lufs": -16,
+   "true_peak_db": -1.5,
+   "lra": 11
+  },
+  "BIV-SCR-001": true,
+  "BIV-SCR-004": true,
+  "BIV-SCR-008": [
+   "revenue",
+   "funding",
+   "users",
+   "ranking",
+   "superlative"
+  ],
+  "BIV-SCR-009": true,
+  "BIV-SCR-010": true,
+  "BIV-SCN-002": true,
+  "BIV-SCN-003": 1.0,
+  "BIV-SCN-004": {
+   "default": "full",
+   "allowed": [
+    "column",
+    "full",
+    "pip",
+    "split"
+   ]
+  },
+  "BIV-SCN-005": {
+   "intro": 5.0,
+   "outro": 6.0
+  },
+  "BIV-SCN-006": {
+   "intro": [
+    3.0,
+    20.0
+   ],
+   "cutaway": [
+    2.0,
+    10.0
+   ],
+   "outro": [
+    3.0,
+    20.0
+   ],
+   "max_cutaways": 4,
+   "min_height": 720
+  },
+  "BIV-SCN-007": true,
+  "BIV-SCN-008": {
+   "max_items": 5,
+   "image_s": [
+    3.0,
+    8.0
+   ],
+   "video_s": [
+    2.0,
+    8.0
+   ]
+  },
+  "BIV-SCN-009": [
+   "16x9",
+   "16x9-light",
+   "thumbnail",
+   "captions"
+  ],
+  "BIV-GFX-001": true,
+  "BIV-GFX-009": true,
+  "BIV-GFX-002": "Toronto, Canada",
+  "BIV-GFX-003": {
+   "max_lines": 8,
+   "max_chars": 90
+  },
+  "BIV-GFX-004": {
+   "title": 40,
+   "subtitle": 60
+  },
+  "BIV-GFX-005": "Founder: Shares the story behind the business",
+  "BIV-GFX-010": {
+   "name_delay": 0.5,
+   "ramp": 0.4
+  },
+  "BIV-GFX-008": true,
+  "BIV-AUD-001": {
+   "loudness_lufs": -16,
+   "true_peak_db": -1.5,
+   "lra": 11
+  },
+  "BIV-AUD-002": 5,
+  "BIV-AUD-003": true,
+  "BIV-QC-001": {
+   "ratio": 0.05,
+   "min_s": 1.0
+  },
+  "BIV-QC-002": true,
+  "BIV-QC-003": -0.1,
+  "BIV-QC-004": 0.5,
+  "BIV-QC-005": true,
+  "BIV-QC-006": true,
+  "BIV-COST-001": "1",
+  "BIV-COST-002": true,
+  "BIV-COST-003": 3,
+  "BIV-COST-004": true,
+  "BIV-COST-005": true,
+  "BIV-SAFE-001": [
+   "cnn",
+   "bbc",
+   "fox news",
+   "sky news",
+   "al jazeera",
+   "msnbc",
+   "reuters",
+   "bloomberg tv",
+   "nbc news",
+   "abc news",
+   "cbs news",
+   "channels tv",
+   "arise news",
+   "dw news",
+   "france 24",
+   "cnbc"
+  ],
+  "BIV-SAFE-002": true,
+  "BIV-SCN-010": [
+   "brand_intro",
+   "presenter_clip:opening shot",
+   "anchor_intro:opening",
+   "anchor_question+founder_answer",
+   "handover+anchor_question+founder_answer+presenter_clip:cutaway",
+   "anchor_analysis:closing_remark+url_card",
+   "news_closing:sign_off",
+   "presenter_clip:sign-off",
+   "brand_outro"
+  ],
+  "BIV-SCR-011": {
+   "with_name": "Joining us in the studio today is {name}{role}. Welcome to Cover Founder News, {first_name}. We're glad to have you.",
+   "without_name": "Joining us in the studio today is {role}. Welcome to Cover Founder News. We're glad to have you.",
+   "default_role": "founder of {company}",
+   "role_of": "{title} of {company}"
+  },
+  "BIV-SCR-012": [
+   "Thanks for sharing that.",
+   "That's an interesting insight.",
+   "Thanks for the insight.",
+   "That's really helpful, thank you.",
+   "Great point, thank you.",
+   "I appreciate you sharing that."
+  ],
+  "BIV-SCR-013": {
+   "max_words": 25,
+   "address": "Find out more at {address}."
+  },
+  "BIV-SCR-014": "This is Cover Founder News. Until we bring you our next story, have a good day!",
+  "BIV-GFX-011": true
+ }
+}

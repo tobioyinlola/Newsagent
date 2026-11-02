@@ -6,7 +6,6 @@ import { CF, CFLogo, MONO, SANS } from "./theme";
 
 type ChromeProps = {
   channel: { name: string };
-  disclosures: { tag: string; anchor: string };
   brand: { accent: string };
   tickerLines: string[];
   liveLocation?: string; // "Toronto, Canada": the LIVE badge, top-right, with a blinking light
@@ -19,8 +18,8 @@ export const TOP_RIGHT_STACK = 118;
 // A dark plate keeps the channel bug and the mandatory labels readable on any studio, including a bright one.
 const PLATE = "rgba(14, 22, 44, 0.78)";
 
-// Elements shown on EVERY video, in every composition: the channel logo and the ticker. (The AI-presenter disclosure travels
-// with the video's captions, description and share page rather than as an on-screen label.)
+// Elements shown on EVERY video, in every composition: the channel logo and the ticker. No "Featured" / "AI-generated anchor"
+// label anywhere (Video Rulebook BIV-GFX-001, BIV-GFX-009).
 export const Chrome: React.FC<ChromeProps> = (p) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();

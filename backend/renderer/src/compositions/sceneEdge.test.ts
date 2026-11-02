@@ -5,6 +5,7 @@ import { EDGE_FRAMES, edgeGain } from "./SceneEdge";
 
 describe("scene edges", () => {
   it("start silent-ish, reach full gain, and end silent-ish, never jumping", () => {
+    // covers: BIV-AUD-002
     const d = 90;
     const gains = Array.from({ length: d }, (_, f) => edgeGain(f, d));
     expect(gains[0]).toBeLessThan(0.3);
@@ -18,6 +19,7 @@ describe("scene edges", () => {
     expect(edgeGain(0, 1)).toBeGreaterThan(0);
   });
   it("never fades the picture: a scene must not become see-through at its edges (the studio set would ghost through at every cut)", () => {
+    // covers: BIV-GFX-008
     const code = fs.readFileSync(path.resolve(__dirname, "SceneEdge.tsx"), "utf8").replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
     expect(code).not.toMatch(/opacity/i);
     expect(code).not.toMatch(/useCurrentFrame/); // nothing in the wrapper depends on the frame: it can only carry the sound ramp

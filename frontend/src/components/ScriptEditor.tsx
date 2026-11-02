@@ -22,6 +22,8 @@ export function ScriptEditor({ projectId, script, guided = false }: { projectId:
   }, [script.id]);
 
   const ORDER = ["intro", "body", "explanation", "analysis", "outro"];
+  // the guided video's fixed running order (Video Rulebook v4): name each part the way the owner hears it
+  const GUIDED_PARTS: Record<string, string> = { intro: "Opening", analysis: "Closing remark", outro: "Sign-off" };
   const EXTRA: Record<string, string> = {
     explanation: "Explanation: the presenter explains the business before your interview",
     analysis: "Analysis: the presenter reflects on your answers after the interview",
@@ -57,7 +59,7 @@ export function ScriptEditor({ projectId, script, guided = false }: { projectId:
         <Notice>{guided ? "Check what the presenter says. It is short on purpose: your story and your own answers do the rest. Nothing is made until you approve." : "Review what the anchor will say. Nothing is rendered, and no credits are used, until you approve."}</Notice>
         {segments.map((s, i) => (
           <div key={i} className="space-y-1">
-            <label htmlFor={`seg-${i}`} className="text-sm font-medium capitalize">{s.kind}</label>
+            <label htmlFor={`seg-${i}`} className="text-sm font-medium capitalize">{(guided && GUIDED_PARTS[s.kind]) || s.kind}</label>
             <textarea id={`seg-${i}`} rows={3} className={inputCls} value={s.text} onChange={(e) => setSegments(segments.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} />
           </div>
         ))}

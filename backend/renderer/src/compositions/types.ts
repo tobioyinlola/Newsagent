@@ -1,6 +1,5 @@
 export type NewsProps = {
   channel: { name: string; locked: boolean };
-  disclosures: { tag: string; anchor: string };
   brand: { primary: string; accent: string };
   tickerLines: string[];
   lowerThirds: { title: string; subtitle: string }[];
@@ -19,10 +18,9 @@ export type NewsProps = {
 
 export const defaultProps: NewsProps = {
   channel: { name: "Cover Founder", locked: true },
-  disclosures: { tag: "Featured", anchor: "AI-generated anchor" },
   brand: { primary: "#0B3D91", accent: "#F5A623" },
   tickerLines: ["FEATURED: Acme builds tools for farmers", "Sample ticker line two"],
-  lowerThirds: [{ title: "Acme", subtitle: "Featured startup" }],
+  lowerThirds: [{ title: "Acme", subtitle: "Business news" }],
   anchorSrc: null,
   anchorDurationSeconds: 10,
 };

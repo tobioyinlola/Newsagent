@@ -24,7 +24,7 @@ from app.schemas.api import (
     ShareCreated,
     SharePublic,
 )
-from app.services.captions import DISCLOSURE, suggested_captions
+from app.services.captions import suggested_captions
 from app.services.ratelimit import limit
 
 router = APIRouter(tags=["delivery"])
@@ -106,7 +106,7 @@ async def downloads(
         if a.type in {"render", "render_light", "preview", "thumbnail", "caption"}
         and (project.state == "final_ready" or a.type == "preview")
     ]
-    return DownloadsOut(items=items, disclosure=DISCLOSURE)
+    return DownloadsOut(items=items, disclosure="")  # no label wording (BIV-GFX-009); field kept for older clients
 
 
 @router.get("/v1/projects/{project_id}/captions", response_model=CaptionsOut)
@@ -126,7 +126,7 @@ async def captions(
     )
     caps = suggested_captions(company, hook)
     caps.pop("company", None)
-    return CaptionsOut(captions=caps, disclosure=DISCLOSURE, has_active_share=link is not None)
+    return CaptionsOut(captions=caps, disclosure="", has_active_share=link is not None)
 
 
 @router.post(
@@ -181,11 +181,11 @@ async def view_share(token: str, session: AsyncSession = Depends(get_session)) -
     link.views = (link.views or 0) + 1  # an impression: someone opened the shared video
     await session.commit()
     return SharePublic(
-        title=company or "Featured startup",
+        title=company or "Cover Founder News",
         video_url=storage.presign_get(video.storage_key, SIGNED_URL_TTL_S),
         thumbnail_url=storage.presign_get(thumb.storage_key, SIGNED_URL_TTL_S) if thumb else None,
-        disclosure=DISCLOSURE,
-        tag="Featured",
+        disclosure="",  # no label wording (BIV-GFX-009); fields kept for older clients
+        tag="",
     )
 
 

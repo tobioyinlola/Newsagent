@@ -43,7 +43,7 @@ test("an owner invites a team member with a role; they join and only get what th
   await expect(sam.getByRole("alert")).toBeVisible();
   await sam.getByLabel("6-digit code").fill(/\b(\d{6})\b/.exec((await lastMail(request, email)).text)![1]);
   await sam.getByRole("button", { name: "Join the team" }).click();
-  await expect(sam.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(sam.getByRole("heading", { level: 1, name: /^Welcome back/ })).toBeVisible();
 
   // Support sees support's screens and not the rest
   const nav = sidebar(sam);
@@ -83,7 +83,7 @@ test("an owner invites a team member with a role; they join and only get what th
   await expect(sam.getByRole("heading", { name: "Check your email" })).toBeVisible();
   await sam.getByLabel("6-digit code").fill(/\b(\d{6})\b/.exec((await lastMail(request, email)).text)![1]);
   await sam.getByRole("button", { name: "Verify" }).click();
-  await expect(sam.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(sam.getByRole("heading", { level: 1, name: /^Welcome back/ })).toBeVisible();
 
   // remove: they're gone from the list and can't get back in
   await active.getByRole("button", { name: "Remove" }).click();

@@ -5,6 +5,8 @@ import re
 import secrets
 from datetime import UTC, datetime
 
+from app.video_rules import value as rule_value
+
 CONSENT_VERSION = "2026-10-v1"
 
 
@@ -67,19 +69,19 @@ def hash_token(token: str) -> str:
 MAX_CHUNKS = 80
 MAX_CHUNK_BYTES = 8 * 1024 * 1024
 MAX_TAKE_BYTES = 150 * 1024 * 1024
-MAX_QUESTIONS = 5
+MAX_QUESTIONS: int = rule_value("BIV-INT-002")
 LAYOUTS = {"pip", "split", "column", "full"}
 
 # ---------- live (AI interviewer) limits ----------
-LIVE_MAX_TOTAL_S = 360  # six-minute estimate; answers are never shortened by an overall timer
-LIVE_MAX_ANSWER_S = 60  # main answer window; the recorder grants five seconds to round up
-LIVE_MIN_ANSWER_S = 15  # an answer window is never shorter than this
+LIVE_MAX_TOTAL_S: int = rule_value("BIV-INT-008")  # six-minute estimate; answers are never shortened by an overall timer
+LIVE_MAX_ANSWER_S: int = rule_value("BIV-INT-004")  # main answer window; the recorder grants five seconds to round up
+LIVE_MIN_ANSWER_S: int = rule_value("BIV-INT-005")  # an answer window is never shorter than this
 LIVE_MAX_CHUNKS = 45  # 75 s of 2 s chunks, plus slack
 ALLOWED_VIDEO_MIME = {"video/webm": "webm", "video/mp4": "mp4"}
 ALLOWED_AUDIO_MIME = {"audio/webm": "webm", "audio/mp4": "m4a", "audio/ogg": "ogg"}
 
 # Loud source audio is retained for diagnostics and normalized by the renderer; it must not force a retake.
-BLOCKING_FLAGS = {"no_speech", "too_short", "dark_video", "abusive_language"}
+BLOCKING_FLAGS: set[str] = set(rule_value("BIV-INT-009"))
 FLAG_MESSAGES = {
     "abusive_language": "Abusive language was detected in this answer. Please record it again using respectful language.",
     "no_speech": "We couldn't hear you clearly. Please check your microphone and try again.",
@@ -119,8 +121,9 @@ def validate_plan(plan: dict, question_count: int, durations: dict[int, float]) 
         if start < 0 or end < 0:
             raise InvalidPlan("Trim values can't be negative.")
         dur = durations.get(q)
-        if dur is not None and a.get("include", True) and start + end > dur - 1.0:
-            raise InvalidPlan(f"Answer {q + 1} would be shorter than 1 second after trimming.")
+        shortest = rule_value("BIV-SCN-003")
+        if dur is not None and a.get("include", True) and start + end > dur - shortest:
+            raise InvalidPlan(f"Answer {q + 1} would be shorter than {shortest:g} second after trimming.")
         own = a.get("layout")
         if own is not None and own not in LAYOUTS:
             raise InvalidPlan("Layout must be picture-in-picture, split screen, answers column or full screen.")

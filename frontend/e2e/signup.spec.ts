@@ -68,7 +68,7 @@ test("sign-in keeps authentication behavior with shared navigation on desktop an
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Open menu" }).click();
   await expect(page.getByRole("dialog", { name: "Menu", exact: true })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Site (mobile)", exact: true }).getByRole("link", { name: "Latest Stories" })).toHaveAttribute("href", "/latest-stories");
+  await expect(page.getByRole("navigation", { name: "Site (mobile)", exact: true }).getByRole("link", { name: "Featured Stories" })).toHaveAttribute("href", "/latest-stories");
   await page.getByRole("button", { name: "Close", exact: true }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: "/tmp/signin-mobile-refined.png", fullPage: true });

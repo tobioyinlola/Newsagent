@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import video_rules
 from app.config import VENDOR_POLICIES, get_settings
 from app.db import session_maker
 from app.integrations import registry
@@ -30,6 +31,7 @@ from app.services.interview import answer_cues, merge_srt, parse_srt, shifted_cu
 from app.services.notifications import low_balance_alert, notify_operators, vendor_budget_alert
 from app.services.safety import find_banned
 from app.services.spend_guard import LimitReached, SpendGuard
+from app.video_rules import value as rule_value
 
 log = logging.getLogger("pipeline")
 
@@ -53,9 +55,9 @@ def final_formats() -> list[dict]:
 
 PREVIEW = [{"kind": "video", "format": "16x9", "name": "preview", "width": 1920, "height": 1080, "scale": 0.5}]
 
-# Locked channel identity and mandatory disclosures (hard rules 1 and 2). Never user-editable.
+# Locked channel identity (hard rule 1). Never user-editable. No "Featured" / "AI-generated anchor" labels (Video Rulebook
+# BIV-GFX-001 and BIV-GFX-009).
 CHANNEL_IDENTITY = {"name": "Cover Founder", "locked": True}
-DISCLOSURES = {"tag": "Featured", "anchor": "AI-generated anchor"}
 
 
 def input_hash(data: dict) -> str:
@@ -168,7 +170,7 @@ def published_label(now: datetime | None = None) -> str:
     return f"{t:%b} {t.day}, {t.year} · {t.hour % 12 or 12}:{t:%M} {'AM' if t.hour < 12 else 'PM'} {t.tzname()}".upper()
 
 
-BRAND_INTRO_S, BRAND_OUTRO_S = 5.0, 6.0  # keep in step with renderer/src/compositions/brand.ts
+BRAND_INTRO_S, BRAND_OUTRO_S = float(rule_value("BIV-SCN-005")["intro"]), float(rule_value("BIV-SCN-005")["outro"])  # keep in step with renderer/src/compositions/brand.ts
 
 
 def brand_lead() -> float:
@@ -190,7 +192,6 @@ async def build_overlay_props(
     )
     return {
         "channel": CHANNEL_IDENTITY,
-        "disclosures": DISCLOSURES,
         "brand": {
             "primary": kit.primary_color if kit else "#0B3D91",
             "accent": project.accent_override or (kit.accent_color if kit else "#F5A623"),
@@ -461,7 +462,7 @@ async def _paid_avatar_asset(
     return cost
 
 
-PARALLEL_CLIPS = 3  # presenter clips made at once (the avatar vendor's own concurrency limit)
+PARALLEL_CLIPS: int = rule_value("BIV-COST-003")  # presenter clips made at once (the avatar vendor's own concurrency limit)
 
 
 async def _paid_clips(session: AsyncSession, project: Project, guard: SpendGuard, jobs: list[dict]) -> Decimal:
@@ -505,6 +506,18 @@ def segment_texts(script: ScriptVersion) -> dict[str, str]:
 
     def join(pred) -> str:
         return " ".join(sg["text"] for sg in script.segments if pred(sg.get("kind")))
+
+    if running_order_v4(script):
+        # Video Rulebook v4: the opening and sign-off are fixed wording from the rulebook, said exactly as written (the
+        # repeat filter would otherwise cut "This is Cover Founder News." as an echo of the opening's welcome). Only the
+        # writer's one line in the closing remark is screened for invitations.
+        remark = join(lambda k: k == "analysis")
+        return {
+            "main": join(lambda k: k != "outro" and k not in EXTRA_KINDS),
+            "explanation": "",
+            "analysis": polish.strip_invites(remark) if remark else remark,
+            "outro": join(lambda k: k == "outro"),
+        }
 
     out = {
         "main": join(lambda k: k != "outro" and k not in EXTRA_KINDS),
@@ -596,6 +609,11 @@ def needed_questions(project: Project, count: int) -> list[int]:
     return list(dict.fromkeys(q for q in plan.get("order", range(count)) if q in include and q < count))
 
 
+def running_order_v4(script: ScriptVersion) -> bool:
+    """Is this video's script written for the fixed running order of Video Rulebook v4 (BIV-SCN-010)? Older scripts keep theirs."""
+    return (getattr(script, "story", None) or {}).get("video_flow") == 2
+
+
 def question_texts(project: Project, script: ScriptVersion, needed: list[int]) -> dict[int, str]:
     """What the presenter says for each question, in the order they play. In an interview the first welcomes the guest by name
     into the studio, and each later one opens with a short acknowledgement of the answer before it (a different line for each
@@ -608,6 +626,17 @@ def question_texts(project: Project, script: ScriptVersion, needed: list[int]) -
         or project.flow == "guided"
         or getattr(project, "interview_mode", None) == "live"
     )
+    if running_order_v4(script):
+        # Video Rulebook v4: the opening already welcomed the guest, so question 1 is the bare question (BIV-SCR-011); each
+        # later question opens with a hand-over line from the fixed pool (BIV-SCR-012).
+        lines = conv.handovers(project.id or "", max(0, len(needed) - 1))
+        out_v4: dict[int, str] = {}
+        for n, q in enumerate(needed):
+            text = script.interview_questions[q] if n == 0 else f"{lines[n - 1]} {script.interview_questions[q]}"
+            fresh = polish.remove_repeats([*before, text])[-1]
+            out_v4[q] = fresh or text
+            before.append(out_v4[q])
+        return out_v4
     gaps = conv.bridges(project.id or "", max(0, len(needed) - 1)) if interview else []
     out: dict[int, str] = {}
     for n, q in enumerate(needed):
@@ -930,7 +959,7 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
             or qclip is None
         ):
             return False
-        return float(take.duration_s or 0) - ans.get("trim_start_s", 0) - ans.get("trim_end_s", 0) >= 1.0
+        return float(take.duration_s or 0) - ans.get("trim_start_s", 0) - ans.get("trim_end_s", 0) >= rule_value("BIV-SCN-003")
 
     shown = [q for q in plan["order"] if usable(q)]
     layout = plan["layout"] if plan["layout"] in sp.LAYOUT_SCENE else "pip"
@@ -1053,7 +1082,9 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
         ]
         if clips.cutaways and q != shown[-1]:  # a cutaway to the presenter between answers, never after the last one
             clip_scene(clips.cutaways[shown.index(q) % len(clips.cutaways)], "cutaway")
+    remark_at = cursor
     presenter_part("analysis", "anchor_analysis")
+    remark_s = cursor - remark_at  # the closing remark (v4) or recap (older videos); 0 when the script has none
     closing_at: float | None = None
     if outro:
         start = closing_at = cursor
@@ -1082,7 +1113,9 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
     await sp.validate_assets(
         scene_plan, storage
     )  # missing media fails now, with a message, before any render time is spent
-    project.scene_plan, project.scene_plan_hash = scene_plan.model_dump(mode="json"), scene_plan.hash()
+    # which rulebook made this video (kept beside the plan, outside its hash, so recording it never forces a re-render)
+    stored = scene_plan.model_dump(mode="json") | {"rules_version": video_rules.VERSION}
+    project.scene_plan, project.scene_plan_hash = stored, scene_plan.hash()
     t_cursor = scene_plan.total_s
     scenes_out = sp.to_render_scenes(scene_plan, lambda k: storage.presign_get(k, RENDER_LINK_S))
     base = await build_overlay_props(session, project, script, t_cursor)
@@ -1098,8 +1131,20 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
     cover_at = thumbnails.guest_moment_s(project.scene_plan, brand_lead())
     if cover_at is not None:  # the cover is the guest talking, not the presenter every video opens on
         props["thumbnailAtSeconds"] = cover_at
-    if site and closing_at is not None:  # shown in a corner while the presenter signs off
-        props |= {"productUrl": display_url(site), "productUrlFromSeconds": closing_at}
+    if site and running_order_v4(script) and remark_s > 0:
+        # BIV-GFX-011: the web address card comes in with the closing remark and stays, still, until that line ends
+        props |= {
+            "productUrl": display_url(site),
+            "productUrlFromSeconds": remark_at,
+            "productUrlSeconds": remark_s,
+            "productUrlStatic": True,
+        }
+    elif site and closing_at is not None:  # older videos: shown in a corner for a few seconds while the presenter signs off
+        props |= {
+            "productUrl": display_url(site),
+            "productUrlFromSeconds": closing_at,
+            "productUrlSeconds": float(rule_value("BIV-GFX-006")),
+        }
     status, cost = await _submit_render(
         guard,
         project,
@@ -1137,7 +1182,7 @@ def chyron_for(script: ScriptVersion, q: int) -> str:
     """The headline bar while the founder answers question q: a short line from what they said (written with the story),
     with a neutral answer label if legacy metadata is missing."""
     chyrons = (script.story or {}).get("chyrons") or {}
-    return str(chyrons.get(str(q)) or "Founder: Shares the story behind the business")[:150]
+    return str(chyrons.get(str(q)) or rule_value("BIV-GFX-005"))[:150]
 
 
 PRESENTER_ROLES = {  # first name -> (name shown on screen, role shown under it)
@@ -1200,15 +1245,13 @@ async def _wait(renderer, render_id: str, project_id: str | None = None):
 
 
 def quality_gate(result: dict, outputs: int) -> list[str]:  # outputs = expected number of rendered files
-    """Stage 11: disclosures, banned names, and measured video/audio properties of each rendered video.
+    """Stage 11: banned names, and measured video/audio properties of each rendered video.
 
     Loudness is normalised by the renderer and only recorded here; clipping, silence, wrong length and
     audio/video drift fail the video before the owner sees it.
     """
     problems = []
     props = result["props"]
-    if props["disclosures"] != DISCLOSURES:
-        problems.append("missing mandatory disclosure labels")
     blob = json.dumps([props["tickerLines"], props["lowerThirds"]])
     for term in find_banned(blob):
         problems.append(f"banned network name in overlays: {term}")
@@ -1223,15 +1266,16 @@ def quality_gate(result: dict, outputs: int) -> list[str]:  # outputs = expected
     )
     for key, a in result.get("analyses", {}).items():
         name = key.rsplit("/", 1)[-1]
-        if abs(a["duration_s"] - expected) > max(1.0, 0.05 * expected):
+        length = rule_value("BIV-QC-001")
+        if abs(a["duration_s"] - expected) > max(length["min_s"], length["ratio"] * expected):
             problems.append(f"{name}: length {a['duration_s']:.1f}s does not match the {expected:.1f}s planned")
         if not a["has_audio"]:
             problems.append(f"{name}: no audio track")
         peak = a.get("true_peak_db")
-        if peak is not None and peak > -0.1:
+        if peak is not None and peak > rule_value("BIV-QC-003"):
             problems.append(f"{name}: audio is clipping ({peak:.1f} dB)")
         av, aa = a.get("video_duration_s"), a.get("audio_duration_s")
-        if av is not None and aa is not None and abs(av - aa) > 0.5:
+        if av is not None and aa is not None and abs(av - aa) > rule_value("BIV-QC-004"):
             problems.append(f"{name}: audio and video lengths differ by {abs(av - aa):.1f}s")
     return problems
 

@@ -65,6 +65,7 @@ async def test_unusable_product_videos_are_refused(client, workspace, analysis):
 
 # ---------- choosing ----------
 async def test_the_owner_picks_product_footage_within_limits(client, workspace):
+    # covers("BIV-SCN-008")
     pid, _t = await interview_project(client)
     img, (vid, _r) = await add_image(client), await add_video(client)
     got = (await client.get(f"/v1/projects/{pid}/broll", headers=OWNER)).json()

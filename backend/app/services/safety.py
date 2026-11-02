@@ -2,10 +2,9 @@
 
 import re
 
-BANNED_TERMS = [
-    "cnn", "bbc", "fox news", "sky news", "al jazeera", "msnbc", "reuters", "bloomberg tv", "nbc news",
-    "abc news", "cbs news", "channels tv", "arise news", "dw news", "france 24", "cnbc",
-]  # fmt: skip
+from app.video_rules import value as rule_value
+
+BANNED_TERMS: list[str] = list(rule_value("BIV-SAFE-001"))  # the Video Rulebook
 _PATTERN = re.compile(r"(?<![a-z0-9])(" + "|".join(re.escape(t) for t in BANNED_TERMS) + r")(?![a-z0-9])", re.I)
 
 
@@ -13,8 +12,8 @@ def find_banned(text: str) -> list[str]:
     return sorted({m.group(1).lower() for m in _PATTERN.finditer(text)})
 
 
-MAX_LOWER_THIRD_TITLE, MAX_LOWER_THIRD_SUBTITLE = 40, 60
-MAX_TICKER_LINE, MAX_TICKER_LINES = 90, 8
+MAX_LOWER_THIRD_TITLE, MAX_LOWER_THIRD_SUBTITLE = rule_value("BIV-GFX-004")["title"], rule_value("BIV-GFX-004")["subtitle"]
+MAX_TICKER_LINE, MAX_TICKER_LINES = rule_value("BIV-GFX-003")["max_chars"], rule_value("BIV-GFX-003")["max_lines"]
 
 
 def text_overflow(lower_thirds: list[dict], ticker_lines: list[str]) -> str | None:

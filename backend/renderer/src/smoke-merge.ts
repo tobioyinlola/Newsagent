@@ -14,7 +14,7 @@ execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsr
 execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "smptebars=s=1920x1080:r=30:d=3", "-f", "lavfi", "-i", "sine=frequency=500:d=3", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "public/presenter-clip.mp4"]);
 
 const props = {
-  channel: { name: "Cover Founder" }, disclosures: { tag: "Featured", anchor: "AI-generated anchor" },
+  channel: { name: "Cover Founder" },
   brand: { primary: "#0B3D91", accent: "#F5A623" }, tickerLines: ["FEATURED: Acme interview"], layout: "pip", totalSeconds: 17,
   scenes: [
     { type: "clip", src: "presenter-clip.mp4", seconds: 3 },

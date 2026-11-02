@@ -69,7 +69,10 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await page.getByRole("button", { name: "Produce my story" }).click();
   await expect(page.getByRole("heading", { name: "Your press release" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "What your presenter says" })).toBeVisible();
-  await expect(page.getByLabel("Outro")).toHaveValue(/^This is Cover Founder News\..*have a great day!$/); // the standard closing line
+  // Video Rulebook v4: the fixed running order, filled with this founder and business (covers: BIV-SCN-010, BIV-SCR-011, BIV-SCR-014)
+  await expect(page.getByLabel("Opening")).toHaveValue(/^Joining us in the studio today is Ada Obi, CEO, Acme Farms\. Welcome to Cover Founder News, Ada\./);
+  await expect(page.getByLabel("Closing remark")).not.toHaveValue("");
+  await expect(page.getByLabel("Sign-off")).toHaveValue("This is Cover Founder News. Until we bring you our next story, have a good day!");
   await expect(page.getByLabel(/Interview question/)).toHaveCount(0); // the questions are fixed once the answers are recorded
   await expect(page.getByRole("button", { name: "Make my video" })).toBeEnabled(); // pictures are optional
   const sample = (process.env.SNAPSHOT_PICS ?? "").split(",").filter(Boolean); // optional real pictures, for a visual check
@@ -94,7 +97,7 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await expect(page.getByRole("heading", { name: "Your announcement" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Social post" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy the social post" })).toBeVisible();
-  await expect(page.getByText("AI-generated anchor").first()).toBeVisible();
+  await expect(page.getByText("AI-generated anchor")).toHaveCount(0); // no label wording around the video (covers: BIV-GFX-009)
 
   // A platform-written story can be selected independently for distribution and edited without changing the original.
   const projectId = new URL(page.url()).pathname.split("/").pop()!;
@@ -149,7 +152,7 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   const shots = process.env.SNAPSHOT_DIR; // optional, for a visual check
   if (shots) { await visitor.setViewportSize({ width: 1280, height: 900 }); await row.scrollIntoViewIfNeeded(); await visitor.screenshot({ path: `${shots}/home-row.png` }); }
   await visitor.goto("/latest-stories");
-  await expect(visitor.getByRole("heading", { name: "Latest stories", level: 1 })).toBeVisible();
+  await expect(visitor.getByRole("heading", { name: "CF Featured Stories", level: 1 })).toBeVisible();
   if (shots) await visitor.screenshot({ path: `${shots}/latest-stories.png`, fullPage: true });
   await visitor.getByRole("link", { name: /^Watch:/ }).click();
   await expect(visitor).toHaveURL(new RegExp(`${slug}$`));
