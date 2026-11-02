@@ -8,7 +8,7 @@ import { Fonts, SANS } from "./theme";
 // Isolated composition: never used by NewsStudio or InterviewMerge.
 export const BREAKING_FPS = 30;
 // The presenter's framing. Her look is a close headshot, so at full size the headline bar covers her mouth. Below 1 her video is
-// set back and rests on the headline (see setbackFocus), with a soft blur of the same studio around it; above 1 it would be
+// set back and rests on the headline (see setbackFocus), on the plain News Desk background; above 1 it would be
 // enlarged around her face (PRESENTER_FOCUS). A video can override this with `presenterZoom`.
 export const PRESENTER_ZOOM = 0.6; // set back: her whole face and shoulders above the headline (chosen 2026-11-02)
 export const PRESENTER_FOCUS = "50% 32%";
@@ -70,12 +70,11 @@ const MotionPicture: React.FC<{ picture: Picture; frames: number }> = ({ picture
     {picture.caption && <div style={{ position: "absolute", bottom: "32%", left: "5%", maxWidth: "82%", background: "#222d", color: "white", padding: "12px 22px", fontSize: 25, lineHeight: 1.4 }}>{picture.caption}</div>}
   </AbsoluteFill>;
 };
-/** The presenter's video. Above 1 it is enlarged around her face; below 1 it is set back and raised, with a soft blur of the same
- *  studio filling the edges (never empty borders), so her face and shoulders sit clear of the headline bar. */
+/** The presenter's video. Above 1 it is enlarged around her face; below 1 it is set back, resting on the headline, on the plain
+ *  News Desk background (no blur), so her face and shoulders sit clear of the headline bar. */
 const PresenterShot: React.FC<{ src: string; zoom: number }> = ({ src, zoom }) => {
   if (zoom >= 1) return <AbsoluteFill style={{ overflow: "hidden" }}><OffthreadVideo src={src} style={{ width: "100%", height: "100%", objectFit: "cover", transform: `scale(${zoom})`, transformOrigin: PRESENTER_FOCUS }} /></AbsoluteFill>;
   return <AbsoluteFill style={{ overflow: "hidden" }}>
-    <OffthreadVideo src={src} muted style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(28px) brightness(0.7)", transform: "scale(1.15)" }} />
     <OffthreadVideo src={src} style={{ position: "absolute", width: "100%", height: "100%", objectFit: "cover", transform: `scale(${zoom})`, transformOrigin: setbackFocus(zoom), boxShadow: "0 0 60px #0008" }} />
   </AbsoluteFill>;
 };
