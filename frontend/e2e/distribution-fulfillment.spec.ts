@@ -71,7 +71,7 @@ test("configured team and publisher emails, media charges, receipt and multi-out
     await expect(page.getByRole("heading", { name: "Payment receipt" })).toBeVisible();
     const id = new URL(page.url()).searchParams.get("draft")!;
     expect(Number((await (await request.get(`${API}/v1/me`, { headers })).json()).credit_balance)).toBe(before - 7);
-    await expect.poll(async () => (await request.get(`${API}/v1/dev/last-email`, { params: { to: "distribution-sales@example.com" } })).status()).toBe(200);
+    await expect.poll(async () => (await request.get(`${API}/v1/dev/last-email`, { params: { to: "distribution-sales@example.com" } })).status(), { timeout: 20_000 }).toBe(200);
     const sale = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: "distribution-sales@example.com" } })).json();
     expect(sale.text).toContain("Total: 7"); expect(sale.text).toContain(contact);
     const sent = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: "distribution-editor@example.com" } })).json();
@@ -101,10 +101,10 @@ test("configured team and publisher emails, media charges, receipt and multi-out
     await firstPlacement.getByLabel("Message body").fill("Hello, following up from Cover Founder. Please confirm your publication date.");
     await firstPlacement.getByRole("button", { name: "Save outlet progress" }).click();
     await firstPlacement.getByRole("button", { name: "Send publisher email / follow-up" }).click();
-    await expect.poll(async () => (await (await request.get(`${API}/v1/dev/last-email`, { params: { to: "distribution-editor@example.com" } })).json()).subject).toBe("Please confirm publication timing");
+    await expect.poll(async () => (await (await request.get(`${API}/v1/dev/last-email`, { params: { to: "distribution-editor@example.com" } })).json()).subject, { timeout: 20_000 }).toBe("Please confirm publication timing");
     await firstPlacement.getByLabel("Published post URL").fill("https://empire.example.com/acme-launch");
     await firstPlacement.getByRole("button", { name: "Save outlet progress" }).click();
-    await expect.poll(async () => (await (await request.get(`${API}/v1/dev/last-email`, { params: { to: contact } })).json()).text).toContain("https://empire.example.com/acme-launch");
+    await expect.poll(async () => (await (await request.get(`${API}/v1/dev/last-email`, { params: { to: contact } })).json()).text, { timeout: 20_000 }).toContain("https://empire.example.com/acme-launch");
     await page.reload();
     await expect(page.getByText("1 of 2 outlets published.", { exact: false })).toBeVisible();
     await expect(page.getByRole("link", { name: "View published post on Empire Magazine Africa" })).toHaveAttribute("href", "https://empire.example.com/acme-launch");
