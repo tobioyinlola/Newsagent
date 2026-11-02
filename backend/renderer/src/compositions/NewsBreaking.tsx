@@ -7,21 +7,9 @@ import { Fonts, SANS } from "./theme";
 
 // Isolated composition: never used by NewsStudio or InterviewMerge.
 export const BREAKING_FPS = 30;
-// The presenter's framing. Her look is a close headshot, so at full size the headline bar covers her mouth. Below 1 her video is
-// set back and rests on the headline (see setbackFocus), with a soft blur of the same studio around it; above 1 it would be
-// enlarged around her face (PRESENTER_FOCUS). A video can override this with `presenterZoom`.
-export const PRESENTER_ZOOM = 0.6; // set back: her whole face and shoulders above the headline (chosen 2026-11-02)
-export const PRESENTER_FOCUS = "50% 32%";
-// Set back (zoom below 1): the box's bottom edge rests just above the "CF TECHNOLOGY BREAKING NEWS" label (72% down the frame),
-// so no gap shows between the presenter and the headline. Scaling about y = o puts the bottom at o + zoom * (1 - o).
-export const SETBACK_BOTTOM = 0.72;
-export function setbackFocus(zoom: number): string {
-  const o = Math.min(1, Math.max(0, (SETBACK_BOTTOM - zoom) / (1 - zoom)));
-  return `50% ${(o * 100).toFixed(2)}%`;
-}
 export const STING_SECONDS = 2;
 type Picture = { src: string; caption: string; motion: string; duration_s?: number };
-export type BreakingProps = { headline: string; summary: string; anchorSrc: string; presenterFrames: number; pictures: Picture[]; presenterZoom?: number };
+export type BreakingProps = { headline: string; summary: string; anchorSrc: string; presenterFrames: number; pictures: Picture[] };
 export const defaultBreakingProps: BreakingProps = { headline: "CF Technology Breaking News", summary: "Cover Founder News", anchorSrc: "", presenterFrames: 900, pictures: [] };
 export function breakingFrames(props: BreakingProps): number {
   if (!Number.isInteger(props.presenterFrames) || props.presenterFrames <= 0 || props.presenterFrames > 47 * BREAKING_FPS) throw new Error("News Desk presenter must fit within 47 seconds");
@@ -70,21 +58,12 @@ const MotionPicture: React.FC<{ picture: Picture; frames: number }> = ({ picture
     {picture.caption && <div style={{ position: "absolute", bottom: "32%", left: "5%", maxWidth: "82%", background: "#222d", color: "white", padding: "12px 22px", fontSize: 25, lineHeight: 1.4 }}>{picture.caption}</div>}
   </AbsoluteFill>;
 };
-/** The presenter's video. Above 1 it is enlarged around her face; below 1 it is set back and raised, with a soft blur of the same
- *  studio filling the edges (never empty borders), so her face and shoulders sit clear of the headline bar. */
-const PresenterShot: React.FC<{ src: string; zoom: number }> = ({ src, zoom }) => {
-  if (zoom >= 1) return <AbsoluteFill style={{ overflow: "hidden" }}><OffthreadVideo src={src} style={{ width: "100%", height: "100%", objectFit: "cover", transform: `scale(${zoom})`, transformOrigin: PRESENTER_FOCUS }} /></AbsoluteFill>;
-  return <AbsoluteFill style={{ overflow: "hidden" }}>
-    <OffthreadVideo src={src} muted style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(28px) brightness(0.7)", transform: "scale(1.15)" }} />
-    <OffthreadVideo src={src} style={{ position: "absolute", width: "100%", height: "100%", objectFit: "cover", transform: `scale(${zoom})`, transformOrigin: setbackFocus(zoom), boxShadow: "0 0 60px #0008" }} />
-  </AbsoluteFill>;
-};
 const Report: React.FC<BreakingProps> = p => {
   const f = useCurrentFrame(); const { width, height } = useVideoConfig();
   const cutaways = breakingCutaways(p.presenterFrames, p.pictures.length, p.pictures.map(picture => picture.duration_s || 5));
   const card = interpolate(f, [0, 18], [height * .24, 0], { ...clamp, easing: ease });
   return <AbsoluteFill style={{ background: "#191a30", fontFamily: SANS }}>
-    {p.anchorSrc && <PresenterShot src={p.anchorSrc} zoom={p.presenterZoom ?? PRESENTER_ZOOM} />}
+    {p.anchorSrc && <OffthreadVideo src={p.anchorSrc} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
     {cutaways.map(c => <Sequence key={c.from} from={c.from} durationInFrames={c.duration}><MotionPicture picture={p.pictures[c.picture]} frames={c.duration} /></Sequence>)}
     <div style={{ position: "absolute", top: "4%", left: "4%", background: "#222", border: "2px solid #c0fe73", color: "#c0fe73", padding: "12px 18px", fontSize: width * .018, fontWeight: 800 }}>CF NEWS</div>
     <div style={{ position: "absolute", top: "4%", right: "4%", background: "#eb464b", color: "white", padding: "12px 18px", fontSize: width * .015, fontWeight: 800 }}>BREAKING NEWS</div>
