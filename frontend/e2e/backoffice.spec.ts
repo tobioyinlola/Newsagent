@@ -39,7 +39,7 @@ test("the overview shows sign-ups, who is paying and how videos are doing", asyn
 
   await asOperator(page);
   await page.goto("/admin");
-  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /^Welcome back/ })).toBeVisible();
   const figures = page.getByLabel("Key figures");
   await expect(figures.getByText("Paying companies")).toBeVisible();
   await expect(figures.getByText("$50").first()).toBeVisible(); // revenue
@@ -118,7 +118,7 @@ test("a customer cannot use the back office", async ({ page, request }) => {
   await page.addInitScript((t) => sessionStorage.setItem("newsagent.admin.token", t), token);
   await page.goto("/admin");
   await expect(page.getByText("isn't a Cover Founder operator")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Overview" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1, name: /^Welcome back/ })).toHaveCount(0);
   for (const path of ["/v1/admin/overview", "/v1/admin/customers", "/v1/admin/payments"]) expect((await request.get(`${API}${path}`, { headers: c.headers })).status()).toBe(403);
 });
 
@@ -141,7 +141,7 @@ test("operators sign in with a password and a code emailed to them, and are sign
   await expect(page.getByRole("alert")).toBeVisible();
   await page.getByLabel("6-digit code").fill(await codeFor(request, "ops@example.com"));
   await page.getByRole("button", { name: "Verify" }).click();
-  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /^Welcome back/ })).toBeVisible();
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Sign out" }).click(); // the confirmation
   await expect(page).toHaveURL(/\/admin\/login/);

@@ -54,8 +54,7 @@ test("configured team and publisher emails, media charges, receipt and multi-out
     await page.getByLabel("Contact name", { exact: true }).fill("Ada Operations");
     await page.getByLabel("Contact email", { exact: true }).fill(contact);
     await page.getByLabel("Primary phone number", { exact: true }).fill("+2348031234567");
-    await page.getByLabel("WhatsApp number", { exact: true }).fill("+19058052110");
-    await page.getByLabel(/Company logo \(required/).setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: png });
+    await page.getByLabel("Company logo (optional, PNG/JPEG, up to 5 MB)", { exact: true }).setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: png });
     await expect(page.getByText("Company logo uploaded ✓")).toBeVisible();
     await page.getByLabel(/Additional pictures \(optional/).setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: png });
     await expect(page.getByText("Picture 1 uploaded")).toBeVisible();

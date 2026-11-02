@@ -111,7 +111,7 @@ test("sign up with a password, verify the emailed code, sign out, sign back in, 
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(pw);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("link", { name: "Videos" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Videos" })).toBeVisible();
 });
 
 test("an expired session sends you back to sign in", async ({ page }) => {

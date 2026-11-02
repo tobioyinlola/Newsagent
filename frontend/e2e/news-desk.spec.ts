@@ -34,10 +34,13 @@ test("News Desk source, AI rewrite, verified images, storyboard, public publicat
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.setViewportSize({ width: 1280, height: 720 });
-  const cards = await (await request.get(`${API}/v1/public/stories`)).json();
-  expect(cards[0].category).toBe("CF Technology Breaking News");
-  await page.goto("/latest-stories");
-  await expect(page.getByRole("heading", { name: "CF Technology Breaking News", exact: true })).toBeVisible();
+  // News Desk stories are published to the CF News feed, kept apart from customers' Featured Stories (since 6de0cf2)
+  const cards = await (await request.get(`${API}/v1/public/cf-news`)).json();
+  expect(cards[0].category).toBe("CF News"); // renamed in 9dc0732 (Add dedicated CF News section)
+  const featured = await (await request.get(`${API}/v1/public/stories`)).json();
+  expect(featured.map((c: { slug: string }) => c.slug)).not.toContain(cards[0].slug);
+  await page.goto("/cf-news");
+  await expect(page.getByRole("region", { name: "CF News stories" }).getByRole("link", { name: /Technology update: a new chapter/ })).toBeVisible();
   await page.goto(path!);
   await expect(page.getByText("Source reporting:", { exact: false })).toBeVisible();
   await expect(page.getByRole("link", { name: "Example Technology", exact: true })).toHaveAttribute("href", "https://example.com/technology");

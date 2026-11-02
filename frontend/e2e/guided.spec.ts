@@ -94,7 +94,7 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await expect(page.getByRole("heading", { name: "Your announcement" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Social post" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy the social post" })).toBeVisible();
-  await expect(page.getByText("AI-generated anchor").first()).toBeVisible();
+  await expect(page.getByText("AI-generated anchor")).toHaveCount(0); // no label wording around the video (covers: BIV-GFX-009)
 
   // A platform-written story can be selected independently for distribution and edited without changing the original.
   const projectId = new URL(page.url()).pathname.split("/").pop()!;
@@ -149,7 +149,7 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   const shots = process.env.SNAPSHOT_DIR; // optional, for a visual check
   if (shots) { await visitor.setViewportSize({ width: 1280, height: 900 }); await row.scrollIntoViewIfNeeded(); await visitor.screenshot({ path: `${shots}/home-row.png` }); }
   await visitor.goto("/latest-stories");
-  await expect(visitor.getByRole("heading", { name: "Latest stories", level: 1 })).toBeVisible();
+  await expect(visitor.getByRole("heading", { name: "CF Featured Stories", level: 1 })).toBeVisible();
   if (shots) await visitor.screenshot({ path: `${shots}/latest-stories.png`, fullPage: true });
   await visitor.getByRole("link", { name: /^Watch:/ }).click();
   await expect(visitor).toHaveURL(new RegExp(`${slug}$`));
