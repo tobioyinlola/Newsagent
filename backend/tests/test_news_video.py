@@ -105,7 +105,8 @@ async def test_breaking_story_uses_the_female_news_desk_presenter(client, worksp
     job = await start(client, row, monkeypatch)
     await news_video.run(job)
     assert seen and seen[0].avatar_id == get_settings().news_desk_avatar_id
-    assert get_settings().news_desk_avatar_id == "56f77809cfb5befeec11d8820fef119f"
+    assert get_settings().news_desk_avatar_id == "294e7a4a0fc0e8bc6d4990e34f5365fc"  # the Studio anchor (chosen 2026-11-02)
+    assert seen[0].voice_gender == "female"  # always a female voice
 
 
 async def test_publish_waits_for_inflight_video_and_stale_copy_is_rejected(client, workspace, monkeypatch):

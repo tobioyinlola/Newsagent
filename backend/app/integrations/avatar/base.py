@@ -12,6 +12,8 @@ class AvatarRequest:
     extra: dict | None = (
         None  # vendor-specific request fields for this clip (e.g. an expression setting for the sign-off)
     )
+    # "female" / "male": the voice MUST be this gender (the News Desk sets it). None: the look's own voice, as before.
+    voice_gender: str | None = None
 
 
 @dataclass

@@ -24,7 +24,7 @@ from app.integrations.errors import ProviderError
 
 log = logging.getLogger("heygen")
 _LOOKS: dict[str, dict] = {}
-_VOICES: dict[tuple[str, str], str | None] = {}
+_VOICES: dict[tuple[str, str, bool], str | None] = {}
 BASE = "https://api.heygen.com"
 # Measured twice on 2026-10-25: 3.0 s cost $0.12 and 3.4 s cost $0.11 (wallet deltas), about $0.03 to $0.04 a second.
 # Two short samples on the account's default engine; there may be a minimum charge. Re-measure with a longer clip before pricing.
@@ -144,20 +144,29 @@ class HeyGenProvider(AvatarProvider):
         _LOOKS[avatar_id] = found
         return found
 
-    async def _voice_for(self, c: httpx.AsyncClient, avatar_id: str, accent: str) -> str | None:
+    async def _voice_for(self, c: httpx.AsyncClient, avatar_id: str, accent: str, required: str | None = None) -> str | None:
         """A voice_id the video can use. The look's own default if it has one; otherwise the configured fallback; otherwise an
-        English voice of the presenter's gender (British or American to match the project's accent when HeyGen says which)."""
+        English voice of the presenter's gender (British or American to match the project's accent when HeyGen says which).
+        `required` ("female"/"male"): the voice must be that gender, so the look's own default (whose gender we can't see) is
+        skipped and only a voice HeyGen lists with that gender is accepted."""
+        st = get_settings()
+        if required:
+            chosen = {"male": st.heygen_voice_male, "female": st.heygen_voice_female}.get(required)
+            return chosen or await self._search_voice(c, required, accent, strict=True)
         look = await self._look(c, avatar_id)
         if look.get("default_voice_id"):
             return look["default_voice_id"]
         gender = _look_gender(look)
-        st = get_settings()
         chosen = {"male": st.heygen_voice_male, "female": st.heygen_voice_female}.get(
             gender
         ) or st.heygen_default_voice_id
         if chosen:
             return chosen
-        key = (gender, accent)
+        return await self._search_voice(c, gender, accent)
+
+    async def _search_voice(self, c: httpx.AsyncClient, gender: str, accent: str, strict: bool = False) -> str | None:
+        """The best English voice for this gender and accent from HeyGen's list. `strict`: only a voice of that gender will do."""
+        key = (gender, accent, strict)
         if key in _VOICES:
             return _VOICES[key]
         want_uk = accent.lower() in {"british", "uk", "english"}
@@ -170,6 +179,8 @@ class HeyGenProvider(AvatarProvider):
             for v in page.get("data", []):
                 lang = str(v.get("language", "")).lower()
                 if not lang.startswith("en") or not v.get("voice_id"):
+                    continue
+                if strict and _gender(v.get("gender")) != gender:
                     continue
                 score = 1 + (2 if gender and _gender(v.get("gender")) == gender else 0)
                 uk = any(t in lang for t in ("uk", "british", "gb"))
@@ -191,7 +202,7 @@ class HeyGenProvider(AvatarProvider):
         async with httpx.AsyncClient(base_url=BASE, headers=self._headers, timeout=30) as c:
             if req.avatar_id:
                 try:
-                    voice = await self._voice_for(c, req.avatar_id, req.voice_accent)
+                    voice = await self._voice_for(c, req.avatar_id, req.voice_accent, req.voice_gender)
                 except httpx.HTTPError:  # the lookup is a convenience; HeyGen still decides whether the video is valid
                     voice = None
                 if voice:

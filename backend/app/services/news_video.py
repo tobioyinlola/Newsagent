@@ -117,6 +117,7 @@ async def generate(db, row: NewsVideo):
         voice_accent="british",
         avatar_id=news_desk_avatar() or None,
         transparent=False,
+        voice_gender=get_settings().news_desk_voice_gender or None,  # a female voice for the News Desk presenter
     )
     media = dict(row.media)
     if not media.get("anchor_key"):

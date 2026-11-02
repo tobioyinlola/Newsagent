@@ -63,3 +63,49 @@ def test_a_look_with_no_gender_field_is_read_from_its_name():
     assert _look_gender({"name": "Studio Woman 2"}) == "female"
     assert _look_gender({"name": "Dante"}) == "male"  # unknown: the house presenter is a man
     assert _look_gender({"name": "Dante", "gender": "female"}) == "female"
+
+
+async def test_a_required_female_voice_is_female_even_when_the_looks_own_voice_is_a_mans(monkeypatch):
+    # The News Desk asks for a female voice: the look's own default (here a man's) and male voices are never used.
+    import json
+
+    from app.config import get_settings
+    from app.integrations.avatar import heygen
+
+    heygen._LOOKS.clear()
+    heygen._VOICES.clear()
+    monkeypatch.setattr(get_settings(), "heygen_voice_female", "")
+    sent = {}
+
+    def handler(request):
+        p = request.url.path
+        if p.startswith("/v3/avatars/looks"):
+            return httpx.Response(200, json={"data": {"id": "anchor", "name": "Studio anchor", "default_voice_id": "his-voice"}})
+        if p == "/v3/voices":
+            voices = [
+                {"voice_id": "m-uk", "language": "English (UK)", "gender": "male"},
+                {"voice_id": "f-us", "language": "English (US)", "gender": "female"},
+                {"voice_id": "f-uk", "language": "English (UK)", "gender": "female"},
+            ]
+            return httpx.Response(200, json={"data": voices, "has_more": False})
+        sent.update(json.loads(request.content))
+        return httpx.Response(200, json={"data": {"video_id": "v1"}})
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(handler), **kw))
+    req = AvatarRequest(script_text="Hi", avatar_id="anchor", voice_accent="british", voice_gender="female")
+    assert await HeyGenProvider().submit(req) == "v1"
+    assert sent["voice_id"] == "f-uk"  # female, British for the British accent; never "his-voice" or "m-uk"
+
+    # a configured female voice wins
+    heygen._VOICES.clear()
+    monkeypatch.setattr(get_settings(), "heygen_voice_female", "our-chosen-female")
+    await HeyGenProvider().submit(req)
+    assert sent["voice_id"] == "our-chosen-female"
+
+
+def test_the_news_desk_uses_the_studio_anchor_with_a_female_voice():
+    from app.config import Settings
+
+    s = Settings()
+    assert s.news_desk_avatar_id == "294e7a4a0fc0e8bc6d4990e34f5365fc" and s.news_desk_voice_gender == "female"
