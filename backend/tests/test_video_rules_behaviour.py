@@ -67,7 +67,7 @@ async def test_pictures_in_the_guided_flow_go_with_the_story_not_into_the_video(
 def test_a_render_missing_any_file_fails_the_quality_check():
     # covers("BIV-QC-005")
     result = {
-        "props": {"disclosures": steps.DISCLOSURES, "tickerLines": ["x"], "lowerThirds": [], "anchorDurationSeconds": 10.0},
+        "props": {"tickerLines": ["x"], "lowerThirds": [], "anchorDurationSeconds": 10.0},
         "output_keys": ["only-one.mp4"],
         "analyses": {},
     }

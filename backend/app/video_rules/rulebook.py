@@ -42,10 +42,13 @@ class Rule:
     enforced_in: tuple[str, ...] = field(default_factory=tuple)  # where the code applies it
 
 
-VERSION = 1
+VERSION = 2
 CHANGELOG: list[str] = [
     "v1 (2026-11-02): rulebook created. Every business interview video rule recorded exactly as the code behaved on this date; "
     "no behaviour changed.",
+    "v2 (2026-11-02): added BIV-GFX-009. The 'Featured' / 'AI-generated anchor' wording that was left after the on-screen "
+    "labels were removed is gone from the render data, the quality check, social captions, the download and share pages "
+    "and the presenter-only video's 'Featured startup' banner. Founder consent text is unchanged.",
 ]
 
 RULES: list[Rule] = [
@@ -161,6 +164,12 @@ RULES: list[Rule] = [
     Rule("BIV-GFX-001", "graphics", "No AI-anchor or 'Featured' labels on screen",
          "The video carries no 'AI-generated anchor' or 'Featured' label (removed 2026-10-28).",
          True, enforced_in=("renderer/src/compositions/Chrome.tsx",)),
+    Rule("BIV-GFX-009", "graphics", "No 'Featured' or 'AI-generated anchor' wording around the video",
+         "Not in the render data, the quality check, social captions, the download or share pages, or the presenter-only "
+         "video's banner. (How founders are told an AI presenter is used, in consent and emails, is separate and unchanged.)",
+         True, since=2,
+         enforced_in=("pipeline/steps.py", "services/captions.py", "routes/delivery.py", "renderer compositions",
+                      "frontend Delivery and Share pages")),
     Rule("BIV-GFX-002", "graphics", "LIVE badge location",
          "The LIVE badge shows the reporter's location while the presenter is on, and the founder's own location during "
          "their answers.",

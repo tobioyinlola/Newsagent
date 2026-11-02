@@ -3,9 +3,8 @@ import { usePageAudience, useVideoAudience } from "../lib/audience";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
-import { DisclosureBadge } from "../components/ui";
 
-// Public page: no sign-in. The disclosure is part of the page and cannot be turned off.
+// Public page: no sign-in.
 export function Share() {
   const { token = "" } = useParams();
   const q = useQuery({ queryKey: ["share", token], queryFn: () => unwrap(api.GET("/v1/share/{token}", { params: { path: { token } } })), retry: false });
@@ -20,7 +19,6 @@ export function Share() {
         <>
           <h1 className="text-2xl font-bold">{q.data.title}</h1>
           <video ref={video} controls className="w-full rounded-md bg-black" src={q.data.video_url} poster={q.data.thumbnail_url ?? undefined} aria-label={`Video: ${q.data.title}`} />
-          <DisclosureBadge text={q.data.disclosure} />
         </>
       )}
     </div>

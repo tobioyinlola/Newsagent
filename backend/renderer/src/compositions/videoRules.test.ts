@@ -20,3 +20,11 @@ describe("Video Rulebook rules drawn by the renderer", () => {
     expect(code("InterviewMerge.tsx")).toMatch(/durationInFrames=\{Math\.round\(URL_SHOWN_S \* fps\)\}/);
   });
 });
+
+describe("no label wording around the video", () => {
+  it.each(["Chrome.tsx", "InterviewMerge.tsx", "NewsStudio.tsx", "types.ts"])("%s carries no Featured / AI-generated anchor wording", (f) => {
+    // covers: BIV-GFX-009
+    expect(code(f)).not.toMatch(/disclosures/);
+    expect(code(f)).not.toMatch(/Featured startup|AI-generated anchor/);
+  });
+});

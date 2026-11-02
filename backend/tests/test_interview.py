@@ -357,7 +357,7 @@ async def test_merge_builds_scene_timeline_and_reaches_final(client, workspace):
         "location": "",
     }
     assert req.props["totalSeconds"] == pytest.approx(sum(s["seconds"] for s in req.props["scenes"]))
-    assert req.props["disclosures"] == {"tag": "Featured", "anchor": "AI-generated anchor"}
+    assert "disclosures" not in req.props  # no label wording in the render data (BIV-GFX-009)
     d = (await client.get(f"/v1/projects/{pid}/downloads", headers=OWNER)).json()
     assert {i["type"] for i in d["items"]} >= {"render", "thumbnail", "caption"}
 

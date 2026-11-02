@@ -3,9 +3,11 @@ from decimal import Decimal
 import pytest
 
 from app.routes import delivery
-from app.services.captions import DISCLOSURE, build_srt
+from app.services.captions import build_srt
 from tests.conftest import OPS, OWNER, VIDEO
 from tests.helpers import make_final_ready
+
+LABELS = ("Featured", "AI-generated anchor")  # wording no longer used (Video Rulebook BIV-GFX-009)
 
 
 def test_srt_is_well_formed_and_covers_duration():
@@ -16,12 +18,13 @@ def test_srt_is_well_formed_and_covers_duration():
     assert "00:00:10,000" in blocks[1]
 
 
-async def test_downloads_signed_urls_and_disclosure(client, workspace):
+async def test_downloads_signed_urls_and_no_label_wording(client, workspace):
+    # covers("BIV-GFX-009")
     pid = await make_final_ready(client)
     d = (await client.get(f"/v1/projects/{pid}/downloads", headers=OWNER)).json()
     kinds = {(i["type"], i["format"]) for i in d["items"]}
     assert {("render", "16x9"), ("thumbnail", "16x9"), ("caption", None)} <= kinds
-    assert d["disclosure"] == DISCLOSURE
+    assert d["disclosure"] == ""
     assert all(i["expires_in_s"] <= 900 and i["url"] for i in d["items"])
 
 
@@ -57,11 +60,13 @@ async def test_downloads_are_private_to_workspace(client, workspace, maker):
         assert (await client.get(f"/v1/projects/{pid}{path}", headers=other)).status_code == 404
 
 
-async def test_captions_always_carry_disclosure(client, workspace):
+async def test_captions_carry_no_label_wording(client, workspace):
+    # covers("BIV-GFX-009")
     pid = await make_final_ready(client)
     caps = (await client.get(f"/v1/projects/{pid}/captions", headers=OWNER)).json()
     assert set(caps["captions"]) == {"linkedin", "instagram", "x"}
-    assert all(DISCLOSURE in c for c in caps["captions"].values())
+    assert not [c for c in caps["captions"].values() if any(w in c for w in LABELS)]
+    assert caps["disclosure"] == ""
 
 
 async def test_share_lifecycle_and_revoke(client, workspace):
@@ -73,7 +78,7 @@ async def test_share_lifecycle_and_revoke(client, workspace):
     stats = (await client.get("/v1/public/stats")).json()
     assert stats["videos"] >= 1 and stats["impressions"] == 1  # opening the shared video counts as an impression
     body = pub.json()
-    assert body["tag"] == "Featured" and body["disclosure"] == DISCLOSURE and body["video_url"]
+    assert body["tag"] == "" and body["disclosure"] == "" and body["video_url"]  # BIV-GFX-009
     assert (await client.delete(f"/v1/projects/{pid}/share", headers=OWNER)).status_code == 200
     assert (await client.get(f"/v1/share/{token}")).status_code == 404
     assert (await client.get("/v1/share/not-a-token")).status_code == 404
@@ -196,10 +201,8 @@ def _result(**analysis):
         "loudness_lufs": -16.0,
         "true_peak_db": -1.5,
     }
-    from app.pipeline.steps import DISCLOSURES
-
     return {
-        "props": {"disclosures": DISCLOSURES, "tickerLines": ["x"], "lowerThirds": [], "anchorDurationSeconds": 10.0},
+        "props": {"tickerLines": ["x"], "lowerThirds": [], "anchorDurationSeconds": 10.0},
         "output_keys": ["a", "b", "c"],
         "analyses": {"p/16x9.mp4": {**base, **analysis}},
     }

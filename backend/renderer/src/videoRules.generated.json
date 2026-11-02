@@ -1,5 +1,5 @@
 {
- "version": 1,
+ "version": 2,
  "rules": {
   "BIV-INT-001": 4,
   "BIV-INT-002": 5,
@@ -106,6 +106,7 @@
    "captions"
   ],
   "BIV-GFX-001": true,
+  "BIV-GFX-009": true,
   "BIV-GFX-002": "Toronto, Canada",
   "BIV-GFX-003": {
    "max_lines": 8,

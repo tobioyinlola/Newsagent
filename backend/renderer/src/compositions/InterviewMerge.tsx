@@ -37,7 +37,6 @@ export type Scene =
 
 export type MergeProps = {
   channel: { name: string };
-  disclosures: { tag: string; anchor: string };
   brand: { primary: string; accent: string };
   tickerLines: string[];
   layout: "pip" | "split" | "column" | "full";
@@ -57,7 +56,6 @@ export type MergeProps = {
 
 export const defaultMergeProps: MergeProps = {
   channel: { name: "Cover Founder" },
-  disclosures: { tag: "Featured", anchor: "AI-generated anchor" },
   brand: { primary: "#0B3D91", accent: "#F5A623" },
   tickerLines: ["FEATURED: Interview"],
   layout: "pip",
@@ -257,7 +255,7 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
           </Series.Sequence>
         ))}
       </Series>
-      <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} liveLocation={liveLocation} publishedLabel={p.publishedLabel} />
+      <Chrome channel={p.channel} brand={p.brand} tickerLines={p.tickerLines} liveLocation={liveLocation} publishedLabel={p.publishedLabel} />
       {p.productUrl && p.productUrlFromSeconds != null && (
         <Sequence from={Math.round(p.productUrlFromSeconds * fps)} durationInFrames={Math.round(URL_SHOWN_S * fps)}>
           <UrlBadge url={p.productUrl} />

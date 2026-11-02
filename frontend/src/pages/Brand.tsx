@@ -77,7 +77,7 @@ export function Brand() {
   return (
     <>
       <h1 className="text-2xl font-bold">Brand kit <span className="text-base font-normal text-muted">version {kit.data.version}</span></h1>
-      <Notice>Your colors, fonts and tone style the graphics. The news-channel look and the “Featured” and “AI-generated anchor” labels are fixed for every video.</Notice>
+      <Notice>Your colors, fonts and tone style the graphics. The news-channel look is fixed for every video.</Notice>
 
       <Card title="Import from your website">
         <form className="flex flex-col gap-2 sm:flex-row" onSubmit={(e) => { e.preventDefault(); imp.mutate(); }}>

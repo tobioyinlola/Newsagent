@@ -1,6 +1,6 @@
 # Video rules: business interview videos
 
-Generated from `backend/app/video_rules/rulebook.py` (rulebook version 1). Do not edit by hand: change the
+Generated from `backend/app/video_rules/rulebook.py` (rulebook version 2). Do not edit by hand: change the
 rulebook, then run `uv run python ../scripts/export_video_rules.py` from `backend/`. How rules may change is written at
 the top of the rulebook; in short, rules are added, never deleted, and every change is versioned and tested.
 
@@ -54,6 +54,7 @@ the top of the rulebook; in short, rules are added, never deleted, and every cha
 | Id | Rule | Value |
 |---|---|---|
 | `BIV-GFX-001` | **No AI-anchor or 'Featured' labels on screen.** The video carries no 'AI-generated anchor' or 'Featured' label (removed 2026-10-28). | true |
+| `BIV-GFX-009` | **No 'Featured' or 'AI-generated anchor' wording around the video.** Not in the render data, the quality check, social captions, the download or share pages, or the presenter-only video's banner. (How founders are told an AI presenter is used, in consent and emails, is separate and unchanged.) | true |
 | `BIV-GFX-002` | **LIVE badge location.** The LIVE badge shows the reporter's location while the presenter is on, and the founder's own location during their answers. | Toronto, Canada |
 | `BIV-GFX-003` | **Ticker limits.** At most 8 ticker lines of 90 characters. | {"max_lines": 8, "max_chars": 90} |
 | `BIV-GFX-004` | **Lower-third text limits.** Lower-third title up to 40 characters, subtitle up to 60. | {"title": 40, "subtitle": 60} |
@@ -101,3 +102,4 @@ the top of the rulebook; in short, rules are added, never deleted, and every cha
 ## Changelog
 
 - v1 (2026-11-02): rulebook created. Every business interview video rule recorded exactly as the code behaved on this date; no behaviour changed.
+- v2 (2026-11-02): added BIV-GFX-009. The 'Featured' / 'AI-generated anchor' wording that was left after the on-screen labels were removed is gone from the render data, the quality check, social captions, the download and share pages and the presenter-only video's 'Featured startup' banner. Founder consent text is unchanged.

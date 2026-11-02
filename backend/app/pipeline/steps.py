@@ -55,9 +55,9 @@ def final_formats() -> list[dict]:
 
 PREVIEW = [{"kind": "video", "format": "16x9", "name": "preview", "width": 1920, "height": 1080, "scale": 0.5}]
 
-# Locked channel identity and mandatory disclosures (hard rules 1 and 2). Never user-editable.
+# Locked channel identity (hard rule 1). Never user-editable. No "Featured" / "AI-generated anchor" labels (Video Rulebook
+# BIV-GFX-001 and BIV-GFX-009).
 CHANNEL_IDENTITY = {"name": "Cover Founder", "locked": True}
-DISCLOSURES = {"tag": "Featured", "anchor": "AI-generated anchor"}
 
 
 def input_hash(data: dict) -> str:
@@ -192,7 +192,6 @@ async def build_overlay_props(
     )
     return {
         "channel": CHANNEL_IDENTITY,
-        "disclosures": DISCLOSURES,
         "brand": {
             "primary": kit.primary_color if kit else "#0B3D91",
             "accent": project.accent_override or (kit.accent_color if kit else "#F5A623"),
@@ -1204,15 +1203,13 @@ async def _wait(renderer, render_id: str, project_id: str | None = None):
 
 
 def quality_gate(result: dict, outputs: int) -> list[str]:  # outputs = expected number of rendered files
-    """Stage 11: disclosures, banned names, and measured video/audio properties of each rendered video.
+    """Stage 11: banned names, and measured video/audio properties of each rendered video.
 
     Loudness is normalised by the renderer and only recorded here; clipping, silence, wrong length and
     audio/video drift fail the video before the owner sees it.
     """
     problems = []
     props = result["props"]
-    if props["disclosures"] != DISCLOSURES:
-        problems.append("missing mandatory disclosure labels")
     blob = json.dumps([props["tickerLines"], props["lowerThirds"]])
     for term in find_banned(blob):
         problems.append(f"banned network name in overlays: {term}")

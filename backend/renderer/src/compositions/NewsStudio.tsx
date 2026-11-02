@@ -39,12 +39,6 @@ const StudioBody: React.FC<NewsProps> = (p) => {
       </AbsoluteFill>}
       {!(p.anchorFullFrame && p.anchorSrc) && <NewsDesk />}
 
-      {/* breaking-news style banner */}
-      <div style={{ position: "absolute", left: 0, bottom: (portrait ? 31 : 24.5) + "%", transform: `translateX(${(1 - slide(5)) * -100}%)` }}>
-        <div style={{ background: CF.green, color: CF.ink, fontFamily: MONO, fontWeight: 700, fontSize: 34 * u, padding: `${8 * u}px ${28 * u}px`, textTransform: "uppercase", letterSpacing: 3 * u }}>
-          Featured startup
-        </div>
-      </div>
 
       {/* lower third */}
       {lt && (
@@ -72,7 +66,7 @@ export const NewsStudio: React.FC<NewsProps> = (p) => {
         <Series.Sequence durationInFrames={frames(p.anchorDurationSeconds)}><SceneEdge><StudioBody {...p} /></SceneEdge></Series.Sequence>
         {p.outroClip && <Series.Sequence durationInFrames={frames(p.outroClip.seconds)}><SceneEdge><ClipScene src={p.outroClip.src} /></SceneEdge></Series.Sequence>}
       </Series>
-      <Chrome channel={p.channel} disclosures={p.disclosures} brand={p.brand} tickerLines={p.tickerLines} liveLocation={p.liveLocation} publishedLabel={p.publishedLabel} />
+      <Chrome channel={p.channel} brand={p.brand} tickerLines={p.tickerLines} liveLocation={p.liveLocation} publishedLabel={p.publishedLabel} />
     </AbsoluteFill>
     </StudioProvider>
   );
