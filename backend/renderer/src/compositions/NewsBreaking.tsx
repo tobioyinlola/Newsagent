@@ -66,7 +66,7 @@ const Report: React.FC<BreakingProps> = p => {
   const cutaways = breakingCutaways(p.presenterFrames, p.pictures.length, p.pictures.map(picture => picture.duration_s || 5));
   const card = interpolate(f, [0, 18], [height * .24, 0], { ...clamp, easing: ease });
   return <AbsoluteFill style={{ background: "#191a30", fontFamily: SANS }}>
-    {p.anchorSrc && (p.anchorCovers ? <FullFrameAnchor src={p.anchorSrc} covers screenText={SCREEN_TEXT} screenTextOn={["left"]} /> : <OffthreadVideo src={p.anchorSrc} style={{ width: "100%", height: "100%", objectFit: "cover" }} />)}
+    {p.anchorSrc && (p.anchorCovers ? <FullFrameAnchor src={p.anchorSrc} covers screenText={SCREEN_TEXT} screenTextOn={["left"]} offScreens={["right"]} /> : <OffthreadVideo src={p.anchorSrc} style={{ width: "100%", height: "100%", objectFit: "cover" }} />)}
     {cutaways.map(c => <Sequence key={c.from} from={c.from} durationInFrames={c.duration}><MotionPicture picture={p.pictures[c.picture]} frames={c.duration} /></Sequence>)}
     <div style={{ position: "absolute", top: "4%", left: "4%", background: "#222", border: "2px solid #c0fe73", color: "#c0fe73", padding: "12px 18px", fontSize: width * .018, fontWeight: 800 }}>CF NEWS</div>
     <div style={{ position: "absolute", top: "4%", right: "4%", background: "#eb464b", color: "white", padding: "12px 18px", fontSize: width * .015, fontWeight: 800 }}>BREAKING NEWS</div>

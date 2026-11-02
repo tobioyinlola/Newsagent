@@ -27,6 +27,6 @@ describe("News Desk presenter screens", () => {
   it("covers a presenter's own studio screens with correctly spelled boards when asked", () => {
     expect(SCREEN_TEXT).toBe("Breaking News");
     const code = fs.readFileSync(path.resolve(__dirname, "NewsBreaking.tsx"), "utf8");
-    expect(code).toMatch(/p\.anchorCovers \? <FullFrameAnchor src=\{p\.anchorSrc\} covers screenText=\{SCREEN_TEXT\} screenTextOn=\{\["left"\]\} \/>/); // the label on the left screen only
+    expect(code).toMatch(/p\.anchorCovers \? <FullFrameAnchor src=\{p\.anchorSrc\} covers screenText=\{SCREEN_TEXT\} screenTextOn=\{\["left"\]\} offScreens=\{\["right"\]\} \/>/); // label on the left; right screen switched off, no panel
   });
 });

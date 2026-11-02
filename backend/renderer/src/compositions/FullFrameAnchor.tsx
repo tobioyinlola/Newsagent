@@ -27,8 +27,9 @@ const useFit = () => {
 };
 
 // `screenText`: optional words drawn on our boards, on the screens named in `screenTextOn` (the News Desk shows "BREAKING NEWS"
-// on the left one only); business videos leave both boards plain.
-export const FullFrameAnchor: React.FC<{ src: string; muted?: boolean; covers?: boolean; screenText?: string; screenTextOn?: ("left" | "right")[] }> = ({ src, muted, covers = true, screenText, screenTextOn = ["left", "right"] }) => {
+// on the left one only); business videos leave both boards plain. `offScreens`: screens shown with no board or text, as a
+// switched-off screen in the studio's blue, so the picture's own text never shows (the News Desk's right screen).
+export const FullFrameAnchor: React.FC<{ src: string; muted?: boolean; covers?: boolean; screenText?: string; screenTextOn?: ("left" | "right")[]; offScreens?: ("left" | "right")[] }> = ({ src, muted, covers = true, screenText, screenTextOn = ["left", "right"], offScreens = [] }) => {
   const volume = useEdgeVolume();
   const { s, ox, oy } = useFit();
   const at = (r: { x: number; y: number; w: number; h: number }) => ({ left: ox + r.x * s, top: oy + r.y * s, width: r.w * s, height: r.h * s });
@@ -38,7 +39,10 @@ export const FullFrameAnchor: React.FC<{ src: string; muted?: boolean; covers?: 
       {covers && REFLECTIONS.map((r, i) => (
         <div key={i} style={{ position: "absolute", ...at(r), borderRadius: 14 * s, backdropFilter: `blur(${16 * s}px)`, background: "rgba(150,185,235,0.35)" }} />
       ))}
-      {covers && SCREENS.map((r, i) => (
+      {covers && SCREENS.filter((r) => offScreens.includes(r.side)).map((r, i) => (
+        <div key={`off-${i}`} style={{ position: "absolute", ...at(r), background: "linear-gradient(160deg,#2c63b8 0%,#17417f 55%,#0e2c5c 100%)", boxShadow: `inset 0 0 ${40 * s}px rgba(120,170,240,.35)` }} />
+      ))}
+      {covers && SCREENS.filter((r) => !offScreens.includes(r.side)).map((r, i) => (
         <div key={i} style={{ position: "absolute", ...at(r), overflow: "hidden", background: "linear-gradient(180deg,#eaf1ff 0%,#9db8ec 55%,#3a5fb0 100%)", border: `${3 * s}px solid #dfe9fb` }}>
           <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(90deg, rgba(20,50,120,.22) 0 14%, rgba(255,255,255,.12) 14% 20%)" }} />
           {screenText && screenTextOn.includes(r.side) && (
