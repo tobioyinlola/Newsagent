@@ -13,12 +13,11 @@ Voice: warm, confident, conversational (OpenAI TTS, e.g. "nova" or "alloy"). Abo
 | 6 | **Make my video, then progress, then the finished video plays** (real customer video). | "Then we produce the news segment. Our AI presenter opens the show and welcomes the founder by name, asks each question, and the founder's own answers play in between, with name cards, headlines and their website on screen. It's a real newsroom format, consistent on every video, made automatically." |
 | 7 | **Download and share.** HD and Light downloads, share link, the public story page on Featured Stories. | "The founder gets the video in HD and a lighter version for phones, a share link, and a public story page on Cover Founder, ready for LinkedIn, X and WhatsApp." |
 | 8 | **Press distribution.** Choose outlets (TechCabal, BusinessDay and more), see credit prices, pay from the wallet. | "And it doesn't stop there. In a few clicks, founders send their story to real publications across Africa, priced per outlet and paid from their credit wallet. Our team handles the outreach and tracks each placement until it's published." |
-| 9 | **Back office glimpse.** Overview, News Desk, distribution tracking. | "Behind it all is a back office that runs the newsroom: payments, distribution, quality review, and our own CF News desk, which turns technology headlines into one-minute breaking-news videos." |
-| 10 | **Close** on the home page / logo. | "Cover Founder: every founder's story, told like the news. Fast, affordable, and built to scale across Africa and beyond." |
+| 9 | **Close** on the home page / logo. | "Cover Founder: every founder's story, told like the news. Fast, affordable, and built to scale across Africa and beyond." |
 
 Word count of the voice-over: about 480 (≈ 3 min 15 s at 150 wpm), plus pauses for the video clips.
 
 Production notes
 - Recorded at 1920×1080 with a visible cursor and a soft highlight on each click; captions burned in as a fallback.
 - Scene 6 shows a real finished customer video (with the founder's permission), not a stand-in.
-- Scenes 1, 7 and 9 are recorded on the live site; scenes 2–6 and 8 on a demo account so no real customer data is shown and nothing is charged.
+- Customer-side screens only (no back office). Scenes 1, 7 and part of 8 are recorded on the live site; scenes 2–6 and the outlet picker on a demo account so no real customer data is shown and nothing is charged.
