@@ -6,7 +6,6 @@ import { api, unwrap } from "../api/client";
 import { Delivery } from "../components/Delivery";
 import { BrollPanel } from "../components/BrollPanel";
 import { ProgressPanel } from "../components/ProgressPanel";
-import { SceneEditor } from "../components/SceneEditor";
 import { StoryCopy } from "../components/StoryCopy";
 import { StoryImages } from "../components/StoryImages";
 import { ScriptEditor } from "../components/ScriptEditor";
@@ -104,7 +103,6 @@ export function ProjectDetail() {
       {p.state === "final_ready" && me.data && <DistributionReadyPrompt key={`${id}-ready`} projectId={id} workspaceId={me.data.workspace_id} />}
       {p.state === "final_ready" && <Delivery projectId={id} />}
       {p.state === "final_ready" && guided && <StoryCopy projectId={id} />}
-      {p.state === "final_ready" && p.interview_enabled && <SceneEditor projectId={id} state={p.state} />}
     </>
   );
 }
