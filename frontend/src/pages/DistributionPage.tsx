@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { getToken } from "../lib/auth";
 import { OutletLogoStrip } from "../components/OutletLogoStrip";
-import { CHANNELS, CardArt, Cta, Eyebrow, SiteShell } from "./Landing";
+import { CHANNELS, Cta, Eyebrow, SiteShell } from "./Landing";
 
 // Dedicated page for distribution (press-distribution style): reach, how it works, coverage by region, outlet types,
 // credit-based packages, the placement report and questions. Distribution is launching: the page says so plainly.
@@ -166,7 +166,7 @@ export function DistributionPage() {
         </section>
 
         <section className="cf-stripes border-t border-white/10 px-4 py-20 text-center md:px-8">
-          <div className="cf-grain relative mx-auto mb-10 h-40 max-w-4xl overflow-hidden rounded-sm"><CardArt variant="story" /></div>
+          <img src="/distribution-cta.webp" alt="" aria-hidden="true" width={1600} height={893} loading="lazy" decoding="async" className="mx-auto mb-10 h-56 w-full max-w-4xl rounded-sm object-cover object-[50%_40%] md:h-80" />
           <h2 className="text-3xl text-white md:text-5xl">Choose where your story goes.</h2>
           <p className="mx-auto mt-3 max-w-xl text-white/70">Choose available outlets, review your announcement and submit a request to our team.</p>
           <div className="mt-8 flex flex-wrap justify-center gap-3"><Cta href={WAITLIST} primary>Choose outlets</Cta>{signedIn ? <Cta to="/ai-newsroom/new">Make a video</Cta> : <Cta to="/ai-newsroom">See the AI Newsroom</Cta>}</div>
