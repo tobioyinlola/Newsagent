@@ -313,7 +313,9 @@ export function InterviewRoom(p: RoomProps) {
         )}
         {phase === "countdown" && <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center bg-ink/50" role="status" aria-label="Recording countdown"><p className="text-8xl font-extrabold text-brand-green">{countdown || "Go"}</p><p className="mt-3 text-lg font-bold">Get ready — recording starts after the countdown</p></div>}
         {phase === "answering" && (
-          <div className="pointer-events-none absolute inset-x-0 top-16 flex justify-center px-3">
+          <div className="pointer-events-none absolute inset-x-0 top-14 flex flex-col items-center gap-3 px-3">
+            {/* up by the camera, so finishing an answer needs almost no glance away from it */}
+            <button type="button" onClick={() => doneNow.current?.()} className="pointer-events-auto rounded-md border-4 border-ink bg-brand-green px-8 py-3 text-xl font-extrabold text-ink shadow-2xl hover:bg-white focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-white">I’m done answering</button>
             <div className={`rounded-md border-4 px-8 py-2 text-center shadow-2xl ${ansLeft <= 10 ? "animate-pulse border-brand-red bg-brand-red text-ink" : "border-brand-green bg-ink text-brand-green"}`} role="timer" aria-label="Time left for this answer">
               <p className="font-mono text-5xl font-extrabold leading-none tabular-nums md:text-6xl">{mmss(ansLeft)}</p>
               <p className="mt-1 text-sm font-bold uppercase tracking-widest">{roundingUp ? "Please round up now" : "left for this answer"}</p>
@@ -353,8 +355,7 @@ export function InterviewRoom(p: RoomProps) {
 
         {phase === "answering" && (
           <div className="mt-auto space-y-2">
-            <p className="text-sm text-white">Answer in your own words. You have up to {mmss(ansWindow)}.</p>
-            <button type="button" onClick={() => doneNow.current?.()} className="w-full rounded-sm border-2 border-ink bg-brand-green px-5 py-4 text-lg font-bold text-ink">I’m done answering</button>
+            <p className="text-sm text-white">Answer in your own words. You have up to {mmss(ansWindow)}. When you finish, press “I’m done answering” at the top of your video.</p>
           </div>
         )}
         {phase === "finishing" && <CheckingProgress indices={p.indices} takes={takes} />}
