@@ -1,9 +1,13 @@
 """Latest Stories: the public lists and pages, and the owner's control over their own story's page."""
 
+import asyncio
+import logging
+import time
 from html import escape
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +21,34 @@ from app.services import news_desk_public, stories
 from app.services.ratelimit import limit
 
 router = APIRouter(tags=["stories"])
+log = logging.getLogger("stories")
+
+# Link previews: WhatsApp drops pictures over about 300 KB, so the picture shared with a link is a 1200x630 JPEG kept well under that.
+SOCIAL_W, SOCIAL_H, SOCIAL_MAX_BYTES = 1200, 630, 280_000
+_social_cache: dict[str, tuple[float, bytes]] = {}
+
+
+async def _social_jpeg(source_url: str) -> bytes | None:
+    """The cover picture as a small 1200x630 JPEG for link previews, or None if it can't be made (the caller then redirects)."""
+    try:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as c:
+            r = await c.get(source_url)
+            r.raise_for_status()
+        if len(r.content) > 20 * 1024 * 1024:
+            return None
+        for quality in (5, 9, 14, 20):
+            proc = await asyncio.create_subprocess_exec(
+                "ffmpeg", "-v", "error", "-i", "pipe:0",
+                "-vf", f"scale={SOCIAL_W}:{SOCIAL_H}:force_original_aspect_ratio=increase,crop={SOCIAL_W}:{SOCIAL_H}",
+                "-frames:v", "1", "-q:v", str(quality), "-f", "image2pipe", "-vcodec", "mjpeg", "pipe:1",
+                stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+            )  # fmt: skip
+            out, _ = await asyncio.wait_for(proc.communicate(r.content), timeout=25)
+            if proc.returncode == 0 and out and len(out) <= SOCIAL_MAX_BYTES:
+                return out
+    except Exception as e:  # a preview picture must never break the link; the plain redirect still works
+        log.warning("preview picture not made: %s", e)
+    return None
 
 
 async def _assets(session: AsyncSession, project_id: str) -> list[Asset]:
@@ -162,69 +194,111 @@ async def _listed(session: AsyncSession, slug: str) -> tuple[Project, Workspace 
 
 
 @router.get("/v1/public/stories/{slug}/image", dependencies=[Depends(limit("public-story", 120, 600))])
-async def story_image(slug: str, session: AsyncSession = Depends(get_session)) -> RedirectResponse:
-    """A steady address for a story's cover picture (the stored file's own link expires), for link previews."""
+async def story_image(slug: str, session: AsyncSession = Depends(get_session)) -> Response:
+    """A steady address for a story's cover picture (the stored file's own link expires), for link previews.
+    Served as a small 1200x630 JPEG so WhatsApp and the others will show it."""
     editorial = await news_desk_public.find(session, slug)
     if editorial:
         pictures = await news_desk_public.images(session, editorial)
         if not pictures:
             raise HTTPException(404, "No picture")
-        return RedirectResponse(pictures[0]["url"], 302)
-    _, _, _, assets = await _listed(session, slug)
-    thumb = next((a for a in assets if a.type == "thumbnail"), None)
-    if thumb is None:
-        raise HTTPException(404, "No picture")
-    return RedirectResponse(registry.get_storage().presign_get(thumb.storage_key, stories.PUBLIC_URL_TTL_S), 302)
+        source = pictures[0]["url"]
+    else:
+        _, _, _, assets = await _listed(session, slug)
+        thumb = next((a for a in assets if a.type == "thumbnail"), None)
+        if thumb is None:
+            raise HTTPException(404, "No picture")
+        source = registry.get_storage().presign_get(thumb.storage_key, stories.PUBLIC_URL_TTL_S)
+    cached = _social_cache.get(slug)
+    if cached and cached[0] > time.monotonic():
+        jpeg: bytes | None = cached[1]
+    else:
+        jpeg = await _social_jpeg(source)
+        if jpeg:
+            if len(_social_cache) >= 64:
+                _social_cache.clear()
+            _social_cache[slug] = (time.monotonic() + 3600, jpeg)
+    if jpeg is None:
+        return RedirectResponse(source, 302)
+    return Response(jpeg, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=3600"})
 
 
-@router.get(
+def _preview_html(
+    *, title: str, desc: str, url: str, image: str | None, alt: str, published: str | None
+) -> HTMLResponse:
+    """The small page link-preview bots read. Title and description come first; every value is escaped."""
+    t, d, u = escape(title, quote=True), escape(desc, quote=True), escape(url, quote=True)
+    tags = [
+        ("property", "og:type", "article"),
+        ("property", "og:site_name", "Cover Founder News"),
+        ("property", "og:locale", "en_US"),
+        ("property", "og:title", t),
+        ("property", "og:description", d),
+        ("property", "og:url", u),
+        ("name", "description", d),
+        ("name", "twitter:card", "summary_large_image" if image else "summary"),
+        ("name", "twitter:title", t),
+        ("name", "twitter:description", d),
+    ]
+    if published:
+        tags.append(("property", "article:published_time", published))
+    if image:
+        i = escape(image, quote=True)
+        tags += [
+            ("property", "og:image", i),
+            ("property", "og:image:secure_url", i),
+            ("property", "og:image:type", "image/jpeg"),
+            ("property", "og:image:width", str(SOCIAL_W)),
+            ("property", "og:image:height", str(SOCIAL_H)),
+            ("property", "og:image:alt", escape(alt, quote=True)),
+            ("name", "twitter:image", i),
+            ("name", "twitter:image:alt", escape(alt, quote=True)),
+        ]
+    meta = "\n".join(f'<meta {k}="{n}" content="{v}">' for k, n, v in tags)
+    body = (
+        f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{t}</title>'
+        f'<link rel="canonical" href="{u}">\n{meta}</head>'
+        f'<body><h1>{t}</h1><p>{d}</p><p><a href="{u}">Watch the story</a></p></body></html>'
+    )
+    return HTMLResponse(body)
+
+
+@router.api_route(
     "/v1/public/stories/{slug}/preview",
+    methods=["GET", "HEAD"],  # some crawlers ask with HEAD first
     response_class=HTMLResponse,
     dependencies=[Depends(limit("public-story", 120, 600))],
 )
 async def story_preview(slug: str, session: AsyncSession = Depends(get_session)) -> HTMLResponse:
     """What WhatsApp, LinkedIn, X, Facebook and Slack read to draw a link preview. The site serves this page, instead of the app,
     to those crawlers only (see vercel.json); people always get the app."""
+    base = get_settings().app_base_url.rstrip("/")
+    url = f"{base}{stories.PATH_PREFIX}{slug}"
+    image = f"{base}/v1/public/stories/{slug}/image"
     editorial = await news_desk_public.find(session, slug)
     if editorial:
         data = editorial.published_data or {}
-        title = escape(data["headline"], quote=True)
-        desc = escape(data["summary"], quote=True)
-        url = f"{get_settings().app_base_url.rstrip('/')}{stories.PATH_PREFIX}{editorial.slug}"
-        return HTMLResponse(
-            f'<!doctype html><html><head><title>{title}</title><meta property="og:type" content="article"><meta property="og:title" content="{title}"><meta property="og:description" content="{desc}"><link rel="canonical" href="{url}"></head><body><h1>{title}</h1><p>{desc}</p><a href="{url}">Read the story</a></body></html>'
+        has_image = bool(await news_desk_public.images(session, editorial))
+        published = getattr(editorial, "published_at", None)
+        return _preview_html(
+            title=str(data.get("headline") or "Cover Founder News"),
+            desc=str(data.get("summary") or ""),
+            url=f"{base}{stories.PATH_PREFIX}{editorial.slug}",
+            image=image if has_image else None,
+            alt=str(data.get("headline") or "Cover Founder News"),
+            published=published.isoformat() if published else None,
         )
     project, ws, story, assets = await _listed(session, slug)
-    base = get_settings().app_base_url.rstrip("/")
-    url = f"{base}{stories.PATH_PREFIX}{slug}"
-    title = escape(str(story.get("headline") or "Cover Founder News"), quote=True)
-    desc = escape(str(story.get("dek") or ""), quote=True)
-    has_image = any(a.type == "thumbnail" for a in assets)
-    image = f"{base}/v1/public/stories/{slug}/image"
-    tags = [
-        ("property", "og:type", "article"),
-        ("property", "og:site_name", "Cover Founder News"),
-        ("property", "og:title", title),
-        ("property", "og:description", desc),
-        ("property", "og:url", url),
-        ("name", "twitter:card", "summary_large_image" if has_image else "summary"),
-        ("name", "twitter:title", title),
-        ("name", "twitter:description", desc),
-    ]
-    if has_image:
-        tags += [
-            ("property", "og:image", image),
-            ("property", "og:image:width", "1280"),
-            ("property", "og:image:height", "720"),
-            ("name", "twitter:image", image),
-        ]
-    meta = "\n".join(f'<meta {k}="{n}" content="{v}">' for k, n, v in tags)
-    body = (
-        f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{title}</title>'
-        f'<link rel="canonical" href="{url}">\n{meta}</head>'
-        f'<body><h1>{title}</h1><p>{desc}</p><p><a href="{url}">Watch the story</a></p></body></html>'
+    headline = str(story.get("headline") or "Cover Founder News")
+    published = project.published_at
+    return _preview_html(
+        title=headline,
+        desc=str(story.get("dek") or ""),
+        url=url,
+        image=image if any(a.type == "thumbnail" for a in assets) else None,
+        alt=headline,
+        published=published.isoformat() if published else None,
     )
-    return HTMLResponse(body)
 
 
 async def _owned(session: AsyncSession, project_id: str, p: Principal) -> Project:

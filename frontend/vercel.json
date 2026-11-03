@@ -14,7 +14,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": "(?i).*(facebookexternalhit|Facebot|WhatsApp|LinkedInBot|Twitterbot|Slackbot|TelegramBot|Discordbot|SkypeUriPreview|Pinterest|redditbot|Googlebot|bingbot|Applebot).*"
+          "value": "(?i).*(facebookexternalhit|Facebot|WhatsApp|LinkedInBot|Twitterbot|Slackbot|TelegramBot|Discordbot|SkypeUriPreview|Pinterest|redditbot|Googlebot|bingbot|Applebot|Signal|Viber|Mastodon|Embedly|Iframely|MicrosoftPreview|Teams|Google-PageRenderer|vkShare|Bluesky|Cardyb).*"
         }
       ],
       "destination": "https://backend-production-73a97.up.railway.app/v1/public/stories/:slug/preview"
