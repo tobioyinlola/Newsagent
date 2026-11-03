@@ -43,14 +43,18 @@ test("completed video to distribution draft, checked images, wallet submission, 
   await expect(outletList).toBeVisible();
   expect(await outletList.evaluate(e => e.scrollHeight > e.clientHeight)).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  for (const name of ["Media outlets", "Crypto News Channels", "Business (Africa) Channels", "Nigeria News Channels", "Entertainment News Channels"]) {
+  for (const name of ["Media outlets", "Crypto News Channels", "Nigeria News Channels"]) {
     await expect(page.getByRole("heading", { name, exact: true })).toHaveCount(1);
+  }
+  // categories made up only of channels that cost 0 credits are hidden for now, with those channels
+  for (const name of ["Business (Africa) Channels", "Entertainment News Channels"]) {
+    await expect(page.getByRole("heading", { name, exact: true })).toHaveCount(0);
   }
   await page.getByLabel("Outlet category", { exact: true }).selectOption("Crypto News Channels");
   await expect(page.getByRole("checkbox")).toHaveCount(5);
   await page.getByRole("checkbox", { name: /^CoinSpeaks/ }).check();
   await page.getByLabel("Outlet category", { exact: true }).selectOption("Nigeria News Channels");
-  await expect(page.getByRole("checkbox")).toHaveCount(22);
+  await expect(page.getByRole("checkbox")).toHaveCount(20); // 22, minus two that cost 0 credits (hidden for now)
   await expect(page.getByRole("checkbox", { name: /^Tribune / }).locator("..")).toContainText("18.8");
   await expect(page.getByRole("checkbox", { name: /^Daily Nation / }).locator("..")).toContainText("651.6");
   await expect(page.getByRole("checkbox", { name: /^Pilot Newspaper / })).toHaveCount(1);
@@ -65,19 +69,20 @@ test("completed video to distribution draft, checked images, wallet submission, 
   await expect(page.getByRole("checkbox", { name: /^CoinSpeaks/ })).toBeChecked();
   await page.getByRole("checkbox", { name: /^CoinSpeaks/ }).uncheck();
   await page.getByLabel("Outlet category", { exact: true }).selectOption("");
-  await expect(page.getByRole("checkbox")).toHaveCount(53);
+  await expect(page.getByRole("checkbox")).toHaveCount(37); // 53 channels minus the 16 that cost 0 credits (hidden for now)
   await page.getByRole("searchbox", { name: "Search media outlets" }).fill("Premium Times");
   await expect(page.getByRole("checkbox")).toHaveCount(1);
   await expect(page.getByLabel("Selected outlets", { exact: true })).toContainText("2 selected");
   await page.getByRole("searchbox", { name: "Search media outlets" }).fill("no matching publication");
   await expect(page.getByRole("heading", { name: "No matching outlets" })).toBeVisible();
   await page.getByRole("button", { name: "Show all outlets" }).click();
-  await expect(page.getByRole("checkbox")).toHaveCount(53);
+  await expect(page.getByRole("checkbox")).toHaveCount(37); // 53 channels minus the 16 that cost 0 credits (hidden for now)
   await page.getByRole("button", { name: "Selected only (2)" }).click();
   await expect(page.getByRole("checkbox")).toHaveCount(2);
   await page.getByRole("button", { name: "Selected only (2)" }).click();
   await outletList.evaluate(e => { e.scrollTop = e.scrollHeight; });
-  await expect(page.getByRole("checkbox", { name: "P mp Kulture" })).toBeInViewport();
+  await expect(page.getByRole("checkbox").last()).toBeInViewport();
+  await expect(page.getByRole("checkbox", { name: "P mp Kulture" })).toHaveCount(0); // a free channel: hidden
   await outletList.evaluate(e => { e.scrollTop = 0; });
   await page.getByRole("button", { name: "View selection" }).click();
   await expect(page.getByRole("dialog", { name: "Your selected outlets" })).toBeVisible();

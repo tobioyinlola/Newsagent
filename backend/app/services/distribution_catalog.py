@@ -145,6 +145,14 @@ async def catalog(db: AsyncSession, *, admin=False) -> list[dict]:
     return result
 
 
+def is_hidden(outlet: dict) -> bool:
+    """Channels that cost 0 credits are hidden from customers for now (HIDE_FREE_DISTRIBUTION_OUTLETS, on by default).
+    Giving an outlet a price in the back office shows it again, and switching the setting off shows all of them."""
+    from app.config import get_settings
+
+    return get_settings().hide_free_distribution_outlets and Decimal(str(outlet["credits"])) == 0
+
+
 def quote(data: dict, outlets: list[dict]) -> list[dict]:
     lines = []
     choices = data.get("media_options", {})

@@ -1,11 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api, unwrap } from "../api/client";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { PlayDisc, StoryRow, StoryThumb, storyPath, useStories, type StoryCard } from "../components/StoryCards";
+import { PlayDisc, StoryRow, StoryThumb, StoryTile, storyPath, type StoryCard } from "../components/StoryCards";
 import { Cta, Eyebrow, SiteShell } from "./Landing";
 
 const SLIDE_MS = 8000;
+
+// Stories shown at first and added by each "See more". One extra is asked for, only to know whether older stories remain.
+export const LATEST_STORIES_PAGE = 12;
 
 // The top of the page: the newest stories, one at a time, with the story's words on the left and its video picture on the right.
 function Hero({ cards }: { cards: StoryCard[] }) {
@@ -51,14 +54,21 @@ function Hero({ cards }: { cards: StoryCard[] }) {
 }
 
 export function LatestStories() {
-  const q = useStories(48);
+  const q = useInfiniteQuery({
+    queryKey: ["latest-stories-page"],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      unwrap(api.GET("/v1/public/stories", { params: { query: { limit: LATEST_STORIES_PAGE + 1, offset: pageParam } } })) as Promise<StoryCard[]>,
+    getNextPageParam: (last, all) => (last.length > LATEST_STORIES_PAGE ? all.length * LATEST_STORIES_PAGE : undefined),
+    retry: false,
+    staleTime: 60_000,
+  });
   const news = useQuery({ queryKey: ["cf-news"], queryFn: () => unwrap(api.GET("/v1/public/cf-news")), staleTime: 60000 });
-  const cards = useMemo(() => q.data ?? [], [q.data]);
-  const byIndustry = useMemo(() => {
-    const m = new Map<string, StoryCard[]>();
-    for (const c of cards) if (c.industry) m.set(c.industry, [...(m.get(c.industry) ?? []), c]);
-    return [...m.entries()].filter(([, v]) => v.length >= 2);
-  }, [cards]);
+  // a story published while someone is reading shifts the pages by one: never show the same story twice
+  const cards = useMemo(() => {
+    const seen = new Set<string>();
+    return (q.data?.pages ?? []).flatMap((p) => p.slice(0, LATEST_STORIES_PAGE)).filter((c) => !seen.has(c.slug) && seen.add(c.slug));
+  }, [q.data]);
   return (
     <SiteShell>
       <main className="px-4 py-10 md:px-8">
@@ -76,8 +86,20 @@ export function LatestStories() {
             ) : (
               <>
                 <Hero cards={cards.slice(0, 4)} />
-                <div className="mt-10"><StoryRow title="Top stories" cards={cards} /></div>
-                {byIndustry.map(([name, list]) => <StoryRow key={name} title={name} cards={list} />)}
+                {/* no categories yet: just the latest stories, newest first, with a button for older ones */}
+                <section aria-label="Latest stories" className="mt-10">
+                  <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {cards.map((c) => <li key={c.slug}><StoryTile card={c} fluid /></li>)}
+                  </ul>
+                  {q.hasNextPage && (
+                    <div className="mt-8 flex justify-center">
+                      <button type="button" onClick={() => void q.fetchNextPage()} disabled={q.isFetchingNextPage} className="rounded-full border border-white/40 px-6 py-2.5 text-sm font-bold text-white hover:border-brand-green hover:text-brand-green disabled:opacity-60">
+                        {q.isFetchingNextPage ? "Loading…" : "See more"}
+                      </button>
+                    </div>
+                  )}
+                  {q.isFetchNextPageError && <p className="mt-3 text-center text-sm text-white/70" role="alert">Couldn't load more stories. Please try again.</p>}
+                </section>
               </>
             )}
           </div>

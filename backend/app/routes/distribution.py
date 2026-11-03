@@ -219,6 +219,9 @@ async def validate(db: AsyncSession, body: DraftIn, workspace_id: str):
         raise HTTPException(422, "Choose valid, distinct outlets")
     if any(i not in OUTLETS for i in body.media_options):
         raise HTTPException(422, "Choose valid outlet media options")
+    hidden = {o["id"] for o in await catalog_service.catalog(db) if catalog_service.is_hidden(o)}
+    if hidden & set(body.outlet_ids):
+        raise HTTPException(422, "One of the outlets you chose is not available right now. Remove it and try again.")
     if body.project_id:
         project = await db.get(Project, body.project_id)
         if project is None or project.workspace_id != workspace_id or project.state != "final_ready":
@@ -258,8 +261,8 @@ async def validate(db: AsyncSession, body: DraftIn, workspace_id: str):
 async def outlets(p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> dict:
     items = await catalog_service.catalog(db)
     return {
-        "outlets": items,
-        "quote_version": catalog_service.version(items),
+        "outlets": [o for o in items if not catalog_service.is_hidden(o)],  # free channels are hidden for now
+        "quote_version": catalog_service.version(items),  # always over the full list, so a submit's price check still matches
         "coming_soon": ["United States", "Canada", "United Kingdom"],
     }
 
