@@ -114,3 +114,36 @@ test("the admin overview uses the refreshed dashboard and real toolbar shortcuts
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test("while a video is being made the distribution pop-up shows once, and shows again when the video is finished", async ({ page }) => {
+  let state = "rendering_anchor";
+  await page.addInitScript(() => localStorage.setItem("newsagent.token", "test"));
+  await page.route("**/v1/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/v1/me") return route.fulfill({ json: { email: "customer@example.com", workspace_name: "Acme", workspace_id: "workspace", is_operator: false, credit_balance: "25" } });
+    if (path === "/v1/projects/making/progress") return route.fulfill({ json: { state, percent: state === "final_ready" ? 100 : 45, stages: [{ key: "render", label: "Making your video", status: state === "final_ready" ? "done" : "working" }], retryable: false, cancellable: true, vendor_jobs_in_flight: 0, queue_ahead: 0 } });
+    if (path === "/v1/projects/making") return route.fulfill({ json: { id: "making", state, flow: "classic", interview_enabled: false, created_at: "2026-10-31T09:00:00Z" } });
+    if (path.endsWith("/costs")) return route.fulfill({ json: { lines: [], total: "0" } });
+    if (path.endsWith("/downloads")) return route.fulfill({ json: { items: [], disclosure: "AI-generated presenter" } });
+    if (path.endsWith("/publication")) return route.fulfill({ json: { published: false } });
+    if (path.endsWith("/captions")) return route.fulfill({ json: { captions: {} } });
+    if (path.includes("/outlets")) return route.fulfill({ json: { outlets: [], coming_soon: [], quote_version: "test" } });
+    if (path === "/v1/capabilities") return route.fulfill({ json: { demo_mode: false } });
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/ai-newsroom/making");
+  const popup = page.getByRole("alertdialog", { name: "Take your story to over 25,000 media outlets?" });
+  await expect(popup).toBeVisible();
+  await expect(popup.getByText("Your video is being made.")).toBeVisible();
+  await page.screenshot({ path: "/tmp/cf-making-distribution-prompt.png" });
+  await popup.getByRole("button", { name: "Not now", exact: true }).click(); // dismissed for this video
+  await expect(popup).toHaveCount(0);
+  await page.reload();
+  await expect(popup).toHaveCount(0);
+  state = "final_ready"; // the video finishes: the pop-up comes back, saying it is ready
+  await page.reload();
+  await expect(popup).toBeVisible();
+  await expect(popup.getByText("Your video is ready.")).toBeVisible();
+  await popup.getByRole("button", { name: "Yes, choose outlets", exact: true }).click();
+  await expect(page).toHaveURL(/distribution\/request\?project=making$/);
+});
