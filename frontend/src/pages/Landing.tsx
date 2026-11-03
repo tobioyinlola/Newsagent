@@ -412,7 +412,7 @@ export function StatsStrip() {
     ["25K+", "Media platforms", "Distribution coverage"],
   ];
   return (
-    <section aria-label="Cover Founder in numbers" className="border-b border-white/10 bg-ink px-4 py-12 md:px-8">
+    <section aria-label="Cover Founder in numbers" className="bg-ink px-4 py-12 md:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="grid grid-cols-1 border border-white/10 md:grid-cols-3">
           {tiles.map(([v, label, sub], i) => (
@@ -492,14 +492,13 @@ export function Landing() {
               <Cta href="#how">See how it works</Cta>
             </div>
           </div>
-          <div className="relative z-10 mt-14"><StudioMock /></div>
         </section>
         <div className="overflow-hidden border-y border-brand-green/40 bg-ink py-3" aria-hidden="true">
           <div className="cf-ticker flex w-max whitespace-nowrap font-mono text-sm text-white/80"><span>{ticker.repeat(4)}</span><span>{ticker.repeat(4)}</span></div>
         </div>
-        <StatsStrip />
         <LatestStoriesRow />
         <CFNewsRow />
+        <StatsStrip />
         <UseCases />
         <TwoWays />
         <Banner />
