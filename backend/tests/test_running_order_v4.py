@@ -115,3 +115,35 @@ async def test_the_founders_name_in_the_opening_uses_the_pronunciation_list(clie
     await get_queue().drain()
     opening = next(r for r in asked if r.script_text.startswith("Joining us in the studio today is Tobi Oyinlola"))
     assert opening.pronunciation == {"Oyinlola": "oh-yin-LOH-lah"}
+
+
+async def test_the_opening_closing_remark_and_sign_off_are_view_only_for_the_owner(client, workspace):
+    # covers("BIV-SCN-010")
+    pid = await interviewed(client)
+    assert (await client.post(f"/v1/projects/{pid}/interview/merge", headers=OWNER)).status_code == 200
+    script = (await client.get(f"/v1/projects/{pid}/script", headers=OWNER)).json()
+    original = {x["kind"]: x["text"] for x in script["segments"]}
+    assert set(original) == {"intro", "analysis", "outro"}
+
+    def body(segments, **changes):
+        out = {k: script[k] for k in ("ticker_lines", "lower_thirds", "interview_questions")}
+        return {**out, "segments": segments, "confirmed_claims": [c["text"] for c in script["claim_flags"]], **changes}
+
+    # edited texts are ignored: the three parts keep what we wrote
+    edited = [{**x, "text": "Something the owner typed instead."} for x in script["segments"]]
+    saved = (await client.put(f"/v1/projects/{pid}/script", json=body(edited), headers=OWNER)).json()
+    assert {x["kind"]: x["text"] for x in saved["segments"]} == original
+    # a page that leaves the sign-off out (it is not shown) still gets it back, in the right order
+    without_sign_off = [x for x in script["segments"] if x["kind"] != "outro"]
+    saved = (await client.put(f"/v1/projects/{pid}/script", json=body(without_sign_off), headers=OWNER)).json()
+    assert [x["kind"] for x in saved["segments"]] == ["intro", "analysis", "outro"]
+    assert saved["segments"][-1]["text"] == presenters.STANDARD_OUTRO
+    # the news ticker is still the owner's to edit
+    saved = (
+        await client.put(
+            f"/v1/projects/{pid}/script",
+            json=body(script["segments"], ticker_lines=["My own ticker line"]),
+            headers=OWNER,
+        )
+    ).json()
+    assert saved["ticker_lines"] == ["My own ticker line"]

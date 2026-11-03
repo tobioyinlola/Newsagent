@@ -30,6 +30,13 @@ from app.services.moderation import fingerprint, script_text
 from app.services.ratelimit import limit
 from app.services.safety import find_banned, text_overflow
 
+FIXED_PRESENTER_PARTS = {
+    "intro",
+    "analysis",
+    "outro",
+}  # opening, closing remark, sign-off: set by us in the guided flow
+PART_ORDER = ["intro", "body", "explanation", "analysis", "outro"]
+
 router = APIRouter(prefix="/v1/projects", tags=["projects"])
 
 WORDS_PER_SECOND = 2.5
@@ -213,6 +220,14 @@ async def update_script(
     guided_flow = project.flow == "guided" and prev is not None
     if guided_flow and prev is not None:
         body.interview_questions = list(prev.interview_questions)  # the recorded answers belong to these questions
+    if guided_flow and prev is not None and (prev.story or {}).get("video_flow") == 2:
+        # The presenter's opening, closing remark and sign-off follow the fixed running order (Video Rulebook v4). The owner
+        # can read them but not change them, so whatever the page sends, these three keep the text we wrote.
+        fixed = [s for s in prev.segments if s.get("kind") in FIXED_PRESENTER_PARTS]
+        body.segments = [s for s in body.segments if s.get("kind") not in FIXED_PRESENTER_PARTS]
+        body.segments = sorted(
+            [*body.segments, *fixed], key=lambda x: PART_ORDER.index(x["kind"]) if x.get("kind") in PART_ORDER else 99
+        )
     text = " ".join(s.get("text", "") for s in body.segments)
     flags = [c.model_dump() for c in detect_claims(text)]
     for f in flags:  # confirmation carries over only for claim text the owner explicitly confirms
