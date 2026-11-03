@@ -5,6 +5,9 @@ import { api, unwrap } from "../api/client";
 import { OutOfCredits } from "../components/OutOfCredits";
 import { PresenterPicker } from "../components/PresenterPicker";
 import { Button, Card, ErrorBox, Field, inputCls } from "../components/ui";
+import { countWords, limitWords } from "../lib/words";
+
+const DETAILS_MAX_WORDS = 250;
 
 const KINDS: [string, string, string][] = [
   ["product_launch", "Product launch", "A new product, feature or version is going live."],
@@ -51,8 +54,13 @@ export function NewProject() {
             ))}
           </div>
         </fieldset>
-        <Field label="Tell us the key details" hint="Who you are, what is happening, who it is for, and any facts you want featured (amounts, dates, names). A few sentences is enough. At least 20 characters.">
-          {(id) => <textarea id={id} required minLength={20} maxLength={4000} rows={6} className={inputCls} value={details} onChange={(e) => setDetails(e.target.value)} />}
+        <Field label="Tell us the key details" hint="Who you are, what is happening, who it is for, and any facts you want featured (amounts, dates, names). A few sentences is enough, and the most we take is 250 words. At least 20 characters.">
+          {(id) => <>
+            <textarea id={id} required minLength={20} maxLength={4000} rows={6} className={inputCls} value={details} onChange={(e) => setDetails(limitWords(e.target.value, DETAILS_MAX_WORDS))} />
+            <p aria-live="polite" className={`mt-1 text-right text-xs ${countWords(details) >= DETAILS_MAX_WORDS ? "font-semibold text-ink" : "text-muted"}`}>
+              {countWords(details)} / {DETAILS_MAX_WORDS} words{countWords(details) >= DETAILS_MAX_WORDS ? " (limit reached)" : ""}
+            </p>
+          </>}
         </Field>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Your name" hint="Our AI interviewer greets you by name.">{(id) => <input id={id} required maxLength={200} className={inputCls} value={founder} onChange={(e) => setFounder(e.target.value)} />}</Field>
