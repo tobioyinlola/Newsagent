@@ -371,7 +371,7 @@ export function Footer() {
   const cols: { title: string; links: [string, string][] }[] = [
     { title: "Product", links: [["Featured Stories", "/latest-stories"], ["News", "/cf-news"], ["AI Newsroom", "/ai-newsroom"], ["Press Distribution", "/press-distribution"], ["How it works", "/#how"], ["FAQ", "/#faq"]] },
     { title: "Members", links: [["Sign in", "/login"], ["Reset password", "/forgot"], ["Publish your free story!", "/signup"], ["Contact support", "mailto:coverfounder@gmail.com"]] },
-    { title: "Trust", links: [["AI disclosure", "/#faq"], ["Your data", "/account"], ["Security", "/security"]] },
+    { title: "Trust", links: [["Terms of Use", "/terms"], ["Privacy Policy", "/privacy"], ["AI disclosure", "/#faq"], ["Your data", "/account"], ["Security", "/security"]] },
   ];
   const link = (label: string, href: string) => <SiteLink to={href} className="text-white/80 hover:text-brand-green">{label}</SiteLink>;
   return (
@@ -391,6 +391,7 @@ export function Footer() {
         </div>
         <div className="mt-12 flex flex-wrap items-center justify-between gap-3 text-xs text-white/60">
           <p className="font-bold">© {new Date().getFullYear()} Cover Founder. All rights reserved.</p>
+          <p className="flex gap-4">{link("Terms of Use", "/terms")}{link("Privacy Policy", "/privacy")}</p>
         </div>
       </div>
       <p aria-hidden="true" className="pointer-events-none mt-6 select-none whitespace-nowrap bg-gradient-to-b from-white/35 to-transparent bg-clip-text text-center font-mono text-[11vw] font-bold leading-[0.85] text-transparent md:text-[9.5rem]">COVER FOUNDER</p>

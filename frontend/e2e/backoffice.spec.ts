@@ -19,7 +19,7 @@ const codeFor = async (request: APIRequestContext, to: string) => /\b(\d{6})\b/.
 async function customer(request: APIRequestContext, company: string, credits = "25") {
   const email = `owner${Date.now()}${n++}@customer.example.com`;
   const inv = await ok<{ code: string; workspace_id: string }>(await request.post(`${API}/v1/admin/invites`, { headers: OPS, data: { email, workspace_name: company, credits } }));
-  await ok(await request.post(`${API}/v1/auth/signup/start`, { data: { invite_code: inv.code, password: PASSWORD } }));
+  await ok(await request.post(`${API}/v1/auth/signup/start`, { data: { accepted_terms: true, invite_code: inv.code, password: PASSWORD } }));
   const s = await ok<{ token: string }>(await request.post(`${API}/v1/auth/signup/verify`, { data: { invite_code: inv.code, code: await codeFor(request, email) } }));
   return { email, workspace: inv.workspace_id, headers: { Authorization: `Bearer ${s.token}` } };
 }

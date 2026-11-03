@@ -65,6 +65,9 @@ class User(Base, TimestampMixin):
     workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"))
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)  # scrypt; None until the user sets one
+    # the Terms of Use and Privacy Policy the person agreed to when they signed up (version = the policy date), and when
+    terms_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class BrandKit(Base, TimestampMixin):
@@ -425,6 +428,7 @@ class AuthCode(Base, TimestampMixin):
     industry: Mapped[str | None] = mapped_column(String(30), nullable=True)
     industry_other: Mapped[str | None] = mapped_column(String(100), nullable=True)
     referral_code: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    terms_version: Mapped[str | None] = mapped_column(String(20), nullable=True)  # sign-up: what was agreed, held until verified
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

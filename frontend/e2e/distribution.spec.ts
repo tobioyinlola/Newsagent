@@ -9,7 +9,7 @@ test("completed video to distribution draft, checked images, wallet submission, 
   }
   const email = `distribution${Date.now()}@example.com`;
   const invited = await (await request.post(`${API}/v1/admin/invites`, { headers: OPS, data: { email, workspace_name: "Distribution Test", credits: "250", spend_cap: "100" } })).json();
-  await request.post(`${API}/v1/auth/signup/start`, { data: { invite_code: invited.code, password: "correct horse battery" } });
+  await request.post(`${API}/v1/auth/signup/start`, { data: { accepted_terms: true, invite_code: invited.code, password: "correct horse battery" } });
   const mail = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: email } })).json();
   const signup = await (await request.post(`${API}/v1/auth/signup/verify`, { data: { invite_code: invited.code, code: /\b(\d{6})\b/.exec(mail.text)![1] } })).json();
   const headers = { Authorization: `Bearer ${signup.token}` };

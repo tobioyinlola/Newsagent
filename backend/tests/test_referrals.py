@@ -26,6 +26,7 @@ async def begin(client, email, code=None):
         "country": "Nigeria",
         "industry": "technology",
         "password": PW,
+        "accepted_terms": True,
     }
     if code is not None:
         body["referral_code"] = code
@@ -122,6 +123,7 @@ async def test_existing_account_self_referral_and_workspace_invite_do_not_reward
     r = await client.post(
         "/v1/auth/signup/start",
         json={
+            "accepted_terms": True,
             "email": "ops@example.com",
             "business_name": "Self",
             "city": "Lagos",
@@ -134,7 +136,8 @@ async def test_existing_account_self_referral_and_workspace_invite_do_not_reward
     assert r.status_code == 409
     code = await invite_for(client, "invited-referral@example.com")
     r = await client.post(
-        "/v1/auth/signup/start", json={"invite_code": code, "password": PW, "referral_code": a["code"]}
+        "/v1/auth/signup/start",
+        json={"accepted_terms": True, "invite_code": code, "password": PW, "referral_code": a["code"]},
     )
     assert r.status_code == 200
     r = await client.post(

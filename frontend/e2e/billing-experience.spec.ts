@@ -6,7 +6,7 @@ const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
 test("insufficient distribution credit opens saved-draft popup, custom top-up, then successful submission", async ({ page, request }) => {
   const email = `funding${Date.now()}@example.com`;
   const invited = await (await request.post(`${API}/v1/admin/invites`, { headers: OPS, data: { email, workspace_name: "Funding Journey", credits: "2", spend_cap: "100" } })).json();
-  await request.post(`${API}/v1/auth/signup/start`, { data: { invite_code: invited.code, password: "correct horse battery" } });
+  await request.post(`${API}/v1/auth/signup/start`, { data: { accepted_terms: true, invite_code: invited.code, password: "correct horse battery" } });
   const mail = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: email } })).json();
   const signup = await (await request.post(`${API}/v1/auth/signup/verify`, { data: { invite_code: invited.code, code: /\b(\d{6})\b/.exec(mail.text)![1] } })).json();
   const headers = { Authorization: `Bearer ${signup.token}` };

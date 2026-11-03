@@ -5414,6 +5414,11 @@ export interface components {
         };
         /** SignupStartIn */
         SignupStartIn: {
+            /**
+             * Accepted Terms
+             * @default false
+             */
+            accepted_terms: boolean;
             /** Business Name */
             business_name?: string | null;
             /** City */

@@ -187,7 +187,9 @@ async def test_public_stats_count_customer_and_breaking_story_videos_and_shared_
     from app.models import NewsStory, NewsVideo
 
     async with maker() as db:
-        story = NewsStory(id="a" * 32, slug="cf-stats-story", created_by="ops@example.com", updated_by="ops@example.com")
+        story = NewsStory(
+            id="a" * 32, slug="cf-stats-story", created_by="ops@example.com", updated_by="ops@example.com"
+        )
         db.add(story)
         db.add(NewsVideo(story_id=story.id, story_revision=1, snapshot={}, status="ready"))
         await db.commit()
@@ -218,6 +220,7 @@ async def new_workspace(client, email="free@startup.example.com"):
     r = await client.post(
         "/v1/auth/signup/start",
         json={
+            "accepted_terms": True,
             "email": email,
             "business_name": "FreeCo",
             "password": "correct horse battery",

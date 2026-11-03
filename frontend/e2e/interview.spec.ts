@@ -14,7 +14,7 @@ async function owner(request: APIRequest) {
   for (const vendor of ["mock", "renderer", "transcription"]) await ok(await request.put(`${API}/v1/admin/vendor-budgets`, { headers: OPS, data: { vendor, limit: "1000" } }));
   const email = `ada${Date.now()}${n++}@startup.example.com`;
   const inv = await ok<{ code: string }>(await request.post(`${API}/v1/admin/invites`, { headers: OPS, data: { email, workspace_name: "Acme Farms", credits: "25", spend_cap: "500" } }));
-  await ok(await request.post(`${API}/v1/auth/signup/start`, { data: { invite_code: inv.code, password: "correct horse battery" } }));
+  await ok(await request.post(`${API}/v1/auth/signup/start`, { data: { accepted_terms: true, invite_code: inv.code, password: "correct horse battery" } }));
   const mail = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: email } })).json();
   const s = await ok<{ token: string }>(await request.post(`${API}/v1/auth/signup/verify`, { data: { invite_code: inv.code, code: /\b(\d{6})\b/.exec(mail.text)![1] } }));
   return s.token;
