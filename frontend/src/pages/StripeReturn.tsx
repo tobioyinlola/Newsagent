@@ -27,7 +27,6 @@ function PaymentSuccessModal({ payment, onClose }: { payment: Payment; onClose: 
         <p className="mt-3 text-lg">You paid <strong>{money(payment.amount_usd)}</strong> for <strong>{credits(payment.credits)} credits</strong>.</p>
         {payment.credit_balance != null && <p className="mt-1 text-muted">Your balance is now {credits(payment.credit_balance)} credits.</p>}
         <p className="mt-3 text-sm text-muted">We've emailed you a confirmation and your invoice.</p>
-        {payment.sandbox && <p className="mt-2 text-xs text-muted">Test mode: no real money was taken.</p>}
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link to="/ai-newsroom/new" className="rounded-sm border-2 border-ink bg-brand-green px-5 py-2 text-sm font-bold text-ink hover:bg-ink hover:text-brand-green">Make a video</Link>
           <Button variant="secondary" autoFocus onClick={onClose}>Close</Button>
@@ -83,7 +82,6 @@ export function StripeReturn() {
           <p>{cancelled || payment.status === "expired" ? "The payment was cancelled, and you have not been charged." : "The payment did not go through, and you have not been charged."}</p>
           <div className="mt-5"><Link to="/billing"><Button>Try again</Button></Link></div>
         </>}
-        {payment?.sandbox && <p className="mt-4 text-xs text-muted">Test mode: no real money was taken.</p>}
       </Card>
     </div>
   );

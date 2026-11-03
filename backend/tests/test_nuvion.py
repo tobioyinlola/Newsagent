@@ -487,6 +487,7 @@ async def test_ngn_quote_and_stale_rate(client, workspace, naira, monkeypatch):
         "ngn_card": True,
         "ngn_bank_transfer": True,
         "stripe": False,
+        "bank_transfer": True,
         "sandbox": True,
         "min_fund_usd": "10",
     }

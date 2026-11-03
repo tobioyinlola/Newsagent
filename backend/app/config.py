@@ -147,6 +147,7 @@ class Settings(BaseSettings):
     mock_anchor_file: str = ""  # a real .webm the mock avatar copies as its output, for local end-to-end renders
     # Credits: a video costs `credits_per_video` credit (one), whatever the vendors charge; one credit is sold at `usd_per_credit`.
     # Preset purchases get amount / usd_per_credit credits, rounded to 0.01; custom quantities have a $10 minimum.
+    bank_transfer_enabled: bool = True  # False hides bank transfer everywhere customers choose how to pay (the code stays; set True to bring it back)
     bank_transfer_review_enabled: bool = True  # New purchases use bank transfer and finance approval; cards are coming soon.
     usd_per_credit: str = "2.70"
     credits_per_video: str = "1"

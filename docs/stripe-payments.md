@@ -55,6 +55,18 @@ Use any future expiry date and any 3-digit security code. Check that: the credit
 the receipt email with the invoice arrives, the "Payment successful" pop-up shows, the ledger shows a "Purchase" row, the payment shows under **Payments**, a
 declined card adds nothing, and backing out of Stripe's page adds nothing.
 
+## Bank transfer (hidden, not deleted)
+
+Customers pay by card only. Bank transfer is hidden by one switch, and all of its code is still in place:
+
+| Variable | Set to | Does |
+|---|---|---|
+| `BANK_TRANSFER_ENABLED` | `false` | customers are only offered card; the currency and payment-method choices disappear, and **Buy** goes straight to Stripe |
+| `BANK_TRANSFER_ENABLED` | `true` (or unset) | bank transfer is offered again, exactly as before |
+
+While it is off, a bank transfer checkout is refused (even if someone asks for it directly), and the back office's transfer
+approval pages still work for any transfer already in progress. Naira bank transfer is part of the same switch.
+
 ## Refunds and chargebacks (built, switched off)
 
 This is fully built and tested but **off by default**. Switch each part on with a Railway variable on the `backend` service
