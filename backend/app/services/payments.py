@@ -2,6 +2,7 @@
 
 import logging
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,14 +35,35 @@ def utc(value: datetime) -> datetime:
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value
 
 
+def money_line(checkout: Checkout) -> str:
+    """The amount the customer actually paid, in the currency they paid in."""
+    ctx = checkout.payment_context or {}
+    if ctx.get("currency") == "NGN" and (ctx.get("amount") or ctx.get("amount_ngn")):
+        return f"₦{Decimal(str(ctx.get('amount') or ctx.get('amount_ngn'))):,.2f}"
+    return f"${Decimal(checkout.amount_usd):,.2f}"
+
+
 async def credit_email(db: AsyncSession, checkout: Checkout):
+    """The payment confirmation with its invoice, sent to the workspace's people once the credits are in."""
+    from app.models import Workspace
+    from app.services import email_templates as templates
+
+    workspace = await db.get(Workspace, checkout.workspace_id)
+    paid = utc(checkout.paid_at) if checkout.paid_at else datetime.now(UTC)
+    method = "Card (Stripe)" if checkout.provider == "stripe" else "Card"
+    subject, html, text = templates.payment_receipt(
+        invoice_no="CF-" + checkout.id[:8].upper(),
+        paid_on=f"{paid.day} {paid:%b %Y}",
+        billed_to=workspace.name if workspace else "Your workspace",
+        amount=money_line(checkout),
+        credits=f"{Decimal(checkout.credits):,.2f}",
+        balance=f"{Decimal(workspace.credit_balance):,.2f}" if workspace else "",
+        method=method,
+        reference=checkout.provider_ref or checkout.id,
+        sign_in_url=f"{get_settings().app_base_url}/login",
+    )
     for email in (await db.execute(select(User.email).where(User.workspace_id == checkout.workspace_id))).scalars():
-        await send_email(
-            email,
-            "Credits added",
-            f"We've added {checkout.credits} credits to your workspace. Thank you!",
-            link=("View your balance", f"{get_settings().app_base_url}/billing"),
-        )
+        await send_email(email, subject, text, html)
 
 
 async def reconcile(

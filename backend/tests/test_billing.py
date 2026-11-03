@@ -76,7 +76,7 @@ async def test_paid_webhook_grants_credits_once(client, workspace, maker):
     async with maker() as s:
         assert (await s.get(Checkout, co)).status == "paid"
         assert await ledger.ledger_sum(s, workspace) == Decimal("10") + TEN
-    assert any(m["subject"] == "Credits added" for m in registry.get_email().sent)
+    assert any(m["subject"].startswith("Payment received: $10.00") for m in registry.get_email().sent)
 
 
 async def test_bad_or_missing_signature_is_rejected_and_grants_nothing(client, workspace, maker):
