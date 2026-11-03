@@ -25,6 +25,7 @@ class FakeStripe:
         self.sessions: dict[str, dict] = {}
         self.created: list[dict] = []
         self.expired: list[str] = []
+        self.intents: dict[str, dict] = {}  # payment intents, for refund and dispute lookups
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path.removeprefix("/v1")
@@ -42,6 +43,8 @@ class FakeStripe:
                 "client_reference_id": form["client_reference_id"],
             }
             return httpx.Response(200, json=self.sessions[sid])
+        if request.method == "GET" and path.startswith("/payment_intents/"):
+            return httpx.Response(200, json=self.intents.get(path.split("/")[2], {"id": "unknown", "metadata": {}}))
         sid = path.split("/")[3]
         if request.method == "GET":
             return httpx.Response(200, json=self.sessions[sid])

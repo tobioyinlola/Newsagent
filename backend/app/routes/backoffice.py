@@ -46,6 +46,11 @@ def _day(d: datetime) -> str:
     return _utc(d).strftime("%Y-%m-%d")  # type: ignore[union-attr]
 
 
+def _net(c: Checkout) -> Decimal:
+    """What a card payment still earns after refunds (disputed and charged-back payments are not loaded at all)."""
+    return Decimal(c.amount_usd) - Decimal(str((c.payment_context or {}).get("refunded_usd", "0")))
+
+
 class _Data:
     """One consistent read of everything the back office needs."""
 
@@ -65,7 +70,7 @@ class _Data:
         return users[0]
 
     def paid_usd(self, ws_id: str) -> Decimal:
-        return sum((c.amount_usd for c in self.paid if c.workspace_id == ws_id), ZERO)
+        return sum((_net(c) for c in self.paid if c.workspace_id == ws_id), ZERO)
 
     def purchases(self, ws_id: str) -> int:
         return sum(1 for c in self.paid if c.workspace_id == ws_id) + sum(
@@ -97,7 +102,7 @@ async def load(session: AsyncSession) -> _Data:
             d.projects_by_ws.setdefault(p.workspace_id, []).append(p)
     d.paid = [
         c
-        for c in (await session.execute(select(Checkout).where(Checkout.status == "paid"))).scalars()
+        for c in (await session.execute(select(Checkout).where(Checkout.status.in_(["paid", "partially_refunded"])))).scalars()
         if c.workspace_id in d.workspaces
     ]
     d.offline = [
@@ -142,13 +147,13 @@ async def overview(
     projects = [p for ps in d.projects_by_ws.values() for p in ps]
     p30 = [p for p in projects if (_utc(p.created_at) or now) >= d30]
     paying = {c.workspace_id for c in d.paid} | {t.workspace_id for t in d.offline}
-    revenue_30d = sum((c.amount_usd for c in d.paid if (_utc(c.paid_at or c.created_at) or now) >= d30), ZERO)
+    revenue_30d = sum((_net(c) for c in d.paid if (_utc(c.paid_at or c.created_at) or now) >= d30), ZERO)
     kpis = Kpis(
         customers=len(d.workspaces),
         signups_7d=sum(1 for t in signed.values() if t and t >= d7),
         signups_30d=sum(1 for t in signed.values() if t and t >= d30),
         paying_companies=len(paying),
-        revenue_usd_total=sum((c.amount_usd for c in d.paid), ZERO),
+        revenue_usd_total=sum((_net(c) for c in d.paid), ZERO),
         revenue_usd_30d=revenue_30d,
         vendor_cost_usd_30d=sum((p.cost_total for p in p30), ZERO),
         videos_total=len(projects),
@@ -211,7 +216,7 @@ async def overview(
         funnel=funnel,
         attention=attention,
         signups_by_day=_series(days, [(t, ZERO) for t in signed.values() if t], False),
-        revenue_by_day=_series(days, [(_utc(c.paid_at or c.created_at) or now, c.amount_usd) for c in d.paid], True),
+        revenue_by_day=_series(days, [(_utc(c.paid_at or c.created_at) or now, _net(c)) for c in d.paid], True),
         videos_by_state=states,
         recent_signups=recent_rows,
         top_customers=top_rows,
@@ -225,7 +230,7 @@ def _payment_rows(d: _Data, ws_ids: set[str] | None = None) -> list[PaymentRow]:
             workspace_id=c.workspace_id,
             company=d.workspaces[c.workspace_id].name,
             kind="bank_transfer" if c.provider in {"manual_bank", "nuvion_bank"} else "card",
-            usd=c.amount_usd,
+            usd=_net(c),
             credits=c.credits,
             provider=c.provider,
         )
@@ -349,7 +354,7 @@ async def payments(
         c.usd += r.usd or ZERO
         c.last_paid_at = max(filter(None, [c.last_paid_at, r.when]))
     return Payments(
-        total_usd=sum((c.amount_usd for c in d.paid), ZERO),
+        total_usd=sum((_net(c) for c in d.paid), ZERO),
         total_usd_30d=sum((r.usd or ZERO for r in items if r.when >= now - timedelta(days=30)), ZERO),
         offline_credits=sum((t.amount for t in d.offline), ZERO),
         paying_companies=sorted(by_co.values(), key=lambda c: (c.usd, c.payments), reverse=True),

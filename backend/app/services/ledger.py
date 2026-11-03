@@ -9,7 +9,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import CreditTransaction, Workspace
 
-KINDS = {"grant", "purchase", "adjustment", "usage", "usage_adjust", "usage_release"}
+KINDS = {
+    "grant",
+    "purchase",
+    "adjustment",
+    "usage",
+    "usage_adjust",
+    "usage_release",
+    "refund",
+    "chargeback",
+    "chargeback_reversal",
+}
 
 
 async def apply(

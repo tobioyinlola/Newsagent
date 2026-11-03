@@ -18,6 +18,7 @@ from app.integrations import registry
 from app.integrations.billing.base import InvalidSignature, PaymentEvent
 from app.integrations.billing.stripe import StripeBilling, StripeError, session_amount_usd
 from app.models import Checkout, Workspace
+from app.services import stripe_reversals as reversals
 from app.services.ratelimit import limit
 
 router = APIRouter(tags=["billing"])
@@ -155,6 +156,16 @@ async def webhook(request: Request, db: AsyncSession = Depends(get_session)) -> 
     except (ValueError, KeyError, TypeError):
         raise HTTPException(400, "Malformed event") from None
     kind = event.get("type", "")
+    if kind in reversals.EVENTS:  # a refund or a chargeback: money going back, not a checkout being paid
+        obj = (event.get("data") or {}).get("object")
+        if not isinstance(obj, dict):
+            raise HTTPException(400, "Malformed event")
+        try:
+            result = await reversals.handle(db, billing(), kind, obj)
+        except StripeError as e:
+            raise HTTPException(503, str(e)) from e  # Stripe retries the delivery
+        log.info("Stripe webhook processed: type=%s result=%s", kind, result)
+        return {"result": result}
     if kind not in {
         "checkout.session.completed",
         "checkout.session.async_payment_succeeded",
