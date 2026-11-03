@@ -429,7 +429,6 @@ async def submit(
     await validate(db, body, p.workspace.id)
     if (
         not body.outlet_ids
-        or not body.project_id
         or not all(
             x.strip()
             for x in [
@@ -442,7 +441,7 @@ async def submit(
         )
     ):
         raise HTTPException(
-            422, "Choose outlets and a completed video, add your release and all contact details"
+            422, "Choose outlets, add your release and all contact details"
         )
     try:
         TypeAdapter(EmailStr).validate_python(body.contact_email)
@@ -543,9 +542,11 @@ async def admin_assets(
         raise HTTPException(404, "Request not found")
     data = row.data
     video = (
-        (await db.execute(select(Asset).where(Asset.project_id == data.get("project_id"), Asset.type == "render")))
+        (await db.execute(select(Asset).where(Asset.project_id == data["project_id"], Asset.type == "render")))
         .scalars()
         .first()
+        if data.get("project_id")  # a video is optional: a request can be just the story
+        else None
     )
     keys = [data.get("logo_key"), *data.get("picture_keys", [])]
     return {

@@ -7,8 +7,9 @@ describe("distribution step validation", () => {
   it("requires outlet selection before advancing", () => {
     expect(validateDistributionStep({ ...complete, outlet_ids: [] }, "outlets").outlet_ids).toBeTruthy();
   });
-  it("requires a completed video and nonblank announcement fields", () => {
-    expect(Object.keys(validateDistributionStep({ ...complete, project_id: null, headline: "  ", announcement: "\n" }, "content"))).toEqual(["project_id", "headline", "announcement"]);
+  it("requires nonblank announcement fields, but not a video", () => {
+    expect(Object.keys(validateDistributionStep({ ...complete, project_id: null, headline: "  ", announcement: "\n" }, "content"))).toEqual(["headline", "announcement"]);
+    expect(validateDistributionStep({ ...complete, project_id: null }, "content")).toEqual({}); // a video is optional
   });
   it("requires explicit story selection in platform mode but permits custom text", () => {
     expect(validateDistributionStep({ ...complete, announcement_source: "platform" }, "content").story_project_id).toBeTruthy();

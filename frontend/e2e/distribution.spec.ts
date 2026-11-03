@@ -95,11 +95,11 @@ test("completed video to distribution draft, checked images, wallet submission, 
   await expect.poll(async () => (await page.locator("#sidebar").boundingBox())?.x).toBe(0);
   await page.screenshot({ path: "/tmp/distribution-outlets-desktop.png", fullPage: true });
   await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByLabel("Completed video")).toHaveValue(project.id);
-  await page.getByLabel("Completed video").selectOption("");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByLabel("Completed video")).toHaveAttribute("aria-invalid", "true");
-  await page.getByLabel("Completed video").selectOption(project.id);
+  await expect(page.getByLabel("Video (optional)")).toHaveValue(project.id);
+  // a video is optional: it can be cleared without an error, and chosen again
+  await page.getByLabel("Video (optional)").selectOption("");
+  await expect(page.getByLabel("Video (optional)")).not.toHaveAttribute("aria-invalid", "true");
+  await page.getByLabel("Video (optional)").selectOption(project.id);
   await page.getByRole("radio", { name: /Choose a Cover Founder story/ }).check();
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(page.getByLabel("Platform story")).toHaveAttribute("aria-invalid", "true");

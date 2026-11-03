@@ -82,3 +82,13 @@ Distribution channels that cost **0 credits** are not shown to customers. This i
 - The back office still lists every channel, and requests already submitted are unchanged.
 - The price check on submit is unaffected: its version is always computed over the full catalog.
 
+## A video is optional; the story defaults to the most recent one
+
+- **No finished video is needed to distribute.** A request can be just the story. If a finished video is chosen it goes with the
+  request as before, and only one of the business's own *finished* videos can be attached. With no video, the team's email says
+  "none (the story only)" and the back office simply shows no video.
+- **A new request starts from the most recent story** the business has written: it is selected as the announcement source and its
+  headline and text are filled in, along with that story's video if it has a finished one. The owner can switch to "Write or paste
+  my own" at any time. With no story yet, the request starts empty for the owner's own text.
+- A request started from a finished video's own page ("Distribute this video") still starts from that video, as before.
+

@@ -5,7 +5,6 @@ export function validateDistributionStep(d: Draft, step: string): DistributionEr
   const e: DistributionErrors = {};
   if (step === "outlets" && !d.outlet_ids.length) e.outlet_ids = "Choose at least one media outlet to continue.";
   if (step === "content") {
-    if (!d.project_id) e.project_id = "Select a completed video.";
     if (d.announcement_source === "platform" && !d.story_project_id) e.story_project_id = "Select a story written on Cover Founder.";
     if (!d.headline.trim()) e.headline = "Add a headline for your announcement.";
     if (!d.announcement.trim()) e.announcement = "Choose a platform story or write your announcement.";

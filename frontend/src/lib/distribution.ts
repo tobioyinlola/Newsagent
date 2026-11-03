@@ -24,3 +24,20 @@ export function priceOutlets(outlets: Outlet[], draft: Draft | null): Outlet[] {
     return { ...o, base_credits: o.credits, logo_fee: String(logoFee), picture_fee: String(pictureFee), credits: String(Number((Number(o.credits) + logoFee + pictureFee).toFixed(4))) };
   });
 }
+
+/** What a new distribution request starts with when no video was chosen up front: the most recent story, ready to send
+ *  (the owner can switch to their own text), plus that story's video if it has a finished one. Null when there are no stories. */
+export function latestStoryStart(
+  stories: { project_id: string; headline: string; announcement: string }[] | undefined,
+  videos: { id: string }[] | undefined,
+) {
+  const latest = stories?.[0]; // the list arrives newest first
+  if (!latest) return null;
+  return {
+    announcement_source: "platform" as const,
+    story_project_id: latest.project_id,
+    headline: latest.headline,
+    announcement: latest.announcement,
+    project_id: videos?.find((v) => v.id === latest.project_id)?.id ?? null,
+  };
+}
