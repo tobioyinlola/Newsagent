@@ -72,7 +72,10 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   // Video Rulebook v4: the fixed running order, filled with this founder and business (covers: BIV-SCN-010, BIV-SCR-011, BIV-SCR-014)
   await expect(page.getByLabel("Opening")).toHaveValue(/^Joining us in the studio today is Ada Obi, CEO, Acme Farms\. Welcome to Cover Founder News, Ada\./);
   await expect(page.getByLabel("Closing remark")).not.toHaveValue("");
-  await expect(page.getByLabel("Sign-off")).toHaveValue("This is Cover Founder News. Until we bring you our next story, have a good day!");
+  // the opening and closing remark are view-only, and the sign-off is not shown at all (it is fixed and still plays at the end)
+  await expect(page.getByLabel("Opening")).not.toBeEditable();
+  await expect(page.getByLabel("Closing remark")).not.toBeEditable();
+  await expect(page.getByLabel("Sign-off")).toHaveCount(0);
   await expect(page.getByLabel(/Interview question/)).toHaveCount(0); // the questions are fixed once the answers are recorded
   await expect(page.getByRole("button", { name: "Make my video" })).toBeEnabled(); // pictures are optional
   const sample = (process.env.SNAPSHOT_PICS ?? "").split(",").filter(Boolean); // optional real pictures, for a visual check

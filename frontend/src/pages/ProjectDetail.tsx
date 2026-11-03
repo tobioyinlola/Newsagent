@@ -34,7 +34,6 @@ export function ProjectDetail() {
     queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/script", path)),
     enabled: state === "script_ready",
   });
-  const costs = useQuery({ queryKey: ["costs", id], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/costs", path)), enabled: !!state && state !== "draft" });
   const moderation = useQuery({
     queryKey: ["moderation", id],
     queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/moderation", path)),
@@ -47,7 +46,7 @@ export function ProjectDetail() {
   useEffect(() => {
     if (!state || ["final_ready", "draft", "script_ready"].includes(state)) return;  // nothing live to watch
     const ctl = new AbortController();
-    streamProjectEvents(id, () => { qc.invalidateQueries({ queryKey: ["project", id] }); qc.invalidateQueries({ queryKey: ["costs", id] }); }, ctl.signal);
+    streamProjectEvents(id, () => { qc.invalidateQueries({ queryKey: ["project", id] }); }, ctl.signal);
     return () => ctl.abort();
   }, [id, state, qc]);
 
@@ -105,14 +104,6 @@ export function ProjectDetail() {
       {p.state === "final_ready" && <Delivery projectId={id} />}
       {p.state === "final_ready" && guided && <StoryCopy projectId={id} />}
       {p.state === "final_ready" && p.interview_enabled && <SceneEditor projectId={id} state={p.state} />}
-      {costs.data && costs.data.lines.length > 0 && (
-        <Card title="Cost">
-          <table className="w-full text-sm"><caption className="sr-only">Cost by step</caption>
-            <thead><tr className="text-left text-muted"><th className="py-1">Step</th><th>Status</th><th className="text-right">Credits</th></tr></thead>
-            <tbody>{costs.data.lines.map((l) => <tr key={l.stage} className="border-t border-line"><td className="py-1">{l.stage.replace("_", " ")}</td><td>{l.status}</td><td className="text-right">{Number(l.cost).toFixed(4)}</td></tr>)}
-              <tr className="border-t border-ink font-semibold"><td className="py-1" colSpan={2}>Total</td><td className="text-right">{Number(costs.data.total).toFixed(4)}</td></tr></tbody></table>
-        </Card>
-      )}
     </>
   );
 }

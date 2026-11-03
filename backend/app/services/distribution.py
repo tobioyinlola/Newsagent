@@ -104,6 +104,8 @@ async def materials(db, row, line: dict) -> str:
         (await db.execute(select(Asset).where(Asset.project_id == row.data["project_id"], Asset.type == "render")))
         .scalars()
         .first()
+        if row.data.get("project_id")  # a video is optional: a request can be just the story
+        else None
     )
     if video:
         lines.append("Video: " + storage.presign_get(video.storage_key, 604800))
@@ -150,7 +152,7 @@ async def plan_submission(db, row, catalog):
             f"A distribution request has been confirmed.\nPayment: {'Paid from credit wallet' if row.total_credits else 'No-charge request'}\n"
             f"Total: {row.total_credits} credits\nReceipt: {invoice(row)['number']}\nRequester: {row.created_by}\n"
             f"Contact: {data['contact_name']} <{data['contact_email']}>\nPhone: {data['phone']}\n"
-            f"Video project: {data['project_id']}\n\nSelected outlets and charges:\n{breakdown(row)}\n\n"
+            f"Video project: {data.get('project_id') or 'none (the story only)'}\n\nSelected outlets and charges:\n{breakdown(row)}\n\n"
             f"Headline: {data['headline']}\n\nAnnouncement:\n{data['announcement']}\n\n"
             f"Company logo uploaded: {'Yes' if data.get('logo_key') else 'No'}\nAdditional pictures: {len(data.get('picture_keys', []))}\n"
             f"\nSubmitted materials (download links expire in 7 days):\n{downloads}\n\n"

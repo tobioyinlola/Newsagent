@@ -162,9 +162,9 @@ async def test_rejects_invalid_or_foreign_content(client, distribution_data, cha
     ).status_code == 422
 
 
-@pytest.mark.parametrize("field", ["contact_email", "phone", "announcement", "project_id", "outlet_ids"])
+@pytest.mark.parametrize("field", ["contact_email", "phone", "announcement", "outlet_ids"])  # a video is optional now
 async def test_incomplete_submission_rolls_back(client, distribution_data, field):
-    data = {**distribution_data, field: [] if field == "outlet_ids" else None if field == "project_id" else ""}
+    data = {**distribution_data, field: [] if field == "outlet_ids" else ""}
     id = await draft(client, data)
     assert (await client.post(f"/v1/distribution/{id}/submit", headers=OWNER)).status_code == 422
     row = (await client.get(f"/v1/distribution/{id}", headers=OWNER)).json()
@@ -865,3 +865,30 @@ async def test_a_hidden_outlet_cannot_be_chosen_and_the_price_check_still_works_
     assert submitted.status_code == 200, submitted.text
     async with maker() as db:
         assert (await db.get(Workspace, workspace)).credit_balance == Decimal("7")  # 10 - 3
+
+
+async def test_a_distribution_can_be_submitted_without_a_video(client, distribution_data, maker, workspace, monkeypatch):
+    monkeypatch.setitem(routes.OUTLETS["1"], "credits", "3")
+    await client.put("/v1/admin/distribution/config", headers=OPS, json={"team_emails": ["sales@example.com"]})
+    id = await draft(client, {**distribution_data, "project_id": None})  # the story only, no video attached
+    sent = await client.post(f"/v1/distribution/{id}/submit", headers=OWNER)
+    assert sent.status_code == 200, sent.text
+    assert sent.json()["paid"] and sent.json()["status"] == "submitted"
+    async with maker() as db:
+        assert (await db.get(Workspace, workspace)).credit_balance == Decimal("7")  # 10 - 3, charged as usual
+    team = [m for m in registry.get_email().sent if "Video project:" in m["text"]]
+    assert team and all("none (the story only)" in m["text"] and "Video: http" not in m["text"] for m in team)
+    assert "None" not in team[0]["text"]  # no stray "None" in the email the team reads
+    assets = await client.get(f"/v1/admin/distribution/{id}/assets", headers=OPS)
+    assert assets.status_code == 200 and assets.json()["video_url"] is None  # the back office copes with no video
+
+
+async def test_a_video_that_is_not_finished_still_cannot_be_attached(client, distribution_data, maker, workspace):
+    async with maker() as db:
+        unfinished = Project(workspace_id=workspace, state="script_ready")
+        db.add(unfinished)
+        await db.commit()
+        unfinished_id = unfinished.id
+    id = await draft(client, distribution_data)
+    refused = await client.put(f"/v1/distribution/{id}", headers=OWNER, json={**distribution_data, "project_id": unfinished_id})
+    assert refused.status_code == 422 and "completed video" in refused.text  # optional, but only a finished one can go with it
