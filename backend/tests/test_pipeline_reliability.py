@@ -329,6 +329,37 @@ async def test_a_fresh_running_job_is_left_alone(client, workspace, maker):
     assert await jobs.reconcile_projects() == 0
 
 
+async def test_a_long_render_is_still_owned_by_its_worker_but_a_dead_one_is_not(client, workspace, maker):
+    """A render may run for up to an hour per attempt, so a render going for 40 minutes is not 'stuck'; a presenter-video step
+    (15 minutes per attempt) that old is."""
+    from app.pipeline.runner import lease_for
+
+    assert lease_for("merge_render") > timedelta(minutes=60) and lease_for("final_render") > timedelta(minutes=60)
+    assert lease_for("anchor_render") < timedelta(minutes=30)
+    set_queue(Lost())
+    pid = await approved_project(client, drain=False)
+    async with maker() as s:
+        p = await s.get(Project, pid)
+        p.state_changed_at = datetime.now(UTC) - timedelta(hours=2)
+        s.add(
+            Job(
+                project_id=pid,
+                stage="merge_render",
+                input_hash="x",
+                status="running",
+                started_at=datetime.now(UTC) - timedelta(minutes=40),
+            )
+        )
+        await s.commit()
+    assert await jobs.reconcile_projects() == 0  # still rendering: leave it alone
+    async with maker() as s:
+        job = (await s.execute(select(Job).where(Job.project_id == pid, Job.stage == "merge_render"))).scalar_one()
+        job.started_at = datetime.now(UTC) - timedelta(hours=2)  # its worker is long gone
+        await s.commit()
+    set_queue(InlineQueue())
+    assert await jobs.reconcile_projects() == 1
+
+
 # ---------- progress ----------
 async def test_progress_reports_each_piece_and_who_may_see_it(client, workspace):
     pid = await approved_project(client)

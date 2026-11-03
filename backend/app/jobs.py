@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
-from app.config import VENDOR_POLICIES, get_settings
+from app.config import get_settings
 from app.db import session_maker
 from app.integrations import registry
 from app.models import InterviewSession, Job, Project, Take
@@ -119,7 +119,8 @@ async def reconcile_projects(now: datetime | None = None) -> int:
 
     now = now or datetime.now(UTC)
     cutoff = now - STUCK_AFTER
-    owned = timedelta(seconds=VENDOR_POLICIES["avatar"].timeout_s * 1.5)
+    from app.pipeline.runner import lease_for
+
     fixed: list[str] = []
     async with session_maker()() as s:
         projects = (await s.execute(select(Project).where(Project.state.in_(sm.ACTIVE)))).scalars().all()
@@ -128,7 +129,7 @@ async def reconcile_projects(now: datetime | None = None) -> int:
             if (since if since.tzinfo else since.replace(tzinfo=UTC)) > cutoff:
                 continue
             running = (await s.execute(select(Job).where(Job.project_id == p.id, Job.status == "running"))).scalars()
-            if any(j.started_at and now - j.started_at.replace(tzinfo=UTC) < owned for j in running):
+            if any(j.started_at and now - j.started_at.replace(tzinfo=UTC) < lease_for(j.stage) for j in running):
                 continue  # a worker still owns it
             fixed.append(p.id)
     for pid in fixed:
