@@ -18666,48 +18666,7 @@
     "/v1/public/stories/{slug}/preview": {
       "get": {
         "description": "What WhatsApp, LinkedIn, X, Facebook and Slack read to draw a link preview. The site serves this page, instead of the app,\nto those crawlers only (see vercel.json); people always get the app.",
-        "operationId": "story_preview_v1_public_stories__slug__preview_head",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "slug",
-            "required": true,
-            "schema": {
-              "title": "Slug",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Story Preview",
-        "tags": [
-          "stories"
-        ]
-      },
-      "head": {
-        "description": "What WhatsApp, LinkedIn, X, Facebook and Slack read to draw a link preview. The site serves this page, instead of the app,\nto those crawlers only (see vercel.json); people always get the app.",
-        "operationId": "story_preview_v1_public_stories__slug__preview_head",
+        "operationId": "story_preview_v1_public_stories__slug__preview_get",
         "parameters": [
           {
             "in": "path",

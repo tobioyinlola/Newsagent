@@ -3146,17 +3146,12 @@ export interface paths {
          * @description What WhatsApp, LinkedIn, X, Facebook and Slack read to draw a link preview. The site serves this page, instead of the app,
          *     to those crawlers only (see vercel.json); people always get the app.
          */
-        get: operations["story_preview_v1_public_stories__slug__preview_head"];
+        get: operations["story_preview_v1_public_stories__slug__preview_get"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
-        /**
-         * Story Preview
-         * @description What WhatsApp, LinkedIn, X, Facebook and Slack read to draw a link preview. The site serves this page, instead of the app,
-         *     to those crawlers only (see vercel.json); people always get the app.
-         */
-        head: operations["story_preview_v1_public_stories__slug__preview_head"];
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -12808,38 +12803,7 @@ export interface operations {
             };
         };
     };
-    story_preview_v1_public_stories__slug__preview_head: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    story_preview_v1_public_stories__slug__preview_head: {
+    story_preview_v1_public_stories__slug__preview_get: {
         parameters: {
             query?: never;
             header?: never;
