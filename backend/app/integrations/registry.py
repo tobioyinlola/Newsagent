@@ -204,6 +204,15 @@ def get_billing():
     return _get("billing", make)
 
 
+def get_stripe_billing():
+    """The Stripe adapter, or None when no Stripe key is configured."""
+    from app.integrations.billing.stripe import StripeBilling, enabled
+
+    if "stripe_billing" not in _cache and not enabled():
+        return None
+    return _get("stripe_billing", StripeBilling)
+
+
 def get_nuvion_billing():
     from app.integrations.billing.nuvion import NuvionBilling
 

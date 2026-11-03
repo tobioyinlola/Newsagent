@@ -49,7 +49,7 @@ def answer_window_s(elapsed_s: float, questions_left: int) -> int:
 def consent_text(company: str) -> str:
     return (
         f"Your recording will be used only in the video about {company}. "
-        "The video includes a visible 'Featured' label and says the anchor is AI-generated. "
+        "The questions are asked by an AI-generated presenter. "
         "Your answers will be transcribed to make captions, and the owner of this video can review, trim or drop "
         "any answer before it is published. Your original recording is kept privately and deleted 90 days after "
         "the video is finished unless the video owner chooses to keep it. You can record again as many times as you "

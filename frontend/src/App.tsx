@@ -32,6 +32,7 @@ const ProjectDetail = named(() => import("./pages/ProjectDetail"), "ProjectDetai
 const Brand = named(() => import("./pages/Brand"), "Brand");
 const Analytics = named(() => import("./pages/Analytics"), "Analytics");
 const CardCheckout = named(() => import("./pages/CardCheckout"), "CardCheckout");
+const StripeReturn = named(() => import("./pages/StripeReturn"), "StripeReturn");
 const TransferCheckout = named(() => import("./pages/TransferCheckout"), "TransferCheckout");
 const BankCheckout = named(() => import("./pages/BankCheckout"), "BankCheckout");
 const Settings = named(() => import("./pages/Settings"), "Settings");
@@ -85,6 +86,7 @@ export function App() {
           <Route path="/analytics" element={plain(<Analytics />)} />
           <Route path="/billing" element={<SettingsRedirect tab="billing" />} />
           <Route path="/billing/card/:checkoutId" element={plain(<CardCheckout />)} />
+          <Route path="/billing/stripe/:checkoutId" element={plain(<StripeReturn />)} />
           <Route path="/billing/transfer/:checkoutId" element={plain(<TransferCheckout />)} />
           <Route path="/billing/bank/:checkoutId" element={plain(<BankCheckout />)} />
           <Route path="/account" element={<SettingsRedirect tab="profile" />} />

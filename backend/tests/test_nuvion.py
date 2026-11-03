@@ -481,7 +481,15 @@ async def bank_transfer(client, maker, state):
 
 async def test_ngn_quote_and_stale_rate(client, workspace, naira, monkeypatch):
     methods = (await client.get("/v1/billing/payment-methods", headers=OWNER)).json()
-    assert methods == {"ngn_per_usd": "1400", "usd_card": True, "ngn_card": True, "ngn_bank_transfer": True}
+    assert methods == {
+        "ngn_per_usd": "1400",
+        "usd_card": True,
+        "ngn_card": True,
+        "ngn_bank_transfer": True,
+        "stripe": False,
+        "sandbox": True,
+        "min_fund_usd": "10",
+    }
     options = (await client.get("/v1/billing/options", headers=OWNER)).json()
     assert Decimal(next(o for o in options if Decimal(o["amount_usd"]) == 10)["amount_ngn"]) == 14000
     assert (await ngn_checkout(client, rate="1300")).status_code == 409

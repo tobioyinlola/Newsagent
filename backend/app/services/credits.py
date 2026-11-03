@@ -62,8 +62,22 @@ class CreditOption:
     videos: int
 
 
+def sandbox() -> bool:
+    """Local development, or Stripe in test mode: nothing real is charged, so the $1 test amount may be offered."""
+    from app.integrations.billing.stripe import sandbox as stripe_sandbox
+
+    s = get_settings()
+    return s.is_local or stripe_sandbox(s)
+
+
+def min_fund_usd() -> Decimal:
+    return Decimal(get_settings().min_fund_usd)
+
+
 def purchase_options() -> list[CreditOption]:
     amounts = sorted({Decimal(a.strip()) for a in get_settings().credit_purchase_usd.split(",") if a.strip()})
+    if not sandbox():
+        amounts = [a for a in amounts if a >= min_fund_usd()]  # live: nothing below the minimum is offered
     return [CreditOption(a, credits_for_usd(a), videos_for(credits_for_usd(a))) for a in amounts]
 
 

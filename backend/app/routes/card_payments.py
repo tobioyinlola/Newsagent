@@ -106,7 +106,8 @@ async def history(p: Principal = Depends(current_principal), db: AsyncSession = 
         await db.execute(
             select(Checkout)
             .where(
-                Checkout.workspace_id == p.workspace.id, Checkout.provider.in_(["nuvion", "nuvion_bank", "manual_bank"])
+                Checkout.workspace_id == p.workspace.id,
+                Checkout.provider.in_(["nuvion", "nuvion_bank", "manual_bank", "stripe"]),
             )
             .order_by(Checkout.created_at.desc())
             .limit(50)
@@ -118,7 +119,11 @@ async def history(p: Principal = Depends(current_principal), db: AsyncSession = 
             "amount_usd": str(co.amount_usd),
             "currency": co.payment_context.get("currency", "USD"),
             "amount": co.payment_context.get("amount", co.payment_context.get("amount_ngn", str(co.amount_usd))),
-            "payment_method": "bank_transfer" if co.provider in {"nuvion_bank", "manual_bank"} else "card",
+            "payment_method": "bank_transfer"
+            if co.provider in {"nuvion_bank", "manual_bank"}
+            else "stripe"
+            if co.provider == "stripe"
+            else "card",
             "review_required": co.provider == "manual_bank",
             "credits": str(co.credits),
             "status": co.status,
