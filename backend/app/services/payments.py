@@ -91,9 +91,12 @@ async def reconcile(
 
 
 async def reconcile_pending() -> int:
+    from app.routes.stripe_payments import reconcile_pending as reconcile_stripe
+
+    stripe_count = await reconcile_stripe()
     if configuration_problems(get_settings()):
-        return 0
-    count = 0
+        return stripe_count
+    count = stripe_count
     async with session_maker()() as db:
         checkouts = (
             (

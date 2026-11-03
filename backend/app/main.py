@@ -36,6 +36,7 @@ from app.routes import (
     scenes,
     staff,
     stories,
+    stripe_payments,
     system,
     transfer_review,
 )
@@ -182,6 +183,7 @@ def create_app() -> FastAPI:
         guided.router,
         billing.router,
         card_payments.router,
+        stripe_payments.router,
         projects.router,
         delivery.router,
         interview.router,

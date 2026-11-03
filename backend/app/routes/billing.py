@@ -42,11 +42,16 @@ async def payment_methods(
     _: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
 ) -> dict:
     s = get_settings()
+    from app.integrations.billing import stripe as stripe_billing
+
+    card = stripe_billing.enabled(s)
+    extra = {"stripe": card, "sandbox": credits.sandbox(), "min_fund_usd": str(credits.min_fund_usd())}
     if s.bank_transfer_review_enabled:
         available = await transfer_reviews.accounts_available(session)
         return {
+            **extra,
             "ngn_per_usd": str(s.ngn_per_usd),
-            "usd_card": False,
+            "usd_card": card,
             "ngn_card": False,
             "usd_bank_transfer": available["USD"],
             "ngn_bank_transfer": available["NGN"],
@@ -54,8 +59,9 @@ async def payment_methods(
         }
     ngn = s.billing_provider == "nuvion" and bool(s.nuvion_ngn_account_id)
     return {
+        **extra,
         "ngn_per_usd": str(s.ngn_per_usd),
-        "usd_card": s.billing_provider != "manual",
+        "usd_card": card or s.billing_provider != "manual",
         "ngn_card": ngn and s.nuvion_ngn_card_enabled,
         "ngn_bank_transfer": ngn and s.nuvion_ngn_bank_enabled,
     }
@@ -135,7 +141,14 @@ async def custom_quote(body: CustomCreditIn, _: Principal = Depends(current_prin
 async def checkout(
     body: CheckoutIn, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
 ) -> CheckoutOut:
-    if get_settings().billing_provider == "manual" and not get_settings().bank_transfer_review_enabled:
+    from app.integrations.billing import stripe as stripe_billing
+
+    use_stripe = stripe_billing.enabled() and body.currency == "USD" and body.payment_method == "card"
+    if (
+        get_settings().billing_provider == "manual"
+        and not get_settings().bank_transfer_review_enabled
+        and not use_stripe
+    ):
         raise HTTPException(409, "Credits are added by our team. Contact us to top up your workspace.")
     option: credits.CreditOption | None
     if body.custom_credits is not None:
@@ -154,6 +167,11 @@ async def checkout(
     if p.workspace.suspended:
         raise HTTPException(403, "This workspace is suspended")
     s = get_settings()
+    if use_stripe:
+        from app.routes.stripe_payments import start
+
+        co, url = await start(session, p, credits=option.credits, amount_usd=option.amount_usd)
+        return CheckoutOut(checkout_id=co.id, url=url)
     if s.bank_transfer_review_enabled:
         if body.payment_method != "bank_transfer":
             raise HTTPException(409, "Card payments are coming soon. Please choose bank transfer.")

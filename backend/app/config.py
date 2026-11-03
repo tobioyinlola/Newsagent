@@ -160,6 +160,11 @@ class Settings(BaseSettings):
     nuvion_entity_id: str = ""
     nuvion_public_key: str = ""
     nuvion_webhook_secret: str = Field(default="", repr=False)
+    # Stripe card payments (hosted Checkout). On when the secret key is set. A test key (sk_test_...) is the sandbox.
+    stripe_secret_key: str = Field(default="", repr=False)
+    stripe_webhook_secret: str = Field(default="", repr=False)  # whsec_..., signing secret of the /v1/webhooks/stripe endpoint
+    stripe_api_url: str = "https://api.stripe.com/v1"  # only changed in local development, to point at a stand-in Stripe
+    min_fund_usd: str = "10"  # lowest amount that can be added; smaller presets (the $1 test amount) show only in sandbox
     ngn_per_usd: Decimal = Field(default=Decimal("1400"), gt=0, le=1000000, decimal_places=2)
     nuvion_ngn_account_id: str = ""
     nuvion_ngn_card_enabled: bool = False

@@ -46,9 +46,13 @@ def problems(s: Settings) -> list[str]:
         )
     elif s.billing_provider == "nuvion":
         from app.integrations.billing.nuvion import configuration_problems
+
         out.extend(configuration_problems(s))
     elif s.billing_provider != "manual" and (not s.billing_webhook_secret or len(s.billing_webhook_secret) < 24):
         out.append("BILLING_WEBHOOK_SECRET must be set to a long random value (24+ characters)")
+    from app.integrations.billing.stripe import configuration_problems as stripe_problems
+
+    out.extend(stripe_problems(s))
     if not s.clamd_host and not (s.allow_unscanned_uploads and s.environment == "staging"):
         out.append(
             "CLAMD_HOST is required: uploads are refused without a malware scanner "
