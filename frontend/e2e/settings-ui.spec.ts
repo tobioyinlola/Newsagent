@@ -8,7 +8,7 @@ test("settings tabs, legacy URLs and receipt submission remain usable on desktop
     let data: unknown = {};
     if (path === "/v1/me") data = { workspace_id: "test", workspace_name: "Ada Ventures", email: "ada@example.com", credit_balance: "30", permissions: [], is_operator: false };
     else if (path === "/v1/projects" || path === "/v1/distribution" || path === "/v1/auth/sessions" || ["/v1/billing/options", "/v1/billing/checkouts", "/v1/billing/ledger"].includes(path)) data = [];
-    else if (path.includes("referrals")) data = { url: "https://www.coverfounder.com/signup?ref=test", reward_credits: "1", completed_referrals: 0, earned_credits: "0", referrals: [] };
+    else if (path.includes("referrals")) data = { url: "https://www.coverfounder.com/signup?ref=test", reward_credits: "1", bonus_credits: "4", completed_referrals: 0, earned_credits: "0", referrals: [] };
     else if (path === "/v1/billing/transfer/purchase/uploads") data = { proof_id: "proof", upload_url: new URL(route.request().url()).origin + "/test-receipt-upload" };
     else if (path.endsWith("/submit")) { submitted = true; data = { ok: true }; }
     else if (path === "/v1/billing/transfer/purchase") data = { id: "purchase", status: submitted ? "pending_review" : "pending", currency: "NGN", amount: "14000", amount_usd: "10", credits: "3.7", ngn_per_usd: "1400", reference: "CF-TEST", bank: { bank_name: "Example bank", account_number: "1234567890" }, receipt: null };
@@ -24,16 +24,17 @@ test("settings tabs, legacy URLs and receipt submission remain usable on desktop
   const sidebar = page.getByRole("navigation", { name: "Main", exact: true });
   await expect(sidebar.getByRole("link", { name: "Settings", exact: true })).toBeVisible();
   await expect(sidebar.getByRole("link", { name: "Credits", exact: true })).toHaveCount(0);
-  for (const [tab, heading] of [["Password", "Change password"], ["Referral", "Invite a business. Earn a credit."], ["Billing", "Credits and billing"]]) {
+  for (const [tab, heading] of [["Password", "Change password"], ["Referral", "Invite a business. Earn credits."], ["Billing", "Credits and billing"]]) {
     await page.getByRole("navigation", { name: "Settings tabs" }).getByRole("link", { name: tab, exact: true }).click();
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
   }
   await page.goto("/billing?returnTo=%2Fdistribution%2Frequest%3Fdraft%3Dexample");
   await expect(page).toHaveURL(/settings\/billing\?returnTo=/);
   await expect(page.getByRole("link", { name: "Return to your saved distribution request" })).toHaveAttribute("href", "/distribution/request?draft=example");
-  for (const [old, tab] of [["account", "profile"], ["security", "password"], ["referrals", "referral"]]) {
+  for (const [old, tab] of [["account", "profile"], ["security", "password"]]) {
     await page.goto(`/${old}`); await expect(page).toHaveURL(new RegExp(`settings/${tab}$`));
   }
+  await page.goto("/settings/referral"); // /referrals is now the sidebar page itself; the Settings tab still exists
   await page.getByRole("navigation", { name: "Settings tabs" }).getByRole("link", { name: "Password", exact: true }).click();
   await page.getByRole("button", { name: "Go back", exact: true }).click();
   await expect(page).toHaveURL(/settings\/referral$/);

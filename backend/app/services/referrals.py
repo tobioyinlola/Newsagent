@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.models import ReferralLink, ReferralReward, User, Workspace
 from app.models.base import utcnow
 from app.services import ledger
@@ -68,7 +69,7 @@ async def reward(db: AsyncSession, code: str | None, new_user: User) -> bool:
         await db.execute(select(ReferralReward.id).where(ReferralReward.referred_workspace_id == new_user.workspace_id))
     ).first():
         return False
-    amount = Decimal("1")
+    amount = Decimal(get_settings().referral_signup_credits)
     tx = await ledger.apply(
         db,
         workspace,
@@ -97,9 +98,63 @@ async def reward(db: AsyncSession, code: str | None, new_user: User) -> bool:
         detail={
             "referrer_user_id": referrer.id,
             "referred_workspace_id": new_user.workspace_id,
-            "credits": "1",
+            "credits": str(amount),
             "ledger_id": tx.id,
         },
     )
     await db.flush()
     return True
+
+
+async def reward_distribution(db: AsyncSession, referred_workspace_id: str) -> tuple[str, str, Decimal] | None:
+    """The one-time bonus for the referrer once the business they referred pays for a distribution.
+    Returns (referrer's email, the referred business's name, credits) when it was just given, else None.
+    Safe to call on every paid distribution: the ledger reference makes it happen once per referred business."""
+    amount = Decimal(get_settings().referral_distribution_bonus_credits)
+    if amount <= 0:
+        return None
+    row = (
+        await db.execute(select(ReferralReward).where(ReferralReward.referred_workspace_id == referred_workspace_id))
+    ).scalar_one_or_none()
+    if row is None:
+        return None  # this business did not come through a referral
+    # Serialize awards to the referrer's wallet, as the signup reward does.
+    workspace = (
+        await db.execute(
+            update(Workspace)
+            .where(
+                Workspace.id == row.referrer_workspace_id,
+                Workspace.deleted_at.is_(None),
+                Workspace.suspended.is_(False),
+            )
+            .values(credit_balance=Workspace.credit_balance)
+            .returning(Workspace)
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
+    if workspace is None:
+        return None
+    referred = await db.get(Workspace, referred_workspace_id)
+    name = referred.name if referred is not None else "A business you referred"
+    tx = await ledger.apply(
+        db,
+        workspace,
+        amount,
+        "grant",
+        ref=f"referral-bonus:{referred_workspace_id}",
+        description=f"Referral bonus: {name} paid for distribution",
+    )
+    if tx is None:
+        return None  # already given
+    audit(
+        db,
+        "referral-service",
+        "referral.distribution_bonus",
+        target_type="workspace",
+        target_id=workspace.id,
+        detail={"referred_workspace_id": referred_workspace_id, "credits": str(amount), "ledger_id": tx.id},
+    )
+    email = (
+        await db.execute(select(User.email).where(User.id == row.referrer_user_id))
+    ).scalar_one_or_none()
+    return (email or "", name, amount) if email else None

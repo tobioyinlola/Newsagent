@@ -26,7 +26,7 @@ test("invite to shared video", async ({ page, browser }) => {
 
   // --- signing up lands on the dashboard; then the brand kit
   await expect(fp.getByRole("heading", { name: "Welcome, Acme Farms" })).toBeVisible();
-  await fp.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Brand kit" }).click();
+  await fp.goto("/brand"); // Brand kit is no longer in the sidebar; it is opened from Settings or its address
   await fp.getByLabel("Accent color", { exact: true }).fill("#00AA66");
   // logo upload: verified, scanned, then usable; malware is refused
   const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(64)]);

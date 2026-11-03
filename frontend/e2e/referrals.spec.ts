@@ -6,7 +6,7 @@ const OPS = { Authorization: "Bearer dev:customer@example.com" };
 test("shared referral link to verified business signup awards one usable wallet credit", async ({ page, browser, request }) => {
   await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:customer@example.com"));
   await page.goto("/referrals");
-  await expect(page.getByRole("heading", { name: "Invite a business. Earn a credit." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Invite a business. Earn credits." })).toBeVisible();
   const link = page.getByLabel("Share this link with another business");
   await expect(link).toHaveValue(/\/signup\?ref=[A-Za-z0-9_-]{24}$/);
   const url = await link.inputValue();

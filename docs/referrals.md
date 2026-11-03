@@ -13,3 +13,16 @@ The authenticated referrals endpoint exposes only the current user's referral li
 Migration **0029** adds `referral_links`, `referral_rewards` and nullable `auth_codes.referral_code`; existing signup codes and accounts remain valid. Workspace exports include their referral reward direction and amounts. Deletion removes that workspace's users' public links and anonymizes user pointers on retained reward records; financial ledger entries remain under the existing retention policy. Deleted businesses appear as “Deleted business” to prior referrers.
 
 Validation covers referral sharing through actual signup/verification, no credit before verification, stable and isolated links, new-user link allocation, invalid/expired codes, resends, attribution tampering, existing accounts, invitation exclusion, duplicate verification, parallel signups and privacy deletion/export. Provider payment credentials are not used by this feature.
+
+## Distribution bonus
+
+On top of the 1 credit for a verified signup, the referrer earns **4 more credits, once per referred business**, the first
+time that business **pays for a distribution** (a distribution request that costs credits; a no-charge request does not count).
+
+- It is granted in the same transaction as the paid distribution, as an ordinary wallet credit (ledger kind `grant`, reference
+  `referral-bonus:<referred-workspace-id>`), so a retry, a double click or a second paid distribution can never pay it twice.
+- It is only given to an active referrer. A deleted or suspended referrer earns nothing.
+- The referrer gets an email ("You earned 4 bonus credits") and the Referral page shows which referred businesses have paid.
+- Both amounts are settings: `REFERRAL_SIGNUP_CREDITS` (default 1) and `REFERRAL_DISTRIBUTION_BONUS_CREDITS` (default 4; set 0 to turn the bonus off).
+- No database migration was needed: the bonus is recorded in the ledger.
+- "Referral" now sits in the main sidebar (`/referrals`) in place of Brand kit; the Brand kit page itself is still reachable from Settings and by its address.
