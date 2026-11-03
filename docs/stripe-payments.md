@@ -33,7 +33,8 @@ Credits are never granted from the browser's return URL, only from Stripe's own 
 2. Add a webhook endpoint for `https://<api-host>/v1/webhooks/stripe` with these events:
    `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`,
    `checkout.session.expired`. Copy its signing secret (`whsec_...`).
-3. Set these variables on the **staging** service (Railway). Never commit them or paste them into chat:
+   (Add `charge.refunded`, `charge.dispute.created` and `charge.dispute.closed` only when you switch on refunds or chargebacks.)
+3. Set these variables on the `backend` service in Railway. Never commit them or paste them into chat:
 
    | Variable | Value |
    |---|---|
@@ -51,13 +52,48 @@ Credits are never granted from the browser's return URL, only from Stripe's own 
 | `4000 0025 0000 3155` | Asks for 3D Secure |
 
 Use any future expiry date and any 3-digit security code. Check that: the credits land and the balance goes up,
-the "Credits added" email arrives, the ledger shows a "Purchase" row, the payment shows under **Payments**, a
+the receipt email with the invoice arrives, the "Payment successful" pop-up shows, the ledger shows a "Purchase" row, the payment shows under **Payments**, a
 declined card adds nothing, and backing out of Stripe's page adds nothing.
+
+## Refunds and chargebacks (built, switched off)
+
+This is fully built and tested but **off by default**. Switch each part on with a Railway variable on the `backend` service
+(no code change, a redeploy picks it up):
+
+| Variable | Set to | Does |
+|---|---|---|
+| `STRIPE_REFUNDS_ENABLED` | `true` | a Stripe refund takes the matching credits back |
+| `STRIPE_CHARGEBACKS_ENABLED` | `true` | a dispute holds the credits, returned if you win |
+
+While they are off, a refund or a dispute in Stripe leaves the customer's credits alone (answered with a harmless "disabled"
+response, nothing changes). If you refund a customer in the meantime, take the credits back by hand with an adjustment in the
+back office (Billing). When you switch them on, also add the matching events to the Stripe webhook (listed below).
+
+When on, you refund a payment, or answer a dispute, in the Stripe dashboard as usual. Stripe tells the webhook and the wallet follows.
+
+**Refund** (`charge.refunded`)
+- The credits the refund represents are taken back (refunded amount ÷ amount paid × credits bought). Partial refunds work, and
+  several partial refunds add up correctly.
+- Only credits still in the wallet are taken. The balance never goes below zero. Credits the customer already spent are
+  written off, and the team gets an email saying how many.
+- The payment shows **Refunded** or **Partly refunded**. The back office counts only what was kept.
+- The customer gets a "Refund processed" email.
+
+**Chargeback** (`charge.dispute.created`, then `charge.dispute.closed`)
+- When the dispute opens, the credits are held at once (again never below zero), the payment shows **Disputed**, and the team is emailed.
+- You win: the held credits are returned and the payment goes back to Paid.
+- You lose: the credits stay removed and the payment shows **Charged back**. Stripe's dispute fee is your cost.
+
+Every step is idempotent: a repeated or out-of-order event changes nothing twice. Amounts and ids are read from Stripe, never
+trusted from the event, and events for payments that are not ours are ignored.
+
+**Testing in the sandbox:** refund a test payment from the Stripe dashboard (Payments → the payment → Refund) and watch the credits
+come off. For a dispute, pay with card `4000 0000 0000 0259` (it creates a dispute), then close it as won or lost from the dashboard.
 
 ## Going live
 
 1. Create the live webhook endpoint in Stripe (live mode) and copy its `whsec_...`.
-2. On the **production** service, set `STRIPE_SECRET_KEY=sk_live_...` and the live `STRIPE_WEBHOOK_SECRET`.
+2. On the `backend` service, set `STRIPE_SECRET_KEY=sk_live_...` and the live `STRIPE_WEBHOOK_SECRET`.
 3. The $1 amount disappears automatically. Make one real $10 payment and check the credits.
 
 The service refuses to start in production with a test key, or with a key but no webhook secret.
@@ -69,4 +105,5 @@ Without a key, Stripe is off and nothing changes.
 
 ## Not included
 
-Refunds, receipts and invoices, saved cards, subscriptions, and Stripe for naira.
+Starting refunds from our own back office (you refund in Stripe), dispute evidence submission, passing Stripe's dispute fee on to
+the customer, PDF invoices, saved cards, subscriptions, and Stripe for naira.

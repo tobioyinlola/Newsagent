@@ -354,7 +354,7 @@ class CreditTransaction(Base):
     workspace_id: Mapped[str] = mapped_column(String(32), index=True)  # no FK: rows outlive a deleted workspace
     kind: Mapped[str] = mapped_column(
         String(20)
-    )  # grant | purchase | adjustment | usage | usage_adjust | usage_release
+    )  # grant | purchase | adjustment | usage | usage_adjust | usage_release | refund | chargeback | chargeback_reversal
     amount: Mapped[Decimal] = mapped_column(Money)  # + adds credits, - spends
     balance_after: Mapped[Decimal] = mapped_column(Money)
     project_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)

@@ -213,3 +213,26 @@ def payment_receipt(
         footer="You are receiving this receipt because a payment was made for your Cover Founder workspace.",
     )
     return f"Payment received: {amount} for {credits} credits (invoice {invoice_no})", html, text
+
+
+def refund_notice(
+    *, invoice_no: str, refunded: str, credits_removed: str, balance: str, full: bool, sign_in_url: str
+) -> tuple[str, str, str]:
+    """(subject, html, text): sent when a card payment has been refunded and the matching credits taken back."""
+    body = (
+        f"Your {'full ' if full else ''}refund of {refunded} for invoice {invoice_no} has been processed. "
+        "It goes back to the card you paid with, and your bank may take a few days to show it.\n\n"
+        + (
+            f"{credits_removed} credits were taken off your wallet to match. Your balance is now {balance} credits."
+            if credits_removed not in {"0.00", "0"}
+            else f"No credits needed to be taken off your wallet. Your balance is {balance} credits."
+        )
+    )
+    html, text = render(
+        "Your refund has been processed",
+        body,
+        button=("View your billing", sign_in_url),
+        after=f"Questions about this refund? Email {SUPPORT_EMAIL} and quote the invoice number.",
+        footer="You are receiving this because a payment for your Cover Founder workspace was refunded.",
+    )
+    return f"Refund processed: {refunded} (invoice {invoice_no})", html, text

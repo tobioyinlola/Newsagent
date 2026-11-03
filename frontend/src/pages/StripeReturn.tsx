@@ -7,6 +7,12 @@ import { Button, Card, ErrorBox, Notice } from "../components/ui";
 
 const credits = (v: string) => Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const money = (v: string) => Number(v).toLocaleString(undefined, { style: "currency", currency: "USD" });
+const REVERSED: Record<string, string> = {
+  refunded: "This payment was refunded. The refund goes back to the card you paid with, and the matching credits were taken off your wallet.",
+  partially_refunded: "Part of this payment was refunded. The refund goes back to your card, and the matching credits were taken off your wallet.",
+  disputed: "Your bank has opened a dispute on this payment, so the matching credits are on hold while it is reviewed.",
+  charged_back: "Your bank reversed this payment, so the matching credits were removed from your wallet.",
+};
 const WAIT_MS = 120_000; // how long to keep checking before suggesting the customer look again later
 
 type Payment = { checkout_id: string; amount_usd: string; credits: string; status: string; sandbox: boolean; credit_balance?: string | null };
@@ -58,7 +64,7 @@ export function StripeReturn() {
     <div className="max-w-xl">
       {showSuccess && <PaymentSuccessModal payment={payment} onClose={() => setDismissed(true)} />}
       <h1 className="text-2xl font-bold">Your payment</h1>
-      <Card title={paid ? "Payment received" : payment?.status === "pending" ? "Confirming your payment…" : "Payment not completed"}>
+      <Card title={paid ? "Payment received" : payment?.status === "pending" ? "Confirming your payment…" : payment && REVERSED[payment.status] ? "Payment update" : "Payment not completed"}>
         <ErrorBox error={query.error} />
         {query.isLoading && <p role="status">Checking with Stripe…</p>}
         {payment && paid && <>
@@ -69,6 +75,10 @@ export function StripeReturn() {
         </>}
         {payment?.status === "pending" && !waited && <p role="status" className="text-sm text-muted">This usually takes a few seconds. Please keep this page open. Your credits are added automatically as soon as the payment is confirmed.</p>}
         {payment?.status === "pending" && waited && <Notice tone="warn">We haven't had confirmation yet. If you completed the payment, your credits will be added automatically within a few minutes, and we'll email you. You can also check your balance on the billing page.</Notice>}
+        {payment && REVERSED[payment.status] && <>
+          <p>{REVERSED[payment.status]}</p>
+          <div className="mt-5"><Link to="/billing"><Button>Back to billing</Button></Link></div>
+        </>}
         {payment && (payment.status === "expired" || payment.status === "failed") && <>
           <p>{cancelled || payment.status === "expired" ? "The payment was cancelled, and you have not been charged." : "The payment did not go through, and you have not been charged."}</p>
           <div className="mt-5"><Link to="/billing"><Button>Try again</Button></Link></div>

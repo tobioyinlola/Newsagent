@@ -131,6 +131,10 @@ class StripeBilling:
     async def retrieve(self, session_id: str) -> dict:
         return await self._call("GET", f"/checkout/sessions/{session_id}")
 
+    async def retrieve_payment_intent(self, intent_id: str) -> dict:
+        """The payment behind a charge or dispute; its metadata carries our checkout id (set when the checkout was created)."""
+        return await self._call("GET", f"/payment_intents/{intent_id}")
+
     async def expire(self, session_id: str) -> dict:
         return await self._call("POST", f"/checkout/sessions/{session_id}/expire")
 

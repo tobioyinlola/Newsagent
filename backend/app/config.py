@@ -164,6 +164,9 @@ class Settings(BaseSettings):
     stripe_secret_key: str = Field(default="", repr=False)
     stripe_webhook_secret: str = Field(default="", repr=False)  # whsec_..., signing secret of the /v1/webhooks/stripe endpoint
     stripe_api_url: str = "https://api.stripe.com/v1"  # only changed in local development, to point at a stand-in Stripe
+    # Money going back. The code is built and tested but OFF until switched on (then also add the matching events to the Stripe webhook).
+    stripe_refunds_enabled: bool = False  # charge.refunded: take back the matching credits
+    stripe_chargebacks_enabled: bool = False  # charge.dispute.created / .closed: hold the credits, return them if the dispute is won
     min_fund_usd: str = "10"  # lowest amount that can be added; smaller presets (the $1 test amount) show only in sandbox
     ngn_per_usd: Decimal = Field(default=Decimal("1400"), gt=0, le=1000000, decimal_places=2)
     nuvion_ngn_account_id: str = ""
