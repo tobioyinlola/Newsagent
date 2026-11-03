@@ -6739,6 +6739,38 @@
         "title": "VoicePrepareOut",
         "type": "object"
       },
+      "WordingIn": {
+        "properties": {
+          "apply": {
+            "default": false,
+            "title": "Apply",
+            "type": "boolean"
+          },
+          "find": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Find",
+            "type": "string"
+          },
+          "replace": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Replace",
+            "type": "string"
+          },
+          "rerender": {
+            "default": false,
+            "title": "Rerender",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "find",
+          "replace"
+        ],
+        "title": "WordingIn",
+        "type": "object"
+      },
       "WorkspaceAdminOut": {
         "properties": {
           "credit_balance": {
@@ -10912,6 +10944,77 @@
         "summary": "Operator Retry",
         "tags": [
           "ops"
+        ]
+      }
+    },
+    "/v1/admin/projects/{project_id}/wording": {
+      "post": {
+        "description": "Correct a name or phrase in a finished video: the story, the presenter's lines, the ticker and the lower thirds.\nThe founder's recorded answers are never changed. Presenter clips whose words changed are made again (and paid for);\neverything else is reused. Without `apply` this only reports what would change.",
+        "operationId": "correct_wording_v1_admin_projects__project_id__wording_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WordingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Correct Wording V1 Admin Projects  Project Id  Wording Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Correct Wording",
+        "tags": [
+          "admin"
         ]
       }
     },

@@ -3,6 +3,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,7 +21,8 @@ from app.schemas.api import (
     WorkspacePatch,
 )
 from app.services import email_templates as templates
-from app.services import ledger, privacy, rbac, stories
+from app.services import ledger, privacy, rbac, stories, wording
+from app.services import state_machine as sm
 from app.services.audit import audit
 from app.services.notifications import send_email
 from app.services.spend_guard import ensure_vendor_budget
@@ -242,3 +244,70 @@ async def put_story_back(
     audit(session, op.user.email, "story.publish", target_type="project", target_id=project_id, request=request)
     await session.commit()
     return {"published": True, "slug": project.story_slug}
+
+
+class WordingIn(BaseModel):
+    find: str = Field(min_length=1, max_length=100)
+    replace: str = Field(min_length=1, max_length=100)
+    apply: bool = False  # false: only say what would change
+    rerender: bool = False  # true (with apply): make the video again so the new wording is in it
+
+
+@router.post("/projects/{project_id}/wording")
+async def correct_wording(
+    project_id: str,
+    body: WordingIn,
+    request: Request,
+    op: Principal = Depends(require("content.manage")),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Correct a name or phrase in a finished video: the story, the presenter's lines, the ticker and the lower thirds.
+    The founder's recorded answers are never changed. Presenter clips whose words changed are made again (and paid for);
+    everything else is reused. Without `apply` this only reports what would change."""
+    project = await _project(session, project_id)
+    if project.state != "final_ready":
+        raise HTTPException(409, "Wording can be corrected once the video is finished.")
+    if body.rerender and not body.apply:
+        raise HTTPException(422, "Re-rendering needs the change to be applied.")
+    try:
+        report = await wording.correct(session, project, body.find, body.replace, apply=body.apply)
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from None
+    if report.applied:
+        audit(
+            session,
+            op.user.email,
+            "video.wording",
+            target_type="project",
+            target_id=project_id,
+            detail={"find": body.find, "replace": body.replace, "found": report.found, "rerender": body.rerender},
+            request=request,
+        )
+        if body.rerender:
+            from app.pipeline.advance import advance
+
+            sm.transition(project, "rendering_anchor")
+            project.revision_pending = False
+            project.completed_at = None
+            report.rerendering = True
+        else:
+            project.revision_pending = (
+                True  # the new words are saved; the video is made again when someone applies them
+            )
+    await session.commit()
+    if report.rerendering:
+        await advance(session, project_id)
+    return {
+        "found": report.found,
+        "total": report.total,
+        "kept": report.kept,
+        "applied": report.applied,
+        "rerendering": report.rerendering,
+        "version": report.version,
+        "note": "The founder's recorded answers are never changed."
+        + (
+            " Questions the presenter already asked are kept as they are."
+            if report.kept.get("interview_questions")
+            else ""
+        ),
+    }

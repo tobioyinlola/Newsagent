@@ -950,6 +950,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/projects/{project_id}/wording": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Correct Wording
+         * @description Correct a name or phrase in a finished video: the story, the presenter's lines, the ticker and the lower thirds.
+         *     The founder's recorded answers are never changed. Presenter clips whose words changed are made again (and paid for);
+         *     everything else is reused. Without `apply` this only reports what would change.
+         */
+        post: operations["correct_wording_v1_admin_projects__project_id__wording_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/queue": {
         parameters: {
             query?: never;
@@ -5859,6 +5881,23 @@ export interface components {
             /** Lines */
             lines: components["schemas"]["VoiceLine"][];
         };
+        /** WordingIn */
+        WordingIn: {
+            /**
+             * Apply
+             * @default false
+             */
+            apply: boolean;
+            /** Find */
+            find: string;
+            /** Replace */
+            replace: string;
+            /**
+             * Rerender
+             * @default false
+             */
+            rerender: boolean;
+        };
         /** WorkspaceAdminOut */
         WorkspaceAdminOut: {
             /** Credit Balance */
@@ -8143,6 +8182,45 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    correct_wording_v1_admin_projects__project_id__wording_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WordingIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
