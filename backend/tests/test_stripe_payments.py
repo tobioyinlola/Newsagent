@@ -273,3 +273,40 @@ async def test_a_repeated_webhook_does_not_send_a_second_receipt(client, workspa
     assert (
         len([m for m in registry.get_email().sent if m["subject"].startswith("Payment received")]) == 2
     )  # once per person
+
+
+async def test_with_bank_transfer_switched_off_customers_are_only_offered_card(client, workspace, monkeypatch, stripe):
+    monkeypatch.setattr(get_settings(), "bank_transfer_review_enabled", True)
+    monkeypatch.setattr(get_settings(), "bank_transfer_enabled", False)
+    methods = (await client.get("/v1/billing/payment-methods", headers=OWNER)).json()
+    assert (
+        methods["bank_transfer"] is False
+        and methods["usd_bank_transfer"] is False
+        and methods["ngn_bank_transfer"] is False
+    )
+    assert methods["usd_card"] is True and methods["stripe"] is True
+    # the card checkout goes straight to Stripe, as before
+    out = await buy(client, "10")
+    assert out["url"].startswith("https://checkout.stripe.test/")
+    # and bank transfer is refused if someone asks for it anyway, in either currency
+    for body in (
+        {"amount_usd": "10", "currency": "USD", "payment_method": "bank_transfer"},
+        {
+            "amount_usd": "10",
+            "currency": "NGN",
+            "payment_method": "bank_transfer",
+            "ngn_per_usd": str(get_settings().ngn_per_usd),
+        },
+    ):
+        refused = await client.post("/v1/billing/checkout", json=body, headers=OWNER)
+        assert refused.status_code == 409 and "pay by card" in refused.json()["detail"]
+
+
+async def test_bank_transfer_is_on_by_default_and_comes_back_when_switched_on(client, workspace, monkeypatch, stripe):
+    monkeypatch.setattr(get_settings(), "bank_transfer_review_enabled", True)
+    assert get_settings().bank_transfer_enabled is True  # the shipped default: nothing changes until it is switched off
+    assert (await client.get("/v1/billing/payment-methods", headers=OWNER)).json()["bank_transfer"] is True
+    monkeypatch.setattr(get_settings(), "bank_transfer_enabled", False)
+    assert (await client.get("/v1/billing/payment-methods", headers=OWNER)).json()["bank_transfer"] is False
+    monkeypatch.setattr(get_settings(), "bank_transfer_enabled", True)  # brought back with the switch alone
+    assert (await client.get("/v1/billing/payment-methods", headers=OWNER)).json()["bank_transfer"] is True

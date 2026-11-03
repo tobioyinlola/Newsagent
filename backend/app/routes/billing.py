@@ -44,9 +44,18 @@ async def payment_methods(
     from app.integrations.billing import stripe as stripe_billing
 
     card = stripe_billing.enabled(s)
-    extra = {"stripe": card, "sandbox": credits.sandbox(), "min_fund_usd": str(credits.min_fund_usd())}
+    extra = {
+        "stripe": card,
+        "sandbox": credits.sandbox(),
+        "min_fund_usd": str(credits.min_fund_usd()),
+        "bank_transfer": s.bank_transfer_enabled,  # False: customers are only offered card
+    }
     if s.bank_transfer_review_enabled:
-        available = await transfer_reviews.accounts_available(session)
+        available = (
+            await transfer_reviews.accounts_available(session)
+            if s.bank_transfer_enabled
+            else {"USD": False, "NGN": False}
+        )
         return {
             **extra,
             "ngn_per_usd": str(s.ngn_per_usd),
@@ -62,7 +71,7 @@ async def payment_methods(
         "ngn_per_usd": str(s.ngn_per_usd),
         "usd_card": card or s.billing_provider != "manual",
         "ngn_card": ngn and s.nuvion_ngn_card_enabled,
-        "ngn_bank_transfer": ngn and s.nuvion_ngn_bank_enabled,
+        "ngn_bank_transfer": ngn and s.nuvion_ngn_bank_enabled and s.bank_transfer_enabled,
     }
 
 
@@ -171,6 +180,8 @@ async def checkout(
 
         co, url = await start(session, p, credits=option.credits, amount_usd=option.amount_usd)
         return CheckoutOut(checkout_id=co.id, url=url)
+    if body.payment_method == "bank_transfer" and not s.bank_transfer_enabled:
+        raise HTTPException(409, "Bank transfer is not available right now. Please pay by card.")
     if s.bank_transfer_review_enabled:
         if body.payment_method != "bank_transfer":
             raise HTTPException(409, "Card payments are coming soon. Please choose bank transfer.")
