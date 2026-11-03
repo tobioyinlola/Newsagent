@@ -5,6 +5,7 @@ Every email also carries a plain-text twin, so text-only readers and tests see t
 from html import escape
 
 INK, NAVY, GREEN, PURPLE, PAPER, MUTED = "#222222", "#191A30", "#C0FE73", "#634EA0", "#F4F4F0", "#5B5C6E"
+SUPPORT_EMAIL = "coverfounder@gmail.com"  # the same address as "Contact support" on the site
 HEAD = "Inter,'Helvetica Neue',Helvetica,Arial,sans-serif"  # Inter where the mail app has it, a close sans otherwise
 BODY = HEAD
 
@@ -41,6 +42,7 @@ def render(
     button: tuple[str, str] | None = None,
     code: str | None = None,
     after: str = "",
+    details: list[tuple[str, str]] | None = None,
     footer: str = "You are receiving this because of activity on your Cover Founder account.",
 ) -> tuple[str, str]:
     """(html, text). `body`/`after` are plain text with blank lines between paragraphs."""
@@ -48,6 +50,17 @@ def render(
         f'<div style="margin:8px 0 20px;padding:18px;background:{PAPER};border:2px solid {INK};border-radius:2px;'
         f'text-align:center;font:700 34px/1 {HEAD};letter-spacing:8px;color:{INK}">{escape(code)}</div>'
         if code
+        else ""
+    )
+    rows = "".join(
+        f'<tr><td style="padding:9px 14px;border-bottom:1px solid #E3E3DC;font:14px/1.4 {BODY};color:{MUTED};width:42%">{escape(k)}</td>'
+        f'<td style="padding:9px 14px;border-bottom:1px solid #E3E3DC;font:600 14px/1.4 {BODY};color:{NAVY};text-align:right">{escape(v)}</td></tr>'
+        for k, v in (details or [])
+    )
+    details_html = (
+        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 22px;background:{PAPER};'
+        f'border:2px solid {INK};border-radius:2px">{rows}</table>'
+        if rows
         else ""
     )
     if button:
@@ -72,13 +85,15 @@ def render(
         f'<img src="{escape(logo_url(), quote=True)}" width="174" height="60" alt="COVER FOUNDER" '
         f'style="display:block;border:0;width:174px;height:60px;color:{GREEN};font:700 18px {HEAD}"></td></tr>'
         f'<tr><td style="padding:32px 28px 12px"><h1 style="margin:0 0 18px;font:700 24px/1.25 {HEAD};color:{INK}">{escape(heading)}</h1>'
-        f"{_paragraphs(body)}{code_html}{button_html}{_paragraphs(after) if after else ''}</td></tr>"
+        f"{_paragraphs(body)}{code_html}{details_html}{button_html}{_paragraphs(after) if after else ''}</td></tr>"
         f'<tr><td style="padding:16px 28px 28px;border-top:1px solid #E3E3DC;font:12px/1.5 {BODY};color:{MUTED}">{escape(footer)}</td></tr>'
         "</table></td></tr></table></body></html>"
     )
     text = f"{heading}\n\n{body.strip()}\n"
     if code:
         text += f"\n    {code}\n"
+    if details:
+        text += "\n" + "\n".join(f"{k}: {v}" for k, v in details) + "\n"
     if button:
         text += f"\n{button[0]}: {button[1]}\n"
     if after:
@@ -156,3 +171,45 @@ def staff_invite(inviter: str, role: str, join_url: str, hours: int, name: str =
         "You're invited to the Cover Founder team", body, button=("Join the team", join_url), after=after
     )
     return "You're invited to the Cover Founder team", html, text
+
+
+def payment_receipt(
+    *,
+    invoice_no: str,
+    paid_on: str,
+    billed_to: str,
+    amount: str,
+    credits: str,
+    balance: str,
+    method: str,
+    reference: str,
+    sign_in_url: str,
+) -> tuple[str, str, str]:
+    """(subject, html, text): the confirmation and invoice sent once a card payment has gone through and the credits are in."""
+    body = (
+        f"Thank you. You've paid {amount} for {credits} credits, and they are already in your wallet.\n\n"
+        "Your invoice is below. Keep this email as your receipt."
+    )
+    after = (
+        "Ready to make your first story? Sign in to Cover Founder to start creating your videos. "
+        "Each video costs 1 credit.\n\n"
+        f"Questions about this payment? Email {SUPPORT_EMAIL} and quote the invoice number."
+    )
+    html, text = render(
+        "Payment received, thank you",
+        body,
+        details=[
+            ("Invoice number", invoice_no),
+            ("Date paid", paid_on),
+            ("Billed to", billed_to),
+            ("Amount paid", amount),
+            ("Credits added", credits),
+            ("New balance", f"{balance} credits"),
+            ("Payment method", method),
+            ("Payment reference", reference),
+        ],
+        button=("Sign in to start creating", sign_in_url),
+        after=after,
+        footer="You are receiving this receipt because a payment was made for your Cover Founder workspace.",
+    )
+    return f"Payment received: {amount} for {credits} credits (invoice {invoice_no})", html, text

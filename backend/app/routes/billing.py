@@ -17,7 +17,7 @@ from app.db import get_session
 from app.integrations import registry
 from app.integrations.billing.base import InvalidSignature
 from app.integrations.billing.mock import SIGNATURE_HEADER, sign
-from app.models import Checkout, CreditTransaction, TransferReview, User, Workspace
+from app.models import Checkout, CreditTransaction, TransferReview, Workspace
 from app.schemas.api import (
     BillingSummary,
     CheckoutIn,
@@ -31,7 +31,6 @@ from app.schemas.api import (
 )
 from app.services import credits, ledger, transfer_reviews
 from app.services.audit import audit
-from app.services.notifications import send_email
 from app.services.ratelimit import limit
 
 router = APIRouter(tags=["billing"])
@@ -319,16 +318,9 @@ async def billing_webhook(request: Request, session: AsyncSession = Depends(get_
     if result == "granted":
         co = await session.get(Checkout, event.checkout_id)
         if co is not None:
-            emails = (
-                (await session.execute(select(User.email).where(User.workspace_id == co.workspace_id))).scalars().all()
-            )
-            for to in emails:
-                await send_email(
-                    to,
-                    "Credits added",
-                    f"We've added {co.credits} credits to your workspace. Thank you!",
-                    link=("Make a video", f"{get_settings().app_base_url}/ai-newsroom/new"),
-                )
+            from app.services.payments import credit_email
+
+            await credit_email(session, co)  # the confirmation and invoice, with a sign-in button
     return {"result": result}
 
 

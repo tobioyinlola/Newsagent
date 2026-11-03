@@ -229,3 +229,44 @@ async def test_without_a_stripe_key_card_checkout_is_unchanged(client, workspace
     monkeypatch.setattr(get_settings(), "stripe_secret_key", "")
     assert (await client.get("/v1/billing/payment-methods", headers=OWNER)).json()["stripe"] is False
     assert (await client.post("/v1/webhooks/stripe", content=b"{}")).status_code == 404
+
+
+async def test_a_paid_checkout_emails_a_receipt_with_the_invoice_and_a_working_sign_in_button(
+    client, workspace, maker, stripe
+):
+    out = await buy(client, "10")
+    stripe.paid("cs_test_1")
+    assert (await deliver(client, webhook_body(out["checkout_id"], "cs_test_1"))).json() == {"result": "granted"}
+    sent = [m for m in registry.get_email().sent if m["subject"].startswith("Payment received")]
+    assert len(sent) == 2  # the owner and the operator account both belong to this workspace
+    mail = next(m for m in sent if m["to"] == "owner@acme.test")
+    invoice = "CF-" + out["checkout_id"][:8].upper()
+    assert mail["subject"] == f"Payment received: $10.00 for 3.70 credits (invoice {invoice})"
+    for words in (
+        "You've paid $10.00 for 3.70 credits",
+        f"Invoice number: {invoice}",
+        "Billed to: Acme",
+        "Amount paid: $10.00",
+        "Credits added: 3.70",
+        "New balance: 13.70 credits",
+        "Payment method: Card (Stripe)",
+        "Payment reference: cs_test_1",
+        "sign in to Cover Founder to start creating your videos",
+        "Email coverfounder@gmail.com and quote the invoice number",
+    ):
+        assert words.lower() in mail["text"].lower(), words
+    login = f"{get_settings().app_base_url}/login"
+    assert f"Sign in to start creating: {login}" in mail["text"]  # the plain-text twin carries the link too
+    assert f'href="{login}"' in mail["html"] and "Sign in to start creating" in mail["html"]  # the button
+    assert invoice in mail["html"] and "$10.00" in mail["html"]
+
+
+async def test_a_repeated_webhook_does_not_send_a_second_receipt(client, workspace, maker, stripe):
+    out = await buy(client, "10")
+    stripe.paid("cs_test_1")
+    body = webhook_body(out["checkout_id"], "cs_test_1")
+    await deliver(client, body)
+    await deliver(client, body)
+    assert (
+        len([m for m in registry.get_email().sent if m["subject"].startswith("Payment received")]) == 2
+    )  # once per person
