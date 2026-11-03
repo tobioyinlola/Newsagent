@@ -72,6 +72,13 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await page.getByRole("button", { name: "Produce my story" }).click();
   await expect(page.getByRole("heading", { name: "Your press release" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "What your presenter says" })).toBeVisible();
+  // the owner can change the press release's subject and body before approving
+  await page.getByRole("button", { name: "Edit the press release" }).click();
+  await page.getByLabel("Subject (headline)").fill("Acme Farms opens in Kumasi");
+  await page.getByLabel("Press release", { exact: true }).fill("Acme Farms has opened in Kumasi.\n\nFarmers can now sell produce on their phones.");
+  await page.getByRole("button", { name: "Save the press release" }).click();
+  await expect(page.getByRole("heading", { name: "Acme Farms opens in Kumasi" })).toBeVisible();
+  await expect(page.getByText("Farmers can now sell produce on their phones.")).toBeVisible();
   // Video Rulebook v4: the fixed running order, filled with this founder and business (covers: BIV-SCN-010, BIV-SCR-011, BIV-SCR-014)
   await expect(page.getByLabel("Opening")).toHaveValue(/^Joining us in the studio today is Ada Obi, CEO, ACME FARMS\. Welcome to Cover Founder News, Ada\./);
   await expect(page.getByLabel("Closing remark")).not.toHaveValue("");
