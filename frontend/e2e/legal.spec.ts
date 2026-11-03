@@ -28,3 +28,25 @@ test("the Terms of Use and Privacy Policy are pages, linked from the footer and 
   await expect(page.getByRole("link", { name: "Privacy Policy" }).first()).toHaveAttribute("href", "/privacy");
   await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
 });
+
+test("the Terms and Privacy pages open at the top, even when reached from the bottom of another page", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("footer").scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(500);
+  await page.getByRole("contentinfo").getByRole("link", { name: "Terms of Use" }).first().click();
+  await expect(page).toHaveURL(/\/terms$/);
+  await expect(page.getByRole("heading", { name: "Terms of Use", level: 1 })).toBeInViewport();
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+  // from the bottom of the Terms to the Privacy Policy
+  await page.locator("#contact").scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(500);
+  await page.getByRole("contentinfo").getByRole("link", { name: "Privacy Policy" }).first().click();
+  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page.getByRole("heading", { name: "Privacy Policy", level: 1 })).toBeInViewport();
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+  // a link to a section still goes to that section
+  await page.goto("/terms#permission");
+  await expect(page.getByRole("heading", { name: /Permission to publish and share/ })).toBeInViewport();
+});

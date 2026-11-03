@@ -263,9 +263,14 @@ def _preview_html(
     return HTMLResponse(body)
 
 
-@router.api_route(
+@router.head(  # some crawlers ask with HEAD first (kept out of the API schema so the generated client is the same everywhere)
     "/v1/public/stories/{slug}/preview",
-    methods=["GET", "HEAD"],  # some crawlers ask with HEAD first
+    response_class=HTMLResponse,
+    include_in_schema=False,
+    dependencies=[Depends(limit("public-story", 120, 600))],
+)
+@router.get(
+    "/v1/public/stories/{slug}/preview",
     response_class=HTMLResponse,
     dependencies=[Depends(limit("public-story", 120, 600))],
 )

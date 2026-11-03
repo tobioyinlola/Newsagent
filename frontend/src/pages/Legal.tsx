@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Eyebrow, SiteShell } from "./Landing";
 
 // The Terms of Use and the Privacy Policy. They describe the platform as it works today. When the wording changes in a way people
@@ -32,6 +32,12 @@ function Block({ item }: { item: Item }) {
 }
 
 function LegalPage({ title, intro, sections, other }: { title: string; intro: string[]; sections: Section[]; other: { to: string; label: string } }) {
+  const { pathname, hash } = useLocation();
+  // Opening either page (from the footer, a sign-up link or the other page) always starts at the top, unless the link points at a section.
+  useEffect(() => {
+    const section = hash ? document.getElementById(decodeURIComponent(hash.slice(1))) : null;
+    if (section) section.scrollIntoView(); else window.scrollTo(0, 0);
+  }, [pathname, hash]);
   useEffect(() => { const old = document.title; document.title = `${title} | ${NAME}`; return () => { document.title = old; }; }, [title]);
   return (
     <SiteShell>

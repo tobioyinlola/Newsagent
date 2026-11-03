@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { Stat } from "../components/Charts";
+import { WordingFix } from "../components/WordingFix";
 import { useCan } from "../lib/can";
 import { Button, Card, ErrorBox, inputCls } from "../components/ui";
 import { ago, date, num, usd } from "../lib/format";
@@ -95,6 +96,7 @@ export function CustomerDetail() {
                 {p.state === "final_ready" && (p.published
                   ? <Button variant="secondary" disabled={takeDown.isPending} onClick={() => { if (confirm("Take this story off Latest Stories? The video stays.")) takeDown.mutate(p.id); }}>Take story down</Button>
                   : <Button variant="secondary" disabled={putBack.isPending} onClick={() => putBack.mutate(p.id)}>Publish story</Button>)}
+                {p.state === "final_ready" && <WordingFix projectId={p.id} onDone={refresh} />}
                 <Button variant="danger" disabled={del.isPending} onClick={() => { if (confirm("Delete this video and all its files? This can't be undone.")) del.mutate(p.id); }}>Delete video</Button>
               </td>)}</tr>)}</tbody>
           </table>
