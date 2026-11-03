@@ -76,7 +76,7 @@ export function App() {
       <Route element={<RequireAuth />}>
         <Route element={plain(<Layout />)}>
           <Route path="/distribution/request" element={plain(<DistributionRequestPage />)} />
-          <Route path="/referrals" element={<SettingsRedirect tab="referral" />} />
+          <Route path="/referrals" element={plain(<Referrals />)} />
           <Route path="/dashboard" element={plain(<Dashboard />)} />
           <Route path="/ai-newsroom/videos" element={plain(<Projects />)} />
           <Route path="/ai-newsroom/new" element={plain(<NewProject />)} />

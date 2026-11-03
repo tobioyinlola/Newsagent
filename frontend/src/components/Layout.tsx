@@ -25,6 +25,7 @@ const ICONS = {
   home: <Icon><path d="M3 11l9-7 9 7v9H3z" /><path d="M9 20v-6h6v6" /></Icon>,
   videos: <Icon><rect x="3" y="5" width="18" height="14" /><path d="M10 9v6l5-3z" /></Icon>,
   brand: <Icon><rect x="3" y="3" width="18" height="18" /><path d="M12 3v18M3 15h9" /></Icon>,
+  referral: <Icon><rect x="3" y="8" width="18" height="4" /><path d="M5 12v9h14v-9M12 8v13M12 8C9 3 5 5 7 8M12 8c3-5 7-3 5 0" /></Icon>,
   credits: <Icon><circle cx="12" cy="12" r="9" /><path d="M12 7v10M9 10h6M9 14h6" /></Icon>,
   data: <Icon><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /></Icon>,
   security: <Icon><rect x="5" y="11" width="14" height="10" /><path d="M8 11V7a4 4 0 018 0v4" /></Icon>,
@@ -121,7 +122,7 @@ export function Layout() {
             </button>
           {item("/dashboard", "Dashboard", ICONS.home)}
           {item("/ai-newsroom/videos", "Videos", ICONS.videos)}
-          {item("/brand", "Brand kit", ICONS.brand)}
+          {item("/referrals", "Referral", ICONS.referral)}
           {item("/distribution/request", "Distribution", ICONS.videos)}
           {item("/analytics", "Analytics", ICONS.videos)}
           {item("/settings", "Settings", <Icon><circle cx="12" cy="12" r="3" /><path d="m9 3 6 0 1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1Z" /></Icon>)}

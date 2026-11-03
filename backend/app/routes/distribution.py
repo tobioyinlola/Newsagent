@@ -11,14 +11,16 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import Principal, current_principal, require
+from app.config import get_settings
 from app.db import get_session
 from app.integrations import registry
 from app.models import Asset, BrandAsset, Brief, DistributionRequest, Project, ScriptVersion, Workspace
 from app.models.base import utcnow
 from app.services import distribution as fulfillment
 from app.services import distribution_catalog as catalog_service
-from app.services import ledger
+from app.services import ledger, referrals
 from app.services.audit import audit
+from app.services.notifications import send_email
 from app.services.ratelimit import limit
 
 router = APIRouter(tags=["distribution"])
@@ -496,6 +498,7 @@ async def submit(
         )
     row.data = {**body.model_dump(), "outlets": lines}
     row.total_credits, row.paid_at, row.submitted_at, row.stage = total, now, now, "submitted"
+    bonus = await referrals.reward_distribution(db, ws.id) if total else None  # a referred business paying: its referrer is thanked
     audit(
         db,
         p.user.email,
@@ -507,6 +510,16 @@ async def submit(
     await fulfillment.plan_submission(db, row, catalog)
     await db.commit()
     tasks.add_task(fulfillment.deliver_request, row.id)
+    if bonus:
+        referrer_email, business, credits = bonus
+        tasks.add_task(
+            send_email,
+            referrer_email,
+            f"You earned {credits:g} bonus credits",
+            f"{business}, a business you referred, has just paid for its first distribution. We've added {credits:g} "
+            "bonus credits to your wallet, on top of the credit you earned when they signed up. Thank you for spreading the word.",
+            link=("See your referrals", f"{get_settings().app_base_url}/referrals"),
+        )
     return await result(db, row)
 
 
