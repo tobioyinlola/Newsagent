@@ -15,7 +15,7 @@ from app.integrations.llm.base import NewsDraft
 from app.integrations.storage.base import ObjectTooLarge
 from app.models import NewsImage, NewsStory, NewsVideo
 from app.models.base import new_id, utcnow
-from app.services import news_video, news_video_rules, uploads
+from app.services import news_desk_public, news_video, news_video_rules, stories, uploads
 from app.services.audit import audit
 from app.services.ratelimit import limit
 
@@ -271,8 +271,18 @@ async def publish(id: str, body: Publish, p: Principal = Depends(operator), db: 
     if moderation.get("level") not in {"allow", "review"}:
         raise HTTPException(422, "This story cannot be published. Review its content before trying again.")
     # The explicit editor confirmation covers human review, including a 'review' moderation result.
+    fields: dict = {}
+    if news_desk_public.is_placeholder_slug(row.slug):  # the address is made from the headline once, then kept for good
+        fields["slug"] = stories.make_slug(str(data.get("headline") or ""), "", id)
     row = await change(
-        db, id, body.revision, status="published", published_data=data, published_at=utcnow(), updated_by=p.user.email
+        db,
+        id,
+        body.revision,
+        status="published",
+        published_data=data,
+        published_at=utcnow(),
+        updated_by=p.user.email,
+        **fields,
     )
     audit(
         db,

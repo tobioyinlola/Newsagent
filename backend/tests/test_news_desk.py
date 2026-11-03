@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from app.integrations import registry
 from app.models import Job, NewsImage, StaffMember, User
+from app.services import stories
 from tests.conftest import OPS, OWNER
 from tests.helpers import api_path
 
@@ -208,3 +209,24 @@ async def test_news_rejects_invalid_image_bytes(client, workspace, content_type,
     assert (
         await client.post(f"{BASE}/{row['id']}/images/confirm", headers=OPS, json={"image_id": signed["image_id"]})
     ).status_code == 422
+
+
+async def test_a_published_story_gets_a_headline_address_and_the_old_address_still_works(client, workspace, maker):
+    row = await ready(client)
+    placeholder = row["slug"]
+    assert placeholder == f"cf-tech-{row['id']}"  # a draft only has a placeholder
+    published = (await publish(client, row)).json()
+    slug = published["slug"]
+    headline = published["data"]["headline"]
+    assert slug.endswith(f"-{row['id'][:6]}") and not slug.startswith("cf-tech-")
+    assert slug == stories.make_slug(headline, "", row["id"])
+    # the new address and the old one both open the story, and the preview and picture use the new one
+    assert (await client.get(f"/v1/public/stories/{slug}")).status_code == 200
+    assert (await client.get(f"/v1/public/stories/{placeholder}")).status_code == 200
+    assert (await client.get(f"/v1/public/stories/{slug}/preview")).status_code == 200
+    assert f"/latest-stories/{slug}" in (await client.get(f"/v1/public/stories/{slug}/preview")).text
+    assert (await client.get("/v1/public/cf-news")).json()[0]["slug"] == slug
+    # publishing again never changes a live address
+    again = await publish(client, published)
+    assert again.status_code == 200, again.text
+    assert again.json()["slug"] == slug
