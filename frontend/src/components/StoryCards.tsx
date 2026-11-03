@@ -46,9 +46,9 @@ export function StoryThumb({ card, big = false }: { card: StoryCard; big?: boole
   );
 }
 
-/** `fluid`: fills its grid cell instead of the fixed width a sideways row needs. */
-export function StoryTile({ card, fluid = false }: { card: StoryCard; fluid?: boolean }) {
-  const size = fluid ? "w-full" : "w-[78vw] shrink-0 snap-start sm:w-[320px]";
+/** `fluid`: fills its grid cell instead of the fixed width a sideways row needs. `grid`: a sideways row on small screens, a grid cell on large ones (see ScrollRow). */
+export function StoryTile({ card, fluid = false, grid = false }: { card: StoryCard; fluid?: boolean; grid?: boolean }) {
+  const size = fluid ? "w-full" : grid ? "w-[78vw] shrink-0 snap-start sm:w-[320px] lg:w-full" : "w-[78vw] shrink-0 snap-start sm:w-[320px]";
   return (
     <Link to={storyPath(card.slug)} className={`group block ${size} rounded-sm border border-white/15 bg-white/[0.03] p-0 hover:border-brand-green`}>
       <StoryThumb card={card} />
@@ -61,8 +61,9 @@ export function StoryTile({ card, fluid = false }: { card: StoryCard; fluid?: bo
   );
 }
 
-/** A row that scrolls sideways: arrows at the right, dots under it, swipe or scroll as well. */
-export function ScrollRow({ label, children, count }: { label: string; children: ReactNode; count: number }) {
+/** A row that scrolls sideways: arrows at the right, dots under it, swipe or scroll as well.
+ *  `grid`: on large screens (desktop, landscape) it lays the stories out four across in rows instead, with no arrows or dots. Use StoryTile `grid` inside. */
+export function ScrollRow({ label, children, count, grid = false }: { label: string; children: ReactNode; count: number; grid?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(0);
   const [pages, setPages] = useState(1);
@@ -76,10 +77,10 @@ export function ScrollRow({ label, children, count }: { label: string; children:
   const go = (dir: 1 | -1) => ref.current?.scrollBy({ left: dir * ref.current.clientWidth * 0.85, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   return (
     <div role="region" aria-roledescription="carousel" aria-label={label}>
-      <div ref={ref} onScroll={measure} className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" tabIndex={0}>
+      <div ref={ref} onScroll={measure} className={`flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${grid ? "lg:grid lg:snap-none lg:grid-cols-4 lg:overflow-visible lg:pb-0" : ""}`} tabIndex={0}>
         {children}
       </div>
-      <div className="mt-3 flex items-center justify-between">
+      <div className={`mt-3 flex items-center justify-between ${grid ? "lg:hidden" : ""}`}>
         <div className="flex flex-1 justify-center gap-2" aria-hidden="true">
           {Array.from({ length: Math.min(pages, 8) }, (_, i) => <span key={i} className={`h-1.5 w-1.5 rounded-full ${i === page ? "bg-white" : "bg-white/30"}`} />)}
         </div>
