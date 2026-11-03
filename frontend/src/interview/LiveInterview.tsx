@@ -196,7 +196,7 @@ function GetReady({ session, onStart, onBack }: { session: Session; onStart: () 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="relative overflow-hidden rounded-md bg-black">
           <video ref={video} autoPlay muted playsInline className="aspect-video w-full object-cover [transform:scaleX(-1)]" aria-label="Your camera preview" />
-          <div aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="h-3/4 w-1/3 rounded-[50%] border-4 border-dashed border-white/70" /></div>
+          <div aria-hidden className="pointer-events-none absolute inset-0 flex items-start justify-center pt-[7%]"><div className="h-[58%] w-[25%] rounded-[50%] border-4 border-dashed border-white/70" /></div>
         </div>
         <div className="space-y-3 text-sm">
           <p className={live ? "font-bold" : "font-bold text-ink"}>{live ? "✓ Your camera is on" : "✗ Your camera is off"}</p>
