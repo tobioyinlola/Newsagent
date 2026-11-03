@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { getToken } from "../lib/auth";
 import { OutletLogoStrip } from "../components/OutletLogoStrip";
-import { CHANNELS, CardArt, Cta, Eyebrow, Panel, SiteShell } from "./Landing";
+import { CHANNELS, CardArt, Cta, Eyebrow, SiteShell } from "./Landing";
 
 // Dedicated page for distribution (press-distribution style): reach, how it works, coverage by region, outlet types,
 // credit-based packages, the placement report and questions. Distribution is launching: the page says so plainly.
@@ -38,20 +38,6 @@ const QUESTIONS: [string, string][] = [
   ["Which regions can I pick?", "Africa is available now. United States, Canada and United Kingdom distribution is coming soon."],
   ["Will I see where it ran?", "Yes. Every distribution comes with a placement report listing where your story appeared."],
 ];
-
-function ReportMock() {
-  const rows: [string, string, string][] = [["Business daily", "United States", "PUBLISHED"], ["Tech weekly", "Canada", "PUBLISHED"], ["Startup wire", "Nigeria", "PUBLISHED"], ["Finance desk", "United Kingdom", "SCHEDULED"], ["Founders' digest", "Kenya", "SCHEDULED"]];
-  return (
-    <Panel title="Placement report · sample" right={<span className="text-brand-green">● LIVE</span>} className="w-full max-w-md">
-      <ul className="space-y-1.5">
-        {rows.map(([o, r, st]) => (
-          <li key={o} className="flex items-center justify-between gap-2 border-b border-white/5 pb-1"><span className="text-white">{o}</span><span className="text-white/50">{r}</span><span className={st === "PUBLISHED" ? "text-brand-green" : "text-brand-peach"}>{st}</span></li>
-        ))}
-      </ul>
-      <p className="mt-3 text-white/40">// sample layout; real reports list real outlets</p>
-    </Panel>
-  );
-}
 
 function OutletMarquee() {
   return (
@@ -91,14 +77,13 @@ export function DistributionPage() {
       <main>
         <section className="cf-grain relative overflow-hidden px-4 pb-16 pt-16 md:px-8 md:pt-24">
           <DistributionHeroPhoto />
-          <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-[1.2fr_1fr]">
-            <div>
+          <div className="relative z-10 mx-auto max-w-6xl">
+            <div className="md:max-w-[55%]">
               <p className="inline-block rounded-sm border border-brand-peach bg-ink/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-brand-peach">Distribution · Africa available</p>
               <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">Your news, across <span className="text-brand-green">20,000+ media outlets.</span></h1>
               <p className="mt-5 max-w-xl text-lg text-white/85">Submit your news segment and written announcement for distribution to the available Africa outlets. United States, Canada and United Kingdom coverage is coming soon. Review the credits before submitting.</p>
               <div className="mt-8 flex flex-wrap gap-3"><Cta to={signedIn ? "/distribution/request" : "/login"} primary>Choose distribution outlets</Cta><Cta href="#coverage">See coverage</Cta></div>
             </div>
-            <div className="flex justify-center"><ReportMock /></div>
           </div>
         </section>
 
