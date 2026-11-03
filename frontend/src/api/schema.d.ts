@@ -2969,7 +2969,12 @@ export interface paths {
          * @description The news story and the social post written after the interview.
          */
         get: operations["story_v1_projects__project_id__story_get"];
-        put?: never;
+        /**
+         * Edit Story
+         * @description Let the owner change the press release before they approve it. Only while the story is being reviewed;
+         *     the social post and the presenter's words are not touched. Moderation screens it when the owner approves.
+         */
+        put: operations["edit_story_v1_projects__project_id__story_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3118,6 +3123,7 @@ export interface paths {
         /**
          * Story Image
          * @description A steady address for a story's cover picture (the stored file's own link expires), for link previews.
+         *     Served as a small 1200x630 JPEG so WhatsApp and the others will show it.
          */
         get: operations["story_image_v1_public_stories__slug__image_get"];
         put?: never;
@@ -3140,12 +3146,17 @@ export interface paths {
          * @description What WhatsApp, LinkedIn, X, Facebook and Slack read to draw a link preview. The site serves this page, instead of the app,
          *     to those crawlers only (see vercel.json); people always get the app.
          */
-        get: operations["story_preview_v1_public_stories__slug__preview_get"];
+        get: operations["story_preview_v1_public_stories__slug__preview_head"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
-        head?: never;
+        /**
+         * Story Preview
+         * @description What WhatsApp, LinkedIn, X, Facebook and Slack read to draw a link preview. The site serves this page, instead of the app,
+         *     to those crawlers only (see vercel.json); people always get the app.
+         */
+        head: operations["story_preview_v1_public_stories__slug__preview_head"];
         patch?: never;
         trace?: never;
     };
@@ -5591,6 +5602,21 @@ export interface components {
             thumbnail_url: string | null;
             /** Title */
             title: string;
+        };
+        /**
+         * StoryEdit
+         * @description The owner's own wording of the press release: its subject (headline), summary line and body paragraphs.
+         */
+        StoryEdit: {
+            /**
+             * Dek
+             * @default
+             */
+            dek: string;
+            /** Headline */
+            headline: string;
+            /** Paragraphs */
+            paragraphs: string[];
         };
         /**
          * StoryPageOut
@@ -12502,6 +12528,45 @@ export interface operations {
             };
         };
     };
+    edit_story_v1_projects__project_id__story_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoryEdit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     understanding_v1_projects__project_id__understanding_get: {
         parameters: {
             query?: never;
@@ -12738,7 +12803,38 @@ export interface operations {
             };
         };
     };
-    story_preview_v1_public_stories__slug__preview_get: {
+    story_preview_v1_public_stories__slug__preview_head: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    story_preview_v1_public_stories__slug__preview_head: {
         parameters: {
             query?: never;
             header?: never;

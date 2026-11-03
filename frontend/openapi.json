@@ -5962,6 +5962,38 @@
         "title": "StoryCardOut",
         "type": "object"
       },
+      "StoryEdit": {
+        "description": "The owner's own wording of the press release: its subject (headline), summary line and body paragraphs.",
+        "properties": {
+          "dek": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Dek",
+            "type": "string"
+          },
+          "headline": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Headline",
+            "type": "string"
+          },
+          "paragraphs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Paragraphs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "headline",
+          "paragraphs"
+        ],
+        "title": "StoryEdit",
+        "type": "object"
+      },
       "StoryPageOut": {
         "description": "A public story page: the video and the press release. The media contact is never included.",
         "properties": {
@@ -18192,6 +18224,75 @@
         "tags": [
           "guided"
         ]
+      },
+      "put": {
+        "description": "Let the owner change the press release before they approve it. Only while the story is being reviewed;\nthe social post and the presenter's words are not touched. Moderation screens it when the owner approves.",
+        "operationId": "edit_story_v1_projects__project_id__story_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoryEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Edit Story V1 Projects  Project Id  Story Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Edit Story",
+        "tags": [
+          "guided"
+        ]
       }
     },
     "/v1/projects/{project_id}/understanding": {
@@ -18518,7 +18619,7 @@
     },
     "/v1/public/stories/{slug}/image": {
       "get": {
-        "description": "A steady address for a story's cover picture (the stored file's own link expires), for link previews.",
+        "description": "A steady address for a story's cover picture (the stored file's own link expires), for link previews.\nServed as a small 1200x630 JPEG so WhatsApp and the others will show it.",
         "operationId": "story_image_v1_public_stories__slug__image_get",
         "parameters": [
           {
@@ -18560,7 +18661,48 @@
     "/v1/public/stories/{slug}/preview": {
       "get": {
         "description": "What WhatsApp, LinkedIn, X, Facebook and Slack read to draw a link preview. The site serves this page, instead of the app,\nto those crawlers only (see vercel.json); people always get the app.",
-        "operationId": "story_preview_v1_public_stories__slug__preview_get",
+        "operationId": "story_preview_v1_public_stories__slug__preview_head",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Story Preview",
+        "tags": [
+          "stories"
+        ]
+      },
+      "head": {
+        "description": "What WhatsApp, LinkedIn, X, Facebook and Slack read to draw a link preview. The site serves this page, instead of the app,\nto those crawlers only (see vercel.json); people always get the app.",
+        "operationId": "story_preview_v1_public_stories__slug__preview_head",
         "parameters": [
           {
             "in": "path",
