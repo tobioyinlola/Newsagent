@@ -1,6 +1,6 @@
 import { CFSymbol, Logo } from "../components/Logo";
 import { getToken } from "../lib/auth";
-import { CardArt, Cta, Eyebrow, Panel, SiteShell } from "./Landing";
+import { Cta, Eyebrow, Panel, SiteShell } from "./Landing";
 
 // Dedicated page for the AI Newsroom: the team, what comes out, how a segment is made.
 
@@ -101,8 +101,8 @@ export function Newsroom() {
                 ))}
               </ol>
             </div>
-            <div className="cf-grain relative min-h-80 overflow-hidden rounded-sm">
-              <CardArt variant="video" />
+            <div className="relative min-h-80 overflow-hidden rounded-sm bg-ink">
+              <img src="/newsroom-how.webp" alt="" aria-hidden="true" width={2000} height={1116} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
               <div className="relative z-10 flex h-full min-h-80 items-center justify-center p-6">
                 <Panel title="Your video" right={<span className="text-brand-green">100%</span>} className="w-full max-w-sm">
                   <ul className="space-y-1.5">{["Story approved", "Interview (4 of 4)", "Presenter: opening", "Presenter: 4 questions", "Presenter: sign-off", "Final video made and checked"].map((x) => <li key={x} className="flex justify-between"><span>{x}</span><span className="text-brand-green">DONE</span></li>)}</ul>
