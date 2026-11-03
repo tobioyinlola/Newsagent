@@ -89,6 +89,12 @@ export function DistributionRequestPage() {
     } catch (e) { setError(e); } finally { setBusy(false); }
   };
   const all = outlets.data?.outlets ?? [];
+  // A draft saved before an outlet was hidden may still list it. Drop it quietly so the draft can be saved and submitted.
+  useEffect(() => {
+    if (!draft || !outlets.data || row?.status !== "draft") return;
+    const known = new Set(outlets.data.outlets.map(o => o.id));
+    if (draft.outlet_ids.some(id => !known.has(id))) patch({ outlet_ids: draft.outlet_ids.filter(id => known.has(id)) });
+  }, [outlets.data, draft?.outlet_ids, row?.status]);
   const selected = priceOutlets(all, draft);
   const total = Number(selected.reduce((n, o) => n + Number(o.credits), 0).toFixed(4));
   const next = async (step: string) => {

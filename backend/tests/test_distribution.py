@@ -4,6 +4,7 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import select
 
+from app.config import get_settings
 from app.integrations import registry
 from app.models import BrandAsset, CreditTransaction, Project, ScriptVersion, User, Workspace
 from app.routes import distribution as routes
@@ -17,6 +18,8 @@ async def distribution_data(maker, workspace, monkeypatch):
     # Workflow tests exercise a deliberately free catalog; price-specific tests set their own costs.
     for outlet in routes.OUTLETS.values():
         monkeypatch.setitem(outlet, "credits", "0")
+    # These tests drive the whole workflow with free outlets; whether free outlets are shown to customers is tested separately.
+    monkeypatch.setattr(get_settings(), "hide_free_distribution_outlets", False)
     async with maker() as db:
         project = Project(workspace_id=workspace, state="final_ready")
         db.add(project)
@@ -678,7 +681,8 @@ def test_outsize_media_quote_is_rejected_before_database_money_overflow():
         quote({"outlet_ids": [o["id"] for o in outlets], "logo_key": "logo", "picture_keys": ["picture"] * 10}, outlets)
 
 
-async def test_outlet_categories_match_groups_and_preserve_existing_ids(client, workspace):
+async def test_outlet_categories_match_groups_and_preserve_existing_ids(client, workspace, monkeypatch):
+    monkeypatch.setattr(get_settings(), "hide_free_distribution_outlets", False)  # this checks the full catalog
     data = (await client.get("/v1/distribution/outlets", headers=OWNER)).json()
     outlets = data["outlets"]
     assert len(outlets) == 53
@@ -744,7 +748,8 @@ async def test_owner_prices_reach_quote_and_wallet_once(client, distribution_dat
         assert await ledger.ledger_sum(db, workspace) == Decimal("85")
 
 
-async def test_nigeria_sheet_final_margin_prices_reach_catalog(client, workspace):
+async def test_nigeria_sheet_final_margin_prices_reach_catalog(client, workspace, monkeypatch):
+    monkeypatch.setattr(get_settings(), "hide_free_distribution_outlets", False)  # this checks the full catalog
     outlets = (await client.get("/v1/distribution/outlets", headers=OWNER)).json()["outlets"]
     expected = {
         "Tribune": "18.8",
@@ -820,3 +825,43 @@ async def test_submission_without_optional_logo_has_no_logo_charge(client, distr
     assert line["logo_key"] is None
     assert not line["include_logo"]
     assert Decimal(line["logo_fee"]) == 0
+
+
+async def test_outlets_that_cost_nothing_are_hidden_from_customers_but_priced_ones_show(
+    client, distribution_data, monkeypatch
+):
+    monkeypatch.setattr(get_settings(), "hide_free_distribution_outlets", True)  # the shipped default
+    monkeypatch.setitem(routes.OUTLETS["1"], "credits", "3")  # one priced outlet, all the others cost 0
+    listed = (await client.get("/v1/distribution/outlets", headers=OWNER)).json()
+    assert [o["id"] for o in listed["outlets"]] == ["1"]
+    assert all(Decimal(o["credits"]) > 0 for o in listed["outlets"])
+    monkeypatch.setitem(routes.OUTLETS["2"], "credits", "1.5")  # giving a free outlet a price shows it
+    ids = [o["id"] for o in (await client.get("/v1/distribution/outlets", headers=OWNER)).json()["outlets"]]
+    assert ids == ["1", "2"]
+    monkeypatch.setattr(
+        get_settings(), "hide_free_distribution_outlets", False
+    )  # switching the setting off shows everything
+    assert len((await client.get("/v1/distribution/outlets", headers=OWNER)).json()["outlets"]) == len(routes.OUTLETS)
+
+
+async def test_a_hidden_outlet_cannot_be_chosen_and_the_price_check_still_works_for_the_rest(
+    client, distribution_data, maker, workspace, monkeypatch
+):
+    monkeypatch.setattr(get_settings(), "hide_free_distribution_outlets", True)
+    monkeypatch.setitem(routes.OUTLETS["1"], "credits", "3")  # outlet 2 stays free, so it is hidden
+    r = await client.post("/v1/distribution", headers=OWNER)
+    id = r.json()["id"]
+    refused = await client.put(
+        f"/v1/distribution/{id}", headers=OWNER, json=distribution_data
+    )  # asks for outlets 1 and 2
+    assert refused.status_code == 422 and "not available right now" in refused.text
+    ok = await client.put(f"/v1/distribution/{id}", headers=OWNER, json={**distribution_data, "outlet_ids": ["1"]})
+    assert ok.status_code == 200, ok.text
+    # the customer's quote version (taken from the list they saw) still matches the server's check, so a paid submit works
+    quote = (await client.get("/v1/distribution/outlets", headers=OWNER)).json()["quote_version"]
+    submitted = await client.post(
+        f"/v1/distribution/{id}/submit", headers=OWNER, json={"expected_total": "3", "quote_version": quote}
+    )
+    assert submitted.status_code == 200, submitted.text
+    async with maker() as db:
+        assert (await db.get(Workspace, workspace)).credit_balance == Decimal("7")  # 10 - 3

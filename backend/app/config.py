@@ -154,6 +154,7 @@ class Settings(BaseSettings):
     credit_purchase_usd: str = "1,10,50,100,200"
     referral_signup_credits: str = "1"  # credits the referrer gets when a business they referred signs up (email verified)
     referral_distribution_bonus_credits: str = "4"  # extra credits, once per referred business, when it first pays for a distribution
+    hide_free_distribution_outlets: bool = True  # outlets priced at 0 credits are not shown to customers for now; price one in the back office to show it
     credit_markup: str = "0"  # credits taken per 1 USD of vendor cost while a video is made: 0 = none, the video's flat price is its only charge
     low_balance_threshold: str = "1"
     billing_webhook_secret: str = ""  # HMAC secret for payment webhooks; REQUIRED outside local

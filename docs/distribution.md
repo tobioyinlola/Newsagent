@@ -67,3 +67,18 @@ Migration `0026` updates only the placement-credit field in existing overrides f
 The Nigerian news spreadsheet rollout (migration 0028) uses the final **CF Credit + Margins** column as the placement credit price. Its five-credit margin is already included and is not added a second time. Decimal prices are preserved. Existing publisher contacts, media fees and policies remain intact; paid distribution requests keep their original price snapshots. Earlier tech/crypto pricing is unchanged.
 
 Distribution step navigation appears at both the top and bottom, with separators, completed-step styling and an accessible active step. Advancing still validates the preceding required fields. The review payment action saves the draft, checks a fresh wallet balance and opens a shortfall modal when more credits are required; the existing atomic server check remains the final authority. Billing and successful payment screens link back to the saved draft.
+
+## Free channels are hidden (for now)
+
+Distribution channels that cost **0 credits** are not shown to customers. This is one setting, `HIDE_FREE_DISTRIBUTION_OUTLETS`
+(on by default), and nothing is deleted.
+
+- **Customers** see only channels with a price. In the default catalog that is 37 of the 53 channels. A category whose channels
+  are all free (for example "Business (Africa) Channels" and "Entertainment News Channels") disappears with them.
+- **To show a channel**, give it a price in the back office (Distribution settings). It then appears by itself. Set the variable
+  to `false` to show every channel again.
+- The server also refuses a request that names a hidden channel, so it cannot be chosen by any other route. An older saved draft
+  that still lists one has it dropped automatically when the page opens.
+- The back office still lists every channel, and requests already submitted are unchanged.
+- The price check on submit is unaffected: its version is always computed over the full catalog.
+
