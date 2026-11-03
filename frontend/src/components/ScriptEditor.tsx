@@ -23,7 +23,7 @@ export function ScriptEditor({ projectId, script, guided = false }: { projectId:
 
   const ORDER = ["intro", "body", "explanation", "analysis", "outro"];
   // the guided video's fixed running order (Video Rulebook v4): name each part the way the owner hears it
-  const GUIDED_PARTS: Record<string, string> = { intro: "Opening", analysis: "Closing remark", outro: "Sign-off" };
+  const GUIDED_PARTS: Record<string, string> = { intro: "Opening", analysis: "Closing remark" }; // the sign-off is not shown: it is fixed, and still plays at the end of the video
   const EXTRA: Record<string, string> = {
     explanation: "Explanation: the presenter explains the business before your interview",
     analysis: "Analysis: the presenter reflects on your answers after the interview",
@@ -56,11 +56,13 @@ export function ScriptEditor({ projectId, script, guided = false }: { projectId:
   return (
     <Card title={guided ? "What your presenter says" : `Script (version ${script.version})`}>
       <div className="space-y-4">
-        <Notice>{guided ? "Check what the presenter says. It is short on purpose: your story and your own answers do the rest. Nothing is made until you approve." : "Review what the anchor will say. Nothing is rendered, and no credits are used, until you approve."}</Notice>
-        {segments.map((s, i) => (
+        <Notice>{guided ? "This is what the presenter will say. It is short on purpose: your story and your own answers do the rest. Nothing is made until you approve." : "Review what the anchor will say. Nothing is rendered, and no credits are used, until you approve."}</Notice>
+        {segments.map((s, i) => guided && !GUIDED_PARTS[s.kind] ? null : (
           <div key={i} className="space-y-1">
-            <label htmlFor={`seg-${i}`} className="text-sm font-medium capitalize">{(guided && GUIDED_PARTS[s.kind]) || s.kind}</label>
-            <textarea id={`seg-${i}`} rows={3} className={inputCls} value={s.text} onChange={(e) => setSegments(segments.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} />
+            <label htmlFor={`seg-${i}`} className="text-sm font-medium capitalize">{(guided && GUIDED_PARTS[s.kind]) || s.kind}{guided && <span className="ml-2 text-xs font-normal normal-case text-muted">View only</span>}</label>
+            {guided
+              ? <textarea id={`seg-${i}`} rows={3} readOnly aria-readonly="true" className={inputCls + " cursor-default bg-paper text-ink/90"} value={s.text} />
+              : <textarea id={`seg-${i}`} rows={3} className={inputCls} value={s.text} onChange={(e) => setSegments(segments.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} />}
           </div>
         ))}
         {!guided && withInterview && addable.length > 0 && (
