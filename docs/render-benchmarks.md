@@ -89,3 +89,10 @@ The API's renderer client waits out 429s (up to 15 minutes) instead of failing t
 Remotion was upgraded 4.0.250 -> 4.0.537 for security fixes. Smoke, merge and load results above were measured on 4.0.537;
 render speed was unchanged versus 4.0.250 (merge: 27 s vs 26 s). Caveat: this sandbox cannot reach `remotion.media`, so the
 upgraded version was run with Playwright's Chromium headless shell (`CHROMIUM_PATH`), not Remotion's own download.
+
+## Production render time limit (3 November 2026)
+Two videos failed with "The render took too long": the interview videos run about 5 to 6 minutes (9,000+ frames) and render at about
+9 frames a second on the production server, which is right at the old 20 minute limit, and two renders at once share the same CPUs.
+One render attempt now gets **60 minutes** (`VENDOR_POLICIES["renderer"]`), and the stuck-project sweep and the back-office "stuck"
+flag work out how long a worker owns a job from the step's own vendor (`runner.lease_for`), so a long render is not mistaken for a
+dead one. Keep `RENDER_JOBS_CONCURRENCY=1` on the backend service so renders run one at a time.

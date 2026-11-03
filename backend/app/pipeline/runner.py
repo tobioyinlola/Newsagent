@@ -53,6 +53,12 @@ PREDECESSOR = {
 }
 
 
+def lease_for(stage: str) -> timedelta:
+    """How long a running job is treated as still owned by its worker: one attempt at that step's vendor, with a margin."""
+    entry = STEPS.get(stage)
+    return timedelta(seconds=VENDOR_POLICIES[entry[0] if entry else "avatar"].timeout_s * 1.5)
+
+
 async def run_step(step: str, payload: dict) -> None:
     if step == "process_take":  # per-take work isn't tied to the project's state
         from app.pipeline.takes import process_take
@@ -134,6 +140,14 @@ async def _defer(pid: str, step: str, ih: str, retry_after: float | None, attemp
 async def _attempt_loop(step, fn, pid, ih, policy) -> bool:
     for attempt in range(1, policy.max_attempts + 1):
         started = time.monotonic()
+        # each attempt renews the worker's lease, so a second attempt is never mistaken for a dead worker's job
+        async with session_maker()() as beat:
+            await beat.execute(
+                update(Job)
+                .where(Job.project_id == pid, Job.stage == step, Job.input_hash == ih)
+                .values(started_at=datetime.now(UTC))
+            )
+            await beat.commit()
         async with session_maker()() as session:
             project = await session.get(Project, pid)
             assert project is not None

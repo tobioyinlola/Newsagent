@@ -11,10 +11,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import Principal, current_principal, require
-from app.config import VENDOR_POLICIES, get_settings
+from app.config import get_settings
 from app.db import get_session
 from app.models import AuditLog, CreditTransaction, Job, ModerationCase, Project, SystemSetting, Take, Workspace
 from app.pipeline.advance import advance
+from app.pipeline.runner import lease_for
 from app.schemas.api import (
     AuditOut,
     CostReport,
@@ -141,11 +142,7 @@ async def jobs(
     out = []
     for j, ws_name in rows:
         started = j.started_at.replace(tzinfo=UTC) if j.started_at and j.started_at.tzinfo is None else j.started_at
-        stuck = (
-            j.status == "running"
-            and started is not None
-            and now - started > max(STUCK_AFTER, timedelta(seconds=VENDOR_POLICIES["avatar"].timeout_s * 1.5))
-        )
+        stuck = j.status == "running" and started is not None and now - started > max(STUCK_AFTER, lease_for(j.stage))
         out.append(
             JobOut(
                 id=j.id,

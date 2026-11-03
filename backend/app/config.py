@@ -18,7 +18,9 @@ class VendorPolicy(BaseModel):
 VENDOR_POLICIES: dict[str, VendorPolicy] = {
     "llm": VendorPolicy(timeout_s=170, max_attempts=3),
     "avatar": VendorPolicy(timeout_s=900, max_attempts=3, max_concurrency=3),
-    "renderer": VendorPolicy(timeout_s=1200, max_attempts=2, max_concurrency=2),
+    # A render of a 5 to 6 minute interview video takes about 20 minutes on the production server (about 9 frames a second), so one
+    # attempt gets an hour. The worker lease (runner.lease_for, used by the stuck-project sweep) is worked out from this number too.
+    "renderer": VendorPolicy(timeout_s=3600, max_attempts=2, max_concurrency=2),
     "transcription": VendorPolicy(timeout_s=300, max_attempts=3),
     "email": VendorPolicy(timeout_s=20, max_attempts=5),
     "tts": VendorPolicy(timeout_s=30, max_attempts=2),  # the interviewer's voice

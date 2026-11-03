@@ -435,9 +435,12 @@ export function StatsStrip() {
   );
 }
 
+// How many stories each home-page row shows. Everything else is one click away, under "See more".
+const HOME_ROW_STORIES = 8;
+
 // A row of the newest published stories between the numbers and "Every announcement worth telling".
 function LatestStoriesRow() {
-  const q = useStories(12);
+  const q = useStories(HOME_ROW_STORIES);
   const cards = q.data ?? [];
   return (
     <section className="border-b border-white/10 bg-ink px-4 py-12 md:px-8">
@@ -447,7 +450,10 @@ function LatestStoriesRow() {
           <Link to="/latest-stories" className="whitespace-nowrap text-sm font-bold text-brand-green hover:underline">See all stories →</Link>
         </div>
         {cards.length ? (
-          <ScrollRow label="Latest stories" count={cards.length}>{cards.map((c) => <StoryTile key={c.slug} card={c} />)}</ScrollRow>
+          <>
+            <ScrollRow grid label="Latest stories" count={cards.length}>{cards.map((c) => <StoryTile grid key={c.slug} card={c} />)}</ScrollRow>
+            <div className="mt-6 flex justify-center"><Cta to="/latest-stories">See more stories</Cta></div>
+          </>
         ) : (
           <div className="border border-white/15 p-8 text-center">
             <p className="text-lg font-bold text-white">Be the first story on Cover Founder.</p>
@@ -462,8 +468,8 @@ function LatestStoriesRow() {
 
 function CFNewsRow() {
   const q = useQuery({ queryKey: ["cf-news"], queryFn: () => unwrap(api.GET("/v1/public/cf-news")), staleTime: 60_000 });
-  const cards = (q.data ?? []).slice(0, 8);
-  return <section className="border-b border-white/10 bg-ink px-4 py-10 md:px-8"><div className="mx-auto max-w-6xl"><div className="mb-5 flex items-end justify-between gap-4"><div><Eyebrow>CF News</Eyebrow><h2 className="mt-2 text-2xl text-white md:text-3xl">Top stories</h2></div><Link to="/cf-news" className="whitespace-nowrap text-sm font-bold text-brand-green hover:underline">See CF News →</Link></div>{cards.length ? <ScrollRow label="CF News" count={cards.length}>{cards.map(c => <StoryTile key={c.slug} card={c} />)}</ScrollRow> : <p className="text-sm text-white/60">CF News will appear here as stories are published.</p>}</div></section>;
+  const cards = (q.data ?? []).slice(0, HOME_ROW_STORIES);
+  return <section className="border-b border-white/10 bg-ink px-4 py-10 md:px-8"><div className="mx-auto max-w-6xl"><div className="mb-5 flex items-end justify-between gap-4"><div><Eyebrow>CF News</Eyebrow><h2 className="mt-2 text-2xl text-white md:text-3xl">Top stories</h2></div><Link to="/cf-news" className="whitespace-nowrap text-sm font-bold text-brand-green hover:underline">See CF News →</Link></div>{cards.length ? <><ScrollRow grid label="CF News" count={cards.length}>{cards.map(c => <StoryTile grid key={c.slug} card={c} />)}</ScrollRow><div className="mt-6 flex justify-center"><Cta to="/cf-news">See more CF News</Cta></div></> : <p className="text-sm text-white/60">CF News will appear here as stories are published.</p>}</div></section>;
 }
 
 export function SiteShell({ children }: { children: ReactNode }) {
