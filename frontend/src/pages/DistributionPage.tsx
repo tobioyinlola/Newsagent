@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { getToken } from "../lib/auth";
 import { OutletLogoStrip } from "../components/OutletLogoStrip";
-import { CHANNELS, CardArt, Cta, Eyebrow, HeroArt, Panel, SiteShell } from "./Landing";
+import { CHANNELS, CardArt, Cta, Eyebrow, Panel, SiteShell } from "./Landing";
 
 // Dedicated page for distribution (press-distribution style): reach, how it works, coverage by region, outlet types,
 // credit-based packages, the placement report and questions. Distribution is launching: the page says so plainly.
@@ -67,6 +67,22 @@ function OutletMarquee() {
   );
 }
 
+// The hero picture: a wall of devices all showing the same story, wired together. The devices fill the right of the picture and its
+// left side is empty dark, so on a wide screen the picture is pinned to the right (its left edge fades out) and the headline sits on
+// the empty side. On a phone the picture runs behind everything, so it is dimmed to keep the text readable.
+function DistributionHeroPhoto() {
+  return (
+    <div aria-hidden="true" className="absolute inset-0 bg-ink">
+      <div className="absolute inset-y-0 right-0 w-full md:w-[62%] md:[mask-image:linear-gradient(to_right,transparent,#000_40%)]">
+        <img src="/distribution-hero.webp" alt="" width={2000} height={848} fetchPriority="high" decoding="async" className="h-full w-full object-cover object-right" />
+      </div>
+      <div className="absolute inset-0 bg-ink/65 md:bg-transparent" />
+      <div className="absolute inset-0 hidden bg-gradient-to-r from-ink/70 via-ink/25 to-transparent md:block" />
+      <div className="absolute inset-0 bg-gradient-to-b from-ink/45 via-transparent to-ink/80" />
+    </div>
+  );
+}
+
 export function DistributionPage() {
   const signedIn = Boolean(getToken());
   const [open, setOpen] = useState(QUESTIONS[0][0]);
@@ -74,8 +90,7 @@ export function DistributionPage() {
     <SiteShell>
       <main>
         <section className="cf-grain relative overflow-hidden px-4 pb-16 pt-16 md:px-8 md:pt-24">
-          <HeroArt />
-          <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(25,26,48,0.9)_0%,rgba(25,26,48,0.6)_45%,transparent_80%)]" />
+          <DistributionHeroPhoto />
           <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-[1.2fr_1fr]">
             <div>
               <p className="inline-block rounded-sm border border-brand-peach bg-ink/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-brand-peach">Distribution · Africa available</p>
