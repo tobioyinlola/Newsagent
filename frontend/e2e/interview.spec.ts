@@ -123,18 +123,8 @@ test("AI interview: understands the announcement, interviews on camera, then mak
   await expect(page.getByRole("link", { name: "Download" }).first()).toBeVisible();
   await expect(page.getByText("AI-generated anchor")).toHaveCount(0); // no label wording around the video (covers: BIV-GFX-009)
 
-  // the finished video can be edited scene by scene; only what changed is made again
-  await expect(page.getByRole("heading", { name: "Edit your video" })).toBeVisible();
-  await page.getByLabel("How this answer appears").first().selectOption("full");
-  await expect(page.getByText("You have changes waiting.")).toBeVisible();
-  page.once("dialog", (d) => void d.accept());
-  await page.getByRole("button", { name: "Apply changes" }).click();
-  const projectId = /ai-newsroom\/([0-9a-f]+)/.exec(page.url())![1];
-  await expect.poll(async () => {
-    const st = (await (await request.get(`${API}/v1/projects/${projectId}`, { headers: auth })).json()).state;
-    const types = st === "final_ready" ? ((await (await request.get(`${API}/v1/projects/${projectId}/scenes`, { headers: auth })).json()).scenes as { type: string }[]).map((x) => x.type) : [];
-    return st === "final_ready" && types.includes("founder_fullscreen");
-  }, { timeout: 60_000 }).toBe(true);
+  // customers are not shown a scene editor on a finished video
+  await expect(page.getByRole("heading", { name: "Edit your video" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Your video", exact: true })).toBeVisible();
 });
 
