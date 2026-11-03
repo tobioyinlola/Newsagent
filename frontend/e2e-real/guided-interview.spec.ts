@@ -31,8 +31,12 @@ test("guided flow, recorded for real, merged into the final video", async ({ bro
   await page.goto("/ai-newsroom/new");
   await page.getByRole("radio", { name: /Funding round/ }).click();
   await page.getByLabel("Tell us the key details").fill("Minicor, a San Francisco startup, raised a $3.8M seed round led by IA Ventures. It lets developers turn desktop workflows in old software into API endpoints, so AI tools can work with systems that have no modern API. The two co-founders, Saheed Akinbile and Faizaan Chishtie, met at university and applied to Y Combinator several times before they were accepted.");
-  await page.getByLabel("Your name").fill("Saheed Akinbile");
-  await page.getByLabel("Your role").fill("Co-founder and CTO, Minicor");
+  await page.getByLabel("First name").fill("Saheed");
+  await page.getByLabel("Last name").fill("Akinbile");
+  await page.getByLabel("Role", { exact: true }).fill("Co-founder and CTO");
+  await page.getByLabel("Company name").fill("Minicor");
+  await page.getByLabel("City", { exact: true }).fill("San Francisco");
+  await page.getByLabel("Country", { exact: true }).fill("USA");
   await expect(page.getByRole("radio", { name: /\(default\)/ })).toBeVisible();
   await shot("1-details");
   await page.getByRole("button", { name: "Continue to the interview" }).click();
