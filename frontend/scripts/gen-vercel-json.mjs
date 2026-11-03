@@ -16,7 +16,7 @@ const env = {
 const API_TARGET = process.env.API_TARGET || "https://backend-production-73a97.up.railway.app";
 // Link-preview crawlers (WhatsApp, LinkedIn, X, Facebook, Slack, search bots) get a small page with the story's headline, summary and
 // cover picture from the API, because the app itself has none of that in its HTML. People always get the app.
-const CRAWLERS = "facebookexternalhit|Facebot|WhatsApp|LinkedInBot|Twitterbot|Slackbot|TelegramBot|Discordbot|SkypeUriPreview|Pinterest|redditbot|Googlebot|bingbot|Applebot";
+const CRAWLERS = "facebookexternalhit|Facebot|WhatsApp|LinkedInBot|Twitterbot|Slackbot|TelegramBot|Discordbot|SkypeUriPreview|Pinterest|redditbot|Googlebot|bingbot|Applebot|Signal|Viber|Mastodon|Embedly|Iframely|MicrosoftPreview|Teams|Google-PageRenderer|vkShare|Bluesky|Cardyb";
 const headers = Object.entries(securityHeaders(env)).map(([key, value]) => ({ key, value }));
 const config = {
   $schema: "https://openapi.vercel.sh/vercel.json",

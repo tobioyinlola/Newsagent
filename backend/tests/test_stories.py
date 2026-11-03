@@ -110,9 +110,65 @@ async def test_link_previews_have_the_headline_summary_and_a_steady_cover_addres
     assert f'property="og:url" content="http://localhost:5173/latest-stories/{slug}"' in r.text
     assert f'property="og:image" content="http://localhost:5173/v1/public/stories/{slug}/image"' in r.text
     assert 'name="twitter:card" content="summary_large_image"' in r.text
+    for tag in (
+        'property="og:image:width" content="1200"',
+        'property="og:image:height" content="630"',
+        'property="og:image:type" content="image/jpeg"',
+        'property="og:image:alt"',
+        'property="og:locale"',
+        'name="description"',
+        "article:published_time",
+    ):
+        assert tag in r.text, tag
+    assert (
+        await client.head(f"/v1/public/stories/{slug}/preview")
+    ).status_code == 200  # some crawlers ask with HEAD first
     assert card["title"].replace("&", "&amp;").replace('"', "&quot;")[:20] in r.text
     img = await client.get(f"/v1/public/stories/{slug}/image")
     assert img.status_code == 302 and img.headers["location"]
     await client.delete(f"/v1/admin/projects/{pid}/publication", headers=OPS)  # taken down: no preview, no picture
     assert (await client.get(f"/v1/public/stories/{slug}/preview")).status_code == 404
     assert (await client.get(f"/v1/public/stories/{slug}/image")).status_code == 404
+
+
+async def test_the_link_preview_picture_is_a_small_1200_by_630_jpeg(monkeypatch, tmp_path):
+    import subprocess
+
+    from app.routes import stories as routes
+
+    src = tmp_path / "cover.png"  # a busy 1920x1080 picture, like a real cover
+    subprocess.run(
+        ["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "mandelbrot=size=1920x1080", "-frames:v", "1", str(src)],
+        check=True,
+    )
+    data = src.read_bytes()
+    assert len(data) > 300_000  # the original is too heavy for WhatsApp
+
+    class Resp:
+        content = data
+
+        def raise_for_status(self):  # noqa: D401
+            return None
+
+    class Client:
+        def __init__(self, *a, **k): ...
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return None
+
+        async def get(self, url):
+            return Resp()
+
+    monkeypatch.setattr(routes.httpx, "AsyncClient", Client)
+    jpeg = await routes._social_jpeg("http://example.test/cover.png")
+    assert jpeg is not None and jpeg[:2] == b"\xff\xd8" and len(jpeg) <= routes.SOCIAL_MAX_BYTES
+    out = tmp_path / "out.jpg"
+    out.write_bytes(jpeg)
+    size = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "stream=width,height", "-of", "csv=p=0", str(out)],
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert size == "1200,630"
