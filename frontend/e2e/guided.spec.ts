@@ -30,10 +30,13 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await expect(page.getByRole("radio", { name: /\(default\)/ })).toHaveAttribute("aria-checked", "true");
   await page.getByRole("radio", { name: /Funding round/ }).click();
   await page.getByLabel("Tell us the key details").fill("Acme Farms helps smallholder farmers sell produce to verified buyers on their phones. We raised a seed round to open in Kumasi.");
-  await page.getByLabel("Your name").fill("Ada Obi");
-  await page.getByLabel("Your role").fill("CEO, Acme Farms");
-  await expect(page.getByLabel("Your role")).toHaveAttribute("placeholder", "CEO, Bybit");
-  await page.getByLabel("Your location", { exact: true }).fill("Lagos, Nigeria");
+  await page.getByLabel("First name").fill("Ada");
+  await page.getByLabel("Last name").fill("Obi");
+  await page.getByLabel("Role", { exact: true }).fill("ceo");
+  await expect(page.getByLabel("Role", { exact: true })).toHaveValue("CEO"); // role, company, city and country are capitals
+  await page.getByLabel("Company name").fill("Acme Farms");
+  await page.getByLabel("City", { exact: true }).fill("Lagos");
+  await page.getByLabel("Country", { exact: true }).fill("Nigeria");
   await page.getByRole("button", { name: "Continue to the interview" }).click();
 
   // 2. the AI interview opens straight away, four questions on camera
@@ -70,7 +73,7 @@ test("guided flow: details, AI interview, written story, pictures, video, announ
   await expect(page.getByRole("heading", { name: "Your press release" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "What your presenter says" })).toBeVisible();
   // Video Rulebook v4: the fixed running order, filled with this founder and business (covers: BIV-SCN-010, BIV-SCR-011, BIV-SCR-014)
-  await expect(page.getByLabel("Opening")).toHaveValue(/^Joining us in the studio today is Ada Obi, CEO, Acme Farms\. Welcome to Cover Founder News, Ada\./);
+  await expect(page.getByLabel("Opening")).toHaveValue(/^Joining us in the studio today is Ada Obi, CEO, ACME FARMS\. Welcome to Cover Founder News, Ada\./);
   await expect(page.getByLabel("Closing remark")).not.toHaveValue("");
   // the opening and closing remark are view-only, and the sign-off is not shown at all (it is fixed and still plays at the end)
   await expect(page.getByLabel("Opening")).not.toBeEditable();
