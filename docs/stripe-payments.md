@@ -32,8 +32,8 @@ Credits are never granted from the browser's return URL, only from Stripe's own 
 1. In Stripe, stay in **Test mode** (sandbox) and copy the secret key (`sk_test_...`).
 2. Add a webhook endpoint for `https://<api-host>/v1/webhooks/stripe` with these events:
    `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`,
-   `checkout.session.expired`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`.
-   Copy its signing secret (`whsec_...`).
+   `checkout.session.expired`. Copy its signing secret (`whsec_...`).
+   (Add `charge.refunded`, `charge.dispute.created` and `charge.dispute.closed` only when you switch on refunds or chargebacks.)
 3. Set these variables on the `backend` service in Railway. Never commit them or paste them into chat:
 
    | Variable | Value |
@@ -55,9 +55,21 @@ Use any future expiry date and any 3-digit security code. Check that: the credit
 the receipt email with the invoice arrives, the "Payment successful" pop-up shows, the ledger shows a "Purchase" row, the payment shows under **Payments**, a
 declined card adds nothing, and backing out of Stripe's page adds nothing.
 
-## Refunds and chargebacks
+## Refunds and chargebacks (built, switched off)
 
-You refund a payment, or answer a dispute, in the Stripe dashboard as usual. Stripe tells the webhook and the wallet follows.
+This is fully built and tested but **off by default**. Switch each part on with a Railway variable on the `backend` service
+(no code change, a redeploy picks it up):
+
+| Variable | Set to | Does |
+|---|---|---|
+| `STRIPE_REFUNDS_ENABLED` | `true` | a Stripe refund takes the matching credits back |
+| `STRIPE_CHARGEBACKS_ENABLED` | `true` | a dispute holds the credits, returned if you win |
+
+While they are off, a refund or a dispute in Stripe leaves the customer's credits alone (answered with a harmless "disabled"
+response, nothing changes). If you refund a customer in the meantime, take the credits back by hand with an adjustment in the
+back office (Billing). When you switch them on, also add the matching events to the Stripe webhook (listed below).
+
+When on, you refund a payment, or answer a dispute, in the Stripe dashboard as usual. Stripe tells the webhook and the wallet follows.
 
 **Refund** (`charge.refunded`)
 - The credits the refund represents are taken back (refunded amount ÷ amount paid × credits bought). Partial refunds work, and

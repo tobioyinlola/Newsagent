@@ -7,11 +7,22 @@ always sums to the balance; the back office stops counting the money."""
 import json
 from decimal import Decimal
 
+import pytest
+
+from app.config import get_settings
 from app.integrations import registry
 from app.models import Checkout, Workspace
 from app.services import ledger
 from tests.conftest import OPS, OWNER
 from tests.test_stripe_payments import balance, buy, deliver, stripe, webhook_body  # noqa: F401  (stripe is a fixture)
+
+
+@pytest.fixture(autouse=True)
+def switched_on(monkeypatch):
+    """The feature ships switched off; these tests exercise it, so they switch it on."""
+    monkeypatch.setattr(get_settings(), "stripe_refunds_enabled", True)
+    monkeypatch.setattr(get_settings(), "stripe_chargebacks_enabled", True)
+
 
 CREDITS = Decimal("3.70")  # what a $10 payment buys
 
@@ -206,3 +217,27 @@ async def test_a_refunded_payment_page_says_so_and_is_not_mistaken_for_a_failed_
     assert page["status"] == "refunded"
     history = (await client.get("/v1/billing/checkouts", headers=OWNER)).json()
     assert [c["status"] for c in history if c["id"] == co] == ["refunded"]
+
+
+async def test_refunds_and_chargebacks_do_nothing_until_switched_on(client, workspace, maker, stripe, monkeypatch):
+    co = await paid(client, stripe)
+    for flag in ("stripe_refunds_enabled", "stripe_chargebacks_enabled"):
+        monkeypatch.setattr(get_settings(), flag, False)  # the shipped default
+    before = await balance(maker, workspace)
+    assert await result(client, refund_event()) == "disabled"  # answered 200, so Stripe stops retrying
+    assert await result(client, dispute_event("created")) == "disabled"
+    assert await result(client, dispute_event("closed", status="lost")) == "disabled"
+    status, bal, ctx = await state(maker, workspace, co)
+    assert (status, bal) == ("paid", before) and "credits_removed" not in ctx and "dispute_id" not in ctx
+    assert not sent("Refund processed") and not sent("Chargeback")
+
+
+async def test_each_switch_works_on_its_own(client, workspace, maker, stripe, monkeypatch):
+    co = await paid(client, stripe)
+    monkeypatch.setattr(get_settings(), "stripe_chargebacks_enabled", False)  # refunds on, chargebacks off
+    assert await result(client, dispute_event("created")) == "disabled"
+    assert await result(client, refund_event()) == "refunded"
+    assert (await state(maker, workspace, co))[0] == "refunded"
+    monkeypatch.setattr(get_settings(), "stripe_refunds_enabled", False)  # now the other way round
+    monkeypatch.setattr(get_settings(), "stripe_chargebacks_enabled", True)
+    assert await result(client, refund_event(refunded=1000, eid="evt_z")) == "disabled"

@@ -288,6 +288,9 @@ async def on_dispute_closed(db: AsyncSession, billing: StripeBilling, dispute: d
 
 
 async def handle(db: AsyncSession, billing: StripeBilling, kind: str, obj: dict) -> str:
+    if not enabled(kind):
+        log.info("Stripe %s received but handling is switched off; nothing changed", kind)
+        return "disabled"  # answered 200 so Stripe does not keep retrying
     if kind == "charge.refunded":
         return await on_refund(db, billing, obj)
     if kind == "charge.dispute.created":
@@ -296,3 +299,9 @@ async def handle(db: AsyncSession, billing: StripeBilling, kind: str, obj: dict)
 
 
 EVENTS = {"charge.refunded", "charge.dispute.created", "charge.dispute.closed"}
+
+
+def enabled(kind: str) -> bool:
+    """Refunds and chargebacks are separate switches (STRIPE_REFUNDS_ENABLED, STRIPE_CHARGEBACKS_ENABLED), both off by default."""
+    s = get_settings()
+    return s.stripe_refunds_enabled if kind == "charge.refunded" else s.stripe_chargebacks_enabled
