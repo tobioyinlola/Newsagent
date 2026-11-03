@@ -29,6 +29,7 @@ test("shared referral link to verified business signup awards one usable wallet 
   await friend.getByLabel("Work email").fill(email);
   await friend.getByLabel("Password", { exact: true }).fill("correct horse battery");
   await friend.getByLabel("Confirm password", { exact: true }).fill("correct horse battery");
+  await friend.getByLabel(/I have read and agree to the Terms of Use/).check();
   await friend.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(friend.getByLabel("6-digit code")).toBeVisible();
   expect(Number((await (await request.get(`${API}/v1/me`, { headers: OPS })).json()).credit_balance)).toBe(initialBalance);

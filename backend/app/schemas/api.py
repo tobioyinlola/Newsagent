@@ -715,6 +715,7 @@ class SignupStartIn(BaseModel):
     industry: Industry | None = None  # one of the listed sectors, or "other"
     industry_other: str | None = Field(default=None, max_length=100)  # required when industry is "other"
     password: Password
+    accepted_terms: bool = False  # must be true: the person agrees to the Terms of Use and Privacy Policy
 
 
 class SignupVerifyIn(BaseModel):

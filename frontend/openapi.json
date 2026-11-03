@@ -5342,6 +5342,11 @@
       },
       "SignupStartIn": {
         "properties": {
+          "accepted_terms": {
+            "default": false,
+            "title": "Accepted Terms",
+            "type": "boolean"
+          },
           "business_name": {
             "anyOf": [
               {

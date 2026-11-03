@@ -31,7 +31,7 @@ test("configured team and publisher emails, media charges, receipt and multi-out
     expect((await request.put(`${API}/v1/admin/distribution/outlets/2`, { headers: OPS, data: { ...second, credits: "3", accepts_logo: false, accepts_images: false, direct_access: true, contact_email: "distribution-editor2@example.com" } })).ok()).toBeTruthy();
     for (const vendor of ["mock", "renderer"]) await request.put(`${API}/v1/admin/vendor-budgets`, { headers: OPS, data: { vendor, limit: "1000" } });
     const invited = await (await request.post(`${API}/v1/admin/invites`, { headers: OPS, data: { email, workspace_name: "Fulfillment Test", credits: "25", spend_cap: "100" } })).json();
-    await request.post(`${API}/v1/auth/signup/start`, { data: { invite_code: invited.code, password: "correct horse battery" } });
+    await request.post(`${API}/v1/auth/signup/start`, { data: { accepted_terms: true, invite_code: invited.code, password: "correct horse battery" } });
     const mail = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: email } })).json();
     const signup = await (await request.post(`${API}/v1/auth/signup/verify`, { data: { invite_code: invited.code, code: /\b(\d{6})\b/.exec(mail.text)![1] } })).json();
     const headers = { Authorization: `Bearer ${signup.token}` };

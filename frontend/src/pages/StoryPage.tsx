@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { PressRelease, StoryPicture, placePictures, type Story } from "../components/PressRelease";
 import { clock, dayOf, STORIES_PATH, StoryRow, useStories } from "../components/StoryCards";
@@ -11,6 +11,9 @@ import { Cta, SiteShell } from "./Landing";
 export function StoryPage() {
   const { slug = "" } = useParams();
   const q = useQuery({ queryKey: ["public-story", slug], queryFn: () => unwrap(api.GET("/v1/public/stories/{slug}", { params: { path: { slug } } })), retry: false });
+  const nav = useNavigate();
+  // An older link (cf-tech-<id>) opens the story; the address bar then shows the story's own headline address.
+  useEffect(() => { if (q.data?.slug && q.data.slug !== slug) nav(`/latest-stories/${q.data.slug}`, { replace: true }); }, [q.data?.slug, slug, nav]);
   const more = useStories(12);
   const video = useRef<HTMLVideoElement>(null);
   const [silent, setSilent] = useState(false); // the browser only allowed it to start muted

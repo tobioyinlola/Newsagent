@@ -1,5 +1,7 @@
 """Only published editorial snapshots are public; raw source text stays in the back office."""
 
+import re
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -65,14 +67,21 @@ async def page(db: AsyncSession, row: NewsStory) -> dict:
     }
 
 
+# Before a story is published its address is a placeholder (cf-tech-<id>). Publishing gives it a headline address, like every other
+# story (the-headline-words-<6 letters>). A link made with the placeholder keeps working: it finds the story by its id.
+_PLACEHOLDER = re.compile(r"^cf-tech-([0-9a-f]{32})$")
+
+
+def is_placeholder_slug(slug: str) -> bool:
+    return _PLACEHOLDER.fullmatch(slug) is not None
+
+
 async def find(db: AsyncSession, slug: str) -> NewsStory | None:
-    return (
-        await db.execute(
-            select(NewsStory).where(
-                NewsStory.slug == slug, NewsStory.status == "published", NewsStory.published_data.is_not(None)
-            )
-        )
-    ).scalar_one_or_none()
+    live = (NewsStory.status == "published") & NewsStory.published_data.is_not(None)
+    row = (await db.execute(select(NewsStory).where(NewsStory.slug == slug, live))).scalar_one_or_none()
+    if row is None and (m := _PLACEHOLDER.fullmatch(slug)):
+        row = (await db.execute(select(NewsStory).where(NewsStory.id == m.group(1), live))).scalar_one_or_none()
+    return row
 
 
 async def published_video(db: AsyncSession, row: NewsStory) -> NewsVideo | None:

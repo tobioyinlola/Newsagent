@@ -50,6 +50,7 @@ async def test_pending_team_addresses_cannot_register_as_customers(client, works
     response = await client.post(
         "/v1/auth/signup/start",
         json={
+            "accepted_terms": True,
             "email": "pending@example.com",
             "business_name": "Test business",
             "city": "Lagos",

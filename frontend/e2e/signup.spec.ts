@@ -15,6 +15,8 @@ test("open sign-up: business name, email, password, emailed code, dashboard", as
   await page.getByLabel("Work email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill("correct horse battery");
   await page.getByLabel("Confirm password", { exact: true }).fill("correct horse battery");
+  await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled(); // not until the Terms and Privacy Policy are agreed to
+  await page.getByLabel(/I have read and agree to the Terms of Use/).check();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByLabel("6-digit code")).toBeVisible();
 
@@ -30,7 +32,7 @@ test("open sign-up: business name, email, password, emailed code, dashboard", as
 
 test("the website field in the details step takes anything, or nothing", async ({ page, request }) => {
   const email = `site${Date.now()}@newbiz.example.com`;
-  await request.post("http://localhost:8000/v1/auth/signup/start", { data: { email, business_name: "Site Biz", city: "Lagos", country: "Nigeria", industry: "technology", password: "correct horse battery" } });
+  await request.post("http://localhost:8000/v1/auth/signup/start", { data: { accepted_terms: true, email, business_name: "Site Biz", city: "Lagos", country: "Nigeria", industry: "technology", password: "correct horse battery" } });
   const mail = await (await request.get("http://localhost:8000/v1/dev/last-email", { params: { to: email } })).json();
   const s = await (await request.post("http://localhost:8000/v1/auth/signup/verify", { data: { email, code: /\b(\d{6})\b/.exec(mail.text)![1] } })).json();
   await page.addInitScript((t) => localStorage.setItem("newsagent.token", t), s.token);
@@ -55,7 +57,7 @@ test("choosing Others in the industry list opens a field for the business to say
 
 test("sign-in keeps authentication behavior with shared navigation on desktop and mobile", async ({ page, request }) => {
   const email = `signin${Date.now()}@newbiz.example.com`;
-  await request.post("http://localhost:8000/v1/auth/signup/start", { data: { email, business_name: "Returning Biz", city: "Lagos", country: "Nigeria", industry: "technology", password: "correct horse battery" } });
+  await request.post("http://localhost:8000/v1/auth/signup/start", { data: { accepted_terms: true, email, business_name: "Returning Biz", city: "Lagos", country: "Nigeria", industry: "technology", password: "correct horse battery" } });
   const mail = await (await request.get("http://localhost:8000/v1/dev/last-email", { params: { to: email } })).json();
   await request.post("http://localhost:8000/v1/auth/signup/verify", { data: { email, code: /\b(\d{6})\b/.exec(mail.text)![1] } });
   await page.goto("/login");

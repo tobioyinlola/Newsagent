@@ -128,6 +128,7 @@ export function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [agreed, setAgreed] = useState(false); // the Terms of Use and Privacy Policy: nothing is sent until this is ticked
   const [sent, setSent] = useState(false);
   const [hint, setHint] = useState("");
   const [code, setCode] = useState("");
@@ -141,7 +142,7 @@ export function Signup() {
   });
   const body = inviteCode ? { invite_code: inviteCode } : { email: email.trim(), business_name: business.trim(), city: city.trim(), country: country.trim(), referral_code: referralCode, industry: industry as Industry, industry_other: industry === "other" ? industryOther.trim() : undefined };
   const start = useMutation({
-    mutationFn: () => unwrap(api.POST("/v1/auth/signup/start", { body: { ...body, password } })),
+    mutationFn: () => unwrap(api.POST("/v1/auth/signup/start", { body: { ...body, password, accepted_terms: agreed } })),
     onSuccess: (r) => { setHint(r.email_hint ?? email); setSent(true); },
   });
   const verify = useMutation({
@@ -169,7 +170,7 @@ export function Signup() {
             </div>
           </form>
         ) : (
-          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!mismatch) start.mutate(); }}>
+          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!mismatch && agreed) start.mutate(); }}>
             {inviteCode ? (
               <p>You have been invited to set up <strong>{preview.data?.workspace_name}</strong> as <strong>{preview.data?.email_hint}</strong>. Choose a password; then we will email a code to confirm it is you.</p>
             ) : (
@@ -196,8 +197,12 @@ export function Signup() {
             <PasswordField value={password} onChange={setPassword} autoComplete="new-password" hint="At least 10 characters." />
             <PasswordField label="Confirm password" value={confirm} onChange={setConfirm} autoComplete="new-password" />
             {mismatch && <Notice tone="warn">The passwords don’t match.</Notice>}
+            <label className="flex items-start gap-3 text-sm">
+              <input type="checkbox" required checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-ink" />
+              <span>I have read and agree to the <a className="font-semibold underline" href="/terms" target="_blank" rel="noopener noreferrer">Terms of Use</a> and the <a className="font-semibold underline" href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>, including that Cover Founder may publish and share my videos and stories on its website and social media.</span>
+            </label>
             <ErrorBox error={start.error} />
-            <Button type="submit" disabled={start.isPending || mismatch}>Continue</Button>
+            <Button type="submit" disabled={start.isPending || mismatch || !agreed}>Continue</Button>
           </form>
         )}
         <p className="mt-3 text-sm">Already have an account? <Link className="underline" to="/login">Sign in</Link></p>

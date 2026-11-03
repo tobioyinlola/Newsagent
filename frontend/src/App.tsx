@@ -39,6 +39,8 @@ const Settings = named(() => import("./pages/Settings"), "Settings");
 const ProfileSettings = named(() => import("./pages/Settings"), "ProfileSettings");
 const Security = named(() => import("./pages/Security"), "Security");
 const Referrals = named(() => import("./pages/Referrals"), "Referrals");
+const TermsPage = named(() => import("./pages/Legal"), "TermsPage");
+const PrivacyPage = named(() => import("./pages/Legal"), "PrivacyPage");
 
 const dark = (el: ReactNode) => <Suspense fallback={<div className="min-h-screen bg-ink" />}>{el}</Suspense>;
 const plain = (el: ReactNode) => <Suspense fallback={<p className="p-6" role="status">Loading…</p>}>{el}</Suspense>;
@@ -59,6 +61,8 @@ export function App() {
       <Route path="/press-distribution" element={dark(<DistributionPage />)} />
       <Route path="/latest-stories" element={dark(<LatestStories />)} />
       <Route path="/cf-news" element={dark(<CFNews />)} />
+      <Route path="/terms" element={dark(<TermsPage />)} />
+      <Route path="/privacy" element={dark(<PrivacyPage />)} />
       <Route path="/latest-stories/:slug" element={dark(<StoryPage />)} />
       <Route path="/newsroom" element={<Navigate to="/ai-newsroom" replace />} />
       <Route path="/distribution" element={<Navigate to="/press-distribution" replace />} />

@@ -33,7 +33,9 @@ async def invite_for(client, email=NEW, name="NewCo"):
 
 async def signup(client, email=NEW, password=PW):
     code = await invite_for(client, email)
-    r = await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": password})
+    r = await client.post(
+        "/v1/auth/signup/start", json={"accepted_terms": True, "invite_code": code, "password": password}
+    )
     assert r.status_code == 200, r.text
     r = await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": last_code(email)})
     assert r.status_code == 200, r.text
@@ -41,7 +43,10 @@ async def signup(client, email=NEW, password=PW):
 
 
 async def login(client, email=NEW, password=PW):
-    r = await client.post("/v1/auth/login", json={"email": email, "password": password, "portal": "admin" if email.lower() == OPS_EMAIL else "customer"})
+    r = await client.post(
+        "/v1/auth/login",
+        json={"email": email, "password": password, "portal": "admin" if email.lower() == OPS_EMAIL else "customer"},
+    )
     assert r.status_code == 200, r.text
     return r.json()
 
@@ -85,7 +90,7 @@ async def test_invite_preview_hides_the_email_and_rejects_bad_links(client, work
 
 async def test_signup_needs_the_emailed_code_and_then_signs_you_in(client, workspace, maker):
     code = await invite_for(client)
-    r = await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})
+    r = await client.post("/v1/auth/signup/start", json={"accepted_terms": True, "invite_code": code, "password": PW})
     assert r.status_code == 200 and r.json()["email_hint"].endswith("@startup.example.com")
     async with maker() as db:  # nothing exists until the code is verified
         assert (await db.execute(select(User).where(User.email == NEW))).scalar_one_or_none() is None
@@ -107,10 +112,12 @@ async def test_signup_needs_the_emailed_code_and_then_signs_you_in(client, works
 async def test_the_password_is_checked_before_a_code_is_sent_and_never_stored_in_plain_text(client, workspace, maker):
     code = await invite_for(client)
     for bad in ("short", "password123", NEW):
-        r = await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": bad})
+        r = await client.post(
+            "/v1/auth/signup/start", json={"accepted_terms": True, "invite_code": code, "password": bad}
+        )
         assert r.status_code in (422,), (bad, r.text)
     assert not [m for m in registry.get_email().sent if m["to"] == NEW and "your Cover Founder code" in m["subject"]]
-    await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})
+    await client.post("/v1/auth/signup/start", json={"accepted_terms": True, "invite_code": code, "password": PW})
     async with maker() as db:
         row = (await db.execute(select(AuthCode))).scalar_one()
         assert PW not in (row.password_hash or "") and PW not in row.code_hash
@@ -125,15 +132,17 @@ async def test_a_used_invite_and_an_existing_account_are_refused(client, workspa
 
 async def test_a_used_invite_cannot_be_used_again(client, workspace):
     code = await invite_for(client)
-    await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})
+    await client.post("/v1/auth/signup/start", json={"accepted_terms": True, "invite_code": code, "password": PW})
     await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": last_code(NEW)})
-    assert (await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})).status_code == 404
+    assert (
+        await client.post("/v1/auth/signup/start", json={"accepted_terms": True, "invite_code": code, "password": PW})
+    ).status_code == 404
 
 
 # ---------- one-time code rules ----------
 async def test_five_wrong_guesses_burn_the_code(client, workspace):
     code = await invite_for(client)
-    await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})
+    await client.post("/v1/auth/signup/start", json={"accepted_terms": True, "invite_code": code, "password": PW})
     good = last_code(NEW)
     wrong = "000000" if good != "000000" else "111111"
     for _ in range(5):
@@ -141,7 +150,9 @@ async def test_five_wrong_guesses_burn_the_code(client, workspace):
             await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": wrong})
         ).status_code == 401
     assert (await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": good})).status_code == 401
-    await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})  # a fresh code works
+    await client.post(
+        "/v1/auth/signup/start", json={"accepted_terms": True, "invite_code": code, "password": PW}
+    )  # a fresh code works
     assert (
         await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": last_code(NEW)})
     ).status_code == 200
@@ -156,18 +167,18 @@ async def age_codes(maker, seconds=120):
 
 async def test_a_code_requested_moments_ago_still_works_after_a_quick_resend(client, workspace):
     code = await invite_for(client)
-    await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})
+    await client.post("/v1/auth/signup/start", json={"accepted_terms": True, "invite_code": code, "password": PW})
     first = last_code(NEW)
-    await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})
+    await client.post("/v1/auth/signup/start", json={"accepted_terms": True, "invite_code": code, "password": PW})
     assert (await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": first})).status_code == 200
 
 
 async def test_a_new_code_cancels_the_old_and_expired_codes_fail(client, workspace, maker):
     code = await invite_for(client)
-    await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})
+    await client.post("/v1/auth/signup/start", json={"accepted_terms": True, "invite_code": code, "password": PW})
     first = last_code(NEW)
     await age_codes(maker)
-    await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW2})
+    await client.post("/v1/auth/signup/start", json={"accepted_terms": True, "invite_code": code, "password": PW2})
     second = last_code(NEW)
     assert first != second
     assert (await client.post("/v1/auth/signup/verify", json={"invite_code": code, "code": first})).status_code == 401
@@ -238,7 +249,11 @@ async def test_login_is_throttled_per_email(client, workspace):
 async def test_signup_code_requests_are_throttled(client, workspace):
     code = await invite_for(client)
     codes = [
-        (await client.post("/v1/auth/signup/start", json={"invite_code": code, "password": PW})).status_code
+        (
+            await client.post(
+                "/v1/auth/signup/start", json={"accepted_terms": True, "invite_code": code, "password": PW}
+            )
+        ).status_code
         for _ in range(6)
     ]
     assert codes == [200] * 5 + [429]
@@ -489,25 +504,44 @@ async def test_a_business_can_sign_up_on_its_own_and_must_verify_its_emailed_cod
 
     email = "owner@newbiz.example.com"
     place = {"city": "Lagos", "country": "Nigeria", "industry": "technology"}
-    r = await client.post("/v1/auth/signup/start", json={"email": email, "business_name": "NewBiz Ltd", "password": PW})
+    r = await client.post(
+        "/v1/auth/signup/start",
+        json={"accepted_terms": True, "email": email, "business_name": "NewBiz Ltd", "password": PW},
+    )
     assert r.status_code == 422  # the press release dateline needs the city and country
     no_industry = {"city": "Lagos", "country": "Nigeria"}
     r = await client.post(
-        "/v1/auth/signup/start", json={"email": email, "business_name": "NewBiz Ltd", "password": PW, **no_industry}
+        "/v1/auth/signup/start",
+        json={"accepted_terms": True, "email": email, "business_name": "NewBiz Ltd", "password": PW, **no_industry},
     )
     assert r.status_code == 422  # and the industry
     r = await client.post(
         "/v1/auth/signup/start",
-        json={"email": email, "business_name": "NewBiz Ltd", "password": PW, **no_industry, "industry": "mining"},
+        json={
+            "accepted_terms": True,
+            "email": email,
+            "business_name": "NewBiz Ltd",
+            "password": PW,
+            **no_industry,
+            "industry": "mining",
+        },
     )
     assert r.status_code == 422  # one of the listed sectors
     r = await client.post(
         "/v1/auth/signup/start",
-        json={"email": email, "business_name": "NewBiz Ltd", "password": PW, **no_industry, "industry": "other"},
+        json={
+            "accepted_terms": True,
+            "email": email,
+            "business_name": "NewBiz Ltd",
+            "password": PW,
+            **no_industry,
+            "industry": "other",
+        },
     )
     assert r.status_code == 422  # "Others" needs the business to say what it is
     r = await client.post(
-        "/v1/auth/signup/start", json={"email": email, "business_name": "NewBiz Ltd", "password": PW, **place}
+        "/v1/auth/signup/start",
+        json={"accepted_terms": True, "email": email, "business_name": "NewBiz Ltd", "password": PW, **place},
     )
     assert r.status_code == 200 and r.json()["email_hint"]
     code = last_code(email)
@@ -524,13 +558,16 @@ async def test_a_business_can_sign_up_on_its_own_and_must_verify_its_emailed_cod
         assert (ws.city, ws.country, ws.industry) == ("Lagos", "Nigeria", "technology")
     # the same email can't sign up twice
     r = await client.post(
-        "/v1/auth/signup/start", json={"email": email, "business_name": "Again", "password": PW, **place}
+        "/v1/auth/signup/start",
+        json={"accepted_terms": True, "email": email, "business_name": "Again", "password": PW, **place},
     )
     assert r.status_code == 409
 
 
 async def test_open_sign_up_can_be_switched_off_and_needs_a_business_name(client, workspace, monkeypatch):
-    r = await client.post("/v1/auth/signup/start", json={"email": "x@biz.example.com", "password": PW})
+    r = await client.post(
+        "/v1/auth/signup/start", json={"accepted_terms": True, "email": "x@biz.example.com", "password": PW}
+    )
     assert r.status_code == 422
     from app.config import get_settings
 
@@ -538,6 +575,7 @@ async def test_open_sign_up_can_be_switched_off_and_needs_a_business_name(client
     r = await client.post(
         "/v1/auth/signup/start",
         json={
+            "accepted_terms": True,
             "email": "x@biz.example.com",
             "business_name": "Biz",
             "password": PW,
@@ -555,7 +593,8 @@ async def test_a_business_that_picks_others_says_which_industry_and_it_is_kept(c
     email = "owner@marine.example.com"
     body = {"email": email, "business_name": "Marine Co", "password": PW, "city": "Accra", "country": "Ghana"}
     r = await client.post(
-        "/v1/auth/signup/start", json={**body, "industry": "other", "industry_other": "Marine salvage"}
+        "/v1/auth/signup/start",
+        json={"accepted_terms": True, **body, "industry": "other", "industry_other": "Marine salvage"},
     )
     assert r.status_code == 200
     r = await client.post("/v1/auth/signup/verify", json={"email": email, "code": last_code(email)})
@@ -567,10 +606,41 @@ async def test_a_business_that_picks_others_says_which_industry_and_it_is_kept(c
     email2 = "owner@farm.example.com"
     r = await client.post(
         "/v1/auth/signup/start",
-        json={**body, "email": email2, "business_name": "Farm Co", "industry": "agriculture", "industry_other": "x"},
+        json={
+            "accepted_terms": True,
+            **body,
+            "email": email2,
+            "business_name": "Farm Co",
+            "industry": "agriculture",
+            "industry_other": "x",
+        },
     )
     assert r.status_code == 200
     await client.post("/v1/auth/signup/verify", json={"email": email2, "code": last_code(email2)})
     async with maker() as db:
         ws = (await db.execute(select(Workspace).where(Workspace.name == "Farm Co"))).scalar_one()
         assert (ws.industry, ws.industry_other) == ("agriculture", None)
+
+
+async def test_signing_up_needs_agreement_to_the_terms_and_records_it(client, workspace, maker):
+    from app.services.legal import TERMS_VERSION
+
+    inv = (
+        await client.post(
+            "/v1/admin/invites",
+            headers=OPS,
+            json={"email": "terms@example.com", "workspace_name": "Terms Co", "credits": "5", "spend_cap": "50"},
+        )
+    ).json()
+    body = {"invite_code": inv["code"], "password": "correct horse battery"}
+    for missing in ({}, {"accepted_terms": False}):  # not ticked: no code is sent and no account can come of it
+        r = await client.post("/v1/auth/signup/start", json={**body, **missing})
+        assert r.status_code == 422 and "Terms of Use" in r.text
+    assert (await client.post("/v1/auth/signup/start", json={**body, "accepted_terms": True})).status_code == 200
+    r = await client.post(
+        "/v1/auth/signup/verify", json={"invite_code": inv["code"], "code": last_code("terms@example.com")}
+    )
+    assert r.status_code == 200, r.text
+    async with maker() as s:
+        user = (await s.execute(select(User).where(User.email == "terms@example.com"))).scalar_one()
+        assert user.terms_version == TERMS_VERSION and user.terms_accepted_at is not None

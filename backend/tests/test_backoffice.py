@@ -23,7 +23,10 @@ async def new_customer(client, maker, email, company, credits="10"):
             "/v1/admin/invites", json={"email": email, "workspace_name": company, "credits": credits}, headers=OPS
         )
     ).json()
-    await client.post("/v1/auth/signup/start", json={"invite_code": inv["code"], "password": "correct horse battery"})
+    await client.post(
+        "/v1/auth/signup/start",
+        json={"accepted_terms": True, "invite_code": inv["code"], "password": "correct horse battery"},
+    )
     mails = [m for m in registry.get_email().sent if m["to"] == email]
     code = re.search(r"\b(\d{6})\b", mails[-1]["text"]).group(1)
     r = await client.post("/v1/auth/signup/verify", json={"invite_code": inv["code"], "code": code})

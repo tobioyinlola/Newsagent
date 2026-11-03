@@ -38,6 +38,7 @@ from app.services import email_templates as templates
 from app.services import ledger, passwords, ratelimit, rbac, referrals
 from app.services import sessions as sess
 from app.services.audit import audit
+from app.services.legal import TERMS_VERSION
 from app.services.notifications import send_email
 
 router = APIRouter(prefix="/v1", tags=["auth"])
@@ -87,6 +88,8 @@ async def signup_start(
     body: SignupStartIn, request: Request, bg: BackgroundTasks, db: AsyncSession = Depends(get_session)
 ) -> CodeSentOut:
     settings = get_settings()
+    if not body.accepted_terms:
+        raise HTTPException(422, "Please agree to the Terms of Use and Privacy Policy to create your account.")
     if body.invite_code:  # an invitation: the workspace and the address are already decided
         await _throttle(request, "signup", body.invite_code, (5, 3600), (settings.signup_per_ip_per_hour, 3600))
         inv = await _invite(db, body.invite_code)
@@ -124,6 +127,7 @@ async def signup_start(
         industry=body.industry,
         industry_other=((body.industry_other or "").strip() or None) if body.industry == "other" else None,
         referral_code=referral_code,
+        terms_version=TERMS_VERSION,
     )
     await db.commit()
     subject, html, text = _email("signup", code)
@@ -170,7 +174,14 @@ async def signup_verify(body: SignupVerifyIn, request: Request, db: AsyncSession
         credits = Decimal(get_settings().signup_credits or "0")
         if credits > 0:
             await ledger.apply(db, ws, credits, "grant", description="Free first video (1 credit)")
-    user = User(email=email, role="owner", workspace_id=ws.id, password_hash=row.password_hash)
+    user = User(
+        email=email,
+        role="owner",
+        workspace_id=ws.id,
+        password_hash=row.password_hash,
+        terms_version=row.terms_version or TERMS_VERSION,  # agreed on the sign-up form before the code was sent
+        terms_accepted_at=row.created_at,
+    )
     db.add(user)
     kit = BrandKit(workspace_id=ws.id)  # neutral fallback kit (spec section 10)
     db.add(kit)
@@ -187,7 +198,7 @@ async def signup_verify(body: SignupVerifyIn, request: Request, db: AsyncSession
         "auth.signup",
         target_type="workspace",
         target_id=ws.id,
-        detail={"via": "invite" if inv else "open"},
+        detail={"via": "invite" if inv else "open", "terms_version": user.terms_version},
         request=request,
     )
     await db.commit()

@@ -21,7 +21,7 @@ async function ok<T>(r: Awaited<ReturnType<APIRequestContext["get"]>>): Promise<
 test("AI interview, recorded for real, merged with the answers column", async ({ browser, request }) => {
   for (const vendor of ["mock", "renderer", "transcription"]) await ok(await request.put(`${API}/v1/admin/vendor-budgets`, { headers: OPS, data: { vendor, limit: "100" } }));
   const inv = await ok<{ code: string }>(await request.post(`${API}/v1/admin/invites`, { headers: OPS, data: { email: OWNER_EMAIL, workspace_name: "Live Co", credits: "50", spend_cap: "100" } }));
-  await ok(await request.post(`${API}/v1/auth/signup/start`, { data: { invite_code: inv.code, password: "correct horse battery" } }));
+  await ok(await request.post(`${API}/v1/auth/signup/start`, { data: { accepted_terms: true, invite_code: inv.code, password: "correct horse battery" } }));
   const mail = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: OWNER_EMAIL } })).json();
   await ok(await request.post(`${API}/v1/auth/signup/verify`, { data: { invite_code: inv.code, code: /\b(\d{6})\b/.exec(mail.text)![1] } }));
 
