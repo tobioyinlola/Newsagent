@@ -79,6 +79,7 @@ class Settings(BaseSettings):
     # new address per branch). Empty: only APP_BASE_URL and ADMIN_BASE_URL.
     cors_origin_regex: str = ""
     email_reply_to: str = ""  # optional: a monitored mailbox; replies from people (and a real, answered address) help mail land in the inbox
+    email_max_per_second: float = 5.0  # sends are spaced to at most this many a second, so a burst of sign-ups stays under the provider's limit (0 = off)
     email_from: str = "Newsroom <no-reply@localhost>"
     storage_endpoint: str = "http://localhost:9000"
     storage_bucket: str = "newsagent"
