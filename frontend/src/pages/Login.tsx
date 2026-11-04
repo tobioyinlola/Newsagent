@@ -175,7 +175,7 @@ export function Signup() {
               <p>You have been invited to set up <strong>{preview.data?.workspace_name}</strong> as <strong>{preview.data?.email_hint}</strong>. Choose a password; then we will email a code to confirm it is you.</p>
             ) : (
               <>
-                {referralCode && <Notice tone="info">You're joining through a referral link. Nothing changes for you: your inviter earns a share of the credits you buy, on top of what you get.</Notice>}
+                {referralCode && <Notice tone="info">You're joining through a referral link. It costs you nothing and changes nothing for you.</Notice>}
                 <p>Create a free workspace for your business. We'll email you a 6-digit code to confirm your email before you get in.</p>
                 <Field label="Business name">{(id) => <input id={id} required minLength={2} maxLength={200} autoComplete="organization" className={inputCls} value={business} onChange={(e) => setBusiness(e.target.value)} />}</Field>
                 <div className="grid gap-4 sm:grid-cols-2">
