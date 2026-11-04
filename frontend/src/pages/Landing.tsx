@@ -399,7 +399,8 @@ export function Footer() {
   );
 }
 
-// The home page's at-a-glance numbers. The video count is live.
+// The home page's at-a-glance numbers. The video count is live. Hidden for now (4 Nov 2026): switch SHOW_HOME_STATS on once the numbers are impressive.
+const SHOW_HOME_STATS = false;
 export const CHANNELS = ["YouTube", "LinkedIn", "X", "Instagram", "TikTok", "Facebook"];
 export const CONTINENTS = ["North America", "Africa", "Europe"];
 export const GEOGRAPHY: [string, string[]][] = [["United States", []], ["Canada", []], ["United Kingdom", []], ["Nigeria", []], ["Kenya", []]];
@@ -505,7 +506,7 @@ export function Landing() {
         </div>
         <LatestStoriesRow />
         <CFNewsRow />
-        <StatsStrip />
+        {SHOW_HOME_STATS && <StatsStrip />}
         <UseCases />
         <TwoWays />
         <Banner />
