@@ -161,6 +161,33 @@ describe("renderer API", () => {
       expect((await post()).status).toBe(202); // room again
     } finally { release(); server.close(); }
   });
+  it("stops taking new work once told to drain, says so in /health, and still answers for what is running", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => { release = r; });
+    const fs = await import("node:fs");
+    const renderFn: any = async ({ outFile }: any) => { await gate; fs.writeFileSync(outFile, "x"); };
+    const app = createApp({ secret: "s3cret", renderFn, maxConcurrent: 1, normalizeFn: async () => {} });
+    const server = app.listen(0);
+    const b = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const h = { "x-renderer-secret": "s3cret", "content-type": "application/json" };
+    const post = () => fetch(`${b}/renders`, { method: "POST", headers: h, body: JSON.stringify({ composition: "NewsStudio", props: {}, outputs: [{ format: "16x9", width: 1920, height: 1080 }], output_prefix: "p" }) });
+    try {
+      const first = await post();
+      expect(first.status).toBe(202);
+      const { render_id } = await first.json();
+      expect((await (await fetch(`${b}/health`)).json()).draining).toBe(false);
+      app.locals.drain();
+      expect(app.locals.idle()).toBe(false); // a render is still running
+      const refused = await post();
+      expect(refused.status).toBe(429); // the answer the API already waits out
+      expect(Number(refused.headers.get("retry-after"))).toBeGreaterThan(0);
+      expect((await (await fetch(`${b}/health`)).json()).draining).toBe(true);
+      expect((await fetch(`${b}/renders/${render_id}`, { headers: h })).status).toBe(200); // the running one can still be asked about
+      release();
+      await new Promise((r) => setTimeout(r, 300));
+      expect(app.locals.idle()).toBe(true);
+    } finally { release(); server.close(); }
+  });
   it("processes a founder's recording while a long render is still running", async () => {
     let release!: () => void;
     const blocked = new Promise<void>((r) => { release = r; });

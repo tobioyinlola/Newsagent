@@ -103,6 +103,7 @@ class Settings(BaseSettings):
     storage_access_key: str = "minioadmin"
     storage_secret_key: str = "minioadmin"
     renderer_url: str = "http://localhost:4000"
+    renderer_urls: str = ""  # several renderers: comma separated `url` or `name=url` (e.g. main=http://127.0.0.1:4000,r2=http://renderer-2.railway.internal:4000). Unset = just renderer_url.
     renderer_shared_secret: str = ""
     open_signup_enabled: bool = True  # anyone can create a workspace by confirming their email (no invitation needed)
     signup_credits: str = "1"  # credits a new workspace starts with when it signs up on its own: one free video

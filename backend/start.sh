@@ -2,6 +2,7 @@
 # Runs the whole backend in one container: renderer (private, on localhost), Celery workers (one pool per lane), Celery scheduler, API.
 # If any of them stops, the container stops, so Railway restarts everything and the problem is visible, not silent.
 # Run exactly ONE replica of this service: two would mean two schedulers (reminders sent twice).
+# An extra renderer is a separate service from the same image with ROLE=renderer (see below).
 #
 # Lanes (app/pipeline/queue.py) keep slow work from blocking quick work:
 #   interactive  founder recordings being processed; a person is waiting on the page, so it must never queue behind a render
@@ -14,6 +15,12 @@
 set -u
 
 export RENDERER_URL="${RENDERER_URL:-http://127.0.0.1:4000}"
+
+# ROLE=renderer: only the renderer, for an extra renderer service (RENDERER_URLS on the main service lists it). Same image; it needs
+# RENDERER_SHARED_SECRET and the storage settings, and listens on PORT. Unset or ROLE=all: everything, exactly as before.
+if [ "${ROLE:-all}" = "renderer" ]; then
+  cd renderer && PORT="${PORT:-4000}" RENDER_CONCURRENCY="${RENDER_CONCURRENCY:-2}" RENDER_JOBS_CONCURRENCY="${RENDER_JOBS_CONCURRENCY:-1}" RENDER_LIGHT_CONCURRENCY="${RENDER_LIGHT_CONCURRENCY:-2}" exec node_modules/.bin/tsx src/server/index.ts
+fi
 
 # First-time setup: create the operator's account (and a workspace holding BOOTSTRAP_OPERATOR_CREDITS) if it doesn't exist yet.
 # Sign-in is invite-only and operators create the invites, so the first operator can't come from an invite. Safe to leave set:

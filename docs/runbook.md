@@ -169,3 +169,22 @@ Parallel chunk-confirmation requests used to overwrite the take's JSON chunk lis
 Chunk confirmation, completion and abandonment now serialize through the interview-session row and reload the latest take before updating it. Storage requests run before that database lock. The uploader retries only server-reported missing chunks from the local copy; terminal upload errors stop waiting and surface a recoverable error. The live room provides a **Try again** action, pauses its interview clock while waiting for retry and cleans up timers on stop. Retakes get a full answer window even after the original interview budget. Existing interview links can retry; no attempt-counter reset is needed. `GuestQuestion.attempts_left = null` means unlimited. Per-recording duration/size and request-rate safeguards remain.
 
 Regression checks include synchronized parallel confirmations, more than five abandoned live takes, missing-chunk reupload, terminated upload handling and a complete browser interview with injected start/completion failures.
+
+## Adding a second renderer
+
+A render takes about 20 minutes of one renderer, so each renderer makes about 3 videos an hour. To double that, run a second renderer:
+
+1. In Railway, create a service from the same repository and settings as `backend` (root `/backend`, same Dockerfile). Do not give it a public
+   domain. Set `ROLE=renderer`, `PORT=4000`, the same `RENDERER_SHARED_SECRET`, the storage variables (`STORAGE_ENDPOINT`, `STORAGE_BUCKET`,
+   `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`) and `RENDERER_ALLOWED_HOSTS` as on `backend`. Name it `renderer-2`.
+2. On the `backend` service set
+   `RENDERER_URLS=main=http://127.0.0.1:4000,r2=http://renderer-2.railway.internal:4000` and redeploy. (Names are kept in render ids, so keep
+   them stable. Unset `RENDERER_URLS` to go back to the single renderer.)
+3. New renders go to whichever renderer has the shorter line (`/health`); recording clean-up goes to `r2` first. A renderer that is down or
+   restarting is skipped. Watch both in the back office queue view.
+
+Also set `AVATAR_MAX_CONCURRENCY` (3 unless set; `8` for the current HeyGen plan) on `backend`. The avatar worker slots follow it. Keep
+`RENDER_JOBS_CONCURRENCY=1` on each renderer: two renders on one 4 vCPU box only make each other slower.
+
+On a restart or deploy a renderer stops taking new work (it answers 429 "renderer restarting", which the API waits out), gives running jobs
+`RENDER_DRAIN_SECONDS` (default 20) to finish, then exits. A render still running then is resubmitted by the API's existing retry.
