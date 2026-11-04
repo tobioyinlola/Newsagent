@@ -64,6 +64,9 @@ async def credit_email(db: AsyncSession, checkout: Checkout):
     )
     for email in (await db.execute(select(User.email).where(User.workspace_id == checkout.workspace_id))).scalars():
         await send_email(email, subject, text, html)
+    from app.services import referrals
+
+    await referrals.notify_purchase_reward(db, checkout)  # and the business that referred this one, if any
 
 
 async def reconcile(

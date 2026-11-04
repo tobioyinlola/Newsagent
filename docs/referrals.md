@@ -14,15 +14,20 @@ Migration **0029** adds `referral_links`, `referral_rewards` and nullable `auth_
 
 Validation covers referral sharing through actual signup/verification, no credit before verification, stable and isolated links, new-user link allocation, invalid/expired codes, resends, attribution tampering, existing accounts, invitation exclusion, duplicate verification, parallel signups and privacy deletion/export. Provider payment credentials are not used by this feature.
 
-## Distribution bonus
+## What a referrer earns (from 4 November 2026)
 
-On top of the 1 credit for a verified signup, the referrer earns **4 more credits, once per referred business**, the first
-time that business **pays for a distribution** (a distribution request that costs credits; a no-charge request does not count).
+**Every time a business that signed up through a referral link buys credits, the business that referred it is credited 5% of those credits,
+on every purchase, for as long as the referred business keeps buying.** This replaced the earlier 1-credit signup reward and the 4-credit
+first-distribution bonus: signing up pays nothing by itself.
 
-- It is granted in the same transaction as the paid distribution, as an ordinary wallet credit (ledger kind `grant`, reference
-  `referral-bonus:<referred-workspace-id>`), so a retry, a double click or a second paid distribution can never pay it twice.
-- It is only given to an active referrer. A deleted or suspended referrer earns nothing.
-- The referrer gets an email ("You earned 4 bonus credits") and the Referral page shows which referred businesses have paid.
-- Both amounts are settings: `REFERRAL_SIGNUP_CREDITS` (default 1) and `REFERRAL_DISTRIBUTION_BONUS_CREDITS` (default 4; set 0 to turn the bonus off).
-- No database migration was needed: the bonus is recorded in the ledger.
-- "Referral" now sits in the main sidebar (`/referrals`) in place of Brand kit; the Brand kit page itself is still reachable from Settings and by its address.
+- It is a plain wallet credit (ledger kind `grant`, reference `referral-purchase:<checkout id>`), granted in the same transaction that adds the
+  buyer's credits, so a repeated payment event can never pay it twice. The buyer receives everything they paid for; the reward is on top.
+- Example: a $50 purchase buys 18.52 credits, so the referrer earns 0.93 credits (5%, rounded to the nearest 0.01; a purchase too small to
+  round to 0.01 pays nothing).
+- It applies to every way of buying credits that goes through payment confirmation: card (Stripe and Nuvion) and approved bank transfers.
+  Credits an operator adds by hand in the back office, and credits earned or given away, never earn a share.
+- Only an active referrer earns it: a deleted or suspended referrer earns nothing.
+- The referrer is emailed ("You earned 0.93 credits") and the Referral page shows credits earned in total and from each business.
+- The rate is the `REFERRAL_PURCHASE_PERCENT` setting (default 5; 0 turns it off). `REFERRAL_SIGNUP_CREDITS` (default 0) can still give a fixed
+  credit at signup if ever wanted. Who referred whom is recorded at signup either way (`referral_rewards`).
+- A business's running total from its referrals is kept on its `referral_rewards` row (`credits`).

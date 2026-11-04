@@ -8,7 +8,7 @@ test("settings tabs, legacy URLs and receipt submission remain usable on desktop
     let data: unknown = {};
     if (path === "/v1/me") data = { workspace_id: "test", workspace_name: "Ada Ventures", email: "ada@example.com", credit_balance: "30", permissions: [], is_operator: false };
     else if (path === "/v1/projects" || path === "/v1/distribution" || path === "/v1/auth/sessions" || ["/v1/billing/options", "/v1/billing/checkouts", "/v1/billing/ledger"].includes(path)) data = [];
-    else if (path.includes("referrals")) data = { url: "https://www.coverfounder.com/signup?ref=test", reward_credits: "1", bonus_credits: "4", completed_referrals: 0, earned_credits: "0", referrals: [] };
+    else if (path.includes("referrals")) data = { url: "https://www.coverfounder.com/signup?ref=test", percent: "5", completed_referrals: 0, earned_credits: "0", referrals: [] };
     else if (path === "/v1/billing/transfer/purchase/uploads") data = { proof_id: "proof", upload_url: new URL(route.request().url()).origin + "/test-receipt-upload" };
     else if (path.endsWith("/submit")) { submitted = true; data = { ok: true }; }
     else if (path === "/v1/billing/transfer/purchase") data = { id: "purchase", status: submitted ? "pending_review" : "pending", currency: "NGN", amount: "14000", amount_usd: "10", credits: "3.7", ngn_per_usd: "1400", reference: "CF-TEST", bank: { bank_name: "Example bank", account_number: "1234567890" }, receipt: null };

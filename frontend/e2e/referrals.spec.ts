@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 const API = "http://localhost:8000";
 const OPS = { Authorization: "Bearer dev:customer@example.com" };
 
-test("shared referral link to verified business signup awards one usable wallet credit", async ({ page, browser, request }) => {
+test("shared referral link to verified business signup records the referral and pays nothing until they buy", async ({ page, browser, request }) => {
   await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:customer@example.com"));
   await page.goto("/referrals");
   await expect(page.getByRole("heading", { name: "Invite a business. Earn credits." })).toBeVisible();
@@ -38,10 +38,10 @@ test("shared referral link to verified business signup awards one usable wallet 
   await friend.getByLabel("6-digit code").fill(code);
   await friend.getByRole("button", { name: "Verify and create workspace" }).click();
   await expect(friend.getByRole("heading", { name: "Welcome, Referral Browser Business" })).toBeVisible({ timeout: 15000 });
-  expect(Number((await (await request.get(`${API}/v1/me`, { headers: OPS })).json()).credit_balance)).toBe(initialBalance + 1);
+  expect(Number((await (await request.get(`${API}/v1/me`, { headers: OPS })).json()).credit_balance)).toBe(initialBalance); // the reward is a share of what they buy, so signing up alone adds nothing
   const repeated = await request.post(`${API}/v1/auth/signup/verify`, { data: { email, code } });
   expect([401, 409]).toContain(repeated.status());
-  expect(Number((await (await request.get(`${API}/v1/me`, { headers: OPS })).json()).credit_balance)).toBe(initialBalance + 1);
+  expect(Number((await (await request.get(`${API}/v1/me`, { headers: OPS })).json()).credit_balance)).toBe(initialBalance); // the reward is a share of what they buy, so signing up alone adds nothing
   await page.reload();
   await expect(page.getByText("Referral Browser Business", { exact: true })).toBeVisible();
   expect((await (await request.get(`${API}/v1/referrals`, { headers: OPS })).json()).completed_referrals).toBe(before + 1);

@@ -300,6 +300,9 @@ async def handle_payment_event(session: AsyncSession, event) -> str:
     if tx is None:
         return "duplicate"
     co.status, co.paid_at = "paid", datetime.now(UTC)
+    from app.services import referrals
+
+    await referrals.reward_purchase(session, ws.id, Decimal(co.credits), co.id)  # a referred business buying: its referrer earns a share
     audit(
         session,
         "billing-webhook",
