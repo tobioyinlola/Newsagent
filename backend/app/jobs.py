@@ -125,7 +125,6 @@ async def reconcile_projects(now: datetime | None = None) -> int:
     async with session_maker()() as s:
         projects = (await s.execute(select(Project).where(Project.state.in_(sm.ACTIVE)))).scalars().all()
         from app.models import WorkItem
-
         from app.services import work_queue
 
         in_line = (  # the dispatcher looks after these (when it is switched off, the sweep does)
