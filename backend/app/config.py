@@ -1,5 +1,7 @@
 """Environment-driven settings plus per-vendor timeout/retry/concurrency policy."""
 
+import os
+from collections.abc import Mapping
 from decimal import Decimal
 from functools import lru_cache
 
@@ -14,18 +16,33 @@ class VendorPolicy(BaseModel):
     max_concurrency: int = 4
 
 
-# One place for timeouts, retries and concurrency per vendor (spec section 3).
-VENDOR_POLICIES: dict[str, VendorPolicy] = {
-    "llm": VendorPolicy(timeout_s=170, max_attempts=3),
-    "avatar": VendorPolicy(timeout_s=900, max_attempts=3, max_concurrency=3),
-    # A render of a 5 to 6 minute interview video takes about 20 minutes on the production server (about 9 frames a second), so one
-    # attempt gets an hour. The worker lease (runner.lease_for, used by the stuck-project sweep) is worked out from this number too.
-    "renderer": VendorPolicy(timeout_s=3600, max_attempts=2, max_concurrency=2),
-    "transcription": VendorPolicy(timeout_s=300, max_attempts=3),
-    "email": VendorPolicy(timeout_s=20, max_attempts=5),
-    "tts": VendorPolicy(timeout_s=30, max_attempts=2),  # the interviewer's voice
-    "broll": VendorPolicy(timeout_s=300, max_attempts=2),  # optional AI-generated product shots
-}
+def _env_int(environ: Mapping[str, str], name: str, default: int, minimum: int = 1) -> int:
+    """A whole number from the environment, or the default when it is unset, empty or not a number."""
+    try:
+        return max(minimum, int(environ.get(name, "").strip() or default))
+    except ValueError:
+        return default
+
+
+def build_vendor_policies(environ: Mapping[str, str]) -> dict[str, VendorPolicy]:
+    """One place for timeouts, retries and concurrency per vendor (spec section 3). How many presenter-video jobs may run at once is
+    what the HeyGen plan allows, so it is a setting (AVATAR_MAX_CONCURRENCY, 3 unless set); the same for the renderer."""
+    return {
+        "llm": VendorPolicy(timeout_s=170, max_attempts=3),
+        "avatar": VendorPolicy(timeout_s=900, max_attempts=3, max_concurrency=_env_int(environ, "AVATAR_MAX_CONCURRENCY", 3)),
+        # A render of a 5 to 6 minute interview video takes about 20 minutes on the production server (about 9 frames a second), so one
+        # attempt gets an hour. The worker lease (runner.lease_for, used by the stuck-project sweep) is worked out from this number too.
+        "renderer": VendorPolicy(
+            timeout_s=3600, max_attempts=2, max_concurrency=_env_int(environ, "RENDERER_MAX_CONCURRENCY", 2)
+        ),
+        "transcription": VendorPolicy(timeout_s=300, max_attempts=3),
+        "email": VendorPolicy(timeout_s=20, max_attempts=5),
+        "tts": VendorPolicy(timeout_s=30, max_attempts=2),  # the interviewer's voice
+        "broll": VendorPolicy(timeout_s=300, max_attempts=2),  # optional AI-generated product shots
+    }
+
+
+VENDOR_POLICIES: dict[str, VendorPolicy] = build_vendor_policies(os.environ)
 
 
 class Settings(BaseSettings):

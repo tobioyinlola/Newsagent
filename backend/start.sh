@@ -23,7 +23,10 @@ if [ -n "${BOOTSTRAP_OPERATOR_EMAIL:-}" ]; then
 fi
 
 (cd renderer && PORT=4000 RENDER_CONCURRENCY="${RENDER_CONCURRENCY:-2}" RENDER_JOBS_CONCURRENCY="${RENDER_JOBS_CONCURRENCY:-1}" RENDER_LIGHT_CONCURRENCY="${RENDER_LIGHT_CONCURRENCY:-2}" exec node_modules/.bin/tsx src/server/index.ts) &
-for spec in "interactive:${WORKER_INTERACTIVE:-3}" "avatar:${WORKER_AVATAR:-4}" "render:${WORKER_RENDER:-2}" "default:${WORKER_DEFAULT:-1}" "newsdesk:${WORKER_NEWS_DESK:-1}"; do
+# One presenter-video worker slot per job HeyGen may run at once (AVATAR_MAX_CONCURRENCY, 3 unless set), plus one; never fewer than the 4 there were.
+case "${AVATAR_MAX_CONCURRENCY:-3}" in ""|*[!0-9]*) AVATAR_CONC=3 ;; *) AVATAR_CONC="${AVATAR_MAX_CONCURRENCY:-3}" ;; esac
+AVATAR_SLOTS=$(( AVATAR_CONC + 1 )); [ "$AVATAR_SLOTS" -lt 4 ] && AVATAR_SLOTS=4
+for spec in "interactive:${WORKER_INTERACTIVE:-3}" "avatar:${WORKER_AVATAR:-$AVATAR_SLOTS}" "render:${WORKER_RENDER:-2}" "default:${WORKER_DEFAULT:-1}" "newsdesk:${WORKER_NEWS_DESK:-1}"; do
   lane="${spec%%:*}"; n="${spec##*:}"
   celery -A app.pipeline.celery_app worker -Q "$lane" -n "$lane@%h" --concurrency "$n" --loglevel INFO &
 done
