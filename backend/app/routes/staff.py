@@ -316,7 +316,7 @@ async def accept_start(
         row.email,
         "staff",
         invite_id=row.id,
-        password_hash=passwords.hash_password(body.password),
+        password_hash=await passwords.hash_password_async(body.password),
         ip=ratelimit.client_ip(request),
         workspace_name=(
             body.name.strip() or row.name or None
