@@ -329,13 +329,17 @@ async def test_a_fresh_running_job_is_left_alone(client, workspace, maker):
     assert await jobs.reconcile_projects() == 0
 
 
-async def test_a_long_render_is_still_owned_by_its_worker_but_a_dead_one_is_not(client, workspace, maker):
-    """A render may run for up to an hour per attempt, so a render going for 40 minutes is not 'stuck'; a presenter-video step
-    (15 minutes per attempt) that old is."""
+async def test_a_render_that_keeps_renewing_its_claim_is_left_alone_and_a_silent_one_is_taken_over(
+    client, workspace, maker
+):
+    """A render may run for an hour, so it renews its claim every minute. One that has gone quiet for 15 minutes is a dead worker's:
+    the sweep picks it up in minutes rather than after the whole render limit. Presenter-video steps keep their own, longer lease."""
     from app.pipeline.runner import lease_for
 
-    assert lease_for("merge_render") > timedelta(minutes=60) and lease_for("final_render") > timedelta(minutes=60)
-    assert lease_for("anchor_render") < timedelta(minutes=30)
+    assert (
+        lease_for("merge_render") == lease_for("final_render") == lease_for("preview_render") == timedelta(minutes=15)
+    )
+    assert lease_for("anchor_render") > timedelta(minutes=20)
     set_queue(Lost())
     pid = await approved_project(client, drain=False)
     async with maker() as s:
@@ -347,17 +351,58 @@ async def test_a_long_render_is_still_owned_by_its_worker_but_a_dead_one_is_not(
                 stage="merge_render",
                 input_hash="x",
                 status="running",
-                started_at=datetime.now(UTC) - timedelta(minutes=40),
+                started_at=datetime.now(UTC) - timedelta(minutes=10),
             )
         )
         await s.commit()
-    assert await jobs.reconcile_projects() == 0  # still rendering: leave it alone
+    assert await jobs.reconcile_projects() == 0  # last heard from 10 minutes ago: still rendering
     async with maker() as s:
         job = (await s.execute(select(Job).where(Job.project_id == pid, Job.stage == "merge_render"))).scalar_one()
-        job.started_at = datetime.now(UTC) - timedelta(hours=2)  # its worker is long gone
+        job.started_at = datetime.now(UTC) - timedelta(
+            minutes=16
+        )  # silent for longer than the lease: its worker is gone
         await s.commit()
     set_queue(InlineQueue())
     assert await jobs.reconcile_projects() == 1
+
+
+async def test_waiting_on_a_render_renews_the_claim_about_every_minute(client, workspace, maker, monkeypatch):
+    import asyncio
+
+    from app.pipeline import steps
+
+    set_queue(Lost())  # nothing else runs: only the rows made here exist
+    pid = await approved_project(client, drain=False)
+    old = datetime.now(UTC) - timedelta(minutes=14)
+    async with maker() as s:
+        s.add(Job(project_id=pid, stage="merge_render", input_hash="h", status="running", started_at=old))
+        s.add(Job(project_id=pid, stage="anchor_render", input_hash="a", status="running", started_at=old))
+        await s.commit()
+
+    class Slow:
+        def __init__(self):
+            self.n = 0
+
+        async def status(self, rid):
+            self.n += 1
+            from types import SimpleNamespace
+
+            return SimpleNamespace(status="succeeded" if self.n > 31 else "running")
+
+        async def cancel(self, rid):
+            return None
+
+    async def instant(_):
+        return None
+
+    monkeypatch.setattr(asyncio, "sleep", instant)  # the 2 second waits between polls
+    await steps._wait(Slow(), "r1", pid)  # 31 polls: one renewal
+    async with maker() as s:
+        rows = {j.stage: j for j in (await s.execute(select(Job).where(Job.project_id == pid))).scalars()}
+        assert rows["merge_render"].started_at.replace(tzinfo=UTC) > datetime.now(UTC) - timedelta(minutes=1)  # renewed
+        assert rows["anchor_render"].started_at.replace(tzinfo=UTC) < datetime.now(UTC) - timedelta(
+            minutes=13
+        )  # not a render: untouched
 
 
 # ---------- progress ----------

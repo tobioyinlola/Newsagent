@@ -53,9 +53,16 @@ PREDECESSOR = {
 }
 
 
+RENDER_LEASE = timedelta(minutes=15)  # a render renews its claim every minute while it runs (steps._wait), so a dead worker is noticed quickly
+
+
 def lease_for(stage: str) -> timedelta:
-    """How long a running job is treated as still owned by its worker: one attempt at that step's vendor, with a margin."""
+    """How long a running job is treated as still owned by its worker without a sign of life. A render renews its claim every
+    minute, so it only needs a short lease (a crashed or restarted worker is then noticed in minutes, not after the whole render
+    limit); other steps get one attempt at their vendor, with a margin."""
     entry = STEPS.get(stage)
+    if entry and entry[0] == "renderer":
+        return RENDER_LEASE
     return timedelta(seconds=VENDOR_POLICIES[entry[0] if entry else "avatar"].timeout_s * 1.5)
 
 
@@ -79,7 +86,7 @@ async def run_step(step: str, payload: dict) -> None:
         ih = steps.input_hash({"step": step, **inputs})
         job = await _job_row(session, pid, step, ih)
         done = job.status == "succeeded"
-        if not done and not await _claim(session, job.id, timedelta(seconds=policy.timeout_s * 1.5)):
+        if not done and not await _claim(session, job.id, lease_for(step)):
             return  # another worker owns it
 
     if not done:
