@@ -14,6 +14,64 @@ function Counts({ title, data }: { title: string; data: Record<string, number> |
   );
 }
 
+const LANE_NAME: Record<string, string> = { avatar: "Presenter clips", render: "Final renders" };
+const STEP_NAME: Record<string, string> = { anchor_render: "Presenter clips", question_clips: "Question clips", preview_render: "Preview render", final_render: "Final render", merge_render: "Final render" };
+
+function span(sec: number | null | undefined): string {
+  if (sec == null) return "n/a";
+  if (sec < 90) return `${Math.round(sec)} s`;
+  if (sec < 5400) return `${Math.round(sec / 60)} min`;
+  return `${(sec / 3600).toFixed(1)} h`;
+}
+
+// Videos waiting for, or being given, presenter clips and renders. Only shown when the line is switched on (QUEUE_MODE=dispatcher).
+function Line({ lanes }: { lanes: { lane: string; waiting: number; running: number; slots: number; oldest_wait_s: number; typical_s?: number | null; paused?: boolean }[] }) {
+  const qc = useQueryClient();
+  const canManage = useCan()("operations.manage");
+  const items = useQuery({ queryKey: ["admin-line"], queryFn: () => unwrap(api.GET("/v1/admin/line", { params: { query: { limit: 100 } } })), refetchInterval: 10000 });
+  const refresh = () => { void qc.invalidateQueries({ queryKey: ["admin-line"] }); void qc.invalidateQueries({ queryKey: ["admin-queue"] }); };
+  const front = useMutation({ mutationFn: (id: string) => unwrap(api.POST("/v1/admin/line/{project_id}/front", { params: { path: { project_id: id } } })), onSuccess: refresh });
+  const stop = useMutation({ mutationFn: (id: string) => unwrap(api.POST("/v1/admin/line/{project_id}/cancel", { params: { path: { project_id: id } } })), onSuccess: refresh });
+  const pause = useMutation({ mutationFn: (v: { lane: string; paused: boolean }) => unwrap(api.POST("/v1/admin/line/lanes/{lane}/pause", { params: { path: { lane: v.lane } }, body: { paused: v.paused } })), onSuccess: refresh });
+  return (
+    <Card title="Line for presenter clips and renders">
+      <div className="grid gap-4 sm:grid-cols-2">
+        {lanes.map((l) => (
+          <div key={l.lane} className="rounded-xl border border-line p-3 text-sm">
+            <div className="flex items-baseline justify-between gap-2"><h3 className="font-semibold">{LANE_NAME[l.lane] ?? l.lane}</h3>{l.paused && <span className="text-xs font-semibold text-red-700">Paused</span>}</div>
+            <p className="mt-1 text-muted">Running {l.running} of {l.slots} at once · waiting {l.waiting} · longest wait {span(l.oldest_wait_s)} · typical {span(l.typical_s)}</p>
+            {canManage && <Button variant="secondary" className="mt-2" disabled={pause.isPending} onClick={() => pause.mutate({ lane: l.lane, paused: !l.paused })}>{l.paused ? "Release this line" : "Hold this line"}</Button>}
+          </div>
+        ))}
+      </div>
+      {!!items.data?.length && (
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="text-xs text-muted"><tr><th className="py-1 pr-3">Business</th><th className="pr-3">Step</th><th className="pr-3">Place</th><th className="pr-3">Waited</th>{canManage && <th />}</tr></thead>
+            <tbody>
+              {items.data.map((i) => (
+                <tr key={i.project_id} className="border-t border-line">
+                  <td className="py-1.5 pr-3">{i.workspace_name}</td>
+                  <td className="pr-3">{STEP_NAME[i.step] ?? i.step}</td>
+                  <td className="pr-3">{i.state === "running" ? "Being made" : `${i.position}${i.priority > 0 ? " (moved up)" : ""}`}</td>
+                  <td className="pr-3 tabular-nums">{span(i.waited_s)}</td>
+                  {canManage && (
+                    <td className="space-x-2 whitespace-nowrap text-right">
+                      {i.state === "waiting" && <Button variant="secondary" disabled={front.isPending} onClick={() => front.mutate(i.project_id)}>Move to front</Button>}
+                      <Button variant="secondary" disabled={stop.isPending} onClick={() => { if (confirm("Stop this video? The owner can retry it later.")) stop.mutate(i.project_id); }}>Stop</Button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <ErrorBox error={front.error ?? stop.error ?? pause.error} />
+    </Card>
+  );
+}
+
 export function Operations() {
   const qc = useQueryClient();
   const canSet = useCan()("settings.manage");
@@ -35,6 +93,7 @@ export function Operations() {
           <div><h3 className="mb-1 text-sm font-semibold text-muted">Waiting for review</h3><p className="text-3xl font-bold tabular-nums">{q?.moderation_pending ?? 0}</p></div>
         </div>
       </Card>
+      {!!q?.lanes?.length && <Line lanes={q.lanes} />}
       {canSet ? (
         <>
       <Card title="Emergency pause">

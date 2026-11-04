@@ -188,3 +188,18 @@ Also set `AVATAR_MAX_CONCURRENCY` (3 unless set; `8` for the current HeyGen plan
 
 On a restart or deploy a renderer stops taking new work (it answers 429 "renderer restarting", which the API waits out), gives running jobs
 `RENDER_DRAIN_SECONDS` (default 20) to finish, then exits. A render still running then is resubmitted by the API's existing retry.
+
+## The line for presenter clips and renders (`QUEUE_MODE`)
+
+`QUEUE_MODE=legacy` (the default) sends every step straight to the workers, as before. `QUEUE_MODE=dispatcher` puts presenter clips and
+renders in ONE durable line (the `work_queue` table) and releases them first in, first out, only as capacity frees up:
+
+- Capacity: renders = renderers in `RENDERER_URLS` x `RENDER_JOBS_CONCURRENCY` (or set `RENDER_QUEUE_SLOTS`); presenter clips = `AVATAR_MAX_CONCURRENCY`.
+- A video never fails for waiting (a wait of up to `QUEUE_MAX_WAIT_HOURS`, 36, is allowed for a busy vendor). It fails only from a real error.
+- One running item per business per lane. A video keeps its place when it moves to its next step or is put back after a crash.
+- The customer's progress panel shows "You are number N in line" and, once three or more videos have finished, about how long. They are emailed when it starts (only if it waited) and when it is ready.
+- Back office > Operations > "Line for presenter clips and renders": see the line, move a video to the front, stop one, hold or release a lane. The emergency pause also holds the line (videos wait instead of stopping).
+- The dispatcher runs every 10 seconds on the scheduler and right after a step finishes. A released job that goes quiet for longer than its lease is put back in line at its place.
+
+To switch on: set `QUEUE_MODE=dispatcher` on `backend` and redeploy (the migration `0037` runs by itself). Videos already being made finish the old way;
+those started afterwards use the line. To switch off: set `QUEUE_MODE=legacy`; anything still waiting in the line is then re-driven by the 5-minute sweep.

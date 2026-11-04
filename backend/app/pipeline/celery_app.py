@@ -40,6 +40,7 @@ celery_app.conf.broker_transport_options = {
 }
 celery_app.conf.beat_schedule = {
     "sweep": {"task": "jobs.sweep", "schedule": 300.0},  # re-send work whose queue message was lost, every 5 minutes
+    "dispatch": {"task": "jobs.dispatch", "schedule": 10.0},  # releases waiting videos as capacity frees up (does nothing unless QUEUE_MODE=dispatcher)
     "hourly": {"task": "jobs.hourly", "schedule": 3600.0},
     "daily": {"task": "jobs.daily", "schedule": 86400.0},
 }
@@ -96,6 +97,20 @@ def daily() -> dict:
     from app.jobs import run_daily
 
     return _run(run_daily)
+
+
+@celery_app.task(name="jobs.dispatch", ignore_result=True)
+def dispatch() -> int:
+    from app.config import get_settings
+
+    if get_settings().queue_mode != "dispatcher":
+        return 0
+    from app.services.work_queue import dispatch_once
+
+    async def go() -> dict:
+        return {"released": await dispatch_once()}
+
+    return int(_run(go)["released"])
 
 
 @celery_app.task(name="jobs.sweep")

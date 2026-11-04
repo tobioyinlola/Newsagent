@@ -15,7 +15,7 @@ from app.models import Job, Project
 from app.models.base import new_id
 from app.pipeline import steps
 from app.pipeline.queue import enqueue
-from app.services import provider_requests, stories
+from app.services import provider_requests, stories, work_queue
 from app.services import state_machine as sm
 from app.services.notifications import low_balance_alert, notify_operators, notify_owners, vendor_budget_alert
 from app.services.spend_guard import LimitReached, SpendGuard
@@ -92,8 +92,10 @@ async def run_step(step: str, payload: dict) -> None:
     if not done:
         ok = await _attempt_loop(step, fn, pid, ih, policy)
         if not ok:
+            await work_queue.kick()  # a failed or stopped video frees its place for the next in line
             return
     await _finish(step, pid, next_state)
+    await work_queue.kick()
 
 
 async def _job_row(session, pid: str, step: str, ih: str) -> Job:
@@ -192,7 +194,7 @@ async def _attempt_loop(step, fn, pid, ih, policy) -> bool:
                     await _defer(pid, step, ih, e.resume_after, attempt, e)
                     return False
                 c = classify(e)
-                if c.category == "busy" and datetime.now(UTC) - waiting_since < MAX_BUSY_WAIT:
+                if c.category == "busy" and datetime.now(UTC) - waiting_since < (work_queue.max_busy_wait() if work_queue.enabled() else MAX_BUSY_WAIT):
                     await _defer(pid, step, ih, c.retry_after, attempt, e)
                     return False
                 log.warning(

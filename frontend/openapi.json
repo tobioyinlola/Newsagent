@@ -2620,6 +2620,55 @@
         "title": "Kpis",
         "type": "object"
       },
+      "LaneOut": {
+        "properties": {
+          "lane": {
+            "title": "Lane",
+            "type": "string"
+          },
+          "oldest_wait_s": {
+            "title": "Oldest Wait S",
+            "type": "integer"
+          },
+          "paused": {
+            "default": false,
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "running": {
+            "title": "Running",
+            "type": "integer"
+          },
+          "slots": {
+            "title": "Slots",
+            "type": "integer"
+          },
+          "typical_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Typical S"
+          },
+          "waiting": {
+            "title": "Waiting",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "lane",
+          "waiting",
+          "running",
+          "slots",
+          "oldest_wait_s"
+        ],
+        "title": "LaneOut",
+        "type": "object"
+      },
       "LedgerEntry": {
         "properties": {
           "amount": {
@@ -2688,6 +2737,106 @@
           "description"
         ],
         "title": "LedgerEntry",
+        "type": "object"
+      },
+      "LineItemOut": {
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "lane": {
+            "title": "Lane",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "integer"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "step": {
+            "title": "Step",
+            "type": "string"
+          },
+          "waited_s": {
+            "title": "Waited S",
+            "type": "integer"
+          },
+          "workspace_name": {
+            "title": "Workspace Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "workspace_name",
+          "lane",
+          "step",
+          "state",
+          "position",
+          "waited_s",
+          "priority",
+          "attempts"
+        ],
+        "title": "LineItemOut",
+        "type": "object"
+      },
+      "LinePauseIn": {
+        "properties": {
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "paused"
+        ],
+        "title": "LinePauseIn",
+        "type": "object"
+      },
+      "LinePlace": {
+        "properties": {
+          "eta_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eta Seconds"
+          },
+          "lane": {
+            "title": "Lane",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lane",
+          "state",
+          "position"
+        ],
+        "title": "LinePlace",
         "type": "object"
       },
       "LinesOut": {
@@ -4055,6 +4204,16 @@
             ],
             "title": "Failure Category"
           },
+          "line": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LinePlace"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "percent": {
             "title": "Percent",
             "type": "integer"
@@ -4473,6 +4632,14 @@
             },
             "title": "Jobs",
             "type": "object"
+          },
+          "lanes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/LaneOut"
+            },
+            "title": "Lanes",
+            "type": "array"
           },
           "moderation_pending": {
             "title": "Moderation Pending",
@@ -9378,6 +9545,262 @@
           }
         },
         "summary": "Jobs",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/v1/admin/line": {
+      "get": {
+        "description": "Videos waiting for or running in the slow lanes (presenter clips, renders), in the order they will be taken.",
+        "operationId": "line_v1_admin_line_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LineItemOut"
+                  },
+                  "title": "Response Line V1 Admin Line Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Line",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/v1/admin/line/lanes/{lane}/pause": {
+      "post": {
+        "description": "Stop releasing work from one lane (videos stay in line) or release it again.",
+        "operationId": "line_pause_v1_admin_line_lanes__lane__pause_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lane",
+            "required": true,
+            "schema": {
+              "title": "Lane",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinePauseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Line Pause V1 Admin Line Lanes  Lane  Pause Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Line Pause",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/v1/admin/line/{project_id}/cancel": {
+      "post": {
+        "description": "Take a video out of the line and stop it (the owner can retry it later; nothing is lost).",
+        "operationId": "line_cancel_v1_admin_line__project_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Line Cancel V1 Admin Line  Project Id  Cancel Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Line Cancel",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/v1/admin/line/{project_id}/front": {
+      "post": {
+        "operationId": "line_to_front_v1_admin_line__project_id__front_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Line To Front V1 Admin Line  Project Id  Front Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Line To Front",
         "tags": [
           "ops"
         ]

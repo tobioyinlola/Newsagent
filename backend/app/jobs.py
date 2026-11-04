@@ -124,7 +124,12 @@ async def reconcile_projects(now: datetime | None = None) -> int:
     fixed: list[str] = []
     async with session_maker()() as s:
         projects = (await s.execute(select(Project).where(Project.state.in_(sm.ACTIVE)))).scalars().all()
+        from app.models import WorkItem
+
+        in_line = set((await s.execute(select(WorkItem.project_id))).scalars())  # the dispatcher looks after these
         for p in projects:
+            if p.id in in_line:
+                continue
             since = p.state_changed_at or p.created_at
             if (since if since.tzinfo else since.replace(tzinfo=UTC)) > cutoff:
                 continue

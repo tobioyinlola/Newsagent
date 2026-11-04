@@ -118,6 +118,13 @@ class ProgressStage(BaseModel):
     detail: str | None = None
 
 
+class LinePlace(BaseModel):
+    lane: str  # avatar | render
+    state: str  # waiting | running
+    position: int  # 1 = next; 0 = running now
+    eta_seconds: int | None = None  # about how long until it starts, once enough videos have finished to know
+
+
 class ProgressOut(BaseModel):
     state: str
     percent: int
@@ -129,6 +136,7 @@ class ProgressOut(BaseModel):
     queue_ahead: int = (
         0  # other videos in the same step that started waiting earlier (about how many are in front of this one)
     )
+    line: LinePlace | None = None  # this video's place in the durable line (only when QUEUE_MODE=dispatcher)
 
 
 class ScriptOut(BaseModel):
@@ -629,7 +637,34 @@ class JobOut(BaseModel):
     stuck: bool = False
 
 
+class LaneOut(BaseModel):
+    lane: str
+    waiting: int
+    running: int
+    slots: int
+    oldest_wait_s: int
+    typical_s: float | None = None
+    paused: bool = False
+
+
+class LineItemOut(BaseModel):
+    project_id: str
+    workspace_name: str
+    lane: str
+    step: str
+    state: str
+    position: int
+    waited_s: int
+    priority: int
+    attempts: int
+
+
+class LinePauseIn(BaseModel):
+    paused: bool
+
+
 class QueueOut(BaseModel):
+    lanes: list[LaneOut] = []
     jobs: dict[str, int]
     takes: dict[str, int]
     projects: dict[str, int]

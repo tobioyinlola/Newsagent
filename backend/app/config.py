@@ -138,6 +138,13 @@ class Settings(BaseSettings):
     mock_vendor_latency_s: float = 0.0
     operator_emails: str = ""  # comma separated; may call /admin
     queue_backend: str = "inline"  # inline | celery
+    # legacy: slow work (presenter clips, renders) goes straight to the workers, as before. dispatcher: it joins ONE durable line
+    # (the work_queue table) and is released first-in-first-out as renderer and presenter-video capacity frees up; waiting never fails.
+    queue_mode: str = "legacy"
+    render_queue_slots: int = 0  # renders running at once under the dispatcher; 0 = one per configured renderer x render_jobs_concurrency
+    render_jobs_concurrency: int = 1  # heavy renders each renderer runs at once (the same RENDER_JOBS_CONCURRENCY the renderer reads)
+    queue_dispatch_grace_s: int = 600  # a released job gets this long to be picked up before it is put back in line
+    queue_max_wait_hours: int = 36  # under the dispatcher, a video waiting for a vendor slot is not failed before this
     # Database connections per process (the API, and each worker). Keep (pool_size + max_overflow) x processes under Postgres's
     # max_connections. A request waits up to db_pool_timeout_s for a free connection, then fails fast instead of piling up.
     # With the Celery queue, a worker waits at most this long on a presenter clip, then is released and the same vendor job is polled
