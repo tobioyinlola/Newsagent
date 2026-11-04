@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -6,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import Principal, current_principal
+from app.config import get_settings
 from app.db import get_session
 from app.integrations import registry
 from app.models import Asset, Brief, Project, ScriptVersion
@@ -345,12 +347,32 @@ async def retry(
     return await _out(session, project)
 
 
+_PROGRESS_CACHE: dict[tuple, tuple[float, dict]] = {}
+
+
 @router.get("/{project_id}/progress", response_model=ProgressOut)
 async def progress(
     project_id: str, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
 ) -> ProgressOut:
-    project = await _owned(session, project_id, p)
-    return ProgressOut(**await progress_svc.build(session, project))
+    project = await _owned(
+        session, project_id, p
+    )  # who may see it is checked every time; only the work of building it is shared
+    ttl = get_settings().progress_cache_s if get_settings().queue_backend == "celery" else 0.0
+    key = (
+        project.id,
+        project.state,
+        str(project.state_changed_at),
+    )  # a cancel, retry or any step change is seen at once
+    now = time.monotonic()
+    hit = _PROGRESS_CACHE.get(key)
+    if ttl > 0 and hit and now - hit[0] < ttl:
+        return ProgressOut(**hit[1])
+    data = await progress_svc.build(session, project)
+    if ttl > 0:
+        if len(_PROGRESS_CACHE) > 2000:
+            _PROGRESS_CACHE.clear()
+        _PROGRESS_CACHE[key] = (now, data)
+    return ProgressOut(**data)
 
 
 @router.get("/{project_id}/scene-plan")

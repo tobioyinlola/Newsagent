@@ -92,6 +92,12 @@ export function Operations() {
           <Counts title="Videos" data={q?.projects} /><Counts title="Jobs" data={q?.jobs} /><Counts title="Founder answers" data={q?.takes} />
           <div><h3 className="mb-1 text-sm font-semibold text-muted">Waiting for review</h3><p className="text-3xl font-bold tabular-nums">{q?.moderation_pending ?? 0}</p></div>
         </div>
+        <div className="mt-5 grid gap-6 border-t border-line pt-4 sm:grid-cols-4">
+          <div><h3 className="mb-1 text-sm font-semibold text-muted">Renders finished (24 h)</h3><p className="text-2xl font-bold tabular-nums">{q?.renders_24h ?? 0}</p></div>
+          <div><h3 className="mb-1 text-sm font-semibold text-muted">Typical render</h3><p className="text-2xl font-bold tabular-nums">{span(q?.typical_render_s)}</p></div>
+          <div><h3 className="mb-1 text-sm font-semibold text-muted">Failed for good (24 h)</h3><p className="text-2xl font-bold tabular-nums">{q?.failed_24h ?? 0}</p></div>
+          <Counts title="Waiting for a worker" data={q?.worker_backlog} />
+        </div>
       </Card>
       {!!q?.lanes?.length && <Line lanes={q.lanes} />}
       {canSet ? (

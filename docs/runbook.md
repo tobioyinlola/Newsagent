@@ -203,3 +203,16 @@ renders in ONE durable line (the `work_queue` table) and releases them first in,
 
 To switch on: set `QUEUE_MODE=dispatcher` on `backend` and redeploy (the migration `0037` runs by itself). Videos already being made finish the old way;
 those started afterwards use the line. To switch off: set `QUEUE_MODE=legacy`; anything still waiting in the line is then re-driven by the 5-minute sweep.
+
+## Database connections and a rush of users
+
+Every process keeps a small pool: the API `DB_POOL_SIZE` + `DB_MAX_OVERFLOW` (10 + 10), and each of the ~11 worker processes
+`DB_WORKER_POOL_SIZE` + `DB_WORKER_MAX_OVERFLOW` (2 + 3). Worst case is about 20 + 11 x 5 = 75 connections per `backend` container, and a second
+container (or a bigger API) adds its own. Keep the total under Postgres's `max_connections` (check it with `SHOW max_connections;`, Railway's default
+is 100). If you grow past that, put PgBouncer in front: add a PgBouncer service (transaction pooling, pool size about 40), point `DATABASE_URL` at
+it, and keep the app's pools as they are. (With asyncpg and transaction pooling, add `?prepared_statement_cache_size=0` to the URL.) The back office
+queue card shows what is waiting; Railway's Postgres metrics show connections in use.
+
+Other rush protections (all on by default): writing calls to the model provider are capped per process (`LLM_MAX_CONCURRENCY`, 16) and a busy answer
+is asked again (`LLM_RETRIES`, 2); a video's progress is worked out at most every `PROGRESS_CACHE_S` (3) seconds however often the page asks;
+the stuck-video sweep reads all candidates in two queries.

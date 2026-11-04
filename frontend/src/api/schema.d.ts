@@ -5290,6 +5290,11 @@ export interface components {
         };
         /** QueueOut */
         QueueOut: {
+            /**
+             * Failed 24H
+             * @default 0
+             */
+            failed_24h: number;
             /** Jobs */
             jobs: {
                 [key: string]: number;
@@ -5307,8 +5312,22 @@ export interface components {
             projects: {
                 [key: string]: number;
             };
+            /**
+             * Renders 24H
+             * @default 0
+             */
+            renders_24h: number;
             /** Takes */
             takes: {
+                [key: string]: number;
+            };
+            /** Typical Render S */
+            typical_render_s?: number | null;
+            /**
+             * Worker Backlog
+             * @default {}
+             */
+            worker_backlog: {
                 [key: string]: number;
             };
         };

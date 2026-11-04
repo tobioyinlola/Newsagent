@@ -123,7 +123,39 @@ async def queue(
             select(func.count()).select_from(ModerationCase).where(ModerationCase.status == "pending")
         )
     ).scalar_one()
+    since = datetime.now(UTC) - timedelta(hours=24)
+    failed = (
+        await session.execute(
+            select(func.count()).select_from(Job).where(Job.status == "failed", Job.created_at > since)
+        )
+    ).scalar_one()
+    done = (
+        (
+            await session.execute(
+                select(Job.duration_s).where(
+                    Job.stage.in_(("final_render", "merge_render")),
+                    Job.status == "succeeded",
+                    Job.created_at > since,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    secs = sorted(float(d) for d in done if d is not None)
+    backlog: dict[str, int] = {}
+    if get_settings().queue_backend == "celery":
+        from app.pipeline.queue import lane_depths
+
+        try:
+            backlog = await lane_depths()
+        except Exception:  # noqa: BLE001  the board must still load when Redis is slow
+            backlog = {}
     return QueueOut(
+        worker_backlog=backlog,
+        failed_24h=int(failed),
+        renders_24h=len(done),
+        typical_render_s=secs[len(secs) // 2] if secs else None,
         lanes=await work_queue.lane_summary(session) if work_queue.enabled() else [],
         jobs=await counts(Job.status),
         takes=await counts(Take.status),

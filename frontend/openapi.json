@@ -4626,6 +4626,11 @@
       },
       "QueueOut": {
         "properties": {
+          "failed_24h": {
+            "default": 0,
+            "title": "Failed 24H",
+            "type": "integer"
+          },
           "jobs": {
             "additionalProperties": {
               "type": "integer"
@@ -4656,11 +4661,35 @@
             "title": "Projects",
             "type": "object"
           },
+          "renders_24h": {
+            "default": 0,
+            "title": "Renders 24H",
+            "type": "integer"
+          },
           "takes": {
             "additionalProperties": {
               "type": "integer"
             },
             "title": "Takes",
+            "type": "object"
+          },
+          "typical_render_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Typical Render S"
+          },
+          "worker_backlog": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "default": {},
+            "title": "Worker Backlog",
             "type": "object"
           }
         },

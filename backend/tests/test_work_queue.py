@@ -340,3 +340,75 @@ async def test_two_dispatchers_at_once_never_release_more_than_capacity(maker, r
         await s.commit()
     await asyncio.gather(*(work_queue.dispatch_once() for _ in range(6)))
     assert len(rec.calls) == 2 and len(set(rec.projects)) == 2
+
+
+async def test_the_stuck_sweep_re_drives_only_stale_videos_nobody_owns(maker, rec):
+    """The sweep reads every candidate in two queries; it leaves fresh videos and ones a live worker owns alone."""
+    from app.jobs import reconcile_projects
+
+    ws = await _ws(maker)
+    old = datetime.now(UTC) - timedelta(hours=2)
+    stale, fresh, owned = [await _project(maker, ws, "rendering_anchor") for _ in range(3)]
+    async with maker() as s:
+        await s.execute(update(Project).where(Project.id.in_([stale, owned])).values(state_changed_at=old))
+        s.add(
+            Job(project_id=owned, stage="anchor_render", input_hash="x", status="running", started_at=datetime.now(UTC))
+        )
+        await s.commit()
+    assert await reconcile_projects() == 1
+    assert rec.projects == [stale]
+
+
+async def test_progress_is_shared_for_a_moment_but_a_change_is_seen_at_once(client, maker, workspace, monkeypatch):
+    from app.routes import projects as routes
+
+    monkeypatch.setattr(get_settings(), "queue_backend", "celery")
+    monkeypatch.setattr(get_settings(), "progress_cache_s", 60.0)
+    routes._PROGRESS_CACHE.clear()
+    built = []
+    real = routes.progress_svc.build
+
+    async def counting(session, project):
+        built.append(project.state)
+        return await real(session, project)
+
+    monkeypatch.setattr(routes.progress_svc, "build", counting)
+    pid = (await client.post("/v1/projects", json=BRIEF, headers=OWNER)).json()["id"]
+    for _ in range(5):
+        assert (await client.get(f"/v1/projects/{pid}/progress", headers=OWNER)).status_code == 200
+    assert len(built) == 1  # five polls, one piece of work
+    from app.models import User
+
+    other_ws = await _ws(maker, "Stranger")
+    async with maker() as s:
+        s.add(User(email="stranger@else.test", workspace_id=other_ws))
+        await s.commit()
+    stranger = {"Authorization": "Bearer dev:stranger@else.test"}
+    got = await client.get(f"/v1/projects/{pid}/progress", headers=stranger)
+    assert got.status_code in {403, 404}  # still checked every time
+    async with maker() as s:
+        await s.execute(
+            update(Project).where(Project.id == pid).values(state="cancelled", state_changed_at=datetime.now(UTC))
+        )
+        await s.commit()
+    assert (await client.get(f"/v1/projects/{pid}/progress", headers=OWNER)).json()["state"] == "cancelled"
+    routes._PROGRESS_CACHE.clear()
+
+
+async def test_the_board_shows_failures_and_render_times(client, maker, workspace):
+    pid = await _project(maker, await _ws(maker))
+    async with maker() as s:
+        for i in range(3):
+            s.add(
+                Job(
+                    project_id=pid,
+                    stage="final_render",
+                    input_hash=f"s{i}",
+                    status="succeeded",
+                    duration_s=Decimal("600") + i,
+                )
+            )
+        s.add(Job(project_id=pid, stage="final_render", input_hash="f", status="failed"))
+        await s.commit()
+    board = (await client.get("/v1/admin/queue", headers=OPS)).json()
+    assert board["renders_24h"] == 3 and board["failed_24h"] == 1 and board["typical_render_s"] == 601.0

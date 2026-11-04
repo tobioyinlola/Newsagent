@@ -665,6 +665,10 @@ class LinePauseIn(BaseModel):
 
 class QueueOut(BaseModel):
     lanes: list[LaneOut] = []
+    worker_backlog: dict[str, int] = {}  # messages waiting for a worker, per worker lane (Celery)
+    failed_24h: int = 0  # steps that failed for good in the last day
+    renders_24h: int = 0  # final renders finished in the last day
+    typical_render_s: float | None = None  # median time of those renders
     jobs: dict[str, int]
     takes: dict[str, int]
     projects: dict[str, int]

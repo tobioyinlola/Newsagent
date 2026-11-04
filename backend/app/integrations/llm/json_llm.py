@@ -4,6 +4,7 @@ language-model vendor answers. A vendor adapter only has to implement `_complete
 import json
 from abc import abstractmethod
 
+from app.integrations.llm import gate
 from app.integrations.llm.base import NewsDraft, ScriptDraft, ScriptLLM, StoryDraft
 from app.services.claims import detect_claims
 from app.video_rules import value as rule_value
@@ -30,7 +31,7 @@ class JsonScriptLLM(ScriptLLM):
         return 0.05
 
     async def _json(self, prompt: str) -> dict:
-        return parse_json_object(await self._complete(prompt))
+        return parse_json_object(await gate.run(lambda: self._complete(prompt)))
 
     async def parse_brief(self, brief_text: str, website_url: str | None) -> dict:
         return await self._json(

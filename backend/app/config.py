@@ -140,6 +140,9 @@ class Settings(BaseSettings):
     queue_backend: str = "inline"  # inline | celery
     # legacy: slow work (presenter clips, renders) goes straight to the workers, as before. dispatcher: it joins ONE durable line
     # (the work_queue table) and is released first-in-first-out as renderer and presenter-video capacity frees up; waiting never fails.
+    progress_cache_s: float = 3.0  # a video's progress is worked out at most this often per project (with the Celery queue); 0 = always fresh
+    llm_max_concurrency: int = 16  # writing calls in flight at once per process; the rest wait their turn
+    llm_retries: int = 2  # a busy or briefly failing writing provider is asked again this many times
     queue_mode: str = "legacy"
     render_queue_slots: int = 0  # renders running at once under the dispatcher; 0 = one per configured renderer x render_jobs_concurrency
     render_jobs_concurrency: int = 1  # heavy renders each renderer runs at once (the same RENDER_JOBS_CONCURRENCY the renderer reads)
