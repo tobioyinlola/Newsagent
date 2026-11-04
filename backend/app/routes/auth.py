@@ -119,7 +119,7 @@ async def signup_start(
         email,
         "signup",
         invite_id=invite_id,
-        password_hash=passwords.hash_password(body.password),
+        password_hash=await passwords.hash_password_async(body.password),
         ip=ratelimit.client_ip(request),
         workspace_name=workspace_name,
         city=(body.city or "").strip() or None,
@@ -213,7 +213,7 @@ async def login(
     email = body.email.lower()
     await _throttle(request, "login", email, (10, 600), (40, 600))
     user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
-    ok = passwords.verify_password(body.password, user.password_hash if user else None)  # same work either way
+    ok = await passwords.verify_password_async(body.password, user.password_hash if user else None)  # same work either way
     if not ok or user is None or await rbac.blocked(db, email):
         raise BAD_LOGIN
     operator = bool(await rbac.permissions_for(db, email))  # an owner, or an active team member
@@ -290,7 +290,7 @@ async def password_reset(body: ResetIn, request: Request, db: AsyncSession = Dep
     if row is None or user is None or await rbac.blocked(db, email):
         raise BAD_CODE
     _check_password(body.new_password, email)
-    user.password_hash = passwords.hash_password(body.new_password)
+    user.password_hash = await passwords.hash_password_async(body.new_password)
     await sess.revoke_all(db, user.id)  # whoever had the old password is signed out
     audit(db, email, "auth.password_reset", target_type="user", target_id=user.id, request=request)
     await db.commit()
@@ -302,10 +302,10 @@ async def password_change(
     body: ChangePasswordIn, request: Request, ctx: AuthCtx = Depends(auth_ctx), db: AsyncSession = Depends(get_session)
 ) -> dict:
     await _throttle(request, "pwchange", ctx.user.id, (10, 600), (40, 600))
-    if not passwords.verify_password(body.current_password, ctx.user.password_hash):
+    if not await passwords.verify_password_async(body.current_password, ctx.user.password_hash):
         raise HTTPException(401, "Your current password is incorrect.")
     _check_password(body.new_password, ctx.user.email)
-    ctx.user.password_hash = passwords.hash_password(body.new_password)
+    ctx.user.password_hash = await passwords.hash_password_async(body.new_password)
     await sess.revoke_all(db, ctx.user.id, except_id=ctx.row.id if ctx.row else None)
     audit(db, ctx.user.email, "auth.password_changed", target_type="user", target_id=ctx.user.id, request=request)
     await db.commit()

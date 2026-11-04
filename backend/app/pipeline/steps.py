@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import video_rules
@@ -34,6 +34,7 @@ from app.services.spend_guard import LimitReached, SpendGuard
 from app.video_rules import value as rule_value
 
 log = logging.getLogger("pipeline")
+RENDER_STAGES = ("merge_render", "preview_render", "final_render")  # the job stages that wait on the renderer
 
 # Each video is delivered twice: HD (the render as made) and Light (the same video re-encoded to a much smaller file by the
 # renderer's ffmpeg, from the HD file: no second render, and nothing to do with the presenter vendor). A light entry must come
@@ -1241,7 +1242,24 @@ async def _wait(renderer, render_id: str, project_id: str | None = None):
         if project_id and polls % 5 == 0 and await _is_cancelled(project_id):
             await renderer.cancel(render_id)
             raise provider_requests.Cancelled()
+        if project_id and polls % 30 == 0:  # about every minute: still alive (see runner.lease_for)
+            await _heartbeat(project_id)
         await asyncio.sleep(2)
+
+
+async def _heartbeat(project_id: str) -> None:
+    """Renew the claim on the project's running render job, so the stuck-project sweep and a redelivered message can tell a render
+    that is still going from one whose worker died. Never fails the render: a missed beat only shortens the lease."""
+    try:
+        async with session_maker()() as s:
+            await s.execute(
+                update(Job)
+                .where(Job.project_id == project_id, Job.status == "running", Job.stage.in_(RENDER_STAGES))
+                .values(started_at=datetime.now(UTC))
+            )
+            await s.commit()
+    except Exception:  # noqa: BLE001
+        log.warning("render heartbeat failed", exc_info=True)
 
 
 def quality_gate(result: dict, outputs: int) -> list[str]:  # outputs = expected number of rendered files

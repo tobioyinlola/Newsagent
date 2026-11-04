@@ -93,6 +93,7 @@ upgraded version was run with Playwright's Chromium headless shell (`CHROMIUM_PA
 ## Production render time limit (3 November 2026)
 Two videos failed with "The render took too long": the interview videos run about 5 to 6 minutes (9,000+ frames) and render at about
 9 frames a second on the production server, which is right at the old 20 minute limit, and two renders at once share the same CPUs.
-One render attempt now gets **60 minutes** (`VENDOR_POLICIES["renderer"]`), and the stuck-project sweep and the back-office "stuck"
-flag work out how long a worker owns a job from the step's own vendor (`runner.lease_for`), so a long render is not mistaken for a
-dead one. Keep `RENDER_JOBS_CONCURRENCY=1` on the backend service so renders run one at a time.
+One render attempt now gets **60 minutes** (`VENDOR_POLICIES["renderer"]`). A render renews its claim on its job every minute while it
+waits for the renderer (`steps._wait`), and the claim only lasts 15 minutes without a renewal (`runner.lease_for`), so a long render is not
+mistaken for a dead one, and a render whose worker crashed or was restarted by a deploy is picked up by the stuck-project sweep in minutes,
+not after the whole render limit. Keep `RENDER_JOBS_CONCURRENCY=1` on the backend service so renders run one at a time.

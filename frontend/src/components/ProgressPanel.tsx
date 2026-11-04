@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { api, unwrap } from "../api/client";
+import { backoffInterval } from "../lib/polling";
 import { Button, Card, ErrorBox } from "./ui";
 
 const MARK: Record<string, string> = { done: "✓", working: "…", waiting: "⏳", pending: "○", failed: "✕", paused: "⏸", cancelled: "■" };
@@ -11,10 +12,11 @@ export function ProgressPanel({ projectId, state }: { projectId: string; state: 
   const qc = useQueryClient();
   const path = { params: { path: { project_id: projectId } } };
   const live = ["script_approved", "rendering_anchor", "anchor_ready", "merging"].includes(state);
+  const openedAt = useRef(Date.now());
   const progress = useQuery({
     queryKey: ["progress", projectId, state],
     queryFn: () => unwrap(api.GET("/v1/projects/{project_id}/progress", path)),
-    refetchInterval: live ? 4000 : false,
+    refetchInterval: live ? () => backoffInterval(openedAt.current, 4000) : false,
   });
   const done = () => { void qc.invalidateQueries({ queryKey: ["project", projectId] }); void qc.invalidateQueries({ queryKey: ["progress", projectId] }); };
   const cancel = useMutation({ mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/cancel", path)), onSuccess: done });

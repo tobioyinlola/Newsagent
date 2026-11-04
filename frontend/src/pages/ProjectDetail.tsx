@@ -1,8 +1,9 @@
 import { DistributionReadyPrompt } from "../components/DistributionReadyPrompt";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
+import { backoffInterval } from "../lib/polling";
 import { Delivery } from "../components/Delivery";
 import { BrollPanel } from "../components/BrollPanel";
 import { ProgressPanel } from "../components/ProgressPanel";
@@ -22,10 +23,11 @@ export function ProjectDetail() {
   const qc = useQueryClient();
   const path = { params: { path: { project_id: id } } };
   const me = useMe();
+  const openedAt = useRef(Date.now()); // polling slows down the longer this page stays open (lib/polling.ts)
   const project = useQuery({
     queryKey: ["project", id], queryFn: () => unwrap(api.GET("/v1/projects/{project_id}", path)),
     refetchOnMount: "always", refetchOnWindowFocus: "always",
-    refetchInterval: query => ["script_approved", "interviewing", "awaiting_founder", "processing_founder", "rendering_anchor", "anchor_ready", "merging"].includes(query.state.data?.state ?? "") ? 5000 : false,
+    refetchInterval: query => ["script_approved", "interviewing", "awaiting_founder", "processing_founder", "rendering_anchor", "anchor_ready", "merging"].includes(query.state.data?.state ?? "") ? backoffInterval(openedAt.current, 5000) : false,
   });
   const state = project.data?.state;
   const script = useQuery({

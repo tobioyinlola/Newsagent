@@ -1,9 +1,11 @@
 """Password hashing (scrypt from the standard library) and the password policy."""
 
+import asyncio
 import base64
 import hashlib
 import hmac
 import secrets
+import threading
 
 N, R, P = 2**15, 8, 1  # ~32 MiB, tens of milliseconds
 _MAXMEM = 64 * 1024 * 1024
@@ -40,6 +42,24 @@ def verify_password(password: str, stored: str | None) -> bool:
         return hmac.compare_digest(got, base64.b64decode(dk))
     except (ValueError, TypeError):
         return False
+
+
+# The same work off the event loop. One scrypt takes tens of milliseconds and ~32 MiB; run in the API's single async process it would
+# stop every other request while it runs, so the handlers await these instead. At most a few run at once (memory), the rest wait.
+_slots = threading.BoundedSemaphore(4)
+
+
+def _limited(fn, *args):
+    with _slots:
+        return fn(*args)
+
+
+async def hash_password_async(password: str) -> str:
+    return await asyncio.to_thread(_limited, hash_password, password)
+
+
+async def verify_password_async(password: str, stored: str | None) -> bool:
+    return await asyncio.to_thread(_limited, verify_password, password, stored)
 
 
 def policy_error(password: str, email: str) -> str | None:

@@ -1,10 +1,20 @@
 import asyncio
 
 from celery import Celery
+from celery.signals import worker_process_init
 from kombu import Queue
 
 from app.config import get_settings
 from app.pipeline.queue import LANES
+
+
+@worker_process_init.connect
+def _small_database_pools(**_) -> None:
+    """Each worker process (about eleven, each task opening its own pool) uses a small database pool, so they cannot use up Postgres's connections."""
+    from app.db import use_worker_pool
+
+    use_worker_pool()
+
 
 celery_app = Celery("newsagent", broker=get_settings().redis_url, backend=get_settings().redis_url)
 celery_app.conf.update(

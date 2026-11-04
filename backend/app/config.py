@@ -79,6 +79,7 @@ class Settings(BaseSettings):
     # new address per branch). Empty: only APP_BASE_URL and ADMIN_BASE_URL.
     cors_origin_regex: str = ""
     email_reply_to: str = ""  # optional: a monitored mailbox; replies from people (and a real, answered address) help mail land in the inbox
+    email_max_per_second: float = 5.0  # sends are spaced to at most this many a second, so a burst of sign-ups stays under the provider's limit (0 = off)
     email_from: str = "Newsroom <no-reply@localhost>"
     storage_endpoint: str = "http://localhost:9000"
     storage_bucket: str = "newsagent"
@@ -126,6 +127,10 @@ class Settings(BaseSettings):
     vendor_hold_s: float = 45.0
     db_pool_size: int = 10
     db_max_overflow: int = 10
+    # The same, for each Celery worker process (there are about eleven, and each task opens its own small pool): kept small so the
+    # API's connections plus all of the workers' stay under Postgres's max_connections even when every lane is busy.
+    db_worker_pool_size: int = 2
+    db_worker_max_overflow: int = 3
     db_pool_timeout_s: int = 20
     db_pool_recycle_s: int = (
         1800  # replace connections older than this, so a database/proxy idle-timeout never hands out a dead one
