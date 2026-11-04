@@ -299,3 +299,28 @@ async def test_two_videos_started_at_once_cannot_both_use_the_last_credit(client
     )
     assert codes[0] == 200 and codes[1] in (200, 402)
     assert await balance(maker, workspace) >= 0
+
+
+async def test_a_video_always_needs_its_credit_even_with_limits_off(client, maker, monkeypatch):
+    """ENFORCE_LIMITS=false relaxes spend caps, never the credit: no credit, no video; fund the wallet, then it works and takes 1."""
+    from app.config import get_settings
+    from tests.helpers import BRIEF
+
+    monkeypatch.setattr(get_settings(), "enforce_limits", False)
+    async with maker() as s:
+        ws = Workspace(name="Broke Co", credit_balance=Decimal("0"))
+        s.add(ws)
+        await s.flush()
+        s.add(User(email="broke@else.test", workspace_id=ws.id))
+        await s.commit()
+        ws_id = ws.id
+    me = {"Authorization": "Bearer dev:broke@else.test"}
+    refused = await client.post("/v1/projects", json=BRIEF, headers=me)
+    assert refused.status_code == 402 and refused.json()["detail"]["error"] == "insufficient_credits"
+    async with maker() as s:
+        ws = await s.get(Workspace, ws_id)
+        await ledger.apply(s, ws, Decimal("3"), "purchase", description="test top-up")
+        await s.commit()
+    assert (await client.post("/v1/projects", json=BRIEF, headers=me)).status_code == 200
+    async with maker() as s:
+        assert (await s.get(Workspace, ws_id)).credit_balance == Decimal("2")
