@@ -290,7 +290,7 @@ function Distribution() {
           <ul className="mt-6 space-y-3 text-white/90">
             {["Pick one region or several for each announcement", "Credits per region, shown before you confirm", "Your video and story stay yours to share anywhere"].map((x) => <li key={x} className="flex gap-3"><span className="text-brand-green" aria-hidden="true">✓</span>{x}</li>)}
           </ul>
-          <div className="mt-8 flex flex-wrap gap-3"><Cta to="/press-distribution" primary>Explore distribution</Cta><Cta href={`${CONTACT}%20-%20distribution`}>Join the waitlist</Cta></div>
+          <div className="mt-8 flex flex-wrap gap-3"><Cta to="/press-distribution#choose" primary>Choose your outlets</Cta><Cta href={`${CONTACT}%20-%20distribution`}>Join the waitlist</Cta></div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {regions.map((r, i) => (

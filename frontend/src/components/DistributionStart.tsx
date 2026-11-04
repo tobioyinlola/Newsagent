@@ -23,7 +23,7 @@ async function readFile(file: File): Promise<{ headline: string; announcement: s
   return data;
 }
 
-export function DistributionStart({ videoPath, onCreated }: { videoPath: ReactNode; onCreated: (id: string) => void }) {
+export function DistributionStart({ videoPath, onCreated, outletIds }: { videoPath: ReactNode; onCreated: (id: string) => void; outletIds?: string[] }) {
   const [step, setStep] = useState<Step>("choose");
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
@@ -68,7 +68,7 @@ export function DistributionStart({ videoPath, onCreated }: { videoPath: ReactNo
   // The draft is only made now, with the press release and the pictures in it; the usual steps carry on from the outlets.
   const toOutlets = () => run(async () => {
     const created = await request<Distribution>("distribution", "POST");
-    await request(`distribution/${created.id}`, "PUT", { ...created.data, headline: release.headline.trim(), announcement: release.announcement.trim(), announcement_source: "custom", project_id: null, story_project_id: null, picture_keys: pictures.map(p => p.key), stage: "outlets" });
+    await request(`distribution/${created.id}`, "PUT", { ...created.data, headline: release.headline.trim(), announcement: release.announcement.trim(), announcement_source: "custom", ...(outletIds?.length ? { outlet_ids: outletIds } : {}), project_id: null, story_project_id: null, picture_keys: pictures.map(p => p.key), stage: "outlets" });
     onCreated(created.id);
   });
 

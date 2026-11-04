@@ -4,7 +4,7 @@ import re
 from decimal import Decimal
 from typing import Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, EmailStr, Field, TypeAdapter, ValidationError
 from sqlalchemy import select, update
@@ -126,16 +126,59 @@ DEFAULT_OUTLET_CREDITS = {
     "The Daily Times": "137.1",
     "Daily Nation": "651.6",
 }
-OUTLETS = {
-    str(i + 1): {
+# Where an outlet can be found, for the filters visitors and customers use: a topic and a country (the region follows from the country).
+TOPICS = ("Technology", "General News", "Gossip Blogs")
+LOCATIONS = {
+    "Africa": ("Nigeria", "Ghana", "Kenya", "Uganda"),
+    "North America": ("Canada", "United States"),
+    "Europe": ("United Kingdom",),
+}
+REGION_OF = {country: region for region, countries in LOCATIONS.items() for country in countries}
+_TECH = ("Techpoint Africa", "Tech Next", "Tech Cabal", "Techeconomy")
+_CRYPTO = ("CoinSpeaks", "The Cryptofy", "The Crypto Reporters", "The Coins Report", "The Coins Insider")
+_GOSSIP = (
+    "88 Lately",
+    "Celeb Spotlight",
+    "Naijaloaded",
+    "Tooxclusive",
+    "NotJustOk",
+    "9jaflaver",
+    "Mp3bullet",
+    "Naijamusic",
+    "MP3Naija",
+    "AlbumTalks",
+    "P mp Kulture",
+)
+_ABROAD = {
+    "Business Insider": "United States",
+    "Street Insider": "United States",
+    "Bar Chart": "United States",
+    "Benzinga": "United States",
+    "The Globe and Mail": "Canada",
+    "Daily Nation": "Kenya",
+}
+
+
+def outlet_tags(name: str) -> tuple[str, str | None]:
+    """(topic, country) for an outlet. The crypto channels cover Africa as a whole, so they have no single country."""
+    topic = "Technology" if name in _TECH or name in _CRYPTO else "Gossip Blogs" if name in _GOSSIP else "General News"
+    return topic, None if name in _CRYPTO else _ABROAD.get(name, "Nigeria")
+
+
+def _outlet(i: int, name: str) -> dict:
+    topic, country = outlet_tags(name)
+    return {
         "id": str(i + 1),
         "name": name,
-        "region": "Africa",
+        "region": REGION_OF[country] if country else "Africa",
+        "country": country,
+        "topic": topic,
         "credits": DEFAULT_OUTLET_CREDITS.get(name, "0"),
         "category": CATEGORY_BY_NAME[name],
     }
-    for i, name in enumerate(NAMES)
-}
+
+
+OUTLETS = {str(i + 1): _outlet(i, name) for i, name in enumerate(NAMES)}
 
 
 class MediaChoice(BaseModel):
@@ -258,11 +301,32 @@ async def validate(db: AsyncSession, body: DraftIn, workspace_id: str):
 @router.get("/v1/distribution/outlets")
 async def outlets(p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> dict:
     items = await catalog_service.catalog(db)
+    shown = [o for o in items if not catalog_service.is_hidden(o)]  # free channels are hidden for now
     return {
-        "outlets": [o for o in items if not catalog_service.is_hidden(o)],  # free channels are hidden for now
+        "outlets": shown,
         "quote_version": catalog_service.version(items),  # always over the full list, so a submit's price check still matches
-        "coming_soon": ["United States", "Canada", "United Kingdom"],
+        "coming_soon": _coming_soon(shown),
+        "filters": _filters(),
     }
+
+
+def _filters() -> dict:
+    return {"topics": list(TOPICS), "locations": [{"region": r, "countries": list(c)} for r, c in LOCATIONS.items()]}
+
+
+def _coming_soon(shown: list[dict]) -> list[str]:
+    """Countries people can filter by that have no outlet yet."""
+    have = {o.get("country") for o in shown}
+    return [c for c in REGION_OF if c not in have]
+
+
+@router.get("/v1/public/distribution/outlets", dependencies=[Depends(limit("public-outlets", 120, 60))])
+async def public_outlets(response: Response, db: AsyncSession = Depends(get_session)) -> dict:
+    """What a visitor who is not signed in may browse before choosing outlets: name, topic, place and price. Nothing internal."""
+    response.headers["Cache-Control"] = "public, max-age=60"
+    shown = [o for o in await catalog_service.catalog(db) if not catalog_service.is_hidden(o)]
+    keep = ("id", "name", "topic", "category", "region", "country", "credits")
+    return {"outlets": [{k: o[k] for k in keep} for o in shown], "coming_soon": _coming_soon(shown), "filters": _filters()}
 
 
 @router.get("/v1/distribution/stories")

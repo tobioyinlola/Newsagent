@@ -1,12 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getToken } from "../lib/auth";
+import { OutletBrowser } from "../components/OutletBrowser";
 import { OutletLogoStrip } from "../components/OutletLogoStrip";
 import { CHANNELS, Cta, Eyebrow, SiteShell } from "./Landing";
 
 // Dedicated page for distribution (press-distribution style): reach, how it works, coverage by region, outlet types,
 // credit-based packages, the placement report and questions. Distribution is launching: the page says so plainly.
-
-const WAITLIST = "/distribution/request";
 
 const REGIONS: { name: string; places: string; outlets: string[] }[] = [
   { name: "United States", places: "National and state outlets", outlets: ["Business & finance", "Technology", "Startups & VC", "Local news"] },
@@ -72,6 +71,9 @@ function DistributionHeroPhoto() {
 export function DistributionPage() {
   const signedIn = Boolean(getToken());
   const [open, setOpen] = useState(QUESTIONS[0][0]);
+  useEffect(() => { // arriving at /press-distribution#choose from another page: the section exists only after the page has loaded
+    if (window.location.hash === "#choose") window.setTimeout(() => document.getElementById("choose")?.scrollIntoView(), 300);
+  }, []);
   return (
     <SiteShell>
       <main>
@@ -82,7 +84,7 @@ export function DistributionPage() {
               <p className="inline-block rounded-sm border border-brand-peach bg-ink/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-brand-peach">Distribution · Africa available</p>
               <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">Your news, across <span className="text-brand-green">20,000+ media outlets.</span></h1>
               <p className="mt-5 max-w-xl text-lg text-white/85">Submit your news segment and written announcement for distribution to the available Africa outlets. United States, Canada and United Kingdom coverage is coming soon. Review the credits before submitting.</p>
-              <div className="mt-8 flex flex-wrap gap-3"><Cta to={signedIn ? "/distribution/request" : "/login"} primary>Choose distribution outlets</Cta><Cta href="#coverage">See coverage</Cta></div>
+              <div className="mt-8 flex flex-wrap gap-3"><Cta href="#choose" primary>Choose distribution outlets</Cta><Cta href="#coverage">See coverage</Cta></div>
             </div>
           </div>
         </section>
@@ -96,6 +98,8 @@ export function DistributionPage() {
         </section>
 
         <OutletMarquee />
+
+        <OutletBrowser />
 
         <section className="bg-ink px-4 py-20 md:px-8">
           <div className="mx-auto max-w-6xl">
@@ -141,7 +145,7 @@ export function DistributionPage() {
                   <p className="text-xs font-bold uppercase tracking-wider text-white/60">{p.name}</p>
                   <p className="mt-3 text-3xl font-bold text-white">{p.reach}</p>
                   <ul className="mt-5 flex-1 space-y-2 text-sm text-white/85">{p.points.map((x) => <li key={x} className="flex gap-2"><span className="text-brand-green" aria-hidden="true">✓</span>{x}</li>)}</ul>
-                  <div className="mt-6"><Cta href={WAITLIST} primary={p.featured}>Choose outlets</Cta></div>
+                  <div className="mt-6"><Cta href="#choose" primary={p.featured}>Choose outlets</Cta></div>
                 </div>
               ))}
             </div>
@@ -169,7 +173,7 @@ export function DistributionPage() {
           <img src="/distribution-cta.webp" alt="" aria-hidden="true" width={1600} height={893} loading="lazy" decoding="async" className="mx-auto mb-10 h-56 w-full max-w-4xl rounded-sm object-cover object-[50%_40%] md:h-80" />
           <h2 className="text-3xl text-white md:text-5xl">Choose where your story goes.</h2>
           <p className="mx-auto mt-3 max-w-xl text-white/70">Choose available outlets, review your announcement and submit a request to our team.</p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3"><Cta href={WAITLIST} primary>Choose outlets</Cta>{signedIn ? <Cta to="/ai-newsroom/new">Make a video</Cta> : <Cta to="/ai-newsroom">See the AI Newsroom</Cta>}</div>
+          <div className="mt-8 flex flex-wrap justify-center gap-3"><Cta href="#choose" primary>Choose outlets</Cta>{signedIn ? <Cta to="/ai-newsroom/new">Make a video</Cta> : <Cta to="/ai-newsroom">See the AI Newsroom</Cta>}</div>
         </section>
       </main>
     </SiteShell>
