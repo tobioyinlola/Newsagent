@@ -7,6 +7,12 @@ import { Button, Card, ErrorBox } from "./ui";
 const MARK: Record<string, string> = { done: "✓", working: "…", waiting: "⏳", pending: "○", failed: "✕", paused: "⏸", cancelled: "■" };
 const TEXT: Record<string, string> = { done: "Done", working: "Working", waiting: "Waiting for you", pending: "Not started", failed: "Needs attention", paused: "Paused", cancelled: "Cancelled" };
 
+function wait(sec: number): string {
+  if (sec < 5400) return `about ${Math.max(10, Math.round(sec / 600) * 10)} minutes`;
+  if (sec < 36 * 3600) return `about ${Math.round(sec / 3600)} ${Math.round(sec / 3600) === 1 ? "hour" : "hours"}`;
+  return `about ${Math.round(sec / 86400)} days`;
+}
+
 // Every piece of the video with its own status, so a partial failure shows exactly what is left (and what is kept).
 export function ProgressPanel({ projectId, state }: { projectId: string; state: string }) {
   const qc = useQueryClient();
@@ -31,7 +37,14 @@ export function ProgressPanel({ projectId, state }: { projectId: string; state: 
       <div className="h-2 w-full rounded-full bg-paper" role="progressbar" aria-valuenow={p.percent} aria-valuemin={0} aria-valuemax={100} aria-label="Video progress">
         <div className="h-2 rounded-full bg-brand-green" style={{ width: `${p.percent}%` }} />
       </div>
-      {p.queue_ahead > 0 && <p className="mt-2 text-sm text-muted">Lots of videos are being made right now. About {p.queue_ahead} {p.queue_ahead === 1 ? "is" : "are"} ahead of yours. It starts by itself, and you can leave this page.</p>}
+      {p.line?.state === "waiting" && (
+        <p className="mt-2 text-sm text-muted" role="status">
+          Lots of videos are being made right now. {p.line.position === 1 ? "Yours is next in line." : `You are number ${p.line.position} in line.`}
+          {p.line.eta_seconds ? ` It should start in ${wait(p.line.eta_seconds)}.` : ""} It starts by itself, we will email you when it begins and when it is ready, and you can leave this page.
+        </p>
+      )}
+      {p.line?.state === "running" && <p className="mt-2 text-sm text-muted" role="status">Your video is being made now.</p>}
+      {!p.line && p.queue_ahead > 0 && <p className="mt-2 text-sm text-muted">Lots of videos are being made right now. About {p.queue_ahead} {p.queue_ahead === 1 ? "is" : "are"} ahead of yours. It starts by itself, and you can leave this page.</p>}
       <ul className="mt-3 space-y-1 text-sm">
         {p.stages.map((s) => (
           <li key={s.key} className="flex flex-wrap items-baseline gap-2">

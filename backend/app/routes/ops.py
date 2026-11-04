@@ -13,7 +13,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import Principal, current_principal, require
 from app.config import get_settings
 from app.db import get_session
-from app.models import AuditLog, CreditTransaction, Job, ModerationCase, Project, SystemSetting, Take, Workspace
+from app.models import (
+    AuditLog,
+    CreditTransaction,
+    Job,
+    ModerationCase,
+    Project,
+    SystemSetting,
+    Take,
+    WorkItem,
+    Workspace,
+)
 from app.pipeline.advance import advance
 from app.pipeline.runner import lease_for
 from app.schemas.api import (
@@ -22,6 +32,8 @@ from app.schemas.api import (
     CostRow,
     CostSummary,
     JobOut,
+    LineItemOut,
+    LinePauseIn,
     ModerationCaseOut,
     ModerationDecisionIn,
     ProjectModerationOut,
@@ -29,7 +41,7 @@ from app.schemas.api import (
     SettingsOut,
     SettingsPatch,
 )
-from app.services import moderation_flow
+from app.services import moderation_flow, work_queue
 from app.services import state_machine as sm
 from app.services.audit import audit
 from app.services.spend_guard import is_paused
@@ -111,13 +123,148 @@ async def queue(
             select(func.count()).select_from(ModerationCase).where(ModerationCase.status == "pending")
         )
     ).scalar_one()
+    since = datetime.now(UTC) - timedelta(hours=24)
+    failed = (
+        await session.execute(
+            select(func.count()).select_from(Job).where(Job.status == "failed", Job.created_at > since)
+        )
+    ).scalar_one()
+    done = (
+        (
+            await session.execute(
+                select(Job.duration_s).where(
+                    Job.stage.in_(("final_render", "merge_render")),
+                    Job.status == "succeeded",
+                    Job.created_at > since,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    secs = sorted(float(d) for d in done if d is not None)
+    backlog: dict[str, int] = {}
+    if get_settings().queue_backend == "celery":
+        from app.pipeline.queue import lane_depths
+
+        try:
+            backlog = await lane_depths()
+        except Exception:  # noqa: BLE001  the board must still load when Redis is slow
+            backlog = {}
     return QueueOut(
+        worker_backlog=backlog,
+        failed_24h=int(failed),
+        renders_24h=len(done),
+        typical_render_s=secs[len(secs) // 2] if secs else None,
+        lanes=await work_queue.lane_summary(session) if work_queue.enabled() else [],
         jobs=await counts(Job.status),
         takes=await counts(Take.status),
         projects=await counts(Project.state),
         moderation_pending=pending,
         paused=await is_paused(session),
     )
+
+
+@router.get("/v1/admin/line", response_model=list[LineItemOut])
+async def line(
+    limit: int = 100,
+    _: Principal = Depends(require("operations.view")),
+    session: AsyncSession = Depends(get_session),
+) -> list[LineItemOut]:
+    """Videos waiting for or running in the slow lanes (presenter clips, renders), in the order they will be taken."""
+    now = datetime.now(UTC)
+    rows = (
+        await session.execute(
+            select(WorkItem, Workspace.name)
+            .join(Workspace, Workspace.id == WorkItem.workspace_id)
+            .order_by(WorkItem.lane, WorkItem.state, WorkItem.priority.desc(), WorkItem.enqueued_at, WorkItem.id)
+            .limit(min(max(limit, 1), 500))
+        )
+    ).all()
+    out, place = [], {"avatar": 0, "render": 0}
+    for it, ws in rows:
+        if it.state == "waiting":
+            place[it.lane] += 1
+        enq = it.enqueued_at if it.enqueued_at.tzinfo else it.enqueued_at.replace(tzinfo=UTC)
+        out.append(
+            LineItemOut(
+                project_id=it.project_id,
+                workspace_name=ws,
+                lane=it.lane,
+                step=it.step,
+                state=it.state,
+                position=place[it.lane] if it.state == "waiting" else 0,
+                waited_s=int((now - enq).total_seconds()),
+                priority=it.priority,
+                attempts=it.attempts,
+            )
+        )
+    return out
+
+
+@router.post("/v1/admin/line/{project_id}/front")
+async def line_to_front(
+    project_id: str,
+    request: Request,
+    op: Principal = Depends(require("operations.manage")),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    if not await work_queue.move_to_front(session, project_id):
+        raise HTTPException(404, "That video is not waiting in line")
+    audit(session, op.user.email, "line.front", target_type="project", target_id=project_id, request=request)
+    await session.commit()
+    await work_queue.kick()
+    return {"ok": True}
+
+
+@router.post("/v1/admin/line/{project_id}/cancel")
+async def line_cancel(
+    project_id: str,
+    request: Request,
+    op: Principal = Depends(require("operations.manage")),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Take a video out of the line and stop it (the owner can retry it later; nothing is lost)."""
+    project = await session.get(Project, project_id)
+    if project is None:
+        raise HTTPException(404, "Project not found")
+    try:
+        sm.transition(project, "cancelled")
+    except sm.IllegalTransition:
+        raise HTTPException(409, "This video cannot be cancelled now") from None
+    project.failure_reason = "Stopped by our team. Retry to continue."
+    project.failure_retryable = True
+    audit(session, op.user.email, "line.cancel", target_type="project", target_id=project_id, request=request)
+    await session.commit()
+    await work_queue.remove(session, project_id)
+    await work_queue.kick()
+    return {"ok": True}
+
+
+@router.post("/v1/admin/line/lanes/{lane}/pause")
+async def line_pause(
+    lane: str,
+    body: LinePauseIn,
+    request: Request,
+    op: Principal = Depends(require("operations.manage")),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Stop releasing work from one lane (videos stay in line) or release it again."""
+    if lane not in work_queue.LANES:
+        raise HTTPException(404, "Unknown lane")
+    await work_queue.set_lane_paused(session, lane, body.paused, op.user.email)
+    audit(
+        session,
+        op.user.email,
+        "line.pause" if body.paused else "line.resume",
+        target_type="lane",
+        target_id=lane,
+        request=request,
+    )
+    await session.commit()
+    if not body.paused:
+        await work_queue.kick()
+    return {"ok": True, "paused": body.paused}
 
 
 @router.get("/v1/admin/jobs", response_model=list[JobOut])

@@ -3,7 +3,7 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from app.config import get_settings
 from app.db import session_maker
@@ -112,6 +112,10 @@ async def purge_old_raw_takes(now: datetime | None = None) -> int:
 STUCK_AFTER = timedelta(minutes=20)
 
 
+def _aware(t: datetime) -> datetime:
+    return t if t.tzinfo else t.replace(tzinfo=UTC)
+
+
 async def reconcile_projects(now: datetime | None = None) -> int:
     """Re-drive projects the pipeline should be moving but isn't (a worker crashed, a queue message was lost, the
     process restarted). Safe to run any time: steps are idempotent and a fresh running job is left alone."""
@@ -123,15 +127,37 @@ async def reconcile_projects(now: datetime | None = None) -> int:
 
     fixed: list[str] = []
     async with session_maker()() as s:
-        projects = (await s.execute(select(Project).where(Project.state.in_(sm.ACTIVE)))).scalars().all()
-        for p in projects:
-            since = p.state_changed_at or p.created_at
-            if (since if since.tzinfo else since.replace(tzinfo=UTC)) > cutoff:
-                continue
-            running = (await s.execute(select(Job).where(Job.project_id == p.id, Job.status == "running"))).scalars()
-            if any(j.started_at and now - j.started_at.replace(tzinfo=UTC) < lease_for(j.stage) for j in running):
-                continue  # a worker still owns it
-            fixed.append(p.id)
+        # two queries for all stuck candidates (not one or two per project): those that have sat in an active step past the cutoff
+        stale = or_(Project.state_changed_at.is_(None), Project.state_changed_at < cutoff)
+        candidates = (
+            await s.execute(
+                select(Project.id, Project.state_changed_at, Project.created_at).where(
+                    Project.state.in_(sm.ACTIVE), stale
+                )
+            )
+        ).all()
+        from app.models import WorkItem
+        from app.services import work_queue
+
+        in_line = (  # the dispatcher looks after these (when it is switched off, the sweep does)
+            set((await s.execute(select(WorkItem.project_id))).scalars()) if work_queue.enabled() else set()
+        )
+        ids = [
+            pid for pid, changed, created in candidates if pid not in in_line and _aware(changed or created) <= cutoff
+        ]
+        alive: set[str] = set()
+        for i in range(0, len(ids), 500):
+            rows = (
+                await s.execute(
+                    select(Job.project_id, Job.stage, Job.started_at).where(
+                        Job.project_id.in_(ids[i : i + 500]), Job.status == "running"
+                    )
+                )
+            ).all()
+            alive |= {
+                pid for pid, stage, started in rows if started and now - _aware(started) < lease_for(stage)
+            }  # a worker still owns it
+        fixed = [pid for pid in ids if pid not in alive]
     for pid in fixed:
         async with session_maker()() as s:
             log.warning("re-driving a stuck project", extra={"project_id": pid})

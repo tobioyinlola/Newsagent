@@ -33,8 +33,10 @@ from app.models.entities import (
 from app.models.news_desk import NewsImage, NewsStory, NewsVideo
 from app.models.referral import ReferralLink, ReferralReward
 from app.models.transfer_review import PaymentProof, TransferMail, TransferReview
+from app.models.work_queue import WorkItem
 
 __all__ = [
+    "WorkItem",
     "NewsImage",
     "NewsStory",
     "NewsVideo",

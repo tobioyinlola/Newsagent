@@ -14,6 +14,10 @@ log = logging.getLogger("notifications")
 
 MESSAGES = {
     "render_ready": ("Your video is ready", "Your video is ready to download and share."),
+    "render_started": (
+        "Your video has started",
+        "Your video has reached the front of the line and is being made now. It usually takes about 20 minutes, and we will email you when it is ready.",
+    ),
     "failed": (
         "We couldn't finish your video",
         "Something went wrong while making your video. Open the project and press Retry. Nothing extra was charged.",

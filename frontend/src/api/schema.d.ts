@@ -541,6 +541,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/line": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Line
+         * @description Videos waiting for or running in the slow lanes (presenter clips, renders), in the order they will be taken.
+         */
+        get: operations["line_v1_admin_line_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/line/lanes/{lane}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Line Pause
+         * @description Stop releasing work from one lane (videos stay in line) or release it again.
+         */
+        post: operations["line_pause_v1_admin_line_lanes__lane__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/line/{project_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Line Cancel
+         * @description Take a video out of the line and stop it (the owner can retry it later; nothing is lost).
+         */
+        post: operations["line_cancel_v1_admin_line__project_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/line/{project_id}/front": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Line To Front */
+        post: operations["line_to_front_v1_admin_line__project_id__front_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/moderation": {
         parameters: {
             query?: never;
@@ -4421,6 +4498,26 @@ export interface components {
             /** Videos Total */
             videos_total: number;
         };
+        /** LaneOut */
+        LaneOut: {
+            /** Lane */
+            lane: string;
+            /** Oldest Wait S */
+            oldest_wait_s: number;
+            /**
+             * Paused
+             * @default false
+             */
+            paused: boolean;
+            /** Running */
+            running: number;
+            /** Slots */
+            slots: number;
+            /** Typical S */
+            typical_s?: number | null;
+            /** Waiting */
+            waiting: number;
+        };
         /** LedgerEntry */
         LedgerEntry: {
             /** Amount */
@@ -4442,6 +4539,43 @@ export interface components {
             project_id: string | null;
             /** Stage */
             stage: string | null;
+        };
+        /** LineItemOut */
+        LineItemOut: {
+            /** Attempts */
+            attempts: number;
+            /** Lane */
+            lane: string;
+            /** Position */
+            position: number;
+            /** Priority */
+            priority: number;
+            /** Project Id */
+            project_id: string;
+            /** State */
+            state: string;
+            /** Step */
+            step: string;
+            /** Waited S */
+            waited_s: number;
+            /** Workspace Name */
+            workspace_name: string;
+        };
+        /** LinePauseIn */
+        LinePauseIn: {
+            /** Paused */
+            paused: boolean;
+        };
+        /** LinePlace */
+        LinePlace: {
+            /** Eta Seconds */
+            eta_seconds?: number | null;
+            /** Lane */
+            lane: string;
+            /** Position */
+            position: number;
+            /** State */
+            state: string;
         };
         /** LinesOut */
         LinesOut: {
@@ -4974,6 +5108,7 @@ export interface components {
             cancellable: boolean;
             /** Failure Category */
             failure_category?: string | null;
+            line?: components["schemas"]["LinePlace"] | null;
             /** Percent */
             percent: number;
             /**
@@ -5155,10 +5290,20 @@ export interface components {
         };
         /** QueueOut */
         QueueOut: {
+            /**
+             * Failed 24H
+             * @default 0
+             */
+            failed_24h: number;
             /** Jobs */
             jobs: {
                 [key: string]: number;
             };
+            /**
+             * Lanes
+             * @default []
+             */
+            lanes: components["schemas"]["LaneOut"][];
             /** Moderation Pending */
             moderation_pending: number;
             /** Paused */
@@ -5167,8 +5312,22 @@ export interface components {
             projects: {
                 [key: string]: number;
             };
+            /**
+             * Renders 24H
+             * @default 0
+             */
+            renders_24h: number;
             /** Takes */
             takes: {
+                [key: string]: number;
+            };
+            /** Typical Render S */
+            typical_render_s?: number | null;
+            /**
+             * Worker Backlog
+             * @default {}
+             */
+            worker_backlog: {
                 [key: string]: number;
             };
         };
@@ -7290,6 +7449,148 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    line_v1_admin_line_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LineItemOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    line_pause_v1_admin_line_lanes__lane__pause_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                lane: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinePauseIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    line_cancel_v1_admin_line__project_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    line_to_front_v1_admin_line__project_id__front_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

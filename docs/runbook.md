@@ -188,3 +188,31 @@ Also set `AVATAR_MAX_CONCURRENCY` (3 unless set; `8` for the current HeyGen plan
 
 On a restart or deploy a renderer stops taking new work (it answers 429 "renderer restarting", which the API waits out), gives running jobs
 `RENDER_DRAIN_SECONDS` (default 20) to finish, then exits. A render still running then is resubmitted by the API's existing retry.
+
+## The line for presenter clips and renders (`QUEUE_MODE`)
+
+`QUEUE_MODE=legacy` (the default) sends every step straight to the workers, as before. `QUEUE_MODE=dispatcher` puts presenter clips and
+renders in ONE durable line (the `work_queue` table) and releases them first in, first out, only as capacity frees up:
+
+- Capacity: renders = renderers in `RENDERER_URLS` x `RENDER_JOBS_CONCURRENCY` (or set `RENDER_QUEUE_SLOTS`); presenter clips = `AVATAR_MAX_CONCURRENCY`.
+- A video never fails for waiting (a wait of up to `QUEUE_MAX_WAIT_HOURS`, 36, is allowed for a busy vendor). It fails only from a real error.
+- One running item per business per lane. A video keeps its place when it moves to its next step or is put back after a crash.
+- The customer's progress panel shows "You are number N in line" and, once three or more videos have finished, about how long. They are emailed when it starts (only if it waited) and when it is ready.
+- Back office > Operations > "Line for presenter clips and renders": see the line, move a video to the front, stop one, hold or release a lane. The emergency pause also holds the line (videos wait instead of stopping).
+- The dispatcher runs every 10 seconds on the scheduler and right after a step finishes. A released job that goes quiet for longer than its lease is put back in line at its place.
+
+To switch on: set `QUEUE_MODE=dispatcher` on `backend` and redeploy (the migration `0037` runs by itself). Videos already being made finish the old way;
+those started afterwards use the line. To switch off: set `QUEUE_MODE=legacy`; anything still waiting in the line is then re-driven by the 5-minute sweep.
+
+## Database connections and a rush of users
+
+Every process keeps a small pool: the API `DB_POOL_SIZE` + `DB_MAX_OVERFLOW` (10 + 10), and each of the ~11 worker processes
+`DB_WORKER_POOL_SIZE` + `DB_WORKER_MAX_OVERFLOW` (2 + 3). Worst case is about 20 + 11 x 5 = 75 connections per `backend` container, and a second
+container (or a bigger API) adds its own. Keep the total under Postgres's `max_connections` (check it with `SHOW max_connections;`, Railway's default
+is 100). If you grow past that, put PgBouncer in front: add a PgBouncer service (transaction pooling, pool size about 40), point `DATABASE_URL` at
+it, and keep the app's pools as they are. (With asyncpg and transaction pooling, add `?prepared_statement_cache_size=0` to the URL.) The back office
+queue card shows what is waiting; Railway's Postgres metrics show connections in use.
+
+Other rush protections (all on by default): writing calls to the model provider are capped per process (`LLM_MAX_CONCURRENCY`, 16) and a busy answer
+is asked again (`LLM_RETRIES`, 2); a video's progress is worked out at most every `PROGRESS_CACHE_S` (3) seconds however often the page asks;
+the stuck-video sweep reads all candidates in two queries.

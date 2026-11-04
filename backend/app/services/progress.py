@@ -111,6 +111,9 @@ async def build(session: AsyncSession, project: Project) -> dict:
                 )
             )
         ).scalar_one()
+    from app.services import work_queue
+
+    line = await work_queue.position_of(session, project.id)
     return {
         "state": project.state,
         "percent": round(100 * done_n / len(stages)) if stages else 0,
@@ -129,4 +132,5 @@ async def build(session: AsyncSession, project: Project) -> dict:
         "failure_category": failed_job.failure_category if failed_job and project.state == "failed" else None,
         "vendor_jobs_in_flight": len(inflight),
         "queue_ahead": int(ahead),
+        "line": line,
     }
