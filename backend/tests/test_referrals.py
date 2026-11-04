@@ -5,11 +5,19 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import func, select
 
+from app.config import get_settings
 from app.models import AuthCode, CreditTransaction, ReferralLink, ReferralReward, User, Workspace
 from app.services import ledger, referrals
 from app.services.privacy import delete_workspace, export_workspace
 from tests.conftest import OWNER
 from tests.test_auth_flow import PW, last_code
+
+
+@pytest.fixture(autouse=True)
+def signup_reward_on(monkeypatch):
+    """These tests are about attribution and its safety (once only, never early, never for oneself). The 1-credit signup reward
+    is off by default now (referrers earn a percentage of purchases instead) but stays a setting, so they run with it on."""
+    monkeypatch.setattr(get_settings(), "referral_signup_credits", "1")
 
 
 async def link(client, headers=OWNER):

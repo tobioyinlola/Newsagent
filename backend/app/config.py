@@ -154,8 +154,8 @@ class Settings(BaseSettings):
     usd_per_credit: str = "2.70"
     credits_per_video: str = "1"
     credit_purchase_usd: str = "1,10,50,100,200"
-    referral_signup_credits: str = "1"  # credits the referrer gets when a business they referred signs up (email verified)
-    referral_distribution_bonus_credits: str = "4"  # extra credits, once per referred business, when it first pays for a distribution
+    referral_purchase_percent: str = "5"  # the referrer is credited this % of the credits every referred business buys, on every purchase
+    referral_signup_credits: str = "0"  # (off) credits the referrer gets when a business they referred signs up; the percentage above replaced it
     hide_free_distribution_outlets: bool = True  # outlets priced at 0 credits are not shown to customers for now; price one in the back office to show it
     credit_markup: str = "0"  # credits taken per 1 USD of vendor cost while a video is made: 0 = none, the video's flat price is its only charge
     low_balance_threshold: str = "1"
