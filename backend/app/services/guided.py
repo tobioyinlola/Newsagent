@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db import release_connection
 from app.integrations import registry
 from app.integrations.llm.base import ScriptSegment
 from app.models import Project, ScriptVersion, User, Workspace
@@ -75,14 +76,16 @@ async def start(session: AsyncSession, project: Project) -> None:
         )
     llm = registry.get_llm()
     brief = project.brief
-    brief.structured_facts = await llm.parse_brief(brief.raw_text, brief.website_url)
+    await release_connection(session)  # the two writer calls below take a while; nothing is unsaved yet
+    structured = await llm.parse_brief(brief.raw_text, brief.website_url)
     facts = {
-        **brief.structured_facts,
+        **structured,
         "founder_name": project.founder_name,
         "founder_title": project.founder_title,
         "announcement_type": project.announcement_type,
     }
     draft = await llm.write_script(facts, "confident")
+    brief.structured_facts = structured
     session.add(
         ScriptVersion(
             project_id=project.id,
@@ -177,6 +180,7 @@ async def write_story(
         "website": project.brief.website_url if project.brief else None,
     }
     draft = None
+    await release_connection(session)  # writing the story takes a while: do not hold a database connection for it
     for attempt in range(2):  # the writer occasionally returns a malformed draft: one more try, then say so plainly
         try:
             draft = await llm.write_story(facts, project.announcement_type or "other", answers)

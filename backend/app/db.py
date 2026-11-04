@@ -36,6 +36,18 @@ async def get_session() -> AsyncIterator[AsyncSession]:
         yield session
 
 
+async def release_connection(session: AsyncSession) -> None:
+    """Give the pooled database connection back before a slow call to another service (an AI writer, a vendor).
+
+    A request's session keeps its connection from its first query until it commits, and the pool is small (it is shared by every
+    request), so a request that waits a minute on an AI model would hold one of the few connections for that minute. Does
+    nothing if there are unsaved changes: committing those early could keep half of an operation that should be all-or-nothing.
+    Objects already loaded stay usable (sessions here use expire_on_commit=False) and the next query takes a fresh connection."""
+    if session.new or session.dirty or session.deleted:
+        return
+    await session.commit()
+
+
 async def reset_engine() -> None:
     """Dispose the engine. Celery runs each task in a fresh event loop, and asyncpg connections are loop-bound."""
     global _engine, _maker

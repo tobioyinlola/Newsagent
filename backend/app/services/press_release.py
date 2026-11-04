@@ -13,6 +13,7 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db import release_connection
 from app.integrations import registry
 from app.services import guided, moderation_flow
 from app.services.safety import find_banned
@@ -128,6 +129,7 @@ async def generate(session: AsyncSession, body) -> dict:
         raise HTTPException(
             422, {"error": "content_blocked", "message": "We can't write a press release from those details."}
         )
+    await release_connection(session)  # the writer takes a while: do not hold a database connection for it
     llm = registry.get_llm()
     website = body.website.strip() or None
     founder = f"{body.first_name.strip()} {body.last_name.strip()}".strip()

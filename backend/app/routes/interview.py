@@ -278,8 +278,6 @@ async def _proceed_live(session: AsyncSession, project: Project, p: Principal) -
         subject_id=fingerprint(*(f"{t.id}:{t.transcript}" for _, t in sorted(takes.items()))),
         text=f"{project.founder_name} {project.founder_title}\n{spoken}",
     )
-    if s:
-        s.revoked_at, s.token_enc = datetime.now(UTC), None
     if project.flow == "guided":
         # guided: the interview is done; write the story from what was said and let the owner review it before anything is paid
         plan_now = guided.featured_plan(project.merge_plan, sorted(takes), n)
@@ -287,12 +285,18 @@ async def _proceed_live(session: AsyncSession, project: Project, p: Principal) -
             {"index": q, "question": script.interview_questions[q], "answer": takes[q].transcript or ""}
             for q in sorted(takes)
         ]
-        project.merge_plan, project.layout = plan_now, plan_now["layout"]
+        # Nothing is changed until the story is written: the writer takes a while, and with nothing unsaved the request can give its
+        # database connection back while it waits (and if the writer fails, the founder's link and plan are untouched).
         await guided.write_story(session, project, script, answers)
+        if s:
+            s.revoked_at, s.token_enc = datetime.now(UTC), None
+        project.merge_plan, project.layout = plan_now, plan_now["layout"]
         sm.transition(project, "script_ready")
         await session.commit()
         await session.refresh(project)
         return await _out(session, project)
+    if s:
+        s.revoked_at, s.token_enc = datetime.now(UTC), None
     project.merge_plan = plan_now
     project.layout = plan_now["layout"]
     sm.transition(project, "rendering_anchor")
