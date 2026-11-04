@@ -126,7 +126,11 @@ async def reconcile_projects(now: datetime | None = None) -> int:
         projects = (await s.execute(select(Project).where(Project.state.in_(sm.ACTIVE)))).scalars().all()
         from app.models import WorkItem
 
-        in_line = set((await s.execute(select(WorkItem.project_id))).scalars())  # the dispatcher looks after these
+        from app.services import work_queue
+
+        in_line = (  # the dispatcher looks after these (when it is switched off, the sweep does)
+            set((await s.execute(select(WorkItem.project_id))).scalars()) if work_queue.enabled() else set()
+        )
         for p in projects:
             if p.id in in_line:
                 continue
