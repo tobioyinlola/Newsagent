@@ -80,3 +80,28 @@ test("the home page sends visitors straight to the outlet picker", async ({ page
   await expect(page).toHaveURL(/\/press-distribution#choose$/);
   await expect(page.getByRole("heading", { name: "Pick where your story goes." })).toBeInViewport();
 });
+
+test("an operator can refile an outlet in the back office and the public filters follow", async ({ browser, request, page }) => {
+  const OPS = { Authorization: "Bearer dev:ops@example.com" };
+  const cfg = await (await request.get(`${API}/v1/admin/distribution/config`, { headers: OPS })).json();
+  const tech = cfg.outlets.find((o: { name: string }) => o.name === "Tech Next");
+  const admin = await browser.newContext();
+  const ap = await admin.newPage();
+  await ap.addInitScript(() => sessionStorage.setItem("newsagent.admin.token", "dev:ops@example.com"));
+  try {
+    await ap.goto("/admin/distribution");
+    await ap.getByRole("button", { name: "Notification and outlet settings" }).click();
+    await ap.getByLabel("Configure outlet").selectOption(tech.id);
+    await expect(ap.getByLabel(/^Topic/)).toHaveValue("Technology");
+    await ap.getByLabel(/^Topic/).selectOption("General News");
+    await ap.getByLabel(/^Country/).selectOption("Kenya");
+    await ap.getByRole("button", { name: "Save outlet settings" }).click();
+    await expect.poll(async () => (await (await request.get(`${API}/v1/public/distribution/outlets`)).json()).outlets.find((o: { name: string }) => o.name === "Tech Next").country).toBe("Kenya");
+    await page.goto("/press-distribution#choose");
+    await page.getByLabel("Country", { exact: true }).selectOption("Kenya");
+    await expect(page.getByRole("checkbox", { name: /Tech Next/ })).toBeVisible();
+  } finally {
+    await request.put(`${API}/v1/admin/distribution/outlets/${tech.id}`, { headers: OPS, data: { ...tech, topic: "Technology", country: "Nigeria" } });
+    await admin.close();
+  }
+});

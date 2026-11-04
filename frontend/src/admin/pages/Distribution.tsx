@@ -8,7 +8,7 @@ const request = <T,>(path: string, method = "GET", body?: unknown) => distributi
 const input = "mt-1 block min-h-11 w-full min-w-0 rounded border border-line bg-white p-2";
 const button = "min-h-11 rounded border border-ink px-3 py-2 text-sm font-semibold disabled:opacity-50";
 type ConfigOutlet = Outlet & { direct_access: boolean; contact_name: string; contact_email: string | null; email_subject: string; email_body: string };
-type Config = { team_emails: string[]; outlets: ConfigOutlet[]; template_variables: string[] };
+type Config = { team_emails: string[]; outlets: ConfigOutlet[]; template_variables: string[]; filters: { topics: string[]; locations: { region: string; countries: string[] }[] } };
 
 function DistributionSettings() {
   const canManage = useCan()("operations.manage");
@@ -32,6 +32,10 @@ function DistributionSettings() {
     {outlet && <form className="space-y-4" onSubmit={e => { e.preventDefault(); void run(() => request(`admin/distribution/outlets/${outlet.id}`, "PUT", { ...outlet, contact_email: outlet.contact_email || null })); }}>
       <fieldset disabled={!canManage || busy} className="space-y-4"><legend className="mb-3 font-bold">{outlet.name}: pricing and image policy</legend>
         <div className="grid gap-4 sm:grid-cols-3">{([['credits', 'Placement credits'], ['logo_credits', 'Logo add-on credits'], ['picture_credits', 'Credits per additional picture']] as const).map(([key, label]) => <label key={key} className="block text-sm font-semibold">{label}<input className={input} type="number" min="0" max="1000000" step="0.0001" value={outlet[key] ?? "0"} onChange={e => setOutlet({ ...outlet, [key]: e.target.value })} /></label>)}</div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block text-sm font-semibold">Topic (how visitors filter outlets)<select className={input} value={outlet.topic ?? ""} onChange={e => setOutlet({ ...outlet, topic: e.target.value })}>{q.data?.filters.topics.map(t => <option key={t} value={t}>{t}</option>)}</select></label>
+          <label className="block text-sm font-semibold">Country<select className={input} value={outlet.country ?? ""} onChange={e => setOutlet({ ...outlet, country: e.target.value })}><option value="">No single country (Africa)</option>{q.data?.filters.locations.map(l => <optgroup key={l.region} label={l.region}>{l.countries.map(c => <option key={c} value={c}>{c}</option>)}</optgroup>)}</select></label>
+        </div>
         <div className="flex flex-wrap gap-5"><label><input type="checkbox" checked={outlet.accepts_logo !== false} onChange={e => setOutlet({ ...outlet, accepts_logo: e.target.checked })} /> Accepts logos</label><label><input type="checkbox" checked={outlet.accepts_images !== false} onChange={e => setOutlet({ ...outlet, accepts_images: e.target.checked })} /> Accepts additional pictures</label></div>
         <h3 className="font-bold">Publisher contact and automatic outreach</h3><div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm font-semibold">Publisher contact name<input className={input} value={outlet.contact_name} onChange={e => setOutlet({ ...outlet, contact_name: e.target.value })} /></label><label className="block text-sm font-semibold">Publisher contact email<input className={input} type="email" required={outlet.direct_access} value={outlet.contact_email ?? ""} onChange={e => setOutlet({ ...outlet, contact_email: e.target.value })} /></label></div>
         <label className="block"><input type="checkbox" checked={outlet.direct_access} onChange={e => setOutlet({ ...outlet, direct_access: e.target.checked })} /> Automatically email this publisher after a paid submission</label>

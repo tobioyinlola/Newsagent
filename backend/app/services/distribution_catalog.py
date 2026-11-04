@@ -91,6 +91,8 @@ class OutletConfig(BaseModel):
     logo_credits: Decimal = Field(default=Decimal("0"), ge=0, le=1000000, decimal_places=4)
     picture_credits: Decimal = Field(default=Decimal("0"), ge=0, le=1000000, decimal_places=4)
     direct_access: bool = False
+    topic: str | None = None  # where the outlet is filed for browsing; unset = the built-in tag. Checked against the allowed topics when saved
+    country: str | None = None  # unset = the built-in tag; "" = no single country (the whole of Africa)
     contact_name: str = Field(default="", max_length=200)
     contact_email: EmailStr | None = None
     email_subject: str = Field(default=SUBJECT, min_length=1, max_length=250)
@@ -141,8 +143,18 @@ async def catalog(db: AsyncSession, *, admin=False) -> list[dict]:
             value = {
                 k: value[k] for k in ["credits", "accepts_logo", "accepts_images", "logo_credits", "picture_credits"]
             }
-        result.append({**base, **value, "media_policy_configured": id in overrides})
+        value.pop("topic", None), value.pop("country", None)
+        result.append({**base, **value, **_tags(base, config), "media_policy_configured": id in overrides})
     return result
+
+
+def _tags(base: dict, config: "OutletConfig") -> dict:
+    """The topic, country and region an outlet is filed under: the operator's choice when there is one, else the built-in tag."""
+    from app.routes.distribution import REGION_OF
+
+    topic = config.topic or base["topic"]
+    country = base["country"] if config.country is None else (config.country or None)
+    return {"topic": topic, "country": country, "region": REGION_OF[country] if country else "Africa"}
 
 
 def is_hidden(outlet: dict) -> bool:

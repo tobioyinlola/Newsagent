@@ -3307,6 +3307,17 @@
             "title": "Contact Name",
             "type": "string"
           },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
           "credits": {
             "anyOf": [
               {
@@ -3367,6 +3378,17 @@
             ],
             "default": "0",
             "title": "Picture Credits"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
           }
         },
         "title": "OutletConfig",

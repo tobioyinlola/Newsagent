@@ -59,3 +59,47 @@ async def test_the_signed_in_list_has_the_same_tags_and_filters(client, workspac
 def test_prices_shown_to_visitors_are_the_real_catalogue_prices():
     assert not catalog_service.is_hidden({"credits": "42"})
     assert catalog_service.is_hidden({"credits": "0"}) is True
+
+
+async def test_an_operator_can_refile_an_outlet_and_the_filters_follow(client, workspace):
+    from tests.conftest import OPS
+
+    cfg = (await client.get("/v1/admin/distribution/config", headers=OPS)).json()
+    assert set(cfg["filters"]["topics"]) == set(TOPICS)
+    punch = next(o for o in cfg["outlets"] if o["name"] == "Punch")
+    assert (punch["topic"], punch["country"], punch["region"]) == ("General News", "Nigeria", "Africa")
+
+    body = {**punch, "credits": "128.8", "topic": "Technology", "country": "Ghana"}
+    saved = await client.put(f"/v1/admin/distribution/outlets/{punch['id']}", json=body, headers=OPS)
+    assert saved.status_code == 200
+    assert (saved.json()["topic"], saved.json()["country"], saved.json()["region"]) == ("Technology", "Ghana", "Africa")
+    public = (await client.get("/v1/public/distribution/outlets")).json()
+    moved = next(o for o in public["outlets"] if o["name"] == "Punch")
+    assert (moved["topic"], moved["country"]) == ("Technology", "Ghana")
+    assert "Ghana" not in public["coming_soon"]  # an outlet is there now
+    mine = (await client.get("/v1/distribution/outlets", headers=OWNER)).json()
+    assert next(o for o in mine["outlets"] if o["name"] == "Punch")["country"] == "Ghana"
+
+    # putting it back to the built-in tag stores nothing, so it follows the built-in tag again
+    back = {**punch, "credits": "128.8", "topic": "General News", "country": "Nigeria"}
+    assert (
+        await client.put(f"/v1/admin/distribution/outlets/{punch['id']}", json=back, headers=OPS)
+    ).status_code == 200
+    again = next(
+        o
+        for o in (await client.get("/v1/admin/distribution/config", headers=OPS)).json()["outlets"]
+        if o["name"] == "Punch"
+    )
+    assert (again["topic"], again["country"]) == ("General News", "Nigeria")
+
+    # a country can be cleared (the whole of Africa) and anything unknown is refused
+    assert (
+        await client.put(f"/v1/admin/distribution/outlets/{punch['id']}", json={**punch, "country": ""}, headers=OPS)
+    ).json()["country"] is None
+    for bad in ({"topic": "Sports"}, {"country": "Narnia"}):
+        assert (
+            await client.put(f"/v1/admin/distribution/outlets/{punch['id']}", json={**punch, **bad}, headers=OPS)
+        ).status_code == 422
+    assert (
+        await client.put(f"/v1/admin/distribution/outlets/{punch['id']}", json={**punch}, headers=OWNER)
+    ).status_code in {401, 403}

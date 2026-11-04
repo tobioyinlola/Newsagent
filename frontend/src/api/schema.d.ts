@@ -4800,6 +4800,8 @@ export interface components {
              * @default
              */
             contact_name: string;
+            /** Country */
+            country?: string | null;
             /**
              * Credits
              * @default 0
@@ -4849,6 +4851,8 @@ export interface components {
              * @default 0
              */
             picture_credits: number | string;
+            /** Topic */
+            topic?: string | null;
         };
         /** OutreachSend */
         OutreachSend: {
