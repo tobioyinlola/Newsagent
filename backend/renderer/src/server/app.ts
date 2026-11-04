@@ -56,7 +56,7 @@ export function createApp(opts: { maxQueue?: number; secret: string; maxConcurre
   }, 60_000);
   sweepJobs.unref();
 
-  app.get("/health", (_req, res) => res.json({ status: "ok", queued: heavy.queue.length + light.queue.length, running: heavy.running + light.running, render: { queued: heavy.queue.length, running: heavy.running }, quick: { queued: light.queue.length, running: light.running } }));
+  app.get("/health", (_req, res) => res.json({ status: "ok", draining, queued: heavy.queue.length + light.queue.length, running: heavy.running + light.running, render: { queued: heavy.queue.length, running: heavy.running }, quick: { queued: light.queue.length, running: light.running } }));
 
   // Media for a render in progress, downloaded beforehand (see localize.ts). Served to the render's own browser on this
   // machine only; the folder name is a random render id and is deleted when the render ends.
@@ -77,7 +77,16 @@ export function createApp(opts: { maxQueue?: number; secret: string; maxConcurre
   });
 
   // Back-pressure: when the waiting line is full, say so (429 + Retry-After) rather than queueing without bound.
+  // Draining (the process was told to stop, for example by a deploy): take no new work, so the API's router sends it elsewhere or waits,
+  // and what is running can finish. The same 429 the API already waits out.
+  let draining = false;
+  app.locals.drain = () => { draining = true; };
+  app.locals.idle = () => heavy.running + light.running + heavy.queue.length + light.queue.length === 0;
   const busyFor = (lane: Lane) => (_req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (draining) {
+      res.set("Retry-After", "30");
+      return res.status(429).json({ error: "renderer restarting", queued: lane.queue.length });
+    }
     if (lane.queue.length >= maxQueue) {
       res.set("Retry-After", String(Math.min(60, 5 + lane.queue.length * 2)));
       return res.status(429).json({ error: "renderer busy", queued: lane.queue.length });

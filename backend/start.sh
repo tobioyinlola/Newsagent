@@ -2,6 +2,7 @@
 # Runs the whole backend in one container: renderer (private, on localhost), Celery workers (one pool per lane), Celery scheduler, API.
 # If any of them stops, the container stops, so Railway restarts everything and the problem is visible, not silent.
 # Run exactly ONE replica of this service: two would mean two schedulers (reminders sent twice).
+# An extra renderer is a separate service from the same image with ROLE=renderer (see below).
 #
 # Lanes (app/pipeline/queue.py) keep slow work from blocking quick work:
 #   interactive  founder recordings being processed; a person is waiting on the page, so it must never queue behind a render
@@ -15,6 +16,12 @@ set -u
 
 export RENDERER_URL="${RENDERER_URL:-http://127.0.0.1:4000}"
 
+# ROLE=renderer: only the renderer, for an extra renderer service (RENDERER_URLS on the main service lists it). Same image; it needs
+# RENDERER_SHARED_SECRET and the storage settings, and listens on PORT. Unset or ROLE=all: everything, exactly as before.
+if [ "${ROLE:-all}" = "renderer" ]; then
+  cd renderer && PORT="${PORT:-4000}" RENDER_CONCURRENCY="${RENDER_CONCURRENCY:-2}" RENDER_JOBS_CONCURRENCY="${RENDER_JOBS_CONCURRENCY:-1}" RENDER_LIGHT_CONCURRENCY="${RENDER_LIGHT_CONCURRENCY:-2}" exec node_modules/.bin/tsx src/server/index.ts
+fi
+
 # First-time setup: create the operator's account (and a workspace holding BOOTSTRAP_OPERATOR_CREDITS) if it doesn't exist yet.
 # Sign-in is invite-only and operators create the invites, so the first operator can't come from an invite. Safe to leave set:
 # it does nothing when the account already exists. The operator then sets a password with "Forgot your password?".
@@ -23,7 +30,10 @@ if [ -n "${BOOTSTRAP_OPERATOR_EMAIL:-}" ]; then
 fi
 
 (cd renderer && PORT=4000 RENDER_CONCURRENCY="${RENDER_CONCURRENCY:-2}" RENDER_JOBS_CONCURRENCY="${RENDER_JOBS_CONCURRENCY:-1}" RENDER_LIGHT_CONCURRENCY="${RENDER_LIGHT_CONCURRENCY:-2}" exec node_modules/.bin/tsx src/server/index.ts) &
-for spec in "interactive:${WORKER_INTERACTIVE:-3}" "avatar:${WORKER_AVATAR:-4}" "render:${WORKER_RENDER:-2}" "default:${WORKER_DEFAULT:-1}" "newsdesk:${WORKER_NEWS_DESK:-1}"; do
+# One presenter-video worker slot per job HeyGen may run at once (AVATAR_MAX_CONCURRENCY, 3 unless set), plus one; never fewer than the 4 there were.
+case "${AVATAR_MAX_CONCURRENCY:-3}" in ""|*[!0-9]*) AVATAR_CONC=3 ;; *) AVATAR_CONC="${AVATAR_MAX_CONCURRENCY:-3}" ;; esac
+AVATAR_SLOTS=$(( AVATAR_CONC + 1 )); [ "$AVATAR_SLOTS" -lt 4 ] && AVATAR_SLOTS=4
+for spec in "interactive:${WORKER_INTERACTIVE:-3}" "avatar:${WORKER_AVATAR:-$AVATAR_SLOTS}" "render:${WORKER_RENDER:-2}" "default:${WORKER_DEFAULT:-1}" "newsdesk:${WORKER_NEWS_DESK:-1}"; do
   lane="${spec%%:*}"; n="${spec##*:}"
   celery -A app.pipeline.celery_app worker -Q "$lane" -n "$lane@%h" --concurrency "$n" --loglevel INFO &
 done

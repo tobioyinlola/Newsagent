@@ -145,3 +145,18 @@ def test_celery_workers_switch_to_the_small_pool_when_they_start():
         assert db._worker_pool is True
     finally:
         db._worker_pool = saved
+
+
+def test_vendor_concurrency_comes_from_the_settings_and_defaults_to_what_it_was():
+    from app.config import build_vendor_policies
+
+    assert build_vendor_policies({})["avatar"].max_concurrency == 3  # today's behaviour when nothing is set
+    assert build_vendor_policies({})["renderer"].max_concurrency == 2
+    assert (
+        build_vendor_policies({"AVATAR_MAX_CONCURRENCY": "8"})["avatar"].max_concurrency == 8
+    )  # the HeyGen plan's limit
+    assert build_vendor_policies({"RENDERER_MAX_CONCURRENCY": "4"})["renderer"].max_concurrency == 4
+    for bad in ("", "  ", "many", "0", "-3"):  # a typo never turns the limit off or to nonsense
+        assert build_vendor_policies({"AVATAR_MAX_CONCURRENCY": bad})["avatar"].max_concurrency in (1, 3)
+    p = build_vendor_policies({"AVATAR_MAX_CONCURRENCY": "8"})["avatar"]
+    assert (p.timeout_s, p.max_attempts) == (900, 3)  # nothing else about the policy changes
