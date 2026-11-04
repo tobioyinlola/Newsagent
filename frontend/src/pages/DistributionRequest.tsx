@@ -9,6 +9,7 @@ import { DistributionLogoUpload } from "../components/DistributionLogoUpload";
 import { validateDistributionStep, type DistributionErrors } from "../lib/distributionValidation";
 import { DistributionOutlets, DistributionSelection } from "../components/DistributionOutlets";
 import { DistributionProgress } from "../components/DistributionProgress";
+import { DistributionStart } from "../components/DistributionStart";
 import { DistributionFundingDialog } from "../components/DistributionFundingDialog";
 import { DistributionSteps, DISTRIBUTION_STEPS as steps } from "../components/DistributionSteps";
 import { DistributionMediaOptions } from "../components/DistributionMediaOptions";
@@ -155,7 +156,7 @@ export function DistributionRequestPage() {
   return <div className="space-y-6 pb-28">
     <div><h1 className="text-3xl font-bold">Distribute your story</h1><p className="mt-2">Want to distribute your video and announcement to over 20,000 media outlets?</p><p className="text-sm text-muted">Choose from the available outlets below. Our team coordinates your request; submission is not a guarantee of publication.</p></div>
     <ErrorBox error={error ?? list.error ?? outlets.error ?? videos.error} />
-    {!id && <><Button onClick={() => void create()} disabled={busy || !videos.data || !outlets.data || stories.isLoading}>Start a distribution request</Button><Card title="Your distribution requests"><ul className="space-y-3">{list.data?.map(r => <li key={r.id}><Link className="underline" to={`/distribution/request?draft=${r.id}`}>{r.data.headline || "Untitled distribution"}</Link> — {distributionStatus(r.status)} · {r.stage} · {r.paid ? `Paid (${r.total_credits} credits)` : "Unpaid draft"}</li>)}</ul>{list.data?.length === 0 && <p>No requests yet. Your drafts will appear here.</p>}</Card></>}
+    {!id && <><DistributionStart videoPath={<Button onClick={() => void create()} disabled={busy || !videos.data || !outlets.data || stories.isLoading}>Start a distribution request</Button>} onCreated={did => { void cache.invalidateQueries({ queryKey: ["distributions"] }); nav(`/distribution/request?draft=${did}`); }} /><Card title="Your distribution requests"><ul className="space-y-3">{list.data?.map(r => <li key={r.id}><Link className="underline" to={`/distribution/request?draft=${r.id}`}>{r.data.headline || "Untitled distribution"}</Link> — {distributionStatus(r.status)} · {r.stage} · {r.paid ? `Paid (${r.total_credits} credits)` : "Unpaid draft"}</li>)}</ul>{list.data?.length === 0 && <p>No requests yet. Your drafts will appear here.</p>}</Card></>}
     {id && !draft && !error && <p>Loading your saved request…</p>}
     {draft && row && <>
       {row.status !== "draft" ? <DistributionProgress request={row} /> : <>

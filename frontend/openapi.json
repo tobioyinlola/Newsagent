@@ -3926,6 +3926,118 @@
         "title": "PresenterOut",
         "type": "object"
       },
+      "PressReleaseIn": {
+        "properties": {
+          "city": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "City",
+            "type": "string"
+          },
+          "company": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Company",
+            "type": "string"
+          },
+          "country": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Country",
+            "type": "string"
+          },
+          "details": {
+            "maxLength": 4000,
+            "minLength": 20,
+            "title": "Details",
+            "type": "string"
+          },
+          "first_name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "First Name",
+            "type": "string"
+          },
+          "kind": {
+            "default": "other",
+            "enum": [
+              "product_launch",
+              "funding_round",
+              "partnership",
+              "hiring",
+              "milestone",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Last Name",
+            "type": "string"
+          },
+          "role": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Role",
+            "type": "string"
+          },
+          "website": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Website",
+            "type": "string"
+          }
+        },
+        "required": [
+          "details",
+          "first_name",
+          "last_name",
+          "role",
+          "company",
+          "city",
+          "country"
+        ],
+        "title": "PressReleaseIn",
+        "type": "object"
+      },
+      "PressReleaseOut": {
+        "properties": {
+          "announcement": {
+            "title": "Announcement",
+            "type": "string"
+          },
+          "dek": {
+            "title": "Dek",
+            "type": "string"
+          },
+          "headline": {
+            "title": "Headline",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "unverified": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Unverified",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "headline",
+          "dek",
+          "announcement"
+        ],
+        "title": "PressReleaseOut",
+        "type": "object"
+      },
       "ProgressOut": {
         "properties": {
           "cancellable": {
@@ -4393,6 +4505,24 @@
           "paused"
         ],
         "title": "QueueOut",
+        "type": "object"
+      },
+      "ReadOut": {
+        "properties": {
+          "announcement": {
+            "title": "Announcement",
+            "type": "string"
+          },
+          "headline": {
+            "title": "Headline",
+            "type": "string"
+          }
+        },
+        "required": [
+          "headline",
+          "announcement"
+        ],
+        "title": "ReadOut",
         "type": "object"
       },
       "RealtimeOut": {
@@ -14656,6 +14786,127 @@
           }
         },
         "summary": "Outlets",
+        "tags": [
+          "distribution"
+        ]
+      }
+    },
+    "/v1/distribution/press-release": {
+      "post": {
+        "description": "Write a press release from the announcement's details. Nothing is saved or charged: the owner edits it, then chooses outlets.",
+        "operationId": "write_press_release_v1_distribution_press_release_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PressReleaseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PressReleaseOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Write Press Release",
+        "tags": [
+          "distribution"
+        ]
+      }
+    },
+    "/v1/distribution/press-release/read": {
+      "post": {
+        "description": "Read the text of a press release the business already has (the file's bytes are the request body). The file is not kept.",
+        "operationId": "read_press_release_v1_distribution_press_release_read_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "filename",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "title": "Filename",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Press Release",
         "tags": [
           "distribution"
         ]

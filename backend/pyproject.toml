@@ -18,6 +18,7 @@ dependencies = [
   "anthropic>=0.40",
   "sentry-sdk[fastapi]>=2.0",
   "livekit-api>=1.2.2",
+  "pypdf>=5",
 ]
 
 [dependency-groups]

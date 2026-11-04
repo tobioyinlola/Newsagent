@@ -92,3 +92,21 @@ Distribution channels that cost **0 credits** are not shown to customers. This i
   my own" at any time. With no story yet, the request starts empty for the owner's own text.
 - A request started from a finished video's own page ("Distribute this video") still starts from that video, as before.
 
+## Distribution without a video (press release first)
+
+**Distribution** in the sidebar opens `/distribution/request`, which now starts with "How do you want to start?":
+
+1. **Use a video or story**: the existing route (pick a finished video and a story, or send the latest story on its own).
+2. **Write my press release**: the same details a video starts with (announcement type, key details up to 250 words, first and last name, role,
+   company, city, country in capitals, website). `POST /v1/distribution/press-release` writes a press release (headline, dateline from the city
+   and country, body, an "About" paragraph; claims that could not be checked are hedged and listed). It is free and nothing is saved or sent.
+   The owner edits the headline and text, and can write it again.
+3. **Upload my own**: `POST /v1/distribution/press-release/read?filename=...` (the file's bytes are the request body) reads `.docx`, `.pdf`,
+   `.txt` or `.md` files up to 2 MB and returns the text, split into a headline and a body. The file is not stored. Scans, password-protected
+   PDFs and documents with entity declarations are refused with a plain reason; the owner can paste the text instead.
+
+Either way the owner is then asked to add pictures (up to 10 PNG or JPEG, 5 MB each, or skip), and the draft is created with the press release
+as the announcement (`announcement_source: custom`, no `project_id`) and the pictures, at the **outlets** step. From there the funnel is the
+same: outlets, announcement (editable, still no video), contact and images, review and payment. Writing is rate-limited (12 an hour); reading a
+file is 20 an hour. The PDF reader is `pypdf`.
+
