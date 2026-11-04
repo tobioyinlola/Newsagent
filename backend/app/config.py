@@ -119,7 +119,7 @@ class Settings(BaseSettings):
     app_base_url: str = "http://localhost:5173"
     admin_base_url: str = "http://localhost:5173/admin"  # the back office: the customer app's site under /admin (or, if you host it apart, its own https address)
     environment: str = "local"  # local, staging, production
-    # ENFORCE_LIMITS=false: video creation is never refused for credits, spend caps, vendor budgets, a maintenance pause or request
+    # ENFORCE_LIMITS=false: video creation is never refused for spend caps (a video ALWAYS needs its credit), vendor budgets, a maintenance pause or request
     # rate limits. Spend is still recorded. Sign-in throttles, webhook/share limits and the suspended flag always apply.
     enforce_limits: bool = True
     # true: every finished video is also rendered in vertical 9:16. Off by default: it doubles the final render time.

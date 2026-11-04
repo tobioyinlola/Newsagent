@@ -8,6 +8,7 @@ import { PublicNavigation } from "../components/PublicNavigation";
 import { BackButton } from "../components/BackButton";
 import { AuthShowcase } from "../components/AuthShowcase";
 import { getToken, setToken } from "../lib/auth";
+import { peekAfterAuth, readPick, takeAfterAuth } from "../lib/distributionFilters";
 
 type Session = Schemas["SessionOut"];
 
@@ -45,13 +46,20 @@ function CodeField({ value, onChange }: { value: string; onChange: (v: string) =
   );
 }
 
+// Shown when someone chose distribution outlets before signing up: their choice is kept and waits for them after sign-in.
+function ChosenOutlets() {
+  const n = peekAfterAuth() ? readPick().length : 0;
+  if (!n) return null;
+  return <Notice tone="info">You chose {n} distribution {n === 1 ? "outlet" : "outlets"}. We will bring {n === 1 ? "it" : "them"} with you: after you sign up you go straight to your distribution request.</Notice>;
+}
+
 function useFinish() {
   const nav = useNavigate();
   const qc = useQueryClient();
   return (s: Session) => {
     setToken(s.token);
     qc.clear();
-    nav(s.otp_required ? "/otp" : "/dashboard", { replace: true });
+    nav(s.otp_required ? "/otp" : takeAfterAuth() ?? "/dashboard", { replace: true }); // someone who chose outlets first goes back to their request
   };
 }
 
@@ -66,9 +74,10 @@ export function Login() {
     onSuccess: finish,
   });
   if (invite) return <Navigate to={`/signup?code=${encodeURIComponent(invite)}`} replace />;
-  if (getToken()) return <Navigate to="/dashboard" replace />;
+  if (getToken()) return <Navigate to={peekAfterAuth() ?? "/dashboard"} replace />;
   return (
     <Shell>
+      <ChosenOutlets />
       <Card title="Sign in">
         <p className="auth-form-description">Welcome back. Your stories, videos and media opportunities are waiting.</p>
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); login.mutate(); }}>
@@ -150,10 +159,11 @@ export function Signup() {
     onSuccess: (s) => { try { sessionStorage.removeItem("newsagent.referral"); } catch { /* storage may be unavailable */ } setCreated(true); window.setTimeout(() => finish(s), 1800); },
   });
   const mismatch = confirm.length > 0 && confirm !== password;
-  if (getToken() && !created) return <Navigate to="/dashboard" replace />;
+  if (getToken() && !created) return <Navigate to={peekAfterAuth() ?? "/dashboard"} replace />;
   return (
     <Shell signup>
-      {created && <Toast>Account created. Taking you to your dashboard…</Toast>}
+      <ChosenOutlets />
+      {created && <Toast>{peekAfterAuth() ? "Account created. Taking you to your distribution request…" : "Account created. Taking you to your dashboard…"}</Toast>}
       <Card title={inviteCode ? "Create your workspace" : "Publish your story free"}>
         {inviteCode && preview.isError ? (
           <Notice tone="warn">This invite link is not valid or has expired. You can <Link className="underline" to="/signup">sign up here</Link> instead, or <Link className="underline" to="/login">sign in</Link>.</Notice>
@@ -218,7 +228,7 @@ export function OtpChallenge() {
   const qc = useQueryClient();
   const verify = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/auth/login/otp", { body: { code: code.trim() } })),
-    onSuccess: () => { qc.clear(); nav("/dashboard", { replace: true }); },
+    onSuccess: () => { qc.clear(); nav(takeAfterAuth() ?? "/dashboard", { replace: true }); },
   });
   const resend = useMutation({ mutationFn: () => unwrap(api.POST("/v1/auth/login/otp/resend")) });
   if (!getToken()) return <Navigate to="/login" replace />;

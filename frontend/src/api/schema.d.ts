@@ -3178,6 +3178,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/distribution/outlets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public Outlets
+         * @description What a visitor who is not signed in may browse before choosing outlets: name, topic, place and price. Nothing internal.
+         */
+        get: operations["public_outlets_v1_public_distribution_outlets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/stats": {
         parameters: {
             query?: never;
@@ -4780,6 +4800,8 @@ export interface components {
              * @default
              */
             contact_name: string;
+            /** Country */
+            country?: string | null;
             /**
              * Credits
              * @default 0
@@ -4829,6 +4851,8 @@ export interface components {
              * @default 0
              */
             picture_credits: number | string;
+            /** Topic */
+            topic?: string | null;
         };
         /** OutreachSend */
         OutreachSend: {
@@ -13186,6 +13210,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CreditOptionOut"][];
+                };
+            };
+        };
+    };
+    public_outlets_v1_public_distribution_outlets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

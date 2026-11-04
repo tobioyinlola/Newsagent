@@ -116,7 +116,7 @@ async def charge_video(session: AsyncSession, workspace_id: str, project: Projec
     price = credits_per_video()
     ws = (await session.execute(select(Workspace).where(Workspace.id == workspace_id).with_for_update())).scalar_one()
     enforce = get_settings().enforce_limits
-    if enforce and ws.credit_balance < price:
+    if ws.credit_balance < price:  # always: a video is never started without the credit to pay for it, whatever ENFORCE_LIMITS says
         raise InsufficientCredits(ws.credit_balance, price)
     if enforce and ws.spend_cap and ws.spent_total + price > ws.spend_cap:
         raise SpendCapReached

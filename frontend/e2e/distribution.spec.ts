@@ -50,11 +50,11 @@ test("completed video to distribution draft, checked images, wallet submission, 
   for (const name of ["Business (Africa) Channels", "Entertainment News Channels"]) {
     await expect(page.getByRole("heading", { name, exact: true })).toHaveCount(0);
   }
-  await page.getByLabel("Outlet category", { exact: true }).selectOption("Crypto News Channels");
-  await expect(page.getByRole("checkbox")).toHaveCount(5);
+  await page.getByRole("button", { name: /^Technology/ }).click(); // the topic filter: 4 Nigerian tech sites and the 5 crypto channels
+  await expect(page.getByRole("checkbox")).toHaveCount(9);
   await page.getByRole("checkbox", { name: /^CoinSpeaks/ }).check();
-  await page.getByLabel("Outlet category", { exact: true }).selectOption("Nigeria News Channels");
-  await expect(page.getByRole("checkbox")).toHaveCount(20); // 22, minus two that cost 0 credits (hidden for now)
+  await page.getByRole("button", { name: /^General News/ }).click();
+  await expect(page.getByRole("checkbox")).toHaveCount(27); // the news outlets that cost credits (the rest are hidden for now)
   await expect(page.getByRole("checkbox", { name: /^Tribune / }).locator("..")).toContainText("18.8");
   await expect(page.getByRole("checkbox", { name: /^Daily Nation / }).locator("..")).toContainText("651.6");
   await expect(page.getByRole("checkbox", { name: /^Pilot Newspaper / })).toHaveCount(1);
@@ -65,10 +65,10 @@ test("completed video to distribution draft, checked images, wallet submission, 
   await expect(page.getByRole("dialog", { name: "Your selected outlets" })).toContainText("Total 388.4 credits");
   await page.getByRole("button", { name: "Close selection" }).click();
   for (const name of [/^Tribune /, /^The Guardian /, /^Sun /]) await page.getByRole("checkbox", { name }).uncheck();
-  await page.getByLabel("Outlet category", { exact: true }).selectOption("Crypto News Channels");
+  await page.getByRole("button", { name: /^Technology/ }).click();
   await expect(page.getByRole("checkbox", { name: /^CoinSpeaks/ })).toBeChecked();
   await page.getByRole("checkbox", { name: /^CoinSpeaks/ }).uncheck();
-  await page.getByLabel("Outlet category", { exact: true }).selectOption("");
+  await page.getByRole("button", { name: "All topics" }).click();
   await expect(page.getByRole("checkbox")).toHaveCount(37); // 53 channels minus the 16 that cost 0 credits (hidden for now)
   await page.getByRole("searchbox", { name: "Search media outlets" }).fill("Premium Times");
   await expect(page.getByRole("checkbox")).toHaveCount(1);
@@ -81,6 +81,7 @@ test("completed video to distribution draft, checked images, wallet submission, 
   await expect(page.getByRole("checkbox")).toHaveCount(2);
   await page.getByRole("button", { name: "Selected only (2)" }).click();
   await outletList.evaluate(e => { e.scrollTop = e.scrollHeight; });
+  await page.getByRole("checkbox").last().scrollIntoViewIfNeeded(); // the filters sit above the list, so on a phone the page scrolls too
   await expect(page.getByRole("checkbox").last()).toBeInViewport();
   await expect(page.getByRole("checkbox", { name: "P mp Kulture" })).toHaveCount(0); // a free channel: hidden
   await outletList.evaluate(e => { e.scrollTop = 0; });

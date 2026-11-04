@@ -3307,6 +3307,17 @@
             "title": "Contact Name",
             "type": "string"
           },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
           "credits": {
             "anyOf": [
               {
@@ -3367,6 +3378,17 @@
             ],
             "default": "0",
             "title": "Picture Credits"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
           }
         },
         "title": "OutletConfig",
@@ -19248,6 +19270,30 @@
         "summary": "Public Options",
         "tags": [
           "billing"
+        ]
+      }
+    },
+    "/v1/public/distribution/outlets": {
+      "get": {
+        "description": "What a visitor who is not signed in may browse before choosing outlets: name, topic, place and price. Nothing internal.",
+        "operationId": "public_outlets_v1_public_distribution_outlets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Public Outlets V1 Public Distribution Outlets Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Public Outlets",
+        "tags": [
+          "distribution"
         ]
       }
     },

@@ -1,22 +1,24 @@
 import { useEffect, useRef, useState } from "react";
 import type { Outlet } from "../lib/distribution";
 import { mediaPolicy } from "./DistributionMediaOptions";
+import { ALL, matches, type Facets, type OutletFilters as FilterList } from "../lib/distributionFilters";
 import { DistributionOutletLogo } from "./DistributionOutletLogo";
+import { OutletFilters } from "./OutletFilters";
 import { Button } from "./ui";
 
-type PickerProps = { outlets: Outlet[]; selectedIds: string[]; onChange: (ids: string[]) => void; comingSoon: string[] };
+type PickerProps = { outlets: Outlet[]; selectedIds: string[]; onChange: (ids: string[]) => void; comingSoon: string[]; filters?: FilterList };
 
-export function DistributionOutlets({ outlets, selectedIds, onChange, comingSoon }: PickerProps) {
+export function DistributionOutlets({ outlets, selectedIds, onChange, comingSoon, filters }: PickerProps) {
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
+  const [facets, setFacets] = useState<Facets>(ALL);
   const categories = [...new Set(outlets.map(o => o.category ?? "Media outlets"))];
   const [selectedOnly, setSelectedOnly] = useState(false);
   const list = useRef<HTMLDivElement>(null);
   const selected = outlets.filter(o => selectedIds.includes(o.id));
-  const visible = outlets.filter(o => (!selectedOnly || selectedIds.includes(o.id)) && (!category || (o.category ?? "Media outlets") === category) && `${o.name} ${o.category ?? "Media outlets"}`.toLowerCase().includes(search.trim().toLowerCase()));
+  const visible = outlets.filter(o => (!selectedOnly || selectedIds.includes(o.id)) && matches(o, facets) && `${o.name} ${o.category ?? "Media outlets"}`.toLowerCase().includes(search.trim().toLowerCase()));
   const groups = categories.map(name => ({ name, items: visible.filter(o => (o.category ?? "Media outlets") === name) })).filter(group => group.items.length);
   const toggle = (id: string) => onChange(selectedIds.includes(id) ? selectedIds.filter(x => x !== id) : [...selectedIds, id]);
-  useEffect(() => { list.current?.scrollTo({ top: 0 }); }, [search, selectedOnly, category]);
+  useEffect(() => { list.current?.scrollTo({ top: 0 }); }, [search, selectedOnly, facets]);
   return <section aria-labelledby="outlet-picker-title" className="overflow-hidden rounded-xl border-2 border-ink bg-white">
     <div className="border-b border-line p-4 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-muted">Choose your reach</p><h2 id="outlet-picker-title" className="mt-1 text-xl font-bold sm:text-2xl">Where would you like to distribute?</h2><p className="mt-2 text-sm text-muted">Browse outlets by category and select the publications that fit your story.</p></div><span className="rounded-full bg-brand-green px-3 py-1 text-xs font-bold">Africa · Available</span></div>
@@ -24,7 +26,7 @@ export function DistributionOutlets({ outlets, selectedIds, onChange, comingSoon
         <label className="relative block flex-1"><span className="sr-only">Search media outlets</span><svg aria-hidden="true" className="pointer-events-none absolute left-3 top-3.5 h-5 w-5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search publications or categories…" className="min-h-12 w-full rounded-lg border border-ink bg-paper py-3 pl-10 pr-3 text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple" /></label>
         <button type="button" aria-pressed={selectedOnly} onClick={() => setSelectedOnly(!selectedOnly)} className={`min-h-12 shrink-0 rounded-lg border-2 px-4 py-2 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple ${selectedOnly ? "border-ink bg-ink text-white" : "border-line bg-white text-ink"}`}>Selected only ({selected.length})</button>
       </div>
-      <label className="mt-4 block text-sm font-bold sm:max-w-md">Outlet category<select aria-label="Outlet category" className="mt-2 min-h-12 w-full rounded-lg border border-ink bg-white px-3 py-2 text-base font-normal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple" value={category} onChange={e => setCategory(e.target.value)}><option value="">All categories ({outlets.length})</option>{categories.map(name => <option key={name} value={name}>{name} ({outlets.filter(o => (o.category ?? "Media outlets") === name).length})</option>)}</select></label>
+      {filters && <div className="mt-4"><OutletFilters filters={filters} outlets={outlets} value={facets} onChange={setFacets} /></div>}
     </div>
     <div className="grid lg:grid-cols-[minmax(0,1fr)_15rem]">
       <div className="min-w-0">
@@ -33,7 +35,7 @@ export function DistributionOutlets({ outlets, selectedIds, onChange, comingSoon
           {visible.length ? <div className="space-y-6">{groups.map((group, index) => <section key={group.name} aria-labelledby={`outlet-category-${index}`}><div className="sticky top-0 z-10 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-line bg-paper px-3 py-3"><h3 id={`outlet-category-${index}`} className="text-sm font-bold">{group.name}</h3><p className="text-xs text-muted">{group.items.length} {group.items.length === 1 ? "outlet" : "outlets"} · {group.items.filter(o => selectedIds.includes(o.id)).length} selected</p></div><div className="grid content-start gap-2 sm:grid-cols-2">{group.items.map(o => {
             const checked = selectedIds.includes(o.id);
             return <label key={o.id} className={`group flex min-h-20 cursor-pointer items-center gap-3 rounded-lg border-2 p-3 transition-colors motion-reduce:transition-none focus-within:ring-2 focus-within:ring-brand-purple focus-within:ring-offset-2 ${checked ? "border-ink bg-brand-green/15" : "border-line bg-white hover:border-ink/50 hover:bg-paper"}`}><input type="checkbox" checked={checked} onChange={() => toggle(o.id)} className="h-5 w-5 shrink-0 accent-ink" /><DistributionOutletLogo name={o.name} /><span className="min-w-0 flex-1"><span className="block break-words text-sm font-bold leading-snug">{o.name}</span><span className="mt-1 inline-flex rounded-full bg-paper px-2 py-0.5 text-xs font-semibold text-ink">{o.credits} credits</span><span className="mt-1 block text-xs text-muted">{mediaPolicy(o)}</span></span><span aria-hidden="true" className={`shrink-0 text-sm ${checked ? "text-ink" : "text-transparent"}`}>✓</span></label>;
-          })}</div></section>)}</div> : <div className="flex min-h-56 flex-col items-center justify-center px-4 text-center"><h3 className="font-bold">{selectedOnly && !selected.length ? "Your selection starts here" : "No matching outlets"}</h3><p className="mt-2 max-w-xs text-sm text-muted">{selectedOnly && !selected.length ? "Browse the full list and choose the publications you want." : "Try another publication name, or reset your filters."}</p><button className="mt-4 min-h-11 rounded-lg border-2 border-ink px-4 py-2 text-sm font-bold" onClick={() => { setSearch(""); setSelectedOnly(false); setCategory(""); }}>Show all outlets</button></div>}
+          })}</div></section>)}</div> : <div className="flex min-h-56 flex-col items-center justify-center px-4 text-center"><h3 className="font-bold">{selectedOnly && !selected.length ? "Your selection starts here" : "No matching outlets"}</h3><p className="mt-2 max-w-xs text-sm text-muted">{selectedOnly && !selected.length ? "Browse the full list and choose the publications you want." : "Try another publication name, or reset your filters."}</p><button className="mt-4 min-h-11 rounded-lg border-2 border-ink px-4 py-2 text-sm font-bold" onClick={() => { setSearch(""); setSelectedOnly(false); setFacets(ALL); }}>Show all outlets</button></div>}
         </div>
         <p className="border-t border-line px-4 py-3 text-xs text-muted sm:px-6">Scroll inside the list to browse. Your selections stay saved across categories and searches.</p>
       </div>

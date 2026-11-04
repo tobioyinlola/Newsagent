@@ -74,7 +74,7 @@ async def test_catalog_draft_video_and_admin_progress(client, distribution_data)
     assert len(catalog["outlets"]) == 53
     assert all(o["credits"] == "0" for o in catalog["outlets"])
     assert sum(o["name"] == "Premium Times" for o in catalog["outlets"]) == 1
-    assert catalog["coming_soon"] == ["United States", "Canada", "United Kingdom"]
+    assert catalog["coming_soon"] == ["Ghana", "Uganda", "United Kingdom"]
     videos = (await client.get("/v1/distribution/videos", headers=OWNER)).json()
     assert videos[0]["headline"] == "Acme launches"
     assert "A new product." in videos[0]["announcement"]

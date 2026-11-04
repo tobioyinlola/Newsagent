@@ -12,7 +12,7 @@ from app.auth import Principal, require
 from app.db import get_session
 from app.models import DistributionMail, DistributionPlacement, DistributionRequest, SystemSetting
 from app.models.base import utcnow
-from app.routes.distribution import OUTLETS, result
+from app.routes.distribution import LOCATIONS, OUTLETS, REGION_OF, TOPICS, result
 from app.services import distribution as service
 from app.services import distribution_catalog as config
 from app.services.audit import audit
@@ -72,6 +72,7 @@ async def get_config(p: Principal = Depends(require("operations.view")), db: Asy
         "team_emails": (row.value if row else {}).get("team_emails", []),
         "outlets": await config.catalog(db, admin=True),
         "template_variables": sorted(config.VARIABLES),
+        "filters": {"topics": list(TOPICS), "locations": [{"region": r, "countries": list(c)} for r, c in LOCATIONS.items()]},
     }
 
 
@@ -95,9 +96,17 @@ async def set_outlet(
 ):
     if outlet_id not in OUTLETS:
         raise HTTPException(404, "Outlet not found")
+    base = OUTLETS[outlet_id]
+    if body.topic and body.topic not in TOPICS:
+        raise HTTPException(422, "Choose one of the listed topics")
+    if body.country and body.country not in REGION_OF:
+        raise HTTPException(422, "Choose one of the listed countries")
     value = body.model_dump(mode="json")
+    # only a real change is stored, so an outlet that is left alone keeps following the built-in tag
+    value["topic"] = body.topic if body.topic and body.topic != base["topic"] else None
+    value["country"] = None if body.country is None or (body.country or None) == base["country"] else body.country
     await save_setting(db, p, lambda old: {**old, "outlets": {**old.get("outlets", {}), outlet_id: value}})
-    return {**OUTLETS[outlet_id], **value}
+    return next(o for o in await config.catalog(db, admin=True) if o["id"] == outlet_id)
 
 
 @router.get("/v1/admin/distribution/{id}")
