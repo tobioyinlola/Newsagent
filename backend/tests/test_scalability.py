@@ -99,3 +99,49 @@ async def test_the_ai_writer_is_never_called_while_a_database_connection_is_held
     before = len(seen)
     assert (await client.post("/v1/distribution/press-release", json=body, headers=OWNER)).status_code == 200
     assert len(seen) == before + 1 and not seen[-1]
+
+
+async def test_worker_processes_use_the_small_database_pool(monkeypatch):
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    from app import db
+    from app.config import get_settings
+
+    seen: list[dict] = []
+
+    def fake_engine(url, **opts):
+        seen.append(opts)
+        return create_async_engine("sqlite+aiosqlite://")  # a real engine, so a session maker can be built on it
+
+    s = get_settings()
+    saved = (db._engine, db._maker, db._worker_pool)
+    monkeypatch.setattr(db, "create_async_engine", fake_engine)
+    monkeypatch.setattr(s, "database_url", "postgresql+asyncpg://u:p@localhost/db")
+    try:
+        db._engine = db._maker = None
+        db._worker_pool = False
+        db.session_maker()  # the API process
+        db._engine = db._maker = None
+        db.use_worker_pool()  # what a Celery worker process does when it starts
+        db.session_maker()
+    finally:
+        db._engine, db._maker, db._worker_pool = saved
+    api, worker = seen
+    assert (api["pool_size"], api["max_overflow"]) == (s.db_pool_size, s.db_max_overflow)
+    assert (worker["pool_size"], worker["max_overflow"]) == (s.db_worker_pool_size, s.db_worker_max_overflow)
+    assert (
+        11 * (worker["pool_size"] + worker["max_overflow"]) + api["pool_size"] + api["max_overflow"] < 100
+    )  # fits Postgres's default
+
+
+def test_celery_workers_switch_to_the_small_pool_when_they_start():
+    from app import db
+    from app.pipeline import celery_app
+
+    saved = db._worker_pool
+    try:
+        db._worker_pool = False
+        celery_app._small_database_pools()  # what Celery calls in each new worker process
+        assert db._worker_pool is True
+    finally:
+        db._worker_pool = saved
