@@ -1990,6 +1990,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/distribution/press-release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Write Press Release
+         * @description Write a press release from the announcement's details. Nothing is saved or charged: the owner edits it, then chooses outlets.
+         */
+        post: operations["write_press_release_v1_distribution_press_release_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/distribution/press-release/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read Press Release
+         * @description Read the text of a press release the business already has (the file's bytes are the request body). The file is not kept.
+         */
+        post: operations["read_press_release_v1_distribution_press_release_read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/distribution/stories": {
         parameters: {
             query?: never;
@@ -4884,6 +4924,50 @@ export interface components {
             /** Preview Image Url */
             preview_image_url?: string | null;
         };
+        /** PressReleaseIn */
+        PressReleaseIn: {
+            /** City */
+            city: string;
+            /** Company */
+            company: string;
+            /** Country */
+            country: string;
+            /** Details */
+            details: string;
+            /** First Name */
+            first_name: string;
+            /**
+             * Kind
+             * @default other
+             * @enum {string}
+             */
+            kind: "product_launch" | "funding_round" | "partnership" | "hiring" | "milestone" | "other";
+            /** Last Name */
+            last_name: string;
+            /** Role */
+            role: string;
+            /**
+             * Website
+             * @default
+             */
+            website: string;
+        };
+        /** PressReleaseOut */
+        PressReleaseOut: {
+            /** Announcement */
+            announcement: string;
+            /** Dek */
+            dek: string;
+            /** Headline */
+            headline: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Unverified
+             * @default []
+             */
+            unverified: string[];
+        };
         /** ProgressOut */
         ProgressOut: {
             /** Cancellable */
@@ -5087,6 +5171,13 @@ export interface components {
             takes: {
                 [key: string]: number;
             };
+        };
+        /** ReadOut */
+        ReadOut: {
+            /** Announcement */
+            announcement: string;
+            /** Headline */
+            headline: string;
         };
         /** RealtimeOut */
         RealtimeOut: {
@@ -10438,6 +10529,74 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    write_press_release_v1_distribution_press_release_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PressReleaseIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PressReleaseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_press_release_v1_distribution_press_release_read_post: {
+        parameters: {
+            query: {
+                filename: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadOut"];
                 };
             };
             /** @description Validation Error */
