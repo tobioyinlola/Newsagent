@@ -33,7 +33,7 @@ def featured() -> list[Presenter]:
     Each entry is `id|name|gender|voice_id|picture` separated by `;`; only id and name are required. The voice is this presenter's own
     (e.g. a female African-English voice); the picture is a file name in the site's /presenters folder (default `<id>.jpg`)."""
     out = []
-    for item in get_settings().heygen_featured_presenters.split(";"):
+    for item in (get_settings().heygen_featured_presenters + ";" + get_settings().heygen_extra_presenters).split(";"):
         parts = [x.strip() for x in item.split("|")]
         if len(parts) >= 2 and parts[0]:
             picture = parts[4] if len(parts) > 4 and parts[4] else f"{parts[0]}.jpg"

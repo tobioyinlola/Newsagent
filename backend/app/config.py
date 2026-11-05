@@ -87,6 +87,7 @@ class Settings(BaseSettings):
     heygen_fullframe_avatar_ids: str = ""
     # presenters offered first and always valid: "id|Name|gender;id|Name|gender". Their pictures are the frontend's /presenters/<id>.jpg
     heygen_featured_presenters: str = ""
+    heygen_extra_presenters: str = ""  # more house presenters, same format as above; added after them (so a new one never has to rewrite the list above)
     heygen_webhook_secret: str = ""
     heygen_webhook_signature_header: str = "signature"
     synthesia_api_key: str = ""

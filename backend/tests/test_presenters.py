@@ -249,3 +249,14 @@ async def test_the_video_service_uses_a_house_presenters_own_voice(monkeypatch):
     async with httpx.AsyncClient() as c:  # no request is made: the presenter's own voice is used before any lookup
         assert await avatar._voice_for(c, "look-a", "british") == "voice-ng-1"
         assert await avatar._voice_for(c, "look-a", "british", "female") == "voice-ng-1"
+
+
+async def test_extra_house_presenters_are_added_after_the_original_list(client, workspace, monkeypatch):
+    monkeypatch.setattr(get_settings(), "heygen_featured_presenters", "look1|Marcus|male")
+    monkeypatch.setattr(get_settings(), "heygen_extra_presenters", "look2|Amara|female|voice-9|amara.jpg")
+    got = (await client.get("/v1/presenters", headers=OWNER)).json()
+    assert [p["id"] for p in got[:2]] == ["look1", "look2"]
+    monkeypatch.setattr(get_settings(), "heygen_featured_presenters", "")
+    assert [p["id"] for p in (await client.get("/v1/presenters", headers=OWNER)).json()[:1]] == [
+        "look2"
+    ]  # works on its own too
