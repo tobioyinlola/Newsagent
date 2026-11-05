@@ -127,6 +127,7 @@ NAMES = [
     "Reuters",
     "Bloomberg",
     "Fox Business",
+    "Entrepreneur",
 ]
 # Keep the existing IDs stable: drafts and paid requests refer to these outlets by ID.
 OUTLET_CATEGORIES = {
@@ -237,6 +238,7 @@ DEFAULT_OUTLET_CREDITS = {
     "Reuters": "1084.2",
     "Bloomberg": "4815.2",
     "Fox Business": "4695.6",
+    "Entrepreneur": "2407.6",  # the sheet lists it twice (2407.6 and 3611.4); the owner asked for one, the first
     # Entertainment news channels: the sheet's CF Credit + Margins value (61) for every one of them.
     "Naijaloaded": "61",
     "Tooxclusive": "61",
@@ -309,6 +311,7 @@ _ABROAD = {
     "Reuters": "United States",
     "Bloomberg": "United States",
     "Fox Business": "United States",
+    "Entrepreneur": "United States",
     "Gulf Business": "United Arab Emirates",
     "Forbes Middle East": "United Arab Emirates",
     "Arabian Business": "United Arab Emirates",
