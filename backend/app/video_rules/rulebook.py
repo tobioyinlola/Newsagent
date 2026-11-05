@@ -42,7 +42,7 @@ class Rule:
     enforced_in: tuple[str, ...] = field(default_factory=tuple)  # where the code applies it
 
 
-VERSION = 4
+VERSION = 6
 CHANGELOG: list[str] = [
     "v1 (2026-11-02): rulebook created. Every business interview video rule recorded exactly as the code behaved on this date; "
     "no behaviour changed.",
@@ -57,6 +57,11 @@ CHANGELOG: list[str] = [
     "closing remark with the web address said and shown on a card for the whole line (BIV-SCR-013, BIV-GFX-011), and a new "
     "sign-off (BIV-SCR-014). Retires BIV-SCR-002, BIV-SCR-003, BIV-SCR-005, BIV-SCR-006, BIV-SCR-007, BIV-GFX-006 and "
     "BIV-SCN-001. Videos written before v4 keep their old running order.",
+    "v5 (2026-11-05): added BIV-INT-012, retiring BIV-INT-006. The recording of each answer now runs from the first second of "
+    "the countdown (it used to start only when the countdown ended, so the first words could be lost); the countdown length "
+    "is unchanged and the lead-in is trimmed off with the rest of the silence when the answer is cleaned up.",
+    "v6 (2026-11-05): added BIV-INT-013, retiring BIV-INT-012. The recording of each answer starts two seconds before the "
+    "countdown ends (not at its first second); the countdown is still five seconds.",
 ]
 
 RULES: list[Rule] = [
@@ -78,7 +83,7 @@ RULES: list[Rule] = [
          15, enforced_in=("services/interview.py", "frontend interview/timing.ts")),
     Rule("BIV-INT-006", "interview", "Countdown before each answer (seconds)",
          "A countdown runs before recording starts, so the founder is ready.",
-         5, enforced_in=("frontend interview/timing.ts",)),
+         5, status="retired", replaced_by="BIV-INT-012", enforced_in=("frontend interview/timing.ts",)),
     Rule("BIV-INT-007", "interview", "Round-up time after the window (seconds)",
          "When the minute is up, the founder gets this much extra time to finish their sentence.",
          5, enforced_in=("frontend interview/timing.ts",)),
@@ -301,6 +306,18 @@ RULES: list[Rule] = [
          "Every video ends with these words, so the sign-off clip is made once per presenter and voice, then reused.",
          "This is Cover Founder News. Until we bring you our next story, have a good day!",
          since=4, enforced_in=("services/presenters.py", "services/guided.py")),
+    Rule("BIV-INT-012", "interview", "Countdown before each answer (seconds), recorded",
+         "A countdown runs before each answer so the founder is ready, and the recording runs through it from its first second: "
+         "nothing said early or right at the end of the countdown is lost. The lead-in is trimmed off with the other silence "
+         "when the answer is cleaned up (BIV-INT-011).",
+         5, since=5, status="retired", replaced_by="BIV-INT-013",
+         enforced_in=("frontend interview/timing.ts", "frontend interview/InterviewRoom.tsx")),
+    Rule("BIV-INT-013", "interview", "Countdown before each answer, and when recording starts (seconds)",
+         "A countdown runs before each answer so the founder is ready. The recording starts this many seconds before the countdown "
+         "ends, so nothing said early or right as it ends is lost. The lead-in is trimmed off with the other silence when the "
+         "answer is cleaned up (BIV-INT-011).",
+         {"countdown_s": 5, "record_before_end_s": 2}, since=6,
+         enforced_in=("frontend interview/timing.ts", "frontend interview/InterviewRoom.tsx")),
     Rule("BIV-GFX-011", "graphics", "Web address card for the whole closing remark",
          "The business's web address card comes in when the closing remark starts and stays still on screen until that line "
          "ends (no website, no card).",

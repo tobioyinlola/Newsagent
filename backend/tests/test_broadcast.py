@@ -34,6 +34,27 @@ def test_the_house_presenter_is_marcus_richard_lead_btn_director(monkeypatch):
     assert presenter_identity(Project(anchor_id="look2")) == {"name": "Elena", "title": "Presenter, CF"}
 
 
+def test_amara_is_amara_dickson_business_reporter_and_sits_in_the_male_reporters_newsroom(monkeypatch):
+    from app.config import get_settings
+    from app.models import Project
+    from app.pipeline import steps
+
+    st = get_settings()
+    monkeypatch.setattr(st, "heygen_featured_presenters", "look1|Marcus, news desk|male")
+    monkeypatch.setattr(st, "heygen_extra_presenters", "look3|Amara, news desk|female")
+    monkeypatch.setattr(st, "heygen_fullframe_avatar_ids", "look1:plain")
+    monkeypatch.setattr(st, "heygen_plate_avatar_ids", "look3")
+    amara, marcus = Project(anchor_id="look3"), Project(anchor_id="look1")
+    assert presenter_identity(amara) == {"name": "Amara Dickson", "title": "Business Reporter, CF News"}
+    assert steps.uses_plate(amara) and not steps.is_fullframe(amara)  # a cut-out shown on the newsroom plate
+    assert not steps.uses_plate(marcus)  # Marcus brings his own newsroom in his picture
+    monkeypatch.setattr(st, "heygen_plate_avatar_ids", "")
+    assert not steps.uses_plate(amara)  # switched off: back to the drawn set
+    monkeypatch.setattr(st, "heygen_plate_avatar_ids", "look3")
+    monkeypatch.setattr(st, "heygen_fullframe_avatar_ids", "look1:plain,look3:plain")
+    assert not steps.uses_plate(amara)  # a look that brings its own studio never gets the plate
+
+
 def test_closing_params_are_read_from_the_environment_setting(monkeypatch):
     from app.config import get_settings
     from app.pipeline.steps import closing_params

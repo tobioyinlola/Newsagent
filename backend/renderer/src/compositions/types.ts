@@ -7,6 +7,7 @@ export type NewsProps = {
   anchorDurationSeconds: number;
   // real presenter footage before and after the AI presenter (the operator's library); the studio graphics run only over the anchor
   anchorFullFrame?: boolean; // the presenter video already contains its studio: draw it full frame, not over our set
+  anchorPlate?: boolean; // a cut-out presenter is shown on the newsroom plate (the male reporter's room), with no desk
   anchorCovers?: boolean; // with anchorFullFrame: cover the picture's own screens and reflections with our boards (default true)
   studio?: string; // which set to draw (project.studio_id): "blue" (default) or "navy"
   introClip?: { src: string; seconds: number } | null;

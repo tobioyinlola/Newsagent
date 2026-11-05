@@ -5,7 +5,7 @@ import { pickMime } from "../founder/media";
 import { ChunkStore } from "../founder/store";
 import { TakeUploader } from "../founder/uploader";
 import { grabFrame, uploadSnapshot } from "./snapshot";
-import { answerTiming, COUNTDOWN_S, ROUND_UP_S, mmss } from "./timing";
+import { answerTiming, COUNTDOWN_S, RECORD_BEFORE_END_S, ROUND_UP_S, mmss } from "./timing";
 import type { Realtime } from "./realtime";
 import { type VoiceLine, speak } from "./voice";
 import { VoiceWave } from "./VoiceWave";
@@ -139,11 +139,16 @@ export function InterviewRoom(p: RoomProps) {
     let n = 0;
     rec.ondataavailable = (e) => { if (e.data.size > 0) { const i = n++; chunks[i] = e.data; void up.add(i, e.data); } };
     const stopped = new Promise<void>((resolve, reject) => { rec.onstop = () => resolve(); rec.onerror = () => reject(new Error("Your browser interrupted the recording. Please try this answer again.")); });
+    // The recording starts two seconds before the countdown ends (BIV-INT-013), so nothing the founder says early or right as it
+    // ends is lost to the recorder starting up. The lead-in is cut off again when the answer is cleaned up (trimmed to the speech).
     setPhase("countdown");
     for (let seconds = COUNTDOWN_S; seconds > 0; seconds--) {
       setCountdown(seconds);
+      if (seconds <= RECORD_BEFORE_END_S && rec.state === "inactive") rec.start(CHUNK_MS);
       await sleep(FAST ? 10 : 1000);
       if (ctl.current.aborted || lost.current) {
+        rec.ondataavailable = null; rec.onerror = null; // nothing from a recording we are throwing away is uploaded
+        if (rec.state === "recording") rec.stop();
         up.dispose(); recorder.current = null;
         await guest.DELETE("/v1/interview/{token}/takes/{take_id}", { params: { path: { token: p.token, take_id: take.id } } }).catch(() => undefined);
         await store.deleteTake(take.id);
@@ -151,7 +156,6 @@ export function InterviewRoom(p: RoomProps) {
       }
     }
     setCountdown(0);
-    rec.start(CHUNK_MS);
     setPhase("answering");
     const started = Date.now();
     let snapped = false;
@@ -311,7 +315,7 @@ export function InterviewRoom(p: RoomProps) {
             </p>
           </div>
         )}
-        {phase === "countdown" && <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center bg-ink/50" role="status" aria-label="Recording countdown"><p className="text-8xl font-extrabold text-brand-green">{countdown || "Go"}</p><p className="mt-3 text-lg font-bold">Get ready — recording starts after the countdown</p></div>}
+        {phase === "countdown" && <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center bg-ink/50" role="status" aria-label="Recording countdown"><p className="text-8xl font-extrabold text-brand-green">{countdown || "Go"}</p><p className="mt-3 text-lg font-bold">{countdown > RECORD_BEFORE_END_S ? "Get ready — your answer begins at Go" : "Recording has started — your answer begins at Go"}</p></div>}
         {phase === "answering" && (
           <div className="pointer-events-none absolute inset-x-0 top-14 flex flex-col items-center gap-3 px-3">
             {/* up by the camera, so finishing an answer needs almost no glance away from it */}

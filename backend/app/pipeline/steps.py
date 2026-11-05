@@ -120,6 +120,14 @@ def fullframe_covers(project: Project) -> bool:
     return _fullframe_entries().get(avatar_for(project) or "", True)
 
 
+def uses_plate(project: Project) -> bool:
+    """Is this presenter a cut-out shown in the male reporter's newsroom (the plate), not on the drawn blue set? A look that brings its own
+    studio never is."""
+    look = avatar_for(project)
+    ids = {x.strip() for x in get_settings().heygen_plate_avatar_ids.split(",") if x.strip()}
+    return bool(look) and look in ids and not is_fullframe(project)
+
+
 def clip_ext(project: Project) -> str:
     return (
         "mp4" if is_fullframe(project) else "webm"
@@ -171,7 +179,10 @@ def published_label(now: datetime | None = None) -> str:
     return f"{t:%b} {t.day}, {t.year} · {t.hour % 12 or 12}:{t:%M} {'AM' if t.hour < 12 else 'PM'} {t.tzname()}".upper()
 
 
-BRAND_INTRO_S, BRAND_OUTRO_S = float(rule_value("BIV-SCN-005")["intro"]), float(rule_value("BIV-SCN-005")["outro"])  # keep in step with renderer/src/compositions/brand.ts
+BRAND_INTRO_S, BRAND_OUTRO_S = (
+    float(rule_value("BIV-SCN-005")["intro"]),
+    float(rule_value("BIV-SCN-005")["outro"]),
+)  # keep in step with renderer/src/compositions/brand.ts
 
 
 def brand_lead() -> float:
@@ -202,6 +213,8 @@ async def build_overlay_props(
         "anchorCovers": fullframe_covers(
             project
         ),  # draw our boards over that picture's screens (false for a plain newsroom)
+        # a cut-out house presenter sits in the male reporter's newsroom, not on the drawn blue set (only sent when on, so other videos are unchanged)
+        **({"anchorPlate": True} if uses_plate(project) else {}),
         "anchorDurationSeconds": anchor_duration_s,
         "tickerLines": [*script.ticker_lines, *await cf_news.ticker_items(session, exclude_project=project.id)],
         "lowerThirds": script.lower_thirds,
@@ -463,7 +476,9 @@ async def _paid_avatar_asset(
     return cost
 
 
-PARALLEL_CLIPS: int = rule_value("BIV-COST-003")  # presenter clips made at once (the avatar vendor's own concurrency limit)
+PARALLEL_CLIPS: int = rule_value(
+    "BIV-COST-003"
+)  # presenter clips made at once (the avatar vendor's own concurrency limit)
 
 
 async def _paid_clips(session: AsyncSession, project: Project, guard: SpendGuard, jobs: list[dict]) -> Decimal:
@@ -960,7 +975,9 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
             or qclip is None
         ):
             return False
-        return float(take.duration_s or 0) - ans.get("trim_start_s", 0) - ans.get("trim_end_s", 0) >= rule_value("BIV-SCN-003")
+        return float(take.duration_s or 0) - ans.get("trim_start_s", 0) - ans.get("trim_end_s", 0) >= rule_value(
+            "BIV-SCN-003"
+        )
 
     shown = [q for q in plan["order"] if usable(q)]
     layout = plan["layout"] if plan["layout"] in sp.LAYOUT_SCENE else "pip"
@@ -1140,7 +1157,9 @@ async def _merge_render(session: AsyncSession, project: Project, guard: SpendGua
             "productUrlSeconds": remark_s,
             "productUrlStatic": True,
         }
-    elif site and closing_at is not None:  # older videos: shown in a corner for a few seconds while the presenter signs off
+    elif (
+        site and closing_at is not None
+    ):  # older videos: shown in a corner for a few seconds while the presenter signs off
         props |= {
             "productUrl": display_url(site),
             "productUrlFromSeconds": closing_at,
@@ -1188,12 +1207,13 @@ def chyron_for(script: ScriptVersion, q: int) -> str:
 
 PRESENTER_ROLES = {  # first name -> (name shown on screen, role shown under it)
     "marcus": ("Marcus Richard", "Business Reporter, CF News"),
+    "amara": ("Amara Dickson", "Business Reporter, CF News"),
 }
 
 
 def presenter_identity(project: Project) -> dict:
-    """The presenter's name box. The house presenter is Marcus Richard, Business Reporter, CF News; another house presenter shows
-    their first name as a CF presenter."""
+    """The presenter's name box: the house presenters are Marcus Richard and Amara Dickson, both Business Reporter, CF News; any other
+    house presenter shows their first name as a CF presenter."""
     from app.services import presenters as pres
 
     look = avatar_for(project)

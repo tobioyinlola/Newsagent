@@ -5,6 +5,7 @@ import { BrollScene } from "./BrollScene";
 import { ClipScene } from "./ClipScene";
 import { FullFrameAnchor } from "./FullFrameAnchor";
 import { NewsDesk, SOFT_TOP, StudioProvider } from "./NewsSet";
+import { NewsroomPlate } from "./NewsroomPlate";
 import { CF, Fonts, MONO, SANS } from "./theme";
 import { LowerThird } from "./LowerThird";
 import { SceneEdge, useEdgeVolume } from "./SceneEdge";
@@ -44,6 +45,7 @@ export type MergeProps = {
   studio?: string;
   anchorFullFrame?: boolean;
   anchorCovers?: boolean;
+  anchorPlate?: boolean; // a cut-out presenter shown on the newsroom plate (the male reporter's room) instead of the drawn blue set
   scenes: Scene[];
   totalSeconds: number;
   headline?: string; // the story's headline: the bar under the presenter
@@ -77,9 +79,14 @@ const AnchorShot: React.FC<{ src: string; muted?: boolean; height: string; fullF
   );
 };
 
-const AnchorScene: React.FC<{ src: string; portrait: boolean; fullFrame?: boolean; covers?: boolean }> = ({ src, portrait, fullFrame, covers }) =>
+const AnchorScene: React.FC<{ src: string; portrait: boolean; fullFrame?: boolean; covers?: boolean; plate?: boolean }> = ({ src, portrait, fullFrame, covers, plate }) =>
   fullFrame ? (
     <FullFrameAnchor src={src} covers={covers ?? true} />
+  ) : plate ? (
+    // on the newsroom plate the cut-out sits at the bottom edge, as the male reporter does: no desk, no seam
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end" }}>
+      <AnchorShot src={src} height={portrait ? "78%" : "100%"} />
+    </AbsoluteFill>
   ) : (
   <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "16%" : "11%" }}>
     <AnchorShot src={src} height={portrait ? "66%" : "80%"} />
@@ -158,7 +165,7 @@ const ColumnAnswer: React.FC<{ scene: Extract<Scene, { type: "answer" }>; founde
   );
 };
 
-const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout: MergeProps["layout"]; brand: MergeProps["brand"]; fullFrame?: boolean; enters?: boolean }> = ({ scene, layout, brand, fullFrame, enters = true }) => {
+const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout: MergeProps["layout"]; brand: MergeProps["brand"]; fullFrame?: boolean; plate?: boolean; enters?: boolean }> = ({ scene, layout, brand, fullFrame, plate, enters = true }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
   const portrait = height > width;
@@ -178,6 +185,7 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
   const anchorBox = (
     <Freeze frame={0}>
       <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: CF.ink, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+        {plate && !fullFrame && <NewsroomPlate />}
         <AnchorShot src={scene.pipSrc} muted height="100%" fullFrame={fullFrame} />
       </div>
     </Freeze>
@@ -255,12 +263,12 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
       <Fonts />
       {/* Behind the scenes: nothing but plain ink when the presenter video brings its own studio, so no set can ever show through
           at a cut, a hold or around a narrow picture. Our own illustrated set is only for a presenter who needs one. */}
-      {p.anchorFullFrame ? <AbsoluteFill style={{ background: CF.ink }} /> : <Backdrop />}
+      {p.anchorFullFrame ? <AbsoluteFill style={{ background: CF.ink }} /> : p.anchorPlate ? <NewsroomPlate /> : <Backdrop />}
       <Series>
         {p.scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={Math.max(1, Math.round(s.seconds * fps))}>
             <SceneEdge>
-            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} fullFrame={p.anchorFullFrame} enters={starts[i]} /> : s.type === "clip" ? <ClipScene src={s.src} /> : s.type === "broll" ? <BrollScene scene={s} /> : <><AnchorScene src={s.src} portrait={portrait} fullFrame={p.anchorFullFrame} covers={p.anchorCovers} /><LowerThird name={p.presenter?.name} title={p.presenter?.title} headline={s.headline ?? p.headline} enters={starts[i]} /></>}
+            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} fullFrame={p.anchorFullFrame} plate={p.anchorPlate} enters={starts[i]} /> : s.type === "clip" ? <ClipScene src={s.src} /> : s.type === "broll" ? <BrollScene scene={s} /> : <><AnchorScene src={s.src} portrait={portrait} fullFrame={p.anchorFullFrame} covers={p.anchorCovers} plate={p.anchorPlate} /><LowerThird name={p.presenter?.name} title={p.presenter?.title} headline={s.headline ?? p.headline} enters={starts[i]} /></>}
             </SceneEdge>
           </Series.Sequence>
         ))}

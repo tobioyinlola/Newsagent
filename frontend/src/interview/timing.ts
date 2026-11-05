@@ -5,7 +5,10 @@ import { rule } from "../lib/videoRules";
 export const MAX_TOTAL_S = rule<number>("BIV-INT-008"); // estimate for the programme, never used to shorten an answer
 export const MAX_ANSWER_S = rule<number>("BIV-INT-004");
 export const MIN_ANSWER_S = rule<number>("BIV-INT-005");
-export const COUNTDOWN_S = rule<number>("BIV-INT-006");
+const COUNTDOWN = rule<{ countdown_s: number; record_before_end_s: number }>("BIV-INT-013");
+export const COUNTDOWN_S = COUNTDOWN.countdown_s;
+// The recording starts this many seconds before the countdown ends (never earlier than the countdown itself).
+export const RECORD_BEFORE_END_S = Math.min(COUNTDOWN.record_before_end_s, COUNTDOWN.countdown_s);
 export const ROUND_UP_S = rule<number>("BIV-INT-007");
 
 export function answerWindow(_elapsedS: number, questionsLeft: number, max = MAX_ANSWER_S, _min = MIN_ANSWER_S): number {
