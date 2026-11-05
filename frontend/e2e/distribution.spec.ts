@@ -43,12 +43,11 @@ test("completed video to distribution draft, checked images, wallet submission, 
   await expect(outletList).toBeVisible();
   expect(await outletList.evaluate(e => e.scrollHeight > e.clientHeight)).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  for (const name of ["Media outlets", "Crypto News Channels", "Nigeria News Channels"]) {
+  // the outlets are shown by topic, then by place
+  for (const name of ["Technology · Nigeria", "Technology · Africa (region-wide)", "Technology · United States", "General News · Nigeria", "General News · Kenya", "Gossip Blogs · Nigeria"]) {
     await expect(page.getByRole("heading", { name, exact: true })).toHaveCount(1);
   }
-  // a category made up only of channels that cost 0 credits is hidden for now, with those channels
-  await expect(page.getByRole("heading", { name: "Tech News Channels", exact: true })).toHaveCount(1); // the US tech channels, priced from the owner's sheet
-  await expect(page.getByRole("heading", { name: "Entertainment News Channels", exact: true })).toHaveCount(1); // 61 credits each
+  await expect(page.getByRole("heading", { name: "General News · Ghana", exact: true })).toHaveCount(0); // no outlets there yet: no empty section
   await page.getByRole("button", { name: /^Technology/ }).click(); // the topic filter: 4 Nigerian tech sites and the 5 crypto channels
   await expect(page.getByRole("checkbox")).toHaveCount(22); // 4 Nigerian tech sites, 5 crypto channels and the 13 tech news channels
   await page.getByRole("checkbox", { name: /^CoinSpeaks/ }).check();

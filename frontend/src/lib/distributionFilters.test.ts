@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { ALL, counts, emptyReason, isAllowedAfter, matches, peekAfterAuth, readPick, savePick, setAfterAuth, takeAfterAuth, clearPick } from "./distributionFilters";
+import { ALL, counts, emptyReason, groupOutlets, isAllowedAfter, matches, peekAfterAuth, readPick, savePick, setAfterAuth, takeAfterAuth, clearPick } from "./distributionFilters";
 
 const outlets = [
   { id: "1", topic: "Technology", region: "Africa", country: "Nigeria" },
@@ -57,5 +57,20 @@ describe("the saved choice", () => {
     expect(peekAfterAuth()).toBe("/distribution/request?pick=1");
     expect(takeAfterAuth()).toBe("/distribution/request?pick=1");
     expect(takeAfterAuth()).toBeNull(); // used once
+  });
+});
+
+describe("grouping", () => {
+  const more = [...outlets, { id: "6", topic: "Technology", region: "Africa", country: null }, { id: "7", topic: "Technology", region: "North America", country: "United States" }, { id: "8", region: "Europe", country: "United Kingdom" }];
+  it("groups by topic, then by place, in a steady order, leaving empty groups out", () => {
+    const g = groupOutlets(more, filters);
+    expect(g.map((x) => `${x.topic}:${x.count}`)).toEqual(["Technology:3", "General News:3", "Gossip Blogs:1", "Others:1"]);
+    expect(g[0].locations.map((l) => l.label)).toEqual(["Nigeria", "Africa (region-wide)", "United States"]); // countries first, then the whole region, then the next region
+    expect(g[1].locations.map((l) => `${l.label}:${l.items.length}`)).toEqual(["Nigeria:1", "Kenya:1", "United States:1"]);
+    expect(groupOutlets(outlets.filter((o) => o.country === "Kenya"), filters).map((x) => x.topic)).toEqual(["General News"]);
+    expect(groupOutlets([], filters)).toEqual([]);
+  });
+  it("works without the filter list too", () => {
+    expect(groupOutlets(outlets)[0].topic).toBe("Technology");
   });
 });
