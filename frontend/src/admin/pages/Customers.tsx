@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { Stat } from "../components/Charts";
@@ -7,6 +7,7 @@ import { WordingFix } from "../components/WordingFix";
 import { useCan } from "../lib/can";
 import { Button, Card, ErrorBox, inputCls } from "../components/ui";
 import { ago, date, num, usd } from "../lib/format";
+import { downloadAuthed } from "../lib/download";
 
 const PAGE = 25;
 
@@ -103,6 +104,7 @@ export function CustomerDetail() {
         )}
         <ErrorBox error={del.error ?? takeDown.error ?? putBack.error} />
       </Card>
+      <WalletHistory id={id} balance={c.credits} />
       <Card title="Payments">
         {c.payments.length === 0 ? <p className="text-sm text-muted">No payments yet.</p> : (
           <table className="w-full text-sm"><caption className="sr-only">Payments</caption>
@@ -112,5 +114,54 @@ export function CustomerDetail() {
         )}
       </Card>
     </>
+  );
+}
+
+const GROUPS: [Group, string][] = [["all", "Everything"], ["payments", "Payments and credits added"], ["usage", "Usage"]];
+type Group = "all" | "payments" | "usage";
+const stamp = (v: string) => new Date(v).toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+// Everything that ever moved this customer's wallet: credits bought, free credits, refunds, and credits used for videos and distribution.
+function WalletHistory({ id, balance }: { id: string; balance: string }) {
+  const [group, setGroup] = useState<Group>("all");
+  const [page, setPage] = useState(0);
+  const [err, setErr] = useState<string | null>(null);
+  const size = 25;
+  const q = useQuery({ queryKey: ["ledger", id, group, page], queryFn: () => unwrap(api.GET("/v1/admin/customers/{workspace_id}/ledger", { params: { path: { workspace_id: id }, query: { group, limit: size, offset: page * size } } })) });
+  const d = q.data;
+  useEffect(() => { // arriving from the Wallets list (#wallet): the page loads before this part exists
+    if (d && window.location.hash === "#wallet") document.getElementById("wallet")?.scrollIntoView({ block: "center" });
+  }, [d]);
+  const pages = Math.max(1, Math.ceil((d?.total ?? 0) / size));
+  const csv = () => downloadAuthed(`/v1/admin/customers/${id}/ledger.csv?group=${group}`, `wallet-${group}.csv`).catch((e) => setErr(e.message));
+  return (
+    <Card title="Wallet history" actions={<Button variant="secondary" onClick={() => void csv()}>Download CSV</Button>}>
+      <div id="wallet" className="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label="Show">
+        <span className="mr-2 text-sm">Balance now: <strong className="tabular-nums">{num(balance)} credits</strong></span>
+        {GROUPS.map(([k, label]) => <button key={k} type="button" aria-pressed={group === k} onClick={() => { setGroup(k); setPage(0); }} className={`min-h-9 rounded-full border px-3 text-sm font-semibold ${group === k ? "border-ink bg-ink text-white" : "border-line"}`}>{label}</button>)}
+      </div>
+      <ErrorBox error={q.error ?? (err ? new Error(err) : null)} />
+      {q.isLoading ? <p aria-busy="true">Loading…</p> : d && d.items.length === 0 ? <p className="text-sm text-muted">Nothing here yet.</p> : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm"><caption className="sr-only">Wallet history, newest first</caption>
+            <thead><tr className="text-left text-muted"><th className="py-1">When</th><th>What</th><th>Details</th><th className="text-right">Credits</th><th className="text-right">Balance after</th></tr></thead>
+            <tbody>{d?.items.map((t) => (
+              <tr key={t.id} className="border-t border-line">
+                <td className="whitespace-nowrap py-1.5">{stamp(t.when)}</td>
+                <td>{t.label}</td>
+                <td className="text-muted">{t.description ?? ""}{t.stage ? ` (${t.stage})` : ""}{t.project_id ? <> · <span className="font-mono">{t.project_id.slice(0, 6)}</span></> : null}</td>
+                <td className={`text-right font-semibold tabular-nums ${Number(t.amount) < 0 ? "text-red-700" : "text-green-800"}`}>{Number(t.amount) > 0 ? "+" : ""}{num(t.amount)}</td>
+                <td className="text-right tabular-nums">{num(t.balance_after)}</td>
+              </tr>))}</tbody>
+          </table>
+        </div>
+      )}
+      {d && d.total > size && (
+        <div className="mt-3 flex items-center justify-between text-sm">
+          <span className="text-muted">{d.total} entries · page {page + 1} of {pages}</span>
+          <span className="flex gap-2"><Button variant="secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>Newer</Button><Button variant="secondary" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Older</Button></span>
+        </div>
+      )}
+    </Card>
   );
 }

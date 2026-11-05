@@ -42,6 +42,7 @@ from app.routes import (
     stripe_payments,
     system,
     transfer_review,
+    wallets,
 )
 from app.runtime_checks import assert_runtime_ok, origin_of
 
@@ -207,6 +208,7 @@ def create_app() -> FastAPI:
         ops.router,
         outreach.router,
         outreach_inbound.router,
+        wallets.router,
     ):
         app.include_router(r)
     return app

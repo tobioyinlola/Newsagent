@@ -20,6 +20,7 @@ import { Presenter } from "./pages/Presenter";
 import { DistributionAdmin } from "./pages/Distribution";
 import { SHOW_OUTREACH } from "./lib/features";
 import { OutreachAdmin } from "./pages/Outreach";
+import { Wallets } from "./pages/Wallets";
 import { Revenue } from "./pages/Revenue";
 import { Security } from "./pages/Security";
 import { TeamPage } from "./pages/Team";
@@ -53,6 +54,7 @@ export function App() {
           <Route path="/" element={<Home />} />
           <Route path="/news-desk" element={<NewsDesk />} />
           <Route path="/customers" element={<Guard any={["customers.view"]}><Customers /></Guard>} />
+          <Route path="/wallets" element={<Guard any={["customers.view"]}><Wallets /></Guard>} />
           <Route path="/customers/:id" element={<Guard any={["customers.view"]}><CustomerDetail /></Guard>} />
           <Route path="/revenue" element={<Guard any={["finance.view"]}><Revenue /></Guard>} />
           <Route path="/analytics" element={<Guard any={["operations.view"]}><AnalyticsAdmin /></Guard>} />

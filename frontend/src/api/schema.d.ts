@@ -352,6 +352,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/customers/{workspace_id}/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ledger */
+        get: operations["ledger_v1_admin_customers__workspace_id__ledger_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/customers/{workspace_id}/ledger.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ledger Csv */
+        get: operations["ledger_csv_v1_admin_customers__workspace_id__ledger_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/distribution": {
         parameters: {
             query?: never;
@@ -1399,6 +1433,40 @@ export interface paths {
         get: operations["list_vendor_budgets_v1_admin_vendor_budgets_get"];
         /** Set Vendor Budget */
         put: operations["set_vendor_budget_v1_admin_vendor_budgets_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/wallets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Wallets */
+        get: operations["wallets_v1_admin_wallets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/wallets.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Wallets Csv */
+        get: operations["wallets_csv_v1_admin_wallets_csv_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -4803,6 +4871,17 @@ export interface components {
             /** Waiting */
             waiting: number;
         };
+        /** Ledger */
+        Ledger: {
+            /** Balance */
+            balance: string;
+            /** Company */
+            company: string;
+            /** Items */
+            items: components["schemas"]["LedgerRow"][];
+            /** Total */
+            total: number;
+        };
         /** LedgerEntry */
         LedgerEntry: {
             /** Amount */
@@ -4824,6 +4903,30 @@ export interface components {
             project_id: string | null;
             /** Stage */
             stage: string | null;
+        };
+        /** LedgerRow */
+        LedgerRow: {
+            /** Amount */
+            amount: string;
+            /** Balance After */
+            balance_after: string;
+            /** Description */
+            description: string | null;
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            /** Project Id */
+            project_id: string | null;
+            /** Stage */
+            stage: string | null;
+            /**
+             * When
+             * Format: date-time
+             */
+            when: string;
         };
         /** LineItemOut */
         LineItemOut: {
@@ -6516,6 +6619,48 @@ export interface components {
             /** Lines */
             lines: components["schemas"]["VoiceLine"][];
         };
+        /** WalletList */
+        WalletList: {
+            /** Items */
+            items: components["schemas"]["WalletRow"][];
+            /** Total */
+            total: number;
+            totals: components["schemas"]["WalletTotals"];
+        };
+        /** WalletRow */
+        WalletRow: {
+            /** Balance */
+            balance: string;
+            /** Bought */
+            bought: string;
+            /** Company */
+            company: string;
+            /** Free */
+            free: string;
+            /** Last Activity At */
+            last_activity_at: string | null;
+            /** Owner Email */
+            owner_email: string;
+            /** Status */
+            status: string;
+            /** Used */
+            used: string;
+            /** Workspace Id */
+            workspace_id: string;
+        };
+        /** WalletTotals */
+        WalletTotals: {
+            /** Balance */
+            balance: string;
+            /** Bought */
+            bought: string;
+            /** Empty */
+            empty: number;
+            /** Used */
+            used: string;
+            /** Wallets */
+            wallets: number;
+        };
         /** WordingIn */
         WordingIn: {
             /**
@@ -7414,6 +7559,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CustomerDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ledger_v1_admin_customers__workspace_id__ledger_get: {
+        parameters: {
+            query?: {
+                group?: "all" | "payments" | "usage";
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ledger"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ledger_csv_v1_admin_customers__workspace_id__ledger_csv_get: {
+        parameters: {
+            query?: {
+                group?: "all" | "payments" | "usage";
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -9931,6 +10148,76 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    wallets_v1_admin_wallets_get: {
+        parameters: {
+            query?: {
+                q?: string;
+                sort?: "balance_low" | "balance_high" | "used_high" | "recent" | "company";
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    wallets_csv_v1_admin_wallets_csv_get: {
+        parameters: {
+            query?: {
+                q?: string;
+                sort?: "balance_low" | "balance_high" | "used_high" | "recent" | "company";
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
