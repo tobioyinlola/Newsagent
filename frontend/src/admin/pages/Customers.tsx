@@ -30,7 +30,15 @@ export function Customers() {
       <ErrorBox error={list.error} />
       <Card>
         {list.isLoading ? <p aria-busy="true">Loading…</p> : list.data && list.data.items.length === 0 ? <p className="text-sm text-muted">{term ? "No customers match that search." : "No customers yet."}</p> : (
-          <div className="overflow-x-auto">
+          <>
+          <ul aria-label="Customers" className="divide-y divide-line sm:hidden">{list.data?.items.map((c) => (
+            <li key={c.workspace_id} className="py-3">
+              <div className="flex items-start justify-between gap-3"><Link className="min-w-0 break-words font-bold underline" to={`/customers/${c.workspace_id}`}>{c.company}</Link><span className={`shrink-0 rounded-sm px-1.5 py-0.5 text-xs font-bold ${c.status === "suspended" ? "bg-brand-red" : "bg-lime-tint"}`}>{c.status}</span></div>
+              <p className="mt-0.5 break-all text-sm text-muted">{c.owner_email}</p>
+              <dl className="mt-2 grid grid-cols-3 gap-2 text-sm"><div><dt className="text-xs text-muted">Paid</dt><dd className="tabular-nums">{usd(c.paid_usd)}</dd></div><div><dt className="text-xs text-muted">Credits</dt><dd className="tabular-nums">{num(c.credits)}</dd></div><div><dt className="text-xs text-muted">Videos</dt><dd className="tabular-nums">{c.videos}</dd></div></dl>
+              <p className="mt-2 text-xs text-muted">Signed up {date(c.signed_up_at)} · last seen {ago(c.last_login_at)}</p>
+            </li>))}</ul>
+          <div className="hidden overflow-x-auto sm:block">
             <table className="w-full text-sm"><caption className="sr-only">Customers, newest sign-up first</caption>
               <thead><tr className="text-left text-muted"><th className="py-1">Company</th><th>Owner</th><th>Signed up</th><th>Last seen</th><th>Status</th><th className="text-right">Paid</th><th className="text-right">Credits</th><th className="text-right">Videos</th></tr></thead>
               <tbody>{list.data?.items.map((c) => (
@@ -42,6 +50,7 @@ export function Customers() {
                 </tr>))}</tbody>
             </table>
           </div>
+          </>
         )}
         {list.data && list.data.total > PAGE && (
           <div className="mt-3 flex items-center justify-between text-sm">

@@ -380,7 +380,7 @@ export function Footer() {
     { title: "Members", links: [["Sign in", "/login"], ["Reset password", "/forgot"], ["Sign up", "/signup"], ["Contact support", "mailto:coverfounder@gmail.com"]] },
     { title: "Trust", links: [["Terms of Use", "/terms"], ["Privacy Policy", "/privacy"], ["AI disclosure", "/#faq"], ["Your data", "/account"], ["Security", "/security"]] },
   ];
-  const link = (label: string, href: string) => <SiteLink to={href} className="text-white/80 hover:text-brand-green">{label}</SiteLink>;
+  const link = (label: string, href: string) => <SiteLink to={href} className="inline-flex min-h-11 items-center text-white/80 hover:text-brand-green md:min-h-0">{label}</SiteLink>;
   return (
     <footer className="relative overflow-hidden border-t border-white/10 bg-navy px-4 pt-14 md:px-8">
       <div className="mx-auto max-w-6xl">

@@ -87,7 +87,7 @@ export function Login() {
           <ErrorBox error={login.error} />
           <Button type="submit" disabled={login.isPending}>{login.isPending ? "Signing in…" : "Sign in"}</Button>
         </form>
-        <p className="mt-3 text-sm"><Link className="underline" to="/forgot">Forgot your password?</Link></p>
+        <p className="mt-1 text-sm"><Link className="inline-flex min-h-11 items-center underline" to="/forgot">Forgot your password?</Link></p>
       </Card>
       <p className="text-sm leading-relaxed text-muted">New here? <Link className="underline" to="/signup">Create your free account</Link>. Have an invite link? Open it to join your workspace.</p>
     </Shell>
@@ -285,7 +285,7 @@ export function Forgot() {
             <Button type="submit" disabled={start.isPending}>Email me a code</Button>
           </form>
         )}
-        <p className="mt-3 text-sm"><Link className="underline" to="/login">Back to sign in</Link></p>
+        <p className="mt-1 text-sm"><Link className="inline-flex min-h-11 items-center underline" to="/login">Back to sign in</Link></p>
       </Card>
     </Shell>
   );

@@ -62,17 +62,17 @@ export function OutletBrowser() {
                   {g.locations.map((l) => (
                     <div key={l.key} className="mt-5">
                       <h4 className="text-sm font-bold uppercase tracking-widest text-brand-green">{l.label} ({g.topic} Channels)</h4>
-                      <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {l.items.map((o) => {
                           const on = picked.includes(o.id);
                           return (
-                            <li key={o.id}>
+                            <li key={o.id} className="min-w-0">
                               <label className={`flex min-h-24 cursor-pointer items-center gap-3 rounded-lg border-2 p-3 focus-within:ring-2 focus-within:ring-brand-purple focus-within:ring-offset-2 focus-within:ring-offset-ink ${on ? "border-brand-green bg-brand-green/15" : "border-white/15 bg-white/5 hover:border-white/50"}`}>
                                 <input type="checkbox" className="h-5 w-5 shrink-0 accent-[#8BE04E]" checked={on} onChange={() => toggle(o.id)} />
                                 <DistributionOutletLogo name={o.name} />
                                 <span className="min-w-0 flex-1">
                                   <span className="block truncate font-bold text-white">{o.name}</span>
-                                  <span className="block text-xs text-white/65">{o.topic} · {o.country ?? o.region}</span>
+                                  <span className="block break-words text-xs text-white/65">{o.topic} · {o.country ?? o.region}</span>
                                   <span className="mt-1 block text-sm font-bold text-brand-green">{credits(Number(o.credits))}</span>
                                 </span>
                               </label>

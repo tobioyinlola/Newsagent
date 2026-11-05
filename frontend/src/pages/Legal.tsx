@@ -50,7 +50,7 @@ function LegalPage({ title, intro, sections, other }: { title: string; intro: st
           <nav aria-label="Contents" className="mt-8 rounded-sm border border-white/15 bg-white/[0.03] p-5">
             <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-brand-peach">Contents</p>
             <ol className="mt-3 columns-1 gap-8 space-y-1 text-sm md:columns-2">
-              {sections.map((s, i) => <li key={s.id} className="break-inside-avoid"><a className="text-white/80 hover:text-brand-green" href={`#${s.id}`}>{i + 1}. {s.title}</a></li>)}
+              {sections.map((s, i) => <li key={s.id} className="break-inside-avoid"><a className="inline-flex min-h-10 items-center text-white/80 hover:text-brand-green md:min-h-0" href={`#${s.id}`}>{i + 1}. {s.title}</a></li>)}
             </ol>
           </nav>
           {sections.map((s, i) => (
