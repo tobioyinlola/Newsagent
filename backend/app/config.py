@@ -146,6 +146,16 @@ class Settings(BaseSettings):
     outreach_ai: str = "off"  # off | on
     outreach_reply_domain: str = ""  # replies come back to outreach+<token>@<this domain> (a domain that receives mail); blank = the plain reply-to address
     outreach_inbound_secret: str = ""  # the inbound-mail webhook's secret: a shared secret (X-Inbound-Secret header) or the provider's whsec_ signing secret
+    # Send outreach through a mailbox you own (Gmail / Google Workspace: smtp.gmail.com, 587, an app password) instead of the app's usual sender.
+    outreach_smtp_host: str = ""  # blank = outreach goes out through the same sender as every other email
+    outreach_smtp_port: int = 587  # STARTTLS
+    outreach_smtp_user: str = ""
+    outreach_smtp_password: str = ""
+    outreach_mailbox: str = ""  # that mailbox's address, e.g. outreach@yourdomain.com. Replies come back to outreach+<code>@yourdomain.com (plus-addressing), and it is the From address
+    outreach_from_name: str = "Cover Founder"
+    outreach_reply_delay_minutes: int = 10  # default: a reply goes out no sooner than this long after the outlet wrote (people do not answer in seconds)
+    outreach_new_gap_minutes: int = 3  # default: first emails to outlets are spread at least this far apart
+    outreach_new_daily_cap: int = 30  # default: at most this many first emails a day
     outreach_imap_host: str = ""  # alternatively, a mailbox the app reads itself (IMAP over SSL); blank = off
     outreach_imap_port: int = 993
     outreach_imap_user: str = ""

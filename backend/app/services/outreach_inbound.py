@@ -18,7 +18,7 @@ from app.services import distribution as dist
 
 log = logging.getLogger("outreach")
 
-TOKEN_RE = re.compile(r"outreach\+([a-z0-9]{8,40})@", re.I)
+TOKEN_RE = re.compile(r"\+([a-f0-9]{20})@", re.I)  # name+<code>@domain: the conversation's secret code
 WROTE_RE = re.compile(r"^on\s.{5,300}$", re.I)
 QUOTE_MARKERS = (
     re.compile(r"^-{2,}\s*(original message|forwarded message)\s*-{2,}\s*$", re.I),

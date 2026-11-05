@@ -60,6 +60,7 @@ class DistributionMail(Base, TimestampMixin):
     reply_to: Mapped[str | None] = mapped_column(String(320), nullable=True)  # where the outlet's reply should come back to
     message_id: Mapped[str | None] = mapped_column(String(300), nullable=True)  # the RFC Message-ID it is sent with
     in_reply_to: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    send_after: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # not before this time (outreach waits a while, like a person would)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error: Mapped[str] = mapped_column(String(300), default="")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

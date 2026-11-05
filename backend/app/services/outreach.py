@@ -6,13 +6,14 @@ answers is kept as a thread the team (and later the agent) can answer.
 """
 
 import logging
+import random
 import re
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 from string import Formatter
 
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -141,7 +142,19 @@ class OutreachConfig(BaseModel):
     mode: str = Field(
         default="draft", pattern=r"^(draft|policy)$"
     )  # how much the agent may do on its own (used by the agent)
-    daily_cap: int = Field(default=200, ge=0, le=5000)
+    daily_cap: int = Field(default=200, ge=0, le=5000)  # automatic (agent) replies a day
+    reply_delay_minutes: int = Field(
+        default_factory=lambda: get_settings().outreach_reply_delay_minutes, ge=0, le=1440
+    )  # a reply goes out no sooner than this after the outlet wrote
+    new_gap_minutes: int = Field(
+        default_factory=lambda: get_settings().outreach_new_gap_minutes, ge=0, le=240
+    )  # first emails are spread at least this far apart
+    new_daily_cap: int = Field(
+        default_factory=lambda: get_settings().outreach_new_daily_cap, ge=1, le=2000
+    )  # first emails a day
+    send_cap_per_day: int = Field(
+        default=150, ge=1, le=5000
+    )  # every outreach email a day (a mailbox that sends too much gets blocked)
     ai_turn_limit: int = Field(default=6, ge=1, le=30)
     paused: bool = False
     policy: dict[str, str] = Field(
@@ -178,12 +191,24 @@ async def save_config(db: AsyncSession, actor: str, cfg: OutreachConfig) -> None
 
 
 def reply_address(token: str) -> str | None:
-    domain = get_settings().outreach_reply_domain.strip()
+    """Where this conversation's replies should come back to. With a mailbox set (Gmail or Workspace), plus-addressing on it
+    (name+<code>@domain); otherwise outreach+<code>@<the reply domain>."""
+    s = get_settings()
+    box = s.outreach_mailbox.strip()
+    if "@" in box:
+        local, domain = box.rsplit("@", 1)
+        return f"{local.split('+')[0]}+{token}@{domain}"
+    domain = s.outreach_reply_domain.strip()
     return f"outreach+{token}@{domain}" if domain else None
 
 
 def new_message_id() -> str:
-    domain = get_settings().outreach_reply_domain.strip() or "outreach.local"
+    s = get_settings()
+    domain = (
+        s.outreach_reply_domain.strip()
+        or (s.outreach_mailbox.rsplit("@", 1)[-1] if "@" in s.outreach_mailbox else "")
+        or "outreach.local"
+    )
     return f"<{secrets.token_hex(12)}@{domain}>"
 
 
@@ -231,6 +256,94 @@ def render_template(cfg: OutreachConfig, template_id: str | None, values: dict) 
     return t.id, subject, body
 
 
+def _aware_dt(t: datetime) -> datetime:
+    return t if t.tzinfo else t.replace(tzinfo=utcnow().tzinfo)
+
+
+def _jitter(minutes: float) -> timedelta:
+    """A wait with some give in it, so the emails do not go out on a clock."""
+    return timedelta(minutes=minutes * random.uniform(1.0, 1.4))  # noqa: S311 (timing variety, not security)
+
+
+def reply_not_before(thread: OutreachThread, cfg: "OutreachConfig") -> datetime | None:
+    """A reply waits until some minutes after the outlet wrote (nobody answers in seconds). None = no need to wait."""
+    if cfg.reply_delay_minutes <= 0 or thread.last_inbound_at is None:
+        return None
+    due = _aware_dt(thread.last_inbound_at) + _jitter(cfg.reply_delay_minutes)
+    return due if due > utcnow() else None
+
+
+async def next_first_slot(db: AsyncSession, cfg: "OutreachConfig") -> datetime | None:
+    """When the next FIRST email to an outlet may go: spread out (not a burst), and no more than a day's cap. None = now."""
+    now = utcnow()
+    when = func.coalesce(DistributionMail.send_after, DistributionMail.created_at)
+    first = (DistributionMail.thread_id.is_not(None)) & (DistributionMail.in_reply_to.is_(None))
+    last = (await db.execute(select(func.max(when)).where(first))).scalar_one_or_none()
+    slot = now
+    if last is not None and cfg.new_gap_minutes > 0:
+        slot = max(now, _aware_dt(last) + _jitter(cfg.new_gap_minutes))
+    for _ in range(14):  # find a day with room
+        day = slot.replace(hour=0, minute=0, second=0, microsecond=0)
+        used = (
+            await db.execute(
+                select(func.count())
+                .select_from(DistributionMail)
+                .where(first, when >= day, when < day + timedelta(days=1))
+            )
+        ).scalar_one()
+        if used < cfg.new_daily_cap:
+            break
+        slot = day + timedelta(days=1, hours=8)  # tomorrow morning
+    return slot if slot > now + timedelta(seconds=5) else None
+
+
+async def send_room(db: AsyncSession) -> int:
+    """How many more conversation emails may go today."""
+    cfg = await get_config(db)
+    day = utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    sent = (
+        await db.execute(
+            select(func.count())
+            .select_from(DistributionMail)
+            .where(
+                DistributionMail.thread_id.is_not(None),
+                DistributionMail.status == "sent",
+                DistributionMail.sent_at >= day,
+            )
+        )
+    ).scalar_one()
+    return max(0, cfg.send_cap_per_day - int(sent))
+
+
+async def deliver_due() -> int:
+    """Send the held conversation emails whose time has come (run every minute). Returns how many requests were looked at."""
+    if not enabled():
+        return 0
+    from app.db import session_maker
+
+    async with session_maker()() as db:
+        ids = (
+            (
+                await db.execute(
+                    select(DistributionMail.request_id)
+                    .where(
+                        DistributionMail.thread_id.is_not(None),
+                        DistributionMail.status.in_(["pending", "failed"]),
+                        DistributionMail.attempts < 8,
+                        DistributionMail.send_after.is_not(None),
+                        DistributionMail.send_after <= utcnow(),
+                    )
+                    .distinct()
+                )
+            )
+            .scalars()
+            .all()
+        )
+    for rid in ids:
+        await dist.deliver_request(rid)
+    return len(ids)
+
+
 async def start_thread(
     db: AsyncSession, row: DistributionRequest, placement: DistributionPlacement, outlet_cfg: dict
 ) -> OutreachThread | None:
@@ -267,7 +380,16 @@ async def start_thread(
     await db.flush()
     placement.outreach_subject, placement.outreach_body = subject, body
     await _queue(
-        db, row, thread, placement, subject, body, kind="template", actor="system", key=placement.id + ":initial"
+        db,
+        row,
+        thread,
+        placement,
+        subject,
+        body,
+        kind="template",
+        actor="system",
+        key=placement.id + ":initial",
+        send_after=await next_first_slot(db, cfg),  # spread out: not a burst, and within a day's limit
     )
     dist.activity(db, row, "outreach_started", {"thread_id": thread.id, "template": template_id}, placement=placement)
     return thread
@@ -286,6 +408,7 @@ async def _queue(
     key: str,
     in_reply_to: str | None = None,
     ai: dict | None = None,
+    send_after: datetime | None = None,
 ) -> OutreachMessage:
     message_id = new_message_id()
     mail = await dist.queue_mail(
@@ -301,6 +424,7 @@ async def _queue(
         reply_to=reply_address(thread.reply_token),
         message_id=message_id,
         in_reply_to=in_reply_to,
+        send_after=send_after,
     )
     msg = OutreachMessage(
         thread_id=thread.id,
@@ -349,6 +473,7 @@ async def send_reply(
     subject: str | None = None,
     kind: str = "human",
     ai: dict | None = None,
+    send_now: bool = False,
 ) -> OutreachMessage:
     """Queue a reply in the conversation. Used for a person's own reply and for approved or automatic agent replies."""
     if thread.status == "do_not_contact" or await is_opted_out(db, thread.contact_email):
@@ -383,6 +508,7 @@ async def send_reply(
         key=f"{thread.id}:reply:{new_id()}",
         in_reply_to=in_reply_to,
         ai=ai,
+        send_after=None if send_now else reply_not_before(thread, cfg),
     )
     thread.last_outbound_at = utcnow()
     thread.updated_at = utcnow()

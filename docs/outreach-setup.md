@@ -31,3 +31,29 @@ When an outlet replies, the agent reads the reply, works out what it needs (a qu
 - **Pause** stops the agent everywhere; **Take over** stops it in one conversation. *Ask the AI to draft* works even when paused.
 - **Account details** an outlet sends are stored encrypted and shown masked. *Show the full details* is recorded in the audit log. Confirm them with the outlet another way (a number you already know) before paying; then press *I confirmed these*.
 The agent uses the same writing model as the rest of the app (`LLM_PROVIDER`). In development (`USE_MOCKS=true`) a simple built-in stand-in reads obvious cues so you can try the whole flow without a model key.
+
+
+## 5. Sending through a Gmail / Google Workspace mailbox (the simple route)
+Instead of a separate sending domain, outreach can go out from, and replies can be read from, one real mailbox you own.
+1. Make a mailbox such as `outreach@coverfounder.com` in Google Workspace (a free Gmail address also works, but looks personal and has a lower daily limit).
+2. Turn on 2-step verification for it, then create an **app password** (Google Account > Security > App passwords). In Gmail settings, make sure IMAP is enabled.
+3. In Google Admin (Workspace), authenticate the domain's email: SPF and DKIM ("Authenticate email"), and add a DMARC record such as `v=DMARC1; p=none; rua=mailto:you@coverfounder.com`. This matters most for staying out of spam.
+4. On `backend`, set:
+   - `OUTREACH_SMTP_HOST=smtp.gmail.com`, `OUTREACH_SMTP_USER=outreach@coverfounder.com`, `OUTREACH_SMTP_PASSWORD=<the app password>`
+   - `OUTREACH_MAILBOX=outreach@coverfounder.com` (the From address; replies come back to `outreach+<code>@coverfounder.com`, which Gmail delivers to the same mailbox)
+   - `OUTREACH_FROM_NAME=Cover Founder` (or a person's name)
+   - `OUTREACH_IMAP_HOST=imap.gmail.com`, `OUTREACH_IMAP_USER=outreach@coverfounder.com`, `OUTREACH_IMAP_PASSWORD=<the same app password>`
+   - `OUTREACH_AI=on` last.
+   No `OUTREACH_REPLY_DOMAIN`, Resend inbound or webhook is needed on this route. Other emails (sign-in codes, receipts) keep going out through Resend as before.
+5. In Back office > Outreach > Templates and settings, use **Send a test email to yourself** and check it lands in your inbox, not spam. Also try mail-tester.com.
+
+## 6. Keeping outreach out of spam
+Built in:
+- **Replies wait** a few minutes (default 10, with some variation) after the outlet's message, as a person would. A person can tick "Send right away" for a single reply.
+- **First emails are spread out** (default at least 3 minutes apart) and capped (default 30 a day, the rest go the next morning).
+- **A daily limit on all outreach email** (default 150) so the mailbox is never over Google's limits.
+- **Plain text**, from a real mailbox, with a clear sender name, a reply-STOP line and your postal address. Replies to a person's own message are always from the same mailbox.
+Do this yourself:
+- Start small (a handful of outlets a day) for the first one or two weeks, then raise the numbers.
+- Ask a few friendly contacts to reply to the first emails: replies build the mailbox's reputation.
+- Keep the long download links out of the first email if you can. Spam filters dislike long signed links; tell the outlet you will send materials when they reply.

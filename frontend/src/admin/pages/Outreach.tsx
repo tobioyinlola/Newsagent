@@ -9,8 +9,9 @@ const request = <T,>(path: string, method = "GET", body?: unknown) => distributi
 
 type Template = { id: string; name: string; subject: string; body: string };
 type Step = { id: string; label: string; never_auto: boolean; default: string };
-type Config = { templates: Template[]; default_template: string; sender_name: string; sender_title: string; footer_address: string; mode: string; daily_cap: number; ai_turn_limit: number; paused: boolean; policy: Record<string, string> };
-type ConfigOut = { config: Config; variables: string[]; steps: Step[]; engine_on: boolean; reply_domain: string };
+type Config = { templates: Template[]; default_template: string; sender_name: string; sender_title: string; footer_address: string; mode: string; daily_cap: number; ai_turn_limit: number; paused: boolean; reply_delay_minutes: number; new_gap_minutes: number; new_daily_cap: number; send_cap_per_day: number; policy: Record<string, string> };
+type Sending = { via_mailbox: boolean; mailbox: string; reads_replies: boolean; reply_address_example: string | null };
+type ConfigOut = { config: Config; variables: string[]; steps: Step[]; engine_on: boolean; reply_domain: string; sending: Sending };
 type Thread = { id: string; request_id: string; outlet_name: string; contact_name: string; contact_email: string; status: string; ai_paused: boolean; updated_at: string | null; last: { direction: string; status: string; snippet: string } | null };
 type Message = { id: string; direction: "in" | "out"; kind: string; status: string; subject: string; body: string; sender: string; actor: string; created_at: string | null; sent_at: string | null; ai: { step?: string; intent?: string; reasons?: string[]; summary?: string; suspicious?: boolean; has_account_details?: boolean; sender_mismatch?: boolean; error?: string; approved_by?: string; edited?: boolean } };
 type Facts = { quoted_price?: number; currency?: string | null; deadline?: string; last_intent?: string; has_account_details?: boolean; account_masked?: string; account_verified?: boolean; account_verified_by?: string | null };
@@ -56,14 +57,15 @@ function Conversations() {
   const [text, setText] = useState("");
   useEffect(() => setText(""), [openId]);
   const refresh = () => { void qc.invalidateQueries({ queryKey: ["outreach-threads"] }); void qc.invalidateQueries({ queryKey: ["outreach-thread", openId] }); };
-  const send = useMutation({ mutationFn: () => request(`admin/outreach/threads/${openId}/reply`, "POST", { body: text }), onSuccess: () => { setText(""); refresh(); } });
-  const approve = useMutation({ mutationFn: (v: { mid: string; body: string }) => request(`admin/outreach/threads/${openId}/messages/${v.mid}/approve`, "POST", { body: v.body }), onSuccess: refresh });
+  const send = useMutation({ mutationFn: () => request(`admin/outreach/threads/${openId}/reply`, "POST", { body: text, send_now: sendNow }), onSuccess: () => { setText(""); refresh(); } });
+  const approve = useMutation({ mutationFn: (v: { mid: string; body: string }) => request(`admin/outreach/threads/${openId}/messages/${v.mid}/approve`, "POST", { body: v.body, send_now: sendNow }), onSuccess: refresh });
   const discard = useMutation({ mutationFn: (mid: string) => request(`admin/outreach/threads/${openId}/messages/${mid}/discard`, "POST"), onSuccess: refresh });
   const askAi = useMutation({ mutationFn: () => request(`admin/outreach/threads/${openId}/ai-draft`, "POST"), onSuccess: () => window.setTimeout(refresh, 2500) });
   const [revealed, setRevealed] = useState<{ details: Record<string, string>; messages: { id: string; text: string }[] } | null>(null);
   const reveal = useMutation({ mutationFn: () => request<{ details: Record<string, string>; messages: { id: string; text: string }[] }>(`admin/outreach/threads/${openId}/account-details`), onSuccess: setRevealed });
   const verify = useMutation({ mutationFn: () => request(`admin/outreach/threads/${openId}/account-details/verify`, "POST"), onSuccess: refresh });
   const [edits, setEdits] = useState<Record<string, string>>({});
+  const [sendNow, setSendNow] = useState(false); // skip the wait before a reply goes out
   useEffect(() => { setRevealed(null); setEdits({}); }, [openId]);
   const mark = useMutation({ mutationFn: (v: { status?: string; ai_paused?: boolean }) => request(`admin/outreach/threads/${openId}/status`, "POST", v), onSuccess: refresh });
   const counts = list.data?.counts ?? {};
@@ -124,6 +126,7 @@ function Conversations() {
             {canManage && d.thread.status !== "do_not_contact" && (
               <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); if (text.trim() && !send.isPending) send.mutate(); }}>
                 <label className="block text-sm font-semibold">Your reply<textarea className={inputCls} rows={5} value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a reply. It is sent from our outreach address and the answer comes back here." /></label>
+                <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={sendNow} onChange={(e) => setSendNow(e.target.checked)} /> Send right away. Otherwise a reply goes out a few minutes after the outlet wrote, as a person would, which helps it stay out of spam.</label>
                 <div className="flex flex-wrap gap-2">
                   <Button type="submit" disabled={!text.trim() || send.isPending}>{send.isPending ? "Sending…" : "Send reply"}</Button>
                   <Button type="button" variant="secondary" disabled={askAi.isPending} onClick={() => askAi.mutate()}>Ask the AI to draft</Button>
@@ -137,6 +140,21 @@ function Conversations() {
           </div>
         )}
       </Card>
+    </div>
+  );
+}
+
+function TestSend({ canManage }: { canManage: boolean }) {
+  const [to, setTo] = useState("");
+  const send = useMutation({ mutationFn: () => request("admin/outreach/test-send", "POST", { to: to.trim() }) });
+  if (!canManage) return null;
+  return (
+    <div className="mt-4 rounded-lg border border-line p-3">
+      <label className="block text-sm font-semibold">Send a test email to yourself<input className={inputCls} type="email" value={to} onChange={(e) => { setTo(e.target.value); send.reset(); }} placeholder="you@example.com" /></label>
+      <p className="mt-1 text-xs text-muted">It goes out exactly like a real one. Check that it lands in your inbox (not spam) before the first real send.</p>
+      <div className="mt-2"><Button type="button" variant="secondary" disabled={!to.trim() || send.isPending} onClick={() => send.mutate()}>{send.isPending ? "Sending…" : "Send test email"}</Button></div>
+      <ErrorBox error={send.error} />
+      {send.isSuccess && <div className="mt-2"><Notice tone="ok">Sent. Look in your inbox, and in spam too.</Notice></div>}
     </div>
   );
 }
@@ -159,6 +177,18 @@ function Settings({ data }: { data: ConfigOut }) {
           <label className="block text-sm font-semibold sm:col-span-2">Company postal address (shown under every email)<input className={inputCls} maxLength={300} value={cfg.footer_address} onChange={(e) => setCfg({ ...cfg, footer_address: e.target.value })} /></label>
         </fieldset>
         <p className="mt-2 text-sm text-muted">Every email also says the contact can reply STOP to be left alone, and we honour it.</p>
+      </Card>
+      <Card title="Sending and pacing">
+        <p className="text-sm">{data.sending.via_mailbox ? <>Emails go out from the mailbox <strong>{data.sending.mailbox}</strong>.</> : <>Emails go out from the app's usual sender (no outreach mailbox is connected yet).</>} {data.sending.reads_replies ? "Replies are read from that mailbox." : data.reply_domain ? `Replies come back to ${data.reply_domain}.` : "Replies are not being read yet."}</p>
+        {data.sending.reply_address_example && <p className="mt-1 text-xs text-muted">Each conversation has its own reply address, like {data.sending.reply_address_example.replace("0123456789abcdef0123", "…")}.</p>}
+        <fieldset disabled={!canManage || save.isPending} className="mt-3 grid gap-4 sm:grid-cols-2">
+          <label className="block text-sm font-semibold">Wait before replying (minutes)<input className={inputCls} type="number" min={0} max={1440} value={cfg.reply_delay_minutes} onChange={(e) => setCfg({ ...cfg, reply_delay_minutes: Number(e.target.value) })} /></label>
+          <label className="block text-sm font-semibold">Gap between first emails (minutes)<input className={inputCls} type="number" min={0} max={240} value={cfg.new_gap_minutes} onChange={(e) => setCfg({ ...cfg, new_gap_minutes: Number(e.target.value) })} /></label>
+          <label className="block text-sm font-semibold">First emails per day<input className={inputCls} type="number" min={1} max={2000} value={cfg.new_daily_cap} onChange={(e) => setCfg({ ...cfg, new_daily_cap: Number(e.target.value) })} /></label>
+          <label className="block text-sm font-semibold">All outreach emails per day<input className={inputCls} type="number" min={1} max={5000} value={cfg.send_cap_per_day} onChange={(e) => setCfg({ ...cfg, send_cap_per_day: Number(e.target.value) })} /></label>
+        </fieldset>
+        <p className="mt-2 text-sm text-muted">A reply never goes out sooner than the wait after the outlet's message, with a little variation. First emails are spread out and capped per day, and everything is sent as plain text from a real mailbox. Start with small numbers and raise them over a few weeks.</p>
+        <TestSend canManage={canManage} />
       </Card>
       <Card title="What the AI agent may do">
         <fieldset disabled={!canManage || save.isPending} className="space-y-4">
@@ -259,7 +289,7 @@ export function OutreachAdmin() {
     <div className="space-y-4">
       <div><h1 className="text-2xl font-bold">Outreach to outlets</h1><p className="mt-1 text-sm text-muted">Contact the outlets a paid request names, read their replies and answer them, all in one place.</p></div>
       {cfg.data && !cfg.data.engine_on && <Notice tone="warn">Outreach conversations are switched off (<code>OUTREACH_AI=off</code>), so paid requests still send the original one-way email. You can set up templates and contacts now.</Notice>}
-      {cfg.data?.engine_on && !cfg.data.reply_domain && <Notice tone="warn">No reply domain is set (<code>OUTREACH_REPLY_DOMAIN</code>), so replies cannot come back into this inbox yet.</Notice>}
+      {cfg.data?.engine_on && !cfg.data.reply_domain && !cfg.data.sending.mailbox && !cfg.data.sending.reads_replies && <Notice tone="warn">No mailbox or reply domain is set (<code>OUTREACH_MAILBOX</code> or <code>OUTREACH_REPLY_DOMAIN</code>), so replies cannot come back into this inbox yet.</Notice>}
       <ErrorBox error={cfg.error} />
       <div className="flex flex-wrap gap-2" role="group" aria-label="Outreach sections">{tabBtn("inbox", "Conversations")}{tabBtn("settings", "Templates and settings")}{tabBtn("contacts", "Contacts")}</div>
       {tab === "inbox" && <Conversations />}

@@ -863,6 +863,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/outreach/test-send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Send
+         * @description Send a sample outreach email (the default template, sample details) to an address of yours, exactly the way real ones go out.
+         */
+        post: operations["test_send_v1_admin_outreach_test_send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/outreach/threads": {
         parameters: {
             query?: never;
@@ -5128,6 +5148,10 @@ export interface components {
              * @default draft
              */
             mode: string;
+            /** New Daily Cap */
+            new_daily_cap?: number;
+            /** New Gap Minutes */
+            new_gap_minutes?: number;
             /**
              * Paused
              * @default false
@@ -5137,6 +5161,13 @@ export interface components {
             policy?: {
                 [key: string]: string;
             };
+            /** Reply Delay Minutes */
+            reply_delay_minutes?: number;
+            /**
+             * Send Cap Per Day
+             * @default 150
+             */
+            send_cap_per_day: number;
             /**
              * Sender Name
              * @default The Cover Founder team
@@ -5720,6 +5751,11 @@ export interface components {
         ReplyIn: {
             /** Body */
             body: string;
+            /**
+             * Send Now
+             * @default false
+             */
+            send_now: boolean;
             /** Subject */
             subject?: string | null;
         };
@@ -6357,6 +6393,14 @@ export interface components {
             /** Subject */
             subject: string;
         };
+        /** TestSendIn */
+        TestSendIn: {
+            /**
+             * To
+             * Format: email
+             */
+            to: string;
+        };
         /** TopCustomer */
         TopCustomer: {
             /** Company */
@@ -6648,6 +6692,11 @@ export interface components {
         app__routes__outreach__ApproveIn: {
             /** Body */
             body?: string | null;
+            /**
+             * Send Now
+             * @default false
+             */
+            send_now: boolean;
         };
         /** StatusIn */
         app__routes__outreach__StatusIn: {
@@ -8591,6 +8640,43 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PreviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_send_v1_admin_outreach_test_send_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TestSendIn"];
             };
         };
         responses: {

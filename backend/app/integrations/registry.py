@@ -146,6 +146,23 @@ def get_email() -> EmailProvider:
     return _get("email", make)  # type: ignore[return-value]
 
 
+def get_outreach_email() -> EmailProvider:
+    """Who sends the outreach emails: the configured mailbox (Gmail / Workspace over SMTP) or, when none is set, the usual sender."""
+    s = get_settings()
+    if not s.outreach_smtp_host:
+        return get_email()
+
+    def make() -> EmailProvider:
+        from email.utils import formataddr
+
+        from app.integrations.email.smtp import SmtpEmail
+
+        sender = formataddr((s.outreach_from_name, s.outreach_mailbox or s.outreach_smtp_user))
+        return SmtpEmail(s.outreach_smtp_host, s.outreach_smtp_port, s.outreach_smtp_user, s.outreach_smtp_password, starttls=True, sender=sender)
+
+    return _get("outreach_email", make)  # type: ignore[return-value]
+
+
 def get_transcription() -> TranscriptionProvider:
     def make() -> TranscriptionProvider:
         if get_settings().use_mocks:

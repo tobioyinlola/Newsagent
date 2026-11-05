@@ -7,7 +7,7 @@ const messages = [
   { id: "m2", direction: "in", kind: "received", status: "received", subject: "Re: Rates", body: "Our rate is $500. Pay to account ••••6789.", sender: "Bayo <billing@other-company.example.org>", actor: "billing@other-company.example.org", ai: { sender_mismatch: true, has_account_details: true, suspicious: true }, created_at: "2026-11-05T09:30:00Z", sent_at: "2026-11-05T09:30:00Z" },
   { id: "m3", direction: "out", kind: "ai_draft", status: "pending_approval", subject: "Re: Rates", body: "Thank you for your details. We will confirm shortly.", sender: "", actor: "ai", ai: { step: "confirm_account_details", reasons: ["“Confirm account details” involves payment or account details, so a person always handles it.", "The reply came from a different company than the contact we wrote to."] }, created_at: "2026-11-05T09:31:00Z", sent_at: null },
 ];
-const config = { config: { templates: [{ id: "intro", name: "Friendly introduction", subject: "Hi", body: "Hello" }], default_template: "intro", sender_name: "Ngozi", sender_title: "Partnerships", footer_address: "", mode: "policy", daily_cap: 200, ai_turn_limit: 6, paused: false, policy: {} }, variables: ["headline"], steps: [{ id: "thanks", label: "Thank them", never_auto: false, default: "auto" }, { id: "discuss_price", label: "Talk about their price", never_auto: false, default: "approve" }, { id: "accept_offer", label: "Accept their offer (commit to pay)", never_auto: true, default: "approve" }], engine_on: true, reply_domain: "mail.example.com" };
+const config = { config: { templates: [{ id: "intro", name: "Friendly introduction", subject: "Hi", body: "Hello" }], default_template: "intro", sender_name: "Ngozi", sender_title: "Partnerships", footer_address: "", mode: "policy", daily_cap: 200, ai_turn_limit: 6, paused: false, policy: {}, reply_delay_minutes: 10, new_gap_minutes: 3, new_daily_cap: 30, send_cap_per_day: 150 }, variables: ["headline"], steps: [{ id: "thanks", label: "Thank them", never_auto: false, default: "auto" }, { id: "discuss_price", label: "Talk about their price", never_auto: false, default: "approve" }, { id: "accept_offer", label: "Accept their offer (commit to pay)", never_auto: true, default: "approve" }], engine_on: true, reply_domain: "", sending: { via_mailbox: true, mailbox: "outreach@coverfounder.com", reads_replies: true, reply_address_example: "outreach+0123456789abcdef0123@coverfounder.com" } };
 
 test("a held draft, a suspicious sender and account details are shown clearly", async ({ browser }) => {
   const ctx = await browser.newContext();
@@ -30,6 +30,10 @@ test("a held draft, a suspicious sender and account details are shown clearly", 
   await page.screenshot({ path: "test-results/outreach-thread.png", fullPage: true });
 
   await page.getByRole("button", { name: "Templates and settings" }).click();
+  await expect(page.getByRole("heading", { name: "Sending and pacing" })).toBeVisible();
+  await expect(page.getByText(/Emails go out from the mailbox/)).toBeVisible();
+  await expect(page.getByLabel("Wait before replying (minutes)")).toHaveValue("10");
+  await expect(page.getByRole("button", { name: "Send test email" })).toBeDisabled();
   await expect(page.getByRole("heading", { name: "What the AI agent may do" })).toBeVisible();
   await expect(page.getByLabel("Accept their offer (commit to pay): automatic or approval")).toBeDisabled(); // money steps are never automatic
   await expect(page.getByLabel("Thank them: automatic or approval")).toBeEnabled();

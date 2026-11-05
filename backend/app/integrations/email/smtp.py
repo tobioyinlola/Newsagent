@@ -7,10 +7,25 @@ from app.integrations.email.base import EmailProvider
 
 
 class SmtpEmail(EmailProvider):
-    """SMTP delivery (Mailpit locally). The production transactional vendor is a Decision needed."""
+    """SMTP delivery: Mailpit locally, or a real mailbox (Gmail / Google Workspace with an app password) with login and STARTTLS."""
 
-    def __init__(self, host: str = "localhost", port: int = 1025) -> None:
-        self.host, self.port = host, port
+    def __init__(
+        self,
+        host: str = "localhost",
+        port: int = 1025,
+        user: str = "",
+        password: str = "",
+        starttls: bool = False,
+        sender: str | None = None,
+    ) -> None:
+        self.host, self.port, self.user, self.password, self.starttls, self.sender = (
+            host,
+            port,
+            user,
+            password,
+            starttls,
+            sender,
+        )
 
     async def send(
         self,
@@ -23,7 +38,7 @@ class SmtpEmail(EmailProvider):
         headers: dict[str, str] | None = None,
     ) -> None:
         msg = EmailMessage()
-        msg["From"], msg["To"], msg["Subject"] = get_settings().email_from, to, subject
+        msg["From"], msg["To"], msg["Subject"] = self.sender or get_settings().email_from, to, subject
         if reply_to:
             msg["Reply-To"] = reply_to
         for name, value in (headers or {}).items():
@@ -33,7 +48,11 @@ class SmtpEmail(EmailProvider):
             msg.add_alternative(html, subtype="html")
 
         def _send() -> None:
-            with smtplib.SMTP(self.host, self.port) as s:
+            with smtplib.SMTP(self.host, self.port, timeout=30) as s:
+                if self.starttls:
+                    s.starttls()
+                if self.user:
+                    s.login(self.user, self.password)
                 s.send_message(msg)
 
         await asyncio.to_thread(_send)

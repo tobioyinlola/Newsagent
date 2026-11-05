@@ -3441,6 +3441,18 @@
             "title": "Mode",
             "type": "string"
           },
+          "new_daily_cap": {
+            "maximum": 2000.0,
+            "minimum": 1.0,
+            "title": "New Daily Cap",
+            "type": "integer"
+          },
+          "new_gap_minutes": {
+            "maximum": 240.0,
+            "minimum": 0.0,
+            "title": "New Gap Minutes",
+            "type": "integer"
+          },
           "paused": {
             "default": false,
             "title": "Paused",
@@ -3452,6 +3464,19 @@
             },
             "title": "Policy",
             "type": "object"
+          },
+          "reply_delay_minutes": {
+            "maximum": 1440.0,
+            "minimum": 0.0,
+            "title": "Reply Delay Minutes",
+            "type": "integer"
+          },
+          "send_cap_per_day": {
+            "default": 150,
+            "maximum": 5000.0,
+            "minimum": 1.0,
+            "title": "Send Cap Per Day",
+            "type": "integer"
           },
           "sender_name": {
             "default": "The Cover Founder team",
@@ -5011,6 +5036,11 @@
             "minLength": 1,
             "title": "Body",
             "type": "string"
+          },
+          "send_now": {
+            "default": false,
+            "title": "Send Now",
+            "type": "boolean"
           },
           "subject": {
             "anyOf": [
@@ -6919,6 +6949,20 @@
         "title": "Template",
         "type": "object"
       },
+      "TestSendIn": {
+        "properties": {
+          "to": {
+            "format": "email",
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "to"
+        ],
+        "title": "TestSendIn",
+        "type": "object"
+      },
       "TopCustomer": {
         "properties": {
           "company": {
@@ -7663,6 +7707,11 @@
               }
             ],
             "title": "Body"
+          },
+          "send_now": {
+            "default": false,
+            "title": "Send Now",
+            "type": "boolean"
           }
         },
         "title": "ApproveIn",
@@ -11206,6 +11255,68 @@
           }
         },
         "summary": "Preview",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/test-send": {
+      "post": {
+        "description": "Send a sample outreach email (the default template, sample details) to an address of yours, exactly the way real ones go out.",
+        "operationId": "test_send_v1_admin_outreach_test_send_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestSendIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Test Send V1 Admin Outreach Test Send Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Test Send",
         "tags": [
           "outreach"
         ]
