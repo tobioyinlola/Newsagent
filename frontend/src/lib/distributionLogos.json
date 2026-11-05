@@ -37,12 +37,12 @@
     "tone": "dark"
   },
   "Street Insider": {
-    "src": "/distribution-logos/street-insider.png",
-    "source": "https://www.streetinsider.com/images/silogo-new.png",
+    "src": "/distribution-logos/street-insider.jpg",
+    "source": "Supplied by the owner (empty margins trimmed)",
     "website": "https://www.streetinsider.com/",
     "dimensions": [
-      232,
-      79
+      1368,
+      720
     ]
   },
   "Crest Africa": {
@@ -308,9 +308,13 @@
     ]
   },
   "Business Insider": {
-    "src": "/outlets/business-insider.webp",
-    "source": "Existing public distribution logo asset",
-    "website": "https://africa.businessinsider.com/"
+    "src": "/distribution-logos/business-insider.jpg",
+    "source": "Supplied by the owner",
+    "website": "https://africa.businessinsider.com/",
+    "dimensions": [
+      554,
+      554
+    ]
   },
   "Techpoint Africa": {
     "src": "/distribution-logos/techpoint-africa.webp",
@@ -395,12 +399,12 @@
     ]
   },
   "Bar Chart": {
-    "src": "/distribution-logos/bar-chart.ico",
-    "source": "https://www.barchart.com/favicon.ico",
+    "src": "/distribution-logos/bar-chart.jpg",
+    "source": "Supplied by the owner (empty margins trimmed)",
     "website": "https://www.barchart.com/",
     "dimensions": [
-      256,
-      256
+      908,
+      768
     ]
   },
   "Investing.com": {
@@ -437,6 +441,24 @@
     "dimensions": [
       355,
       88
+    ]
+  },
+  "Big News Network": {
+    "src": "/distribution-logos/big-news-network.jpg",
+    "source": "Supplied by the owner (empty margins trimmed)",
+    "website": "https://www.bignewsnetwork.com/",
+    "dimensions": [
+      979,
+      344
+    ]
+  },
+  "Business Outstanders": {
+    "src": "/distribution-logos/business-outstanders.jpg",
+    "source": "Supplied by the owner (empty margins trimmed)",
+    "website": "https://businessoutstanders.com/",
+    "dimensions": [
+      1210,
+      587
     ]
   }
 }
