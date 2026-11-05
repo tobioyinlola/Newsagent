@@ -220,3 +220,32 @@ async def test_house_presenters_come_first_and_are_always_valid(client, workspac
     # a house presenter need not be in the vendor's (huge) catalogue to be chosen
     r = await client.post("/v1/projects", json={**BRIEF, "anchor_id": "house-man"}, headers=OWNER)
     assert r.status_code == 200 and r.json()["anchor_id"] == "house-man"
+
+
+async def test_a_house_presenter_can_have_her_own_voice_and_picture(client, workspace, monkeypatch):
+    from app.services import presenters
+
+    monkeypatch.setattr(
+        get_settings(),
+        "heygen_featured_presenters",
+        "look-a|Amara, news desk|female|voice-ng-1|amara.jpg;look-b|Marcus|male;look-c|Plain|female",
+    )
+    got = {p["id"]: p for p in (await client.get("/v1/presenters", headers=OWNER)).json()}
+    assert got["look-a"]["preview_image_url"] == "/presenters/amara.jpg"  # the named picture
+    assert got["look-b"]["preview_image_url"] == "/presenters/look-b.jpg"  # the default picture name is unchanged
+    assert presenters.own_voice("look-a") == "voice-ng-1"
+    assert presenters.own_voice("look-a", "female") == "voice-ng-1"
+    assert presenters.own_voice("look-a", "male") is None  # only when she is the gender required
+    assert presenters.own_voice("look-b") is None and presenters.own_voice("unknown") is None
+
+
+async def test_the_video_service_uses_a_house_presenters_own_voice(monkeypatch):
+    import httpx
+
+    from app.integrations.avatar.heygen import HeyGenProvider
+
+    monkeypatch.setattr(get_settings(), "heygen_featured_presenters", "look-a|Amara|female|voice-ng-1")
+    avatar = HeyGenProvider.__new__(HeyGenProvider)
+    async with httpx.AsyncClient() as c:  # no request is made: the presenter's own voice is used before any lookup
+        assert await avatar._voice_for(c, "look-a", "british") == "voice-ng-1"
+        assert await avatar._voice_for(c, "look-a", "british", "female") == "voice-ng-1"

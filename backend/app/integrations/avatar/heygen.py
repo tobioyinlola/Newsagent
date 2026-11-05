@@ -150,6 +150,11 @@ class HeyGenProvider(AvatarProvider):
         `required` ("female"/"male"): the voice must be that gender, so the look's own default (whose gender we can't see) is
         skipped and only a voice HeyGen lists with that gender is accepted."""
         st = get_settings()
+        from app.services import presenters  # local: the services layer imports the adapters
+
+        own = presenters.own_voice(avatar_id, required)
+        if own:  # a house presenter with a voice of her own (for example a female African-English voice)
+            return own
         if required:
             chosen = {"male": st.heygen_voice_male, "female": st.heygen_voice_female}.get(required)
             return chosen or await self._search_voice(c, required, accent, strict=True)
