@@ -41,6 +41,7 @@ class Presenter:
     gender: str = ""
     preview_image_url: str | None = None
     orientation: str | None = None
+    soon: bool = False  # shown to customers as "coming soon", not yet pickable
     voice_id: str = ""  # a house presenter's own voice (HEYGEN_FEATURED_PRESENTERS' 4th field); blank = the vendor's default for the look
 
 

@@ -31,22 +31,31 @@ async def catalogue() -> list[Presenter]:
 def featured() -> list[Presenter]:
     """The house presenters, offered first. Configured, so a new one is an environment change, not a deploy.
     Each entry is `id|name|gender|voice_id|picture` separated by `;`; only id and name are required. The voice is this presenter's own
-    (e.g. a female African-English voice); the picture is a file name in the site's /presenters folder (default `<id>.jpg`)."""
-    out = []
-    for item in (get_settings().heygen_featured_presenters + ";" + get_settings().heygen_extra_presenters).split(";"):
-        parts = [x.strip() for x in item.split("|")]
-        if len(parts) >= 2 and parts[0]:
-            picture = parts[4] if len(parts) > 4 and parts[4] else f"{parts[0]}.jpg"
-            out.append(
-                Presenter(
-                    parts[0],
-                    parts[1],
-                    parts[2] if len(parts) > 2 else "",
-                    f"/presenters/{picture}",
-                    "landscape",
-                    voice_id=parts[3] if len(parts) > 3 else "",
+    (e.g. a female African-English voice); the picture is a file name in the site's /presenters folder (default `<id>.jpg`).
+
+    HEYGEN_FEATURED_PRESENTERS is the original list: only its first presenter is pickable, the rest show as "coming soon".
+    HEYGEN_EXTRA_PRESENTERS are added after it and are all pickable. The default presenter (HEYGEN_DEFAULT_AVATAR_ID) is always pickable
+    and is listed first."""
+    st = get_settings()
+    default = st.heygen_default_avatar_id
+    out: list[Presenter] = []
+    for group, live in ((st.heygen_featured_presenters, False), (st.heygen_extra_presenters, True)):
+        for n, item in enumerate(group.split(";")):
+            parts = [x.strip() for x in item.split("|")]
+            if len(parts) >= 2 and parts[0]:
+                picture = parts[4] if len(parts) > 4 and parts[4] else f"{parts[0]}.jpg"
+                out.append(
+                    Presenter(
+                        parts[0],
+                        parts[1],
+                        parts[2] if len(parts) > 2 else "",
+                        f"/presenters/{picture}",
+                        "landscape",
+                        soon=not (live or (n == 0 and not out) or parts[0] == default),
+                        voice_id=parts[3] if len(parts) > 3 else "",
+                    )
                 )
-            )
+    out.sort(key=lambda p: p.id != default)  # the default first (a stable sort: the others keep their order)
     return out
 
 
@@ -66,7 +75,12 @@ async def search(q: str = "", gender: str = "", limit: int = 48) -> list[Present
 
     house = [p for p in featured() if ok(p)]
     seen = {p.id for p in house}
-    return (house + [p for p in await catalogue() if ok(p) and p.id not in seen])[:limit]
+    from dataclasses import replace
+
+    rest = [replace(p, soon=True) for p in await catalogue() if ok(p) and p.id not in seen]  # the vendor's catalogue: shown, not yet pickable
+    if not featured() and rest:  # no house presenters set up: the first look is the default, as it always was
+        rest[0] = replace(rest[0], soon=False)
+    return (house + rest)[:limit]
 
 
 async def resolve(requested: str | None) -> str | None:
