@@ -12,6 +12,6 @@ describe("no studio plates in the picture", () => {
     expect(code(f)).not.toMatch(/>\s*FEATURED\s*</);
   });
   it("behind the scenes of a presenter video with its own studio there is only plain ink, never our set", () => {
-    expect(code("InterviewMerge.tsx")).toMatch(/anchorFullFrame \? <AbsoluteFill style=\{\{ background: CF\.ink \}\} \/> : <Backdrop \/>/);
+    expect(code("InterviewMerge.tsx")).toMatch(/anchorFullFrame \? <AbsoluteFill style=\{\{ background: CF\.ink \}\} \/> : p\.anchorPlate \? <NewsroomPlate \/> : <Backdrop \/>/);
   });
 });

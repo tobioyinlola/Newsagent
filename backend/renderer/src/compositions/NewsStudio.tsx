@@ -5,6 +5,7 @@ import { Backdrop, Chrome } from "./Chrome";
 import { ClipScene } from "./ClipScene";
 import { FullFrameAnchor } from "./FullFrameAnchor";
 import { NewsDesk, SOFT_TOP, StudioProvider } from "./NewsSet";
+import { NewsroomPlate } from "./NewsroomPlate";
 import { SceneEdge, useEdgeVolume } from "./SceneEdge";
 import { CF, Fonts, MONO, SANS } from "./theme";
 import { NewsProps } from "./types";
@@ -27,17 +28,17 @@ const StudioBody: React.FC<NewsProps> = (p) => {
   return (
     <AbsoluteFill style={{ background: CF.ink, fontFamily: SANS }}>
       <Fonts />
-      {p.anchorFullFrame && p.anchorSrc ? <FullFrameAnchor src={p.anchorSrc} covers={p.anchorCovers ?? true} /> : <Backdrop />}
+      {p.anchorFullFrame && p.anchorSrc ? <FullFrameAnchor src={p.anchorSrc} covers={p.anchorCovers ?? true} /> : p.anchorPlate ? <NewsroomPlate /> : <Backdrop />}
 
       {/* anchor */}
-      {!(p.anchorFullFrame && p.anchorSrc) && <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: portrait ? "16%" : "11%" }}>
+      {!(p.anchorFullFrame && p.anchorSrc) && <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", paddingBottom: p.anchorPlate ? 0 : portrait ? "16%" : "11%" }}>
         {p.anchorSrc ? (
-          <OffthreadVideo src={p.anchorSrc.startsWith("http") ? p.anchorSrc : staticFile(p.anchorSrc)} transparent volume={volume} style={{ height: portrait ? "66%" : "80%", objectFit: "contain", ...SOFT_TOP }} />
+          <OffthreadVideo src={p.anchorSrc.startsWith("http") ? p.anchorSrc : staticFile(p.anchorSrc)} transparent volume={volume} style={{ height: p.anchorPlate ? (portrait ? "78%" : "100%") : portrait ? "66%" : "80%", objectFit: "contain", ...SOFT_TOP }} />
         ) : (
           <AnchorFigure height={portrait ? "68%" : "86%"} />
         )}
       </AbsoluteFill>}
-      {!(p.anchorFullFrame && p.anchorSrc) && <NewsDesk />}
+      {!(p.anchorFullFrame && p.anchorSrc) && !p.anchorPlate && <NewsDesk />}
 
 
       {/* lower third */}

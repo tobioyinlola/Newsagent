@@ -29,7 +29,9 @@ def build_vendor_policies(environ: Mapping[str, str]) -> dict[str, VendorPolicy]
     what the HeyGen plan allows, so it is a setting (AVATAR_MAX_CONCURRENCY, 3 unless set); the same for the renderer."""
     return {
         "llm": VendorPolicy(timeout_s=170, max_attempts=3),
-        "avatar": VendorPolicy(timeout_s=900, max_attempts=3, max_concurrency=_env_int(environ, "AVATAR_MAX_CONCURRENCY", 3)),
+        "avatar": VendorPolicy(
+            timeout_s=900, max_attempts=3, max_concurrency=_env_int(environ, "AVATAR_MAX_CONCURRENCY", 3)
+        ),
         # A render of a 5 to 6 minute interview video takes about 20 minutes on the production server (about 9 frames a second), so one
         # attempt gets an hour. The worker lease (runner.lease_for, used by the stuck-project sweep) is worked out from this number too.
         "renderer": VendorPolicy(
@@ -74,8 +76,12 @@ class Settings(BaseSettings):
     heygen_default_avatar_id: str = ""
     # Editorial Breaking Story presenter only. The customer video pipeline keeps using heygen_default_avatar_id.
     # This is the female news-desk look already listed as coming soon in the presenter catalogue.
-    news_desk_avatar_id: str = "294e7a4a0fc0e8bc6d4990e34f5365fc"  # "Studio anchor": at a news desk, face clear of the headline
-    news_desk_voice_gender: str = "female"  # the News Desk presenter always speaks with a voice of this gender ("" = the look's own)
+    news_desk_avatar_id: str = (
+        "294e7a4a0fc0e8bc6d4990e34f5365fc"  # "Studio anchor": at a news desk, face clear of the headline
+    )
+    news_desk_voice_gender: str = (
+        "female"  # the News Desk presenter always speaks with a voice of this gender ("" = the look's own)
+    )
     heygen_voice_male: str = ""  # voice used when a presenter's look has no voice of its own and the presenter is a man
     heygen_voice_female: str = ""  # ... and a woman
     heygen_closing_params: str = (
@@ -85,6 +91,9 @@ class Settings(BaseSettings):
     # Looks whose video already contains the whole studio (a photo of a news set that the vendor animates). Those are
     # requested as ordinary MP4 and shown full frame; every other look is requested as a transparent cut-out.
     heygen_fullframe_avatar_ids: str = ""
+    # Looks that arrive as a transparent cut-out and are shown in the newsroom of the male reporter (the plate behind Marcus), with no desk,
+    # instead of the drawn blue set. Comma-separated look ids; the default is Amara. Empty = every cut-out keeps the drawn set.
+    heygen_plate_avatar_ids: str = "757b92ac0a0fb20f4eda506ad96c8f17"
     # presenters offered first and always valid: "id|Name|gender;id|Name|gender". Their pictures are the frontend's /presenters/<id>.jpg
     heygen_featured_presenters: str = ""
     heygen_extra_presenters: str = ""  # more house presenters, same format as above; added after them (so a new one never has to rewrite the list above)
@@ -141,7 +150,9 @@ class Settings(BaseSettings):
     queue_backend: str = "inline"  # inline | celery
     # legacy: slow work (presenter clips, renders) goes straight to the workers, as before. dispatcher: it joins ONE durable line
     # (the work_queue table) and is released first-in-first-out as renderer and presenter-video capacity frees up; waiting never fails.
-    progress_cache_s: float = 3.0  # a video's progress is worked out at most this often per project (with the Celery queue); 0 = always fresh
+    progress_cache_s: float = (
+        3.0  # a video's progress is worked out at most this often per project (with the Celery queue); 0 = always fresh
+    )
     # AI outreach to distribution outlets (templates, a reply inbox, an agent that answers within approval rules). off = the original one-way email.
     outreach_ai: str = "off"  # off | on
     outreach_reply_domain: str = ""  # replies come back to outreach+<token>@<this domain> (a domain that receives mail); blank = the plain reply-to address
@@ -164,8 +175,12 @@ class Settings(BaseSettings):
     llm_max_concurrency: int = 16  # writing calls in flight at once per process; the rest wait their turn
     llm_retries: int = 2  # a busy or briefly failing writing provider is asked again this many times
     queue_mode: str = "legacy"
-    render_queue_slots: int = 0  # renders running at once under the dispatcher; 0 = one per configured renderer x render_jobs_concurrency
-    render_jobs_concurrency: int = 1  # heavy renders each renderer runs at once (the same RENDER_JOBS_CONCURRENCY the renderer reads)
+    render_queue_slots: int = (
+        0  # renders running at once under the dispatcher; 0 = one per configured renderer x render_jobs_concurrency
+    )
+    render_jobs_concurrency: int = (
+        1  # heavy renders each renderer runs at once (the same RENDER_JOBS_CONCURRENCY the renderer reads)
+    )
     queue_dispatch_grace_s: int = 600  # a released job gets this long to be picked up before it is put back in line
     queue_max_wait_hours: int = 36  # under the dispatcher, a video waiting for a vendor slot is not failed before this
     # Database connections per process (the API, and each worker). Keep (pool_size + max_overflow) x processes under Postgres's
@@ -203,13 +218,21 @@ class Settings(BaseSettings):
     # Credits: a video costs `credits_per_video` credit (one), whatever the vendors charge; one credit is sold at `usd_per_credit`.
     # Preset purchases get amount / usd_per_credit credits, rounded to 0.01; custom quantities have a $10 minimum.
     bank_transfer_enabled: bool = True  # False hides bank transfer everywhere customers choose how to pay (the code stays; set True to bring it back)
-    bank_transfer_review_enabled: bool = True  # New purchases use bank transfer and finance approval; cards are coming soon.
+    bank_transfer_review_enabled: bool = (
+        True  # New purchases use bank transfer and finance approval; cards are coming soon.
+    )
     usd_per_credit: str = "2.70"
     credits_per_video: str = "1"
     credit_purchase_usd: str = "1,10,50,100,200"
-    referral_purchase_percent: str = "5"  # the referrer is credited this % of the credits every referred business buys, on every purchase
-    referral_signup_credits: str = "0"  # (off) credits the referrer gets when a business they referred signs up; the percentage above replaced it
-    hide_free_distribution_outlets: bool = True  # outlets priced at 0 credits are not shown to customers for now; price one in the back office to show it
+    referral_purchase_percent: str = (
+        "5"  # the referrer is credited this % of the credits every referred business buys, on every purchase
+    )
+    referral_signup_credits: str = (
+        "0"  # (off) credits the referrer gets when a business they referred signs up; the percentage above replaced it
+    )
+    hide_free_distribution_outlets: bool = (
+        True  # outlets priced at 0 credits are not shown to customers for now; price one in the back office to show it
+    )
     credit_markup: str = "0"  # credits taken per 1 USD of vendor cost while a video is made: 0 = none, the video's flat price is its only charge
     low_balance_threshold: str = "1"
     billing_webhook_secret: str = ""  # HMAC secret for payment webhooks; REQUIRED outside local
@@ -221,12 +244,20 @@ class Settings(BaseSettings):
     nuvion_webhook_secret: str = Field(default="", repr=False)
     # Stripe card payments (hosted Checkout). On when the secret key is set. A test key (sk_test_...) is the sandbox.
     stripe_secret_key: str = Field(default="", repr=False)
-    stripe_webhook_secret: str = Field(default="", repr=False)  # whsec_..., signing secret of the /v1/webhooks/stripe endpoint
-    stripe_api_url: str = "https://api.stripe.com/v1"  # only changed in local development, to point at a stand-in Stripe
+    stripe_webhook_secret: str = Field(
+        default="", repr=False
+    )  # whsec_..., signing secret of the /v1/webhooks/stripe endpoint
+    stripe_api_url: str = (
+        "https://api.stripe.com/v1"  # only changed in local development, to point at a stand-in Stripe
+    )
     # Money going back. The code is built and tested but OFF until switched on (then also add the matching events to the Stripe webhook).
     stripe_refunds_enabled: bool = False  # charge.refunded: take back the matching credits
-    stripe_chargebacks_enabled: bool = False  # charge.dispute.created / .closed: hold the credits, return them if the dispute is won
-    min_fund_usd: str = "10"  # lowest amount that can be added; smaller presets (the $1 test amount) show only in sandbox
+    stripe_chargebacks_enabled: bool = (
+        False  # charge.dispute.created / .closed: hold the credits, return them if the dispute is won
+    )
+    min_fund_usd: str = (
+        "10"  # lowest amount that can be added; smaller presets (the $1 test amount) show only in sandbox
+    )
     ngn_per_usd: Decimal = Field(default=Decimal("1400"), gt=0, le=1000000, decimal_places=2)
     nuvion_ngn_account_id: str = ""
     nuvion_ngn_card_enabled: bool = False
