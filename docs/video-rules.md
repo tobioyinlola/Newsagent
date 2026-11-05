@@ -1,6 +1,6 @@
 # Video rules: business interview videos
 
-Generated from `backend/app/video_rules/rulebook.py` (rulebook version 5). Do not edit by hand: change the
+Generated from `backend/app/video_rules/rulebook.py` (rulebook version 6). Do not edit by hand: change the
 rulebook, then run `uv run python ../scripts/export_video_rules.py` from `backend/`. How rules may change is written at
 the top of the rulebook; in short, rules are added, never deleted, and every change is versioned and tested.
 
@@ -18,7 +18,7 @@ the top of the rulebook; in short, rules are added, never deleted, and every cha
 | `BIV-INT-009` | **Answers that must be recorded again.** An answer with no speech, that is too short, too dark, or contains abusive language must be re-recorded. | ["abusive_language", "dark_video", "no_speech", "too_short"] |
 | `BIV-INT-010` | **Answer checks (thresholds).** No speech: under 1 s of speech or average level below -50 dB. Too short: under 2 s between first and last speech. Too dark: average brightness below 25 (of 255). Loud sound is accepted and levelled, never a reason to re-record. | {"min_speech_s": 1.0, "min_mean_db": -50, "min_span_s": 2, "min_brightness": 25} |
 | `BIV-INT-011` | **Answer clean-up.** Each kept answer is cleaned (rumble filter, noise reduction), trimmed to the speech, and levelled to -16 LUFS. | {"loudness_lufs": -16, "true_peak_db": -1.5, "lra": 11} |
-| `BIV-INT-012` | **Countdown before each answer (seconds), recorded.** A countdown runs before each answer so the founder is ready, and the recording runs through it from its first second: nothing said early or right at the end of the countdown is lost. The lead-in is trimmed off with the other silence when the answer is cleaned up (BIV-INT-011). | 5 |
+| `BIV-INT-013` | **Countdown before each answer, and when recording starts (seconds).** A countdown runs before each answer so the founder is ready. The recording starts this many seconds before the countdown ends, so nothing said early or right as it ends is lost. The lead-in is trimmed off with the other silence when the answer is cleaned up (BIV-INT-011). | {"countdown_s": 5, "record_before_end_s": 2} |
 
 ## What the presenter says
 
@@ -111,6 +111,7 @@ the top of the rulebook; in short, rules are added, never deleted, and every cha
 | `BIV-SCN-001` | **Scene order.** Brand intro, opening shot (if any), presenter opening, explanation (if any), then for each answer: presenter asks, founder answers, cutaway (if any); then the recap, the sign-off, the sign-off shot (if any) and the brand outro. | `BIV-SCN-010` |
 | `BIV-GFX-006` | **Product web address at the sign-off (seconds).** The product's web address shows top right for this long, starting when the presenter signs off. | `BIV-GFX-011` |
 | `BIV-GFX-007` | **Name card timing (seconds).** A speaker's name card slides in after a short delay and holds for a fixed time, then slides out, in every scene. | `BIV-GFX-010` |
+| `BIV-INT-012` | **Countdown before each answer (seconds), recorded.** A countdown runs before each answer so the founder is ready, and the recording runs through it from its first second: nothing said early or right at the end of the countdown is lost. The lead-in is trimmed off with the other silence when the answer is cleaned up (BIV-INT-011). | `BIV-INT-013` |
 
 ## Changelog
 
@@ -119,3 +120,4 @@ the top of the rulebook; in short, rules are added, never deleted, and every cha
 - v3 (2026-11-02): added BIV-GFX-010, retiring BIV-GFX-007. A speaker's name card and headline bar now come in once when their turn starts and stay still on screen until the turn ends (no 6-second fade-out, no re-entry between the presenter's own scenes).
 - v4 (2026-11-02): one fixed running order for guided business interview videos (BIV-SCN-010): a set opening that names the founder and the business (BIV-SCR-011), a hand-over line from a pool of six between answers (BIV-SCR-012), a one-line closing remark with the web address said and shown on a card for the whole line (BIV-SCR-013, BIV-GFX-011), and a new sign-off (BIV-SCR-014). Retires BIV-SCR-002, BIV-SCR-003, BIV-SCR-005, BIV-SCR-006, BIV-SCR-007, BIV-GFX-006 and BIV-SCN-001. Videos written before v4 keep their old running order.
 - v5 (2026-11-05): added BIV-INT-012, retiring BIV-INT-006. The recording of each answer now runs from the first second of the countdown (it used to start only when the countdown ended, so the first words could be lost); the countdown length is unchanged and the lead-in is trimmed off with the rest of the silence when the answer is cleaned up.
+- v6 (2026-11-05): added BIV-INT-013, retiring BIV-INT-012. The recording of each answer starts two seconds before the countdown ends (not at its first second); the countdown is still five seconds.

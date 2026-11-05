@@ -287,7 +287,7 @@
   ],
   "layout": "full",
   "project_id": "<id>",
-  "rules_version": 5,
+  "rules_version": 6,
   "scenes": [
    {
     "asset": {

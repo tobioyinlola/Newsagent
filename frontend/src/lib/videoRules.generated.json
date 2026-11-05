@@ -1,5 +1,5 @@
 {
- "version": 5,
+ "version": 6,
  "rules": {
   "BIV-INT-001": 4,
   "BIV-INT-002": 5,
@@ -172,7 +172,10 @@
    "address": "Find out more at {address}."
   },
   "BIV-SCR-014": "This is Cover Founder News. Until we bring you our next story, have a good day!",
-  "BIV-INT-012": 5,
+  "BIV-INT-013": {
+   "countdown_s": 5,
+   "record_before_end_s": 2
+  },
   "BIV-GFX-011": true
  }
 }
