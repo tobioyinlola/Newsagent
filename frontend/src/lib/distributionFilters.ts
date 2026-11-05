@@ -25,6 +25,43 @@ export function emptyReason(outlets: Tagged[], f: Facets): string | null {
   return "No outlets match these choices. Try another topic or place.";
 }
 
+// ---------- showing the outlets in groups: by topic, then by place ----------
+const DEFAULT_TOPICS = ["Technology", "General News", "Gossip Blogs"];
+const DEFAULT_LOCATIONS = [{ region: "Africa", countries: ["Nigeria", "Ghana", "Kenya", "Uganda"] }, { region: "North America", countries: ["Canada", "United States"] }, { region: "Europe", countries: ["United Kingdom"] }];
+export type LocationGroup<T> = { key: string; label: string; items: T[] };
+export type TopicGroup<T> = { topic: string; count: number; locations: LocationGroup<T>[] };
+
+/** The outlets as sections: each topic (Technology, General News, ...) with the places inside it (Nigeria, Kenya, ...). Empty groups are left out. */
+export function groupOutlets<T extends Tagged>(outlets: T[], filters?: OutletFilters): TopicGroup<T>[] {
+  const topics = filters?.topics ?? DEFAULT_TOPICS;
+  const locations = filters?.locations ?? DEFAULT_LOCATIONS;
+  const place = (o: Tagged): { key: string; label: string; rank: number } => {
+    const r = locations.findIndex((l) => l.region === o.region);
+    const base = (r < 0 ? locations.length : r) * 100;
+    if (o.country) {
+      const c = locations[r]?.countries.indexOf(o.country) ?? -1;
+      return { key: `${o.region}/${o.country}`, label: o.country, rank: base + (c < 0 ? 98 : c) };
+    }
+    return { key: `${o.region}/`, label: `${o.region ?? "Other"} (region-wide)`, rank: base + 99 };
+  };
+  const known = new Set(topics);
+  const names = [...topics, ...(outlets.some((o) => !o.topic || !known.has(o.topic)) ? ["Others"] : [])];
+  const out: TopicGroup<T>[] = [];
+  for (const topic of names) {
+    const inTopic = outlets.filter((o) => (topic === "Others" ? !o.topic || !known.has(o.topic) : o.topic === topic));
+    if (!inTopic.length) continue;
+    const byPlace = new Map<string, { rank: number; group: LocationGroup<T> }>();
+    for (const o of inTopic) {
+      const p = place(o);
+      const g = byPlace.get(p.key) ?? { rank: p.rank, group: { key: p.key, label: p.label, items: [] } };
+      g.group.items.push(o);
+      byPlace.set(p.key, g);
+    }
+    out.push({ topic, count: inTopic.length, locations: [...byPlace.values()].sort((a, b) => a.rank - b.rank).map((x) => x.group) });
+  }
+  return out;
+}
+
 // ---------- the saved choice ----------
 const PICK = "newsagent.distribution.pick";
 const AFTER = "newsagent.afterAuth";

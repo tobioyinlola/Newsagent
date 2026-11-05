@@ -58,7 +58,22 @@ def customer_recipients(row):
     return sorted({x.strip().lower() for x in [row.created_by, row.data["contact_email"]]})
 
 
-async def queue_mail(db, row, kind, recipient, subject, body, *, key, placement=None, thread_id=None, reply_to=None, message_id=None, in_reply_to=None):
+async def queue_mail(
+    db,
+    row,
+    kind,
+    recipient,
+    subject,
+    body,
+    *,
+    key,
+    placement=None,
+    thread_id=None,
+    reply_to=None,
+    message_id=None,
+    in_reply_to=None,
+    send_after=None,
+):
     recipient = recipient.strip().lower()
     dedupe = f"{row.id}:{kind}:" + hashlib.sha256((key + ":" + recipient).encode()).hexdigest()
     existing = (
@@ -78,6 +93,7 @@ async def queue_mail(db, row, kind, recipient, subject, body, *, key, placement=
         reply_to=reply_to,
         message_id=message_id,
         in_reply_to=in_reply_to,
+        send_after=send_after,
     )
     db.add(mail)
     activity(db, row, "email_queued", {"kind": kind, "recipient": recipient}, placement=placement)
@@ -181,7 +197,9 @@ async def plan_submission(db, row, catalog):
         await db.flush()
         placement.outreach_subject, placement.outreach_body = await outreach_copy(db, row, placement, config)
         if config.get("direct_access") and placement.contact_email and outreach.enabled():
-            await outreach.start_thread(db, row, placement, config)  # a conversation, with a reply address that finds its way back
+            await outreach.start_thread(
+                db, row, placement, config
+            )  # a conversation, with a reply address that finds its way back
         elif config.get("direct_access") and placement.contact_email:
             await queue_mail(
                 db,
@@ -242,28 +260,36 @@ async def send_confirmation(db: AsyncSession, row: DistributionRequest, *, deadl
     await queue_receipts(db, row)
     await db.commit()
     cutoff = utcnow() - timedelta(minutes=10)
-    ids = (
-        (
-            await db.execute(
-                select(DistributionMail.id)
-                .where(
-                    DistributionMail.request_id == row.id,
-                    or_(
-                        DistributionMail.status.in_(["pending", "failed", "retry_requested"]),
-                        (DistributionMail.status == "sending") & (DistributionMail.claimed_at < cutoff),
-                    ),
-                    or_(DistributionMail.attempts < 8, DistributionMail.status == "retry_requested"),
-                )
-                .order_by(DistributionMail.created_at)
+    now = utcnow()
+    due = or_(
+        DistributionMail.send_after.is_(None), DistributionMail.send_after <= now
+    )  # outreach waits a while, like a person
+    rows = (
+        await db.execute(
+            select(DistributionMail.id, DistributionMail.thread_id)
+            .where(
+                DistributionMail.request_id == row.id,
+                or_(
+                    DistributionMail.status.in_(["pending", "failed", "retry_requested"]),
+                    (DistributionMail.status == "sending") & (DistributionMail.claimed_at < cutoff),
+                ),
+                or_(DistributionMail.attempts < 8, DistributionMail.status == "retry_requested"),
+                due,
             )
+            .order_by(DistributionMail.created_at)
         )
-        .scalars()
-        .all()
-    )
+    ).all()
+    ids = [r[0] for r in rows]
+    has_thread = {r[0] for r in rows if r[1]}
+    room = await outreach.send_room(db) if has_thread else 0  # how many more conversation emails today's limit allows
     await db.commit()
     for ident in ids:
         if deadline is not None and time.monotonic() >= deadline:
             break
+        if ident in has_thread:
+            if room <= 0:
+                continue  # over the daily limit: it waits for tomorrow (a mailbox that sends too much gets blocked)
+            room -= 1
         token = new_id()
         claimed = (
             await db.execute(
@@ -275,6 +301,7 @@ async def send_confirmation(db: AsyncSession, row: DistributionRequest, *, deadl
                         (DistributionMail.status == "sending") & (DistributionMail.claimed_at < cutoff),
                     ),
                     or_(DistributionMail.attempts < 8, DistributionMail.status == "retry_requested"),
+                    due,
                 )
                 .values(
                     status="sending", claim_token=token, claimed_at=utcnow(), attempts=DistributionMail.attempts + 1
@@ -298,16 +325,22 @@ async def send_confirmation(db: AsyncSession, row: DistributionRequest, *, deadl
                     if mail.kind == "outreach"
                     else "You are a configured recipient of Cover Founder distribution notifications."
                 )
-                html, text = email_templates.render(mail.subject, mail.body, footer=footer)
-                if mail.thread_id:  # a conversation email: replies come back to its tagged address
+                if mail.thread_id:  # a conversation email: plain text from the outreach mailbox; replies come back to its tagged address
                     headers = {"Message-ID": mail.message_id} if mail.message_id else {}
                     if mail.in_reply_to:
                         headers["In-Reply-To"] = mail.in_reply_to
                         headers["References"] = mail.in_reply_to
                     success = await send_email(
-                        mail.recipient, mail.subject, text, html=html, reply_to=mail.reply_to, headers=headers
+                        mail.recipient,
+                        mail.subject,
+                        mail.body,
+                        reply_to=mail.reply_to,
+                        headers=headers,
+                        provider=registry.get_outreach_email(),
+                        plain=True,
                     )
                 else:
+                    html, text = email_templates.render(mail.subject, mail.body, footer=footer)
                     success = await send_email(mail.recipient, mail.subject, text, html=html)
             else:
                 success = await send_email(mail.recipient, mail.subject, mail.body)

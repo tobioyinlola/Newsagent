@@ -18,6 +18,7 @@ import { Forgot, Login, OtpChallenge } from "./pages/Login";
 import { Overview } from "./pages/Overview";
 import { Presenter } from "./pages/Presenter";
 import { DistributionAdmin } from "./pages/Distribution";
+import { SHOW_OUTREACH } from "./lib/features";
 import { OutreachAdmin } from "./pages/Outreach";
 import { Revenue } from "./pages/Revenue";
 import { Security } from "./pages/Security";
@@ -56,7 +57,7 @@ export function App() {
           <Route path="/revenue" element={<Guard any={["finance.view"]}><Revenue /></Guard>} />
           <Route path="/analytics" element={<Guard any={["operations.view"]}><AnalyticsAdmin /></Guard>} />
           <Route path="/distribution" element={<Guard any={["operations.view"]}><DistributionAdmin /></Guard>} />
-          <Route path="/outreach" element={<Guard any={["operations.view"]}><OutreachAdmin /></Guard>} />
+          {SHOW_OUTREACH && <Route path="/outreach" element={<Guard any={["operations.view"]}><OutreachAdmin /></Guard>} />}
           <Route path="/operations" element={<Guard any={["operations.view"]}><Page title="Operations"><Operations /></Page></Guard>} />
           <Route path="/review" element={<Guard any={["review.manage"]}><Page title="Review queue"><Review /></Page></Guard>} />
           <Route path="/jobs" element={<Guard any={["operations.view"]}><Page title="Jobs"><JobsTab /></Page></Guard>} />

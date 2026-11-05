@@ -23,6 +23,8 @@ def engine(monkeypatch):
     s = get_settings()
     monkeypatch.setattr(s, "outreach_ai", "on")
     monkeypatch.setattr(s, "outreach_reply_domain", "mail.test.example")
+    for k, v in (("outreach_reply_delay_minutes", 0), ("outreach_new_gap_minutes", 0), ("outreach_new_daily_cap", 1000)):
+        monkeypatch.setattr(s, k, v)  # these tests are about the conversation itself; the waiting has its own tests
     return s
 
 

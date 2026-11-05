@@ -454,7 +454,12 @@ def schedule(thread_id: str, message_id: str, force: bool = False) -> None:
 
 
 async def approve_draft(
-    db: AsyncSession, thread: OutreachThread, draft: OutreachMessage, actor: str, body: str | None = None
+    db: AsyncSession,
+    thread: OutreachThread,
+    draft: OutreachMessage,
+    actor: str,
+    body: str | None = None,
+    send_now: bool = False,
 ) -> OutreachMessage:
     """A person approves (optionally after editing) a held draft: it is sent from the conversation as their decision."""
     if draft.kind != "ai_draft" or draft.status != "pending_approval":
@@ -468,6 +473,7 @@ async def approve_draft(
         subject=draft.subject,
         kind="ai_draft",
         ai={**draft.ai, "approved_by": actor, "edited": text != draft.body.strip()},
+        send_now=send_now,
     )
     draft.status = "discarded"
     draft.ai = {**draft.ai, "approved_by": actor}

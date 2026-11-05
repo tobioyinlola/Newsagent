@@ -38,6 +38,12 @@ async def get_config(
         ],
         "engine_on": outreach.enabled(),
         "reply_domain": get_settings().outreach_reply_domain,
+        "sending": {
+            "via_mailbox": bool(get_settings().outreach_smtp_host),
+            "mailbox": get_settings().outreach_mailbox or get_settings().outreach_smtp_user,
+            "reads_replies": bool(get_settings().outreach_imap_host),
+            "reply_address_example": outreach.reply_address("0123456789abcdef0123"),
+        },
     }
 
 
@@ -370,6 +376,7 @@ async def get_thread(
 class ReplyIn(BaseModel):
     body: str = Field(min_length=1, max_length=20000)
     subject: str | None = Field(default=None, max_length=250)
+    send_now: bool = False  # skip the wait before a reply goes out
 
 
 @router.post("/v1/admin/outreach/threads/{id}/reply")
@@ -382,7 +389,7 @@ async def reply(
 ) -> dict:
     t = await _thread(db, id)
     try:
-        msg = await outreach.send_reply(db, t, body.body, p.user.email, subject=body.subject)
+        msg = await outreach.send_reply(db, t, body.body, p.user.email, subject=body.subject, send_now=body.send_now)
     except outreach.CannotSend as e:
         raise HTTPException(409, str(e)) from e
     audit(db, p.user.email, "outreach.reply", target_type="outreach_thread", target_id=id)
@@ -427,6 +434,7 @@ async def set_status(
 # ---------- the agent's drafts ----------
 class ApproveIn(BaseModel):
     body: str | None = Field(default=None, max_length=20000)
+    send_now: bool = False
 
 
 async def _message(db: AsyncSession, thread_id: str, mid: str) -> OutreachMessage:
@@ -448,7 +456,7 @@ async def approve(
     t = await _thread(db, id)
     draft = await _message(db, id, mid)
     try:
-        msg = await outreach_agent.approve_draft(db, t, draft, p.user.email, body.body)
+        msg = await outreach_agent.approve_draft(db, t, draft, p.user.email, body.body, body.send_now)
     except outreach.CannotSend as e:
         raise HTTPException(409, str(e)) from e
     audit(
@@ -557,3 +565,49 @@ async def verify_account(
     audit(db, p.user.email, "outreach.account_details_verified", target_type="outreach_thread", target_id=id)
     await db.commit()
     return {"ok": True}
+
+
+class TestSendIn(BaseModel):
+    to: EmailStr
+
+
+@router.post("/v1/admin/outreach/test-send")
+async def test_send(
+    body: TestSendIn, p: Principal = Depends(require("operations.manage")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Send a sample outreach email (the default template, sample details) to an address of yours, exactly the way real ones go out."""
+    from app.integrations import registry
+    from app.services.notifications import send_email
+
+    cfg = await outreach.get_config(db)
+    _, subject, text = outreach.render_template(
+        cfg,
+        None,
+        {
+            "contact_name": "there",
+            "outlet_name": "your publication",
+            "headline": "Acme opens its first store in Lagos",
+            "summary": "Acme has opened its first store in Lagos.",
+            "announcement": "Acme has opened its first store in Lagos.",
+            "assets": "(story materials would be listed here)",
+            "reference": "CF-DIST-TEST",
+            "payment_summary": "This is a test.",
+            "sender_name": cfg.sender_name,
+            "sender_title": cfg.sender_title,
+            "customer_name": "Tunde Bello",
+            "company_name": "Acme Foods",
+        },
+    )
+    ok = await send_email(
+        body.to,
+        "[Test] " + subject,
+        text,
+        plain=True,
+        reply_to=outreach.reply_address("0123456789abcdef0123"),
+        provider=registry.get_outreach_email(),
+    )
+    audit(db, p.user.email, "outreach.test_send", target_type="setting", target_id=outreach.KEY, detail={"ok": ok})
+    await db.commit()
+    if not ok:
+        raise HTTPException(502, "The mail server did not accept the message. Check the sender settings.")
+    return {"sent": True}

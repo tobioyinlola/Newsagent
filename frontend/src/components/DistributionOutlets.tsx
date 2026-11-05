@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Outlet } from "../lib/distribution";
 import { mediaPolicy } from "./DistributionMediaOptions";
-import { ALL, matches, type Facets, type OutletFilters as FilterList } from "../lib/distributionFilters";
+import { ALL, groupOutlets, matches, type Facets, type OutletFilters as FilterList } from "../lib/distributionFilters";
 import { DistributionOutletLogo } from "./DistributionOutletLogo";
 import { OutletFilters } from "./OutletFilters";
 import { Button } from "./ui";
@@ -11,12 +11,12 @@ type PickerProps = { outlets: Outlet[]; selectedIds: string[]; onChange: (ids: s
 export function DistributionOutlets({ outlets, selectedIds, onChange, comingSoon, filters }: PickerProps) {
   const [search, setSearch] = useState("");
   const [facets, setFacets] = useState<Facets>(ALL);
-  const categories = [...new Set(outlets.map(o => o.category ?? "Media outlets"))];
   const [selectedOnly, setSelectedOnly] = useState(false);
   const list = useRef<HTMLDivElement>(null);
   const selected = outlets.filter(o => selectedIds.includes(o.id));
   const visible = outlets.filter(o => (!selectedOnly || selectedIds.includes(o.id)) && matches(o, facets) && `${o.name} ${o.category ?? "Media outlets"}`.toLowerCase().includes(search.trim().toLowerCase()));
-  const groups = categories.map(name => ({ name, items: visible.filter(o => (o.category ?? "Media outlets") === name) })).filter(group => group.items.length);
+  // by topic, then by place: "Technology · Nigeria", "General News · Kenya", ...
+  const groups = groupOutlets(visible, filters).flatMap(t => t.locations.map(l => ({ name: `${t.topic} · ${l.label}`, items: l.items })));
   const toggle = (id: string) => onChange(selectedIds.includes(id) ? selectedIds.filter(x => x !== id) : [...selectedIds, id]);
   useEffect(() => { list.current?.scrollTo({ top: 0 }); }, [search, selectedOnly, facets]);
   return <section aria-labelledby="outlet-picker-title" className="overflow-hidden rounded-xl border-2 border-ink bg-white">
