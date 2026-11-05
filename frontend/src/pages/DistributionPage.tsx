@@ -91,7 +91,7 @@ export function DistributionPage() {
 
         <section aria-label="Distribution in numbers" className="border-y border-white/10 bg-ink px-4 py-10 md:px-8">
           <div className="mx-auto grid max-w-6xl grid-cols-2 gap-y-6 md:grid-cols-4">
-            {[["25K+", "Media platforms"], ["5", "Launch countries"], [String(CHANNELS.length), "Social & video channels"], ["1", "Credit wallet"]].map(([v, l]) => (
+            {[["2,500+", "Media platforms"], ["5", "Launch countries"], [String(CHANNELS.length), "Social & video channels"], ["1", "Credit wallet"]].map(([v, l]) => (
               <div key={l} className="px-2"><p className="text-4xl font-bold text-white md:text-5xl">{v}</p><p className="mt-1 text-xs font-bold uppercase tracking-wider text-brand-green">{l}</p></div>
             ))}
           </div>
