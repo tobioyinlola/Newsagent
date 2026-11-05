@@ -2671,6 +2671,37 @@
         "title": "LaneOut",
         "type": "object"
       },
+      "Ledger": {
+        "properties": {
+          "balance": {
+            "title": "Balance",
+            "type": "string"
+          },
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "company",
+          "balance",
+          "total",
+          "items"
+        ],
+        "title": "Ledger",
+        "type": "object"
+      },
       "LedgerEntry": {
         "properties": {
           "amount": {
@@ -2739,6 +2770,81 @@
           "description"
         ],
         "title": "LedgerEntry",
+        "type": "object"
+      },
+      "LedgerRow": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "balance_after": {
+            "title": "Balance After",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "when": {
+            "format": "date-time",
+            "title": "When",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "when",
+          "kind",
+          "label",
+          "amount",
+          "balance_after",
+          "description",
+          "stage",
+          "project_id"
+        ],
+        "title": "LedgerRow",
         "type": "object"
       },
       "LineItemOut": {
@@ -7313,6 +7419,125 @@
         "title": "VoicePrepareOut",
         "type": "object"
       },
+      "WalletList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WalletRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/WalletTotals"
+          }
+        },
+        "required": [
+          "totals",
+          "total",
+          "items"
+        ],
+        "title": "WalletList",
+        "type": "object"
+      },
+      "WalletRow": {
+        "properties": {
+          "balance": {
+            "title": "Balance",
+            "type": "string"
+          },
+          "bought": {
+            "title": "Bought",
+            "type": "string"
+          },
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "free": {
+            "title": "Free",
+            "type": "string"
+          },
+          "last_activity_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Activity At"
+          },
+          "owner_email": {
+            "title": "Owner Email",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "used": {
+            "title": "Used",
+            "type": "string"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "company",
+          "owner_email",
+          "status",
+          "balance",
+          "bought",
+          "free",
+          "used",
+          "last_activity_at"
+        ],
+        "title": "WalletRow",
+        "type": "object"
+      },
+      "WalletTotals": {
+        "properties": {
+          "balance": {
+            "title": "Balance",
+            "type": "string"
+          },
+          "bought": {
+            "title": "Bought",
+            "type": "string"
+          },
+          "empty": {
+            "title": "Empty",
+            "type": "integer"
+          },
+          "used": {
+            "title": "Used",
+            "type": "string"
+          },
+          "wallets": {
+            "title": "Wallets",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "wallets",
+          "balance",
+          "empty",
+          "bought",
+          "used"
+        ],
+        "title": "WalletTotals",
+        "type": "object"
+      },
       "WordingIn": {
         "properties": {
           "apply": {
@@ -9080,6 +9305,173 @@
           }
         },
         "summary": "Customer",
+        "tags": [
+          "backoffice"
+        ]
+      }
+    },
+    "/v1/admin/customers/{workspace_id}/ledger": {
+      "get": {
+        "operationId": "ledger_v1_admin_customers__workspace_id__ledger_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "payments",
+                "usage"
+              ],
+              "title": "Group",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ledger"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ledger",
+        "tags": [
+          "backoffice"
+        ]
+      }
+    },
+    "/v1/admin/customers/{workspace_id}/ledger.csv": {
+      "get": {
+        "operationId": "ledger_csv_v1_admin_customers__workspace_id__ledger_csv_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "payments",
+                "usage"
+              ],
+              "title": "Group",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ledger Csv",
         "tags": [
           "backoffice"
         ]
@@ -13474,6 +13866,181 @@
         "summary": "Set Vendor Budget",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/v1/admin/wallets": {
+      "get": {
+        "operationId": "wallets_v1_admin_wallets_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "balance_high",
+              "enum": [
+                "balance_low",
+                "balance_high",
+                "used_high",
+                "recent",
+                "company"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wallets",
+        "tags": [
+          "backoffice"
+        ]
+      }
+    },
+    "/v1/admin/wallets.csv": {
+      "get": {
+        "operationId": "wallets_csv_v1_admin_wallets_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "balance_high",
+              "enum": [
+                "balance_low",
+                "balance_high",
+                "used_high",
+                "recent",
+                "company"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wallets Csv",
+        "tags": [
+          "backoffice"
         ]
       }
     },

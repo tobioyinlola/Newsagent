@@ -140,6 +140,7 @@ export function TeamPage() {
       <Card title="Members">
         {team.isLoading ? <p aria-busy="true">Loading…</p> : (
           <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
             <table className="w-full text-sm"><caption className="sr-only">Back-office team</caption>
               <thead><tr className="text-left text-muted"><th className="py-1">Person</th><th>Role</th><th>Status</th><th>Last sign-in</th><th><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>{t?.members.map((m) => (
@@ -161,6 +162,7 @@ export function TeamPage() {
                   </td>
                 </tr>))}</tbody>
             </table>
+            </div>
           </div>
         )}
       </Card>
