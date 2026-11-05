@@ -71,7 +71,7 @@ async def draft(client, data):
 
 async def test_catalog_draft_video_and_admin_progress(client, distribution_data):
     catalog = (await client.get("/v1/distribution/outlets", headers=OWNER)).json()
-    assert len(catalog["outlets"]) == 53
+    assert len(catalog["outlets"]) == 61
     assert all(o["credits"] == "0" for o in catalog["outlets"])
     assert sum(o["name"] == "Premium Times" for o in catalog["outlets"]) == 1
     assert catalog["coming_soon"] == ["Ghana", "Uganda", "United Kingdom"]
@@ -685,8 +685,8 @@ async def test_outlet_categories_match_groups_and_preserve_existing_ids(client, 
     monkeypatch.setattr(get_settings(), "hide_free_distribution_outlets", False)  # this checks the full catalog
     data = (await client.get("/v1/distribution/outlets", headers=OWNER)).json()
     outlets = data["outlets"]
-    assert len(outlets) == 53
-    assert len({o["id"] for o in outlets}) == 53
+    assert len(outlets) == 61
+    assert len({o["id"] for o in outlets}) == 61
     assert [o["name"] for o in outlets].count("Premium Times") == 1
     expected = {
         "Media outlets": routes.NAMES[:12],
@@ -697,14 +697,22 @@ async def test_outlet_categories_match_groups_and_preserve_existing_ids(client, 
             "The Coins Report",
             "The Coins Insider",
         ],
-        "Business (Africa) Channels": [
+        "Tech News Channels": [
             "Business Insider",
             "Street Insider",
             "Bar Chart",
             "The Globe and Mail",
             "Benzinga",
+            "TechBullion",
+            "Investing.com",
+            "USA Today",
+            "Business Outstanders",
+            "Big News Network",
+            "MSN",
+            "NewsBreak",
+            "USA Wire",
         ],
-        "Nigeria News Channels": routes.NAMES[22:38] + routes.NAMES[47:],
+        "Nigeria News Channels": routes.NAMES[22:38] + routes.NAMES[47:53],
         "Entertainment News Channels": [
             "Naijaloaded",
             "Tooxclusive",
@@ -780,6 +788,31 @@ async def test_nigeria_sheet_final_margin_prices_reach_catalog(client, workspace
     assert by_name["Naijaloaded"]["id"] == "39"
     assert by_name["P mp Kulture"]["id"] == "47"
     assert by_name["Pilot Newspaper"]["id"] == "48"
+
+
+async def test_us_tech_sheet_prices_reach_catalog(client, workspace):
+    outlets = (await client.get("/v1/distribution/outlets", headers=OWNER)).json()["outlets"]
+    expected = {
+        "TechBullion": "19.5",
+        "Street Insider": "36.4",
+        "Investing.com": "191.1",
+        "Bar Chart": "24.7",
+        "USA Today": "92.3",
+        "The Globe and Mail": "94.9",
+        "Benzinga": "143",
+        "Business Outstanders": "29.9",
+        "Big News Network": "19.5",
+        "Business Insider": "87.1",
+        "MSN": "94.9",
+        "NewsBreak": "44.2",
+        "USA Wire": "19.5",
+    }
+    by_name = {o["name"]: o for o in outlets}
+    for name, price in expected.items():
+        assert by_name[name]["category"] == "Tech News Channels" and by_name[name]["topic"] == "Technology"
+        assert Decimal(by_name[name]["credits"]) == Decimal(price)
+    assert [by_name[n]["id"] for n in ("TechBullion", "USA Wire")] == ["54", "61"]  # appended: no earlier ID moved
+    assert {o["country"] for n, o in by_name.items() if n in expected} == {"United States", "Canada"}
 
 
 async def test_nigeria_fractional_prices_quote_and_debit_once(client, distribution_data, maker, workspace, monkeypatch):

@@ -47,10 +47,10 @@ test("completed video to distribution draft, checked images, wallet submission, 
     await expect(page.getByRole("heading", { name, exact: true })).toHaveCount(1);
   }
   // a category made up only of channels that cost 0 credits is hidden for now, with those channels
-  await expect(page.getByRole("heading", { name: "Business (Africa) Channels", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Tech News Channels", exact: true })).toHaveCount(1); // the US tech channels, priced from the owner's sheet
   await expect(page.getByRole("heading", { name: "Entertainment News Channels", exact: true })).toHaveCount(1); // 61 credits each
   await page.getByRole("button", { name: /^Technology/ }).click(); // the topic filter: 4 Nigerian tech sites and the 5 crypto channels
-  await expect(page.getByRole("checkbox")).toHaveCount(9);
+  await expect(page.getByRole("checkbox")).toHaveCount(22); // 4 Nigerian tech sites, 5 crypto channels and the 13 tech news channels
   await page.getByRole("checkbox", { name: /^CoinSpeaks/ }).check();
   await page.getByRole("button", { name: /^General News/ }).click();
   await expect(page.getByRole("checkbox")).toHaveCount(27); // the news outlets that cost credits (the rest are hidden for now)
@@ -68,14 +68,14 @@ test("completed video to distribution draft, checked images, wallet submission, 
   await expect(page.getByRole("checkbox", { name: /^CoinSpeaks/ })).toBeChecked();
   await page.getByRole("checkbox", { name: /^CoinSpeaks/ }).uncheck();
   await page.getByRole("button", { name: "All topics" }).click();
-  await expect(page.getByRole("checkbox")).toHaveCount(46); // 53 channels minus the 7 that cost 0 credits (hidden for now)
+  await expect(page.getByRole("checkbox")).toHaveCount(59); // 61 channels minus the 2 that cost 0 credits (hidden for now)
   await page.getByRole("searchbox", { name: "Search media outlets" }).fill("Premium Times");
   await expect(page.getByRole("checkbox")).toHaveCount(1);
   await expect(page.getByLabel("Selected outlets", { exact: true })).toContainText("2 selected");
   await page.getByRole("searchbox", { name: "Search media outlets" }).fill("no matching publication");
   await expect(page.getByRole("heading", { name: "No matching outlets" })).toBeVisible();
   await page.getByRole("button", { name: "Show all outlets" }).click();
-  await expect(page.getByRole("checkbox")).toHaveCount(46); // 53 channels minus the 7 that cost 0 credits (hidden for now)
+  await expect(page.getByRole("checkbox")).toHaveCount(59); // 61 channels minus the 2 that cost 0 credits (hidden for now)
   await page.getByRole("button", { name: "Selected only (2)" }).click();
   await expect(page.getByRole("checkbox")).toHaveCount(2);
   await page.getByRole("button", { name: "Selected only (2)" }).click();

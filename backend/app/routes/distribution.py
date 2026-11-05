@@ -76,13 +76,22 @@ NAMES = [
     "TVC News",
     "The Daily Times",
     "Daily Nation",
+    # United States tech news channels (appended, so every earlier outlet keeps its ID)
+    "TechBullion",
+    "Investing.com",
+    "USA Today",
+    "Business Outstanders",
+    "Big News Network",
+    "MSN",
+    "NewsBreak",
+    "USA Wire",
 ]
 # Keep the existing IDs stable: drafts and paid requests refer to these outlets by ID.
 OUTLET_CATEGORIES = {
     "Media outlets": NAMES[:12],
     "Crypto News Channels": NAMES[12:17],
-    "Business (Africa) Channels": NAMES[17:22],
-    "Nigeria News Channels": NAMES[22:38] + NAMES[47:],
+    "Tech News Channels": NAMES[17:22] + NAMES[53:],  # the owner's sheet: US channels (and The Globe and Mail, a Canadian one)
+    "Nigeria News Channels": NAMES[22:38] + NAMES[47:53],
     "Entertainment News Channels": NAMES[38:47],
 }
 CATEGORY_BY_NAME = {name: category for category, names in OUTLET_CATEGORIES.items() for name in names}
@@ -125,6 +134,20 @@ DEFAULT_OUTLET_CREDITS = {
     "TVC News": "115.1",
     "The Daily Times": "137.1",
     "Daily Nation": "651.6",
+    # Tech news channels (US): the sheet's CF Credit + Margins value (30% margin added).
+    "TechBullion": "19.5",
+    "Street Insider": "36.4",
+    "Investing.com": "191.1",
+    "Bar Chart": "24.7",
+    "USA Today": "92.3",
+    "The Globe and Mail": "94.9",
+    "Benzinga": "143",
+    "Business Outstanders": "29.9",
+    "Big News Network": "19.5",
+    "Business Insider": "87.1",
+    "MSN": "94.9",
+    "NewsBreak": "44.2",
+    "USA Wire": "19.5",
     # Entertainment news channels: the sheet's CF Credit + Margins value (61) for every one of them.
     "Naijaloaded": "61",
     "Tooxclusive": "61",
@@ -159,7 +182,30 @@ _GOSSIP = (
     "AlbumTalks",
     "P mp Kulture",
 )
+_US_TECH = (
+    "TechBullion",
+    "Street Insider",
+    "Investing.com",
+    "Bar Chart",
+    "USA Today",
+    "The Globe and Mail",
+    "Benzinga",
+    "Business Outstanders",
+    "Big News Network",
+    "Business Insider",
+    "MSN",
+    "NewsBreak",
+    "USA Wire",
+)  # the owner's "Tech news channels" sheet
 _ABROAD = {
+    "TechBullion": "United States",
+    "Investing.com": "United States",
+    "USA Today": "United States",
+    "Business Outstanders": "United States",
+    "Big News Network": "United States",
+    "MSN": "United States",
+    "NewsBreak": "United States",
+    "USA Wire": "United States",
     "Business Insider": "United States",
     "Street Insider": "United States",
     "Bar Chart": "United States",
@@ -171,7 +217,7 @@ _ABROAD = {
 
 def outlet_tags(name: str) -> tuple[str, str | None]:
     """(topic, country) for an outlet. The crypto channels cover Africa as a whole, so they have no single country."""
-    topic = "Technology" if name in _TECH or name in _CRYPTO else "Gossip Blogs" if name in _GOSSIP else "General News"
+    topic = "Technology" if name in _TECH or name in _CRYPTO or name in _US_TECH else "Gossip Blogs" if name in _GOSSIP else "General News"
     return topic, None if name in _CRYPTO else _ABROAD.get(name, "Nigeria")
 
 
