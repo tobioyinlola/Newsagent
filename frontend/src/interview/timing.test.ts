@@ -3,7 +3,7 @@ import { answerTiming, answerWindow, COUNTDOWN_S } from "./timing";
 
 describe("answer recording contract", () => {
   it("always prepares five seconds before recording and never shortens later answers", () => {
-    // covers: BIV-INT-004, BIV-INT-006
+    // covers: BIV-INT-004, BIV-INT-012
     expect(COUNTDOWN_S).toBe(5);
     expect(answerWindow(290, 4)).toBe(60);
     expect(answerWindow(800, 1)).toBe(60);
