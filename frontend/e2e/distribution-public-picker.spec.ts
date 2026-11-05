@@ -11,7 +11,7 @@ test("a visitor picks outlets by topic and place, signs up, and finds them in th
   // topic and place
   // shown by topic, then by place
   await expect(page.getByRole("heading", { level: 3, name: /^Technology \d+ outlets$/ })).toBeVisible();
-  await expect(page.getByRole("heading", { level: 4, name: "Nigeria" }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { level: 4, name: "Nigeria (Technology Channels)" }).first()).toBeVisible();
   await expect(page.getByRole("heading", { level: 4, name: "United States" }).first()).toBeVisible();
   await page.screenshot({ path: "test-results/public-grouped.png" });
   await page.getByRole("button", { name: /^Technology/ }).click();
