@@ -171,7 +171,7 @@ function UseCases() {
             <h3 className="text-2xl text-white">{u.title}</h3>
             <p className="mt-3 text-white/70">{u.body}</p>
             <ul className="mt-6 space-y-3">{u.points.map((p) => <li key={p} className="flex gap-3 text-white/90"><span className="text-brand-green" aria-hidden="true">✓</span>{p}</li>)}</ul>
-            <div className="mt-8"><Cta to="/signup" primary>Publish your free story!</Cta></div>
+            <div className="mt-8"><Cta to="/signup" primary>Sign up here</Cta></div>
           </div>
           <div className="relative min-h-[26rem] overflow-hidden bg-ink md:min-h-72">
             <img src="/boardroom.jpg" alt="" width={1300} height={867} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: "50% 50%" }} />
@@ -321,7 +321,7 @@ const FAQ: { group: string; items: [string, string][] }[] = [
   { group: "Credits & access", items: [
     ["How does pricing work?", "You buy a pack of credits and spend them as you make videos. There's no subscription, and a step that fails is never charged."],
     ["What is distribution?", "Coming soon: placing your segment and story with audiences in the regions you choose (the United States, Canada, the United Kingdom, Nigeria and Kenya to start), paid per region in credits."],
-    ["Who can sign up?", "Anyone can. Press “Publish your free story!”, enter your business name and email, and confirm the 6-digit code we email you. Invitations from our team still work too."],
+    ["Who can sign up?", "Anyone can. Press “Sign up here”, enter your business name and email, and confirm the 6-digit code we email you. Invitations from our team still work too."],
     ["Who owns the video?", "You do. Download it, post it anywhere, or share a private link."],
   ] },
 ];
@@ -377,7 +377,7 @@ export const SOCIAL_LINKS: { name: string; href: string; icon: ReactNode }[] = [
 export function Footer() {
   const cols: { title: string; links: [string, string][] }[] = [
     { title: "Product", links: [["Featured Stories", "/latest-stories"], ["News", "/cf-news"], ["AI Newsroom", "/ai-newsroom"], ["Press Distribution", "/press-distribution"], ["How it works", "/#how"], ["FAQ", "/#faq"]] },
-    { title: "Members", links: [["Sign in", "/login"], ["Reset password", "/forgot"], ["Publish your free story!", "/signup"], ["Contact support", "mailto:coverfounder@gmail.com"]] },
+    { title: "Members", links: [["Sign in", "/login"], ["Reset password", "/forgot"], ["Sign up", "/signup"], ["Contact support", "mailto:coverfounder@gmail.com"]] },
     { title: "Trust", links: [["Terms of Use", "/terms"], ["Privacy Policy", "/privacy"], ["AI disclosure", "/#faq"], ["Your data", "/account"], ["Security", "/security"]] },
   ];
   const link = (label: string, href: string) => <SiteLink to={href} className="text-white/80 hover:text-brand-green">{label}</SiteLink>;
@@ -473,7 +473,7 @@ function LatestStoriesRow() {
           <div className="border border-white/15 p-8 text-center">
             <p className="text-lg font-bold text-white">Be the first story on Cover Founder.</p>
             <p className="mt-1 text-sm text-white/70">Every finished video is published here with its press release.</p>
-            <div className="mt-4 flex justify-center"><Cta to="/signup" primary>Publish your free story!</Cta></div>
+            <div className="mt-4 flex justify-center"><Cta to="/signup" primary>Sign up here</Cta></div>
           </div>
         )}
       </div>
@@ -530,7 +530,7 @@ export function Landing() {
         <section className="cf-stripes border-t border-white/10 px-4 py-20 text-center md:px-8">
           <h2 className="text-3xl text-white md:text-5xl">Ready to go on air?</h2>
           <p className="mx-auto mt-3 max-w-xl text-white/70">Tell us about your next announcement. We'll send you an invitation and your first credits.</p>
-          <div className="mt-8 flex justify-center gap-3">{signedIn ? <Cta to="/ai-newsroom/new" primary>Make a video</Cta> : <Cta to="/signup" primary>Publish your free story!</Cta>}<Cta to="/login">Sign in</Cta></div>
+          <div className="mt-8 flex justify-center gap-3">{signedIn ? <Cta to="/ai-newsroom/new" primary>Make a video</Cta> : <Cta to="/signup" primary>Sign up here</Cta>}<Cta to="/login">Sign in</Cta></div>
         </section>
       </main>
 

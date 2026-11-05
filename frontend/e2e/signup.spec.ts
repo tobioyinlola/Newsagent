@@ -91,7 +91,7 @@ test("signup navigation stays usable on small screens", async ({ page }) => {
 test("the home page's two main buttons say what they do and go to the right place", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("link", { name: "Sign up now!" }).first()).toBeVisible(); // the top menu says it is a sign-up
-  await page.getByRole("link", { name: "Sign up here" }).click();
+  await page.getByRole("link", { name: "Sign up here" }).first().click();
   await expect(page).toHaveURL(/\/signup$/);
   await page.goto("/");
   await page.getByRole("link", { name: "Get media attention" }).click();
