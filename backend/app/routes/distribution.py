@@ -167,7 +167,7 @@ LOCATIONS = {
     "Europe": ("United Kingdom",),
 }
 REGION_OF = {country: region for region, countries in LOCATIONS.items() for country in countries}
-_TECH = ("Techpoint Africa", "Tech Next", "Tech Cabal", "Techeconomy")
+_TECH = ("Techpoint Africa", "Tech Next", "Tech Cabal", "Techeconomy", "Condia")
 _CRYPTO = ("CoinSpeaks", "The Cryptofy", "The Crypto Reporters", "The Coins Report", "The Coins Insider")
 _GOSSIP = (
     "88 Lately",
