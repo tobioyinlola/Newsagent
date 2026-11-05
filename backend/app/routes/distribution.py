@@ -108,6 +108,16 @@ NAMES = [
     "Vogue Switzerland",
     "Forbes Liechtenstein",
     "Portugal News",
+    # Middle East news channels (appended)
+    "Gulf Business",
+    "Forbes Middle East",
+    "Arabian Business",
+    "Cosmopolitan Middle East",
+    "Gulf Times",
+    "Gulf News",
+    "Qatar Tribune",
+    "Dubai Weekly",
+    "Arabian Startup",
 ]
 # Keep the existing IDs stable: drafts and paid requests refer to these outlets by ID.
 OUTLET_CATEGORIES = {
@@ -118,7 +128,8 @@ OUTLET_CATEGORIES = {
     "Nigeria News Channels": NAMES[22:38] + NAMES[47:53],
     "Entertainment News Channels": NAMES[38:47],
     "Canada News Channels": NAMES[61:69],
-    "UK & Europe News Channels": NAMES[69:],
+    "UK & Europe News Channels": NAMES[69:82],
+    "Middle East News Channels": NAMES[82:],
 }
 CATEGORY_BY_NAME = {name: category for category, names in OUTLET_CATEGORIES.items() for name in names}
 # Owner-supplied prices: original Credit on CF values plus the Nigerian sheet's final CF Credit + Margins values (already include its five-credit margin).
@@ -197,6 +208,16 @@ DEFAULT_OUTLET_CREDITS = {
     "Vogue Switzerland": "109.2",
     "Forbes Liechtenstein": "180.7",
     "Portugal News": "422.5",
+    # Middle East news channels: the sheet's CF Credit + Margins value.
+    "Gulf Business": "3192.8",
+    "Forbes Middle East": "2407.6",
+    "Arabian Business": "1901.9",
+    "Cosmopolitan Middle East": "1901.9",
+    "Gulf Times": "1016.6",
+    "Gulf News": "939.9",
+    "Qatar Tribune": "431.6",
+    "Dubai Weekly": "157.3",
+    "Arabian Startup": "157.3",
     # Entertainment news channels: the sheet's CF Credit + Margins value (61) for every one of them.
     "Naijaloaded": "61",
     "Tooxclusive": "61",
@@ -213,6 +234,7 @@ TOPICS = ("Technology", "General News", "Gossip Blogs")
 LOCATIONS = {
     "Africa": ("Nigeria", "Ghana", "Kenya", "Uganda"),
     "North America": ("Canada", "United States"),
+    "Middle East": ("United Arab Emirates", "Qatar"),
     "Europe": ("United Kingdom", "Germany", "Netherlands", "Switzerland", "Liechtenstein", "Portugal"),
 }
 REGION_OF = {country: region for region, countries in LOCATIONS.items() for country in countries}
@@ -260,6 +282,15 @@ _ABROAD = {
     "Bar Chart": "United States",
     "Benzinga": "United States",
     "The Globe and Mail": "Canada",
+    "Gulf Business": "United Arab Emirates",
+    "Forbes Middle East": "United Arab Emirates",
+    "Arabian Business": "United Arab Emirates",
+    "Cosmopolitan Middle East": "United Arab Emirates",
+    "Gulf Times": "Qatar",
+    "Gulf News": "United Arab Emirates",
+    "Qatar Tribune": "Qatar",
+    "Dubai Weekly": "United Arab Emirates",
+    "Arabian Startup": "United Arab Emirates",
     "The Sun (UK)": "United Kingdom",
     "Rolling Stones UK": "United Kingdom",
     "London Loves Business": "United Kingdom",
@@ -289,7 +320,7 @@ def outlet_tags(name: str) -> tuple[str, str | None]:
     """(topic, country) for an outlet. The crypto channels cover Africa as a whole, so they have no single country."""
     topic = (
         "Technology"
-        if name in _TECH or name in _CRYPTO or name in _US_TECH or name == "Techround UK"
+        if name in _TECH or name in _CRYPTO or name in _US_TECH or name in ("Techround UK", "Arabian Startup")
         else "Gossip Blogs"
         if name in _GOSSIP
         else "General News"
