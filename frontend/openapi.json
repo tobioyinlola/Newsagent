@@ -1210,6 +1210,25 @@
         "title": "ConfirmIn",
         "type": "object"
       },
+      "ContactsIn": {
+        "properties": {
+          "enable_automatic": {
+            "default": true,
+            "title": "Enable Automatic",
+            "type": "boolean"
+          },
+          "text": {
+            "maxLength": 200000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "ContactsIn",
+        "type": "object"
+      },
       "ContrastCheck": {
         "properties": {
           "background": {
@@ -3365,6 +3384,18 @@
             "default": "0",
             "title": "Logo Credits"
           },
+          "outreach_template": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outreach Template"
+          },
           "picture_credits": {
             "anyOf": [
               {
@@ -3392,6 +3423,76 @@
           }
         },
         "title": "OutletConfig",
+        "type": "object"
+      },
+      "OutreachConfig": {
+        "properties": {
+          "ai_turn_limit": {
+            "default": 6,
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Ai Turn Limit",
+            "type": "integer"
+          },
+          "daily_cap": {
+            "default": 200,
+            "maximum": 5000.0,
+            "minimum": 0.0,
+            "title": "Daily Cap",
+            "type": "integer"
+          },
+          "default_template": {
+            "default": "intro",
+            "title": "Default Template",
+            "type": "string"
+          },
+          "footer_address": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Footer Address",
+            "type": "string"
+          },
+          "mode": {
+            "default": "draft",
+            "pattern": "^(draft|balanced|auto)$",
+            "title": "Mode",
+            "type": "string"
+          },
+          "paused": {
+            "default": false,
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "policy": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Policy",
+            "type": "object"
+          },
+          "sender_name": {
+            "default": "The Cover Founder team",
+            "maxLength": 120,
+            "title": "Sender Name",
+            "type": "string"
+          },
+          "sender_title": {
+            "default": "Partnerships",
+            "maxLength": 120,
+            "title": "Sender Title",
+            "type": "string"
+          },
+          "templates": {
+            "items": {
+              "$ref": "#/components/schemas/Template"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Templates",
+            "type": "array"
+          }
+        },
+        "title": "OutreachConfig",
         "type": "object"
       },
       "OutreachSend": {
@@ -4209,6 +4310,58 @@
         "title": "PressReleaseOut",
         "type": "object"
       },
+      "PreviewIn": {
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "maxLength": 12000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "outlet_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outlet Id"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "maxLength": 250,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
+          }
+        },
+        "title": "PreviewIn",
+        "type": "object"
+      },
       "ProgressOut": {
         "properties": {
           "cancellable": {
@@ -4866,6 +5019,33 @@
           "reason"
         ],
         "title": "Rejection",
+        "type": "object"
+      },
+      "ReplyIn": {
+        "properties": {
+          "body": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "maxLength": 250,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "ReplyIn",
         "type": "object"
       },
       "ResetIn": {
@@ -6210,24 +6390,6 @@
         "title": "StaffTokenIn",
         "type": "object"
       },
-      "StatusIn": {
-        "properties": {
-          "status": {
-            "enum": [
-              "submitted",
-              "in_progress",
-              "completed"
-            ],
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "status"
-        ],
-        "title": "StatusIn",
-        "type": "object"
-      },
       "StoryCardOut": {
         "description": "One story in the public Latest Stories lists.",
         "properties": {
@@ -6735,6 +6897,43 @@
           "your_permissions"
         ],
         "title": "TeamOut",
+        "type": "object"
+      },
+      "Template": {
+        "properties": {
+          "body": {
+            "maxLength": 12000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 40,
+            "minLength": 1,
+            "pattern": "^[a-z0-9_-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "subject": {
+            "maxLength": 250,
+            "minLength": 1,
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "subject",
+          "body"
+        ],
+        "title": "Template",
         "type": "object"
       },
       "TopCustomer": {
@@ -7360,6 +7559,24 @@
         "title": "DraftIn",
         "type": "object"
       },
+      "app__routes__distribution__StatusIn": {
+        "properties": {
+          "status": {
+            "enum": [
+              "submitted",
+              "in_progress",
+              "completed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "StatusIn",
+        "type": "object"
+      },
       "app__routes__news_desk__DraftIn": {
         "properties": {
           "body": {
@@ -7448,6 +7665,41 @@
           "revision"
         ],
         "title": "DraftIn",
+        "type": "object"
+      },
+      "app__routes__outreach__StatusIn": {
+        "properties": {
+          "ai_paused": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Paused"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "awaiting_reply",
+                  "replied",
+                  "agreed",
+                  "closed",
+                  "do_not_contact"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "StatusIn",
         "type": "object"
       }
     }
@@ -9076,7 +9328,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/StatusIn"
+                "$ref": "#/components/schemas/app__routes__distribution__StatusIn"
               }
             }
           },
@@ -10644,6 +10896,593 @@
         "summary": "Unpublish",
         "tags": [
           "news-desk"
+        ]
+      }
+    },
+    "/v1/admin/outreach/config": {
+      "get": {
+        "operationId": "get_config_v1_admin_outreach_config_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Config V1 Admin Outreach Config Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Config",
+        "tags": [
+          "outreach"
+        ]
+      },
+      "put": {
+        "operationId": "put_config_v1_admin_outreach_config_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutreachConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Config V1 Admin Outreach Config Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Config",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/contacts/apply": {
+      "post": {
+        "operationId": "contacts_apply_v1_admin_outreach_contacts_apply_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Contacts Apply V1 Admin Outreach Contacts Apply Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Contacts Apply",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/contacts/preview": {
+      "post": {
+        "operationId": "contacts_preview_v1_admin_outreach_contacts_preview_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Contacts Preview V1 Admin Outreach Contacts Preview Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Contacts Preview",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/preview": {
+      "post": {
+        "description": "What a template looks like with sample details (nothing is sent).",
+        "operationId": "preview_v1_admin_outreach_preview_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Preview V1 Admin Outreach Preview Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/threads": {
+      "get": {
+        "operationId": "list_threads_v1_admin_outreach_threads_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Threads V1 Admin Outreach Threads Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Threads",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/threads/{id}": {
+      "get": {
+        "operationId": "get_thread_v1_admin_outreach_threads__id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Thread V1 Admin Outreach Threads  Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Thread",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/threads/{id}/reply": {
+      "post": {
+        "operationId": "reply_v1_admin_outreach_threads__id__reply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Reply V1 Admin Outreach Threads  Id  Reply Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reply",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/threads/{id}/status": {
+      "post": {
+        "operationId": "set_status_v1_admin_outreach_threads__id__status_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__routes__outreach__StatusIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Set Status V1 Admin Outreach Threads  Id  Status Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Status",
+        "tags": [
+          "outreach"
         ]
       }
     },

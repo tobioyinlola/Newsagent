@@ -21,12 +21,23 @@ class ResendEmail(EmailProvider):
         self._headers = {"Authorization": f"Bearer {s.email_api_key}"}
         self._injected = client  # tests; in production each send opens its own client (the background worker runs each task in a new event loop, and a client kept from an earlier loop fails with "Event loop is closed")
 
-    async def send(self, to: str, subject: str, text: str, html: str | None = None) -> None:
+    async def send(
+        self,
+        to: str,
+        subject: str,
+        text: str,
+        html: str | None = None,
+        *,
+        reply_to: str | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         body: dict = {"from": self._from, "to": [to], "subject": subject, "text": text}
         if html:
             body["html"] = html
-        if get_settings().email_reply_to:
-            body["reply_to"] = get_settings().email_reply_to
+        if reply_to or get_settings().email_reply_to:
+            body["reply_to"] = reply_to or get_settings().email_reply_to
+        if headers:
+            body["headers"] = headers
         attempts = VENDOR_POLICIES["email"].max_attempts
         for attempt in range(1, attempts + 1):
             await (

@@ -141,6 +141,10 @@ class Settings(BaseSettings):
     # legacy: slow work (presenter clips, renders) goes straight to the workers, as before. dispatcher: it joins ONE durable line
     # (the work_queue table) and is released first-in-first-out as renderer and presenter-video capacity frees up; waiting never fails.
     progress_cache_s: float = 3.0  # a video's progress is worked out at most this often per project (with the Celery queue); 0 = always fresh
+    # AI outreach to distribution outlets (templates, a reply inbox, an agent that answers within approval rules). off = the original one-way email.
+    outreach_ai: str = "off"  # off | on
+    outreach_reply_domain: str = ""  # replies come back to outreach+<token>@<this domain> (a domain that receives mail); blank = the plain reply-to address
+    outreach_inbound_secret: str = ""  # shared secret the inbound-mail webhook must present
     llm_max_concurrency: int = 16  # writing calls in flight at once per process; the rest wait their turn
     llm_retries: int = 2  # a busy or briefly failing writing provider is asked again this many times
     queue_mode: str = "legacy"

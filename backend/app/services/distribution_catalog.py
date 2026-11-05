@@ -95,6 +95,7 @@ class OutletConfig(BaseModel):
     country: str | None = None  # unset = the built-in tag; "" = no single country (the whole of Africa)
     contact_name: str = Field(default="", max_length=200)
     contact_email: EmailStr | None = None
+    outreach_template: str | None = Field(default=None, max_length=40)  # which outreach template this outlet gets (blank = the default one)
     email_subject: str = Field(default=SUBJECT, min_length=1, max_length=250)
     email_body: str = Field(default=BODY, min_length=1, max_length=12000)
 

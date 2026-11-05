@@ -50,13 +50,18 @@ async def send_email(
     *,
     heading: str | None = None,
     link: tuple[str, str] | None = None,
+    reply_to: str | None = None,
+    headers: dict[str, str] | None = None,
 ) -> bool:
     """Send one email; never raises (a failed email must not break a pipeline or request).
     Without `html`, the text is wrapped in the branded template (`heading` defaults to the subject, `link` becomes the button)."""
     try:
         if html is None:
             html, text = templates.notice(heading or subject, text, link)
-        await registry.get_email().send(to, subject, text, html)
+        if reply_to or headers:
+            await registry.get_email().send(to, subject, text, html, reply_to=reply_to, headers=headers)
+        else:  # the common case keeps the original call shape
+            await registry.get_email().send(to, subject, text, html)
         return True
     except Exception:  # noqa: BLE001
         log.exception("email to a recipient failed: %s", subject)
