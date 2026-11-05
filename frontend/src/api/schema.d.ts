@@ -5511,6 +5511,11 @@ export interface components {
             orientation?: string | null;
             /** Preview Image Url */
             preview_image_url?: string | null;
+            /**
+             * Soon
+             * @default false
+             */
+            soon: boolean;
         };
         /** PressReleaseIn */
         PressReleaseIn: {

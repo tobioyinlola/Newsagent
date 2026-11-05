@@ -40,6 +40,8 @@ class PresenterOut(BaseModel):
     gender: str
     preview_image_url: str | None = None
     orientation: str | None = None
+    soon: bool = False  # listed, but not available to pick yet
+    voice_id: str = Field(default="", exclude=True)  # never sent to customers
 
 
 class AssetOut(BaseModel):

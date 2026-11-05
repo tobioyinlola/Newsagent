@@ -260,3 +260,33 @@ async def test_extra_house_presenters_are_added_after_the_original_list(client, 
     assert [p["id"] for p in (await client.get("/v1/presenters", headers=OWNER)).json()[:1]] == [
         "look2"
     ]  # works on its own too
+
+
+async def test_which_presenters_can_be_picked_and_which_show_as_coming_soon(client, workspace, monkeypatch):
+    s = get_settings()
+    monkeypatch.setattr(s, "heygen_featured_presenters", "m1|Marcus|male;w1|Elena|female;w2|Dana|female")
+    monkeypatch.setattr(s, "heygen_extra_presenters", "amara|Amara, news desk|female|voice-ng")
+    monkeypatch.setattr(s, "heygen_default_avatar_id", "m1")
+    got = (await client.get("/v1/presenters", headers=OWNER)).json()
+    house = {p["id"]: p for p in got if p["id"] in {"m1", "w1", "w2", "amara"}}
+    assert {k: v["soon"] for k, v in house.items()} == {
+        "m1": False,
+        "w1": True,
+        "w2": True,
+        "amara": False,
+    }  # the first and the extras can be picked
+    assert [p["id"] for p in got[:4]] == ["m1", "w1", "w2", "amara"]
+    assert all("voice_id" not in p for p in got)  # a presenter's voice is never sent to customers
+
+    monkeypatch.setattr(s, "heygen_default_avatar_id", "amara")  # make her the default
+    got = (await client.get("/v1/presenters", headers=OWNER)).json()
+    assert [(p["id"], p["soon"]) for p in got[:3]] == [
+        ("amara", False),
+        ("m1", False),
+        ("w1", True),
+    ]  # first, and still pickable: Marcus stays too
+    # catalogue looks beyond the house presenters are listed but not pickable yet
+    assert all(p["soon"] for p in got if p["id"] not in {"amara", "m1", "w1", "w2"})
+    assert (await client.post("/v1/projects", json={**BRIEF, "anchor_id": "amara"}, headers=OWNER)).json()[
+        "anchor_id"
+    ] == "amara"

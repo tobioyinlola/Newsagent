@@ -1,25 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, unwrap } from "../api/client";
 
-// The AI presenter who reads the news. Only the house default is available today (the first in the list); the next few are shown,
-// blurred, as coming soon.
-const AVAILABLE = 1;
+// The AI presenter who reads the news. The server says which ones can be picked (the default is listed first) and which are
+// still "coming soon": those are shown blurred.
+const LISTED = 12;
 const PREVIEWED = 3;
 
 export function PresenterPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
   const list = useQuery({
     queryKey: ["presenters"],
-    queryFn: () => unwrap(api.GET("/v1/presenters", { params: { query: { q: "", gender: "", limit: AVAILABLE + PREVIEWED } } })),
+    queryFn: () => unwrap(api.GET("/v1/presenters", { params: { query: { q: "", gender: "", limit: LISTED } } })),
     retry: false,
   });
   const items = list.data ?? [];
   if (list.isSuccess && items.length === 0) return null; // this provider has no catalogue to choose from
-  const ready = items.slice(0, AVAILABLE);
-  const soon = items.slice(AVAILABLE, AVAILABLE + PREVIEWED);
+  const ready = items.filter((p) => !p.soon);
+  const soon = items.filter((p) => p.soon).slice(0, PREVIEWED);
   return (
     <fieldset className="space-y-2 rounded-md border-2 border-ink p-3">
       <legend className="px-1 text-sm font-semibold">Your presenter</legend>
-      <p className="text-sm text-muted">Our news-desk presenter reads your story. More presenters are coming soon.</p>
+      <p className="text-sm text-muted">Choose who reads your story. More presenters are coming soon.</p>
       {list.isError && <p className="text-sm text-muted">The presenter list isn't available right now. The default presenter will be used.</p>}
       <div role="radiogroup" aria-label="Presenters" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {ready.map((p, i) => {

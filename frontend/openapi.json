@@ -4302,6 +4302,11 @@
               }
             ],
             "title": "Preview Image Url"
+          },
+          "soon": {
+            "default": false,
+            "title": "Soon",
+            "type": "boolean"
           }
         },
         "required": [
