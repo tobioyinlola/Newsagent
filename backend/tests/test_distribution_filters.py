@@ -103,3 +103,11 @@ async def test_an_operator_can_refile_an_outlet_and_the_filters_follow(client, w
     assert (
         await client.put(f"/v1/admin/distribution/outlets/{punch['id']}", json={**punch}, headers=OWNER)
     ).status_code in {401, 403}
+
+
+def test_the_entertainment_channels_are_priced_at_61_credits_each():
+    from app.routes.distribution import DEFAULT_OUTLET_CREDITS
+
+    entertainment = [o["name"] for o in OUTLETS.values() if o["category"] == "Entertainment News Channels"]
+    assert len(entertainment) == 9
+    assert {DEFAULT_OUTLET_CREDITS[n] for n in entertainment} == {"61"}

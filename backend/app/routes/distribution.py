@@ -125,6 +125,16 @@ DEFAULT_OUTLET_CREDITS = {
     "TVC News": "115.1",
     "The Daily Times": "137.1",
     "Daily Nation": "651.6",
+    # Entertainment news channels: the sheet's CF Credit + Margins value (61) for every one of them.
+    "Naijaloaded": "61",
+    "Tooxclusive": "61",
+    "NotJustOk": "61",
+    "9jaflaver": "61",
+    "Mp3bullet": "61",
+    "Naijamusic": "61",
+    "MP3Naija": "61",
+    "AlbumTalks": "61",
+    "P mp Kulture": "61",
 }
 # Where an outlet can be found, for the filters visitors and customers use: a topic and a country (the region follows from the country).
 TOPICS = ("Technology", "General News", "Gossip Blogs")

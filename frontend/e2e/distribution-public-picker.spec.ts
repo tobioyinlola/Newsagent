@@ -57,7 +57,7 @@ test("a visitor picks outlets by topic and place, signs up, and finds them in th
 
   // the signed-in picker has the same filters
   await page.getByRole("button", { name: /^Gossip Blogs/ }).click();
-  await expect(page.getByRole("checkbox")).toHaveCount(1); // 88 Lately is the only gossip blog that costs credits so far
+  await expect(page.getByRole("checkbox")).toHaveCount(10); // 88 Lately and the nine entertainment channels
   await page.getByRole("button", { name: "All topics" }).click();
   await page.getByLabel("Region", { exact: true }).selectOption("Africa");
   await expect(page.getByRole("checkbox").first()).toBeVisible();
