@@ -460,5 +460,14 @@
       1210,
       587
     ]
+  },
+  "TechBullion": {
+    "src": "/distribution-logos/techbullion.jpg",
+    "source": "Supplied by the owner (empty margins trimmed)",
+    "website": "https://techbullion.com/",
+    "dimensions": [
+      854,
+      465
+    ]
   }
 }
