@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.db import get_session
-from app.services import outreach, outreach_inbound
+from app.services import outreach, outreach_agent, outreach_inbound
 from app.services.notifications import notify_operators
 from app.services.ratelimit import limit
 
@@ -125,7 +125,14 @@ async def inbound_email(request: Request, tasks: BackgroundTasks, db: AsyncSessi
         raise HTTPException(503, "Could not fetch the message; try again") from e  # the provider retries
     result = await outreach_inbound.receive(db, mail)
     await db.commit()
-    if result["result"] in {"stored", "opt_out"}:
+    if result["result"] == "stored":
+        if await outreach_agent.will_handle(db, result["thread_id"]):
+            outreach_agent.schedule(
+                result["thread_id"], result["message_id"]
+            )  # the agent reads it and tells the team if it needs them
+        else:
+            tasks.add_task(_announce, result)  # nobody else will look at it, so the team is told
+    elif result["result"] == "opt_out":
         tasks.add_task(_announce, result)
     return {"result": result["result"]}
 

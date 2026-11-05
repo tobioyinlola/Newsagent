@@ -21,3 +21,13 @@ Use a subdomain you do not use for anything else, for example `mail.yourdomain.c
 
 ## 3. Trying it safely
 Do the whole thing on `staging` first with one contact that is your own mailbox. Reply to the email and confirm it appears in the conversation.
+
+## 4. The AI agent
+When an outlet replies, the agent reads the reply, works out what it needs (a question, a price, an acceptance, account details...), and writes our next email. **Settings > "What the AI agent may do":**
+- **Drafts only (the default):** every reply waits in the conversation for you to edit and press *Approve and send*.
+- **By step:** each kind of reply is marked *Automatic* or *Needs my approval*. By default the agent sends the routine ones itself (thanks, asking for rates or timing, sending the materials, answering a question about the story) and holds the rest.
+- **Always a person, whatever you set:** accepting an offer, payment arrangements, asking for or confirming account details. The agent never pays anyone and never marks a request paid or published.
+- **Also held for a person:** a draft that mentions an amount, bank details, a date or a link; a reply from a different company than the contact; an email that looks like it is instructing the agent; a reply the agent was not sure about; a conversation that has gone past the reply limit; anything over the daily cap.
+- **Pause** stops the agent everywhere; **Take over** stops it in one conversation. *Ask the AI to draft* works even when paused.
+- **Account details** an outlet sends are stored encrypted and shown masked. *Show the full details* is recorded in the audit log. Confirm them with the outlet another way (a number you already know) before paying; then press *I confirmed these*.
+The agent uses the same writing model as the rest of the app (`LLM_PROVIDER`). In development (`USE_MOCKS=true`) a simple built-in stand-in reads obvious cues so you can try the whole flow without a model key.

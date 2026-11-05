@@ -21,12 +21,12 @@ class OpenAIScriptLLM(JsonScriptLLM):
             timeout=150,
         )
 
-    async def _complete(self, prompt: str) -> str:
+    async def _complete(self, prompt: str, system: str | None = None) -> str:
         r = await self._client.post(
             "/chat/completions",
             json={
                 "model": get_settings().llm_model or DEFAULT_MODEL,
-                "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}],
+                "messages": [{"role": "system", "content": system or SYSTEM}, {"role": "user", "content": prompt}],
                 "response_format": {"type": "json_object"},
             },
         )

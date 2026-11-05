@@ -6,7 +6,7 @@ import logging
 
 from app.config import get_settings
 from app.db import session_maker
-from app.services import outreach, outreach_inbound
+from app.services import outreach, outreach_agent, outreach_inbound
 
 log = logging.getLogger("outreach")
 
@@ -65,6 +65,8 @@ async def poll_once() -> int:
             async with session_maker()() as db:
                 result = await outreach_inbound.receive(db, mail)
                 await db.commit()
+                if result["result"] == "stored" and await outreach_agent.will_handle(db, result["thread_id"]):
+                    outreach_agent.schedule(result["thread_id"], result["message_id"])
             kept += result["result"] == "stored"
             done.append(num)
         except Exception:  # noqa: BLE001

@@ -139,7 +139,7 @@ class OutreachConfig(BaseModel):
     sender_title: str = Field(default="Partnerships", max_length=120)
     footer_address: str = Field(default="", max_length=300)  # the company's postal address, shown under every email
     mode: str = Field(
-        default="draft", pattern=r"^(draft|balanced|auto)$"
+        default="draft", pattern=r"^(draft|policy)$"
     )  # how much the agent may do on its own (used by the agent)
     daily_cap: int = Field(default=200, ge=0, le=5000)
     ai_turn_limit: int = Field(default=6, ge=1, le=30)
@@ -441,4 +441,5 @@ def public_facts(facts: dict) -> dict:
     """What the admin may see by default: everything except stored account details, which are shown only masked (see the agent step)."""
     shown = {k: v for k, v in (facts or {}).items() if k != "account_details_enc"}
     shown["has_account_details"] = bool((facts or {}).get("account_details_enc"))
+    shown["account_verified"] = bool((facts or {}).get("account_verified_by"))
     return shown

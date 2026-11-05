@@ -897,6 +897,97 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/outreach/threads/{id}/account-details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reveal Account
+         * @description The account details an outlet sent, in full. Each reveal is recorded. Verify them with the outlet another way before paying.
+         */
+        get: operations["reveal_account_v1_admin_outreach_threads__id__account_details_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/outreach/threads/{id}/account-details/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify Account */
+        post: operations["verify_account_v1_admin_outreach_threads__id__account_details_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/outreach/threads/{id}/ai-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask For Draft
+         * @description Ask the agent to read the newest reply again and draft an answer (it ignores a pause, since a person asked).
+         */
+        post: operations["ask_for_draft_v1_admin_outreach_threads__id__ai_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/outreach/threads/{id}/messages/{mid}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve */
+        post: operations["approve_v1_admin_outreach_threads__id__messages__mid__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/outreach/threads/{id}/messages/{mid}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Discard */
+        post: operations["discard_v1_admin_outreach_threads__id__messages__mid__discard_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/outreach/threads/{id}/reply": {
         parameters: {
             query?: never;
@@ -3567,6 +3658,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/webhooks/inbound-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Inbound Email */
+        post: operations["inbound_email_v1_webhooks_inbound_email_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/webhooks/nuvion": {
         parameters: {
             query?: never;
@@ -3620,19 +3728,6 @@ export interface components {
             reason: string;
             /** Revision */
             revision: number;
-        };
-        /** ApproveIn */
-        ApproveIn: {
-            /**
-             * Interview Mode
-             * @default invite
-             */
-            interview_mode: string;
-            /**
-             * With Interview
-             * @default false
-             */
-            with_interview: boolean;
         };
         /** AssetOut */
         AssetOut: {
@@ -6549,12 +6644,30 @@ export interface components {
              */
             summary: string;
         };
+        /** ApproveIn */
+        app__routes__outreach__ApproveIn: {
+            /** Body */
+            body?: string | null;
+        };
         /** StatusIn */
         app__routes__outreach__StatusIn: {
             /** Ai Paused */
             ai_paused?: boolean | null;
             /** Status */
             status?: ("awaiting_reply" | "replied" | "agreed" | "closed" | "do_not_contact") | null;
+        };
+        /** ApproveIn */
+        app__schemas__api__ApproveIn: {
+            /**
+             * Interview Mode
+             * @default invite
+             */
+            interview_mode: string;
+            /**
+             * With Interview
+             * @default false
+             */
+            with_interview: boolean;
         };
     };
     responses: never;
@@ -8548,6 +8661,187 @@ export interface operations {
             };
             path: {
                 id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reveal_account_v1_admin_outreach_threads__id__account_details_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_account_v1_admin_outreach_threads__id__account_details_verify_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ask_for_draft_v1_admin_outreach_threads__id__ai_draft_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_v1_admin_outreach_threads__id__messages__mid__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+                mid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["app__routes__outreach__ApproveIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discard_v1_admin_outreach_threads__id__messages__mid__discard_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+                mid: string;
             };
             cookie?: never;
         };
@@ -13498,7 +13792,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["ApproveIn"] | null;
+                "application/json": components["schemas"]["app__schemas__api__ApproveIn"] | null;
             };
         };
         responses: {
@@ -14137,6 +14431,28 @@ export interface operations {
         };
     };
     heygen_webhook_v1_webhooks_heygen_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    inbound_email_v1_webhooks_inbound_email_post: {
         parameters: {
             query?: never;
             header?: never;

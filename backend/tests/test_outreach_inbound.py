@@ -12,6 +12,7 @@ from sqlalchemy import select
 
 from app.config import get_settings
 from app.models import OutreachMessage, OutreachOptout, OutreachThread
+from app.pipeline.queue import get_queue
 from app.routes.outreach_inbound import verify_svix
 from app.services import outreach_inbound as inb
 from tests.conftest import OPS
@@ -23,9 +24,16 @@ HOOK = "/v1/webhooks/inbound-email"
 
 
 @pytest.fixture
-def inbound(engine, monkeypatch):
+def with_agent(engine, monkeypatch):
     monkeypatch.setattr(get_settings(), "outreach_inbound_secret", SECRET)
     return engine
+
+
+@pytest.fixture
+def inbound(with_agent, monkeypatch):
+    """Storing replies only: the agent is not started (it has its own tests)."""
+    monkeypatch.setattr("app.services.outreach_agent.schedule", lambda *a, **k: None)
+    return with_agent
 
 
 async def _thread(maker, client, data, outlet="Empire Magazine Africa"):
@@ -117,7 +125,7 @@ async def test_a_reply_is_kept_in_its_conversation(client, distribution_data, in
     assert r.status_code == 200 and r.json() == {"result": "stored"}
     async with maker() as db:
         thread = await db.get(OutreachThread, t.id)
-        assert thread.status == "replied" and thread.last_inbound_at is not None
+        assert thread.status == "replied" and thread.last_inbound_at is not None  # (before the agent has read it)
         msg = (
             await db.execute(
                 select(OutreachMessage).where(OutreachMessage.thread_id == t.id, OutreachMessage.direction == "in")
@@ -203,16 +211,26 @@ async def test_a_reply_from_a_different_company_is_flagged(client, distribution_
         assert msg.ai["sender_mismatch"] is True
 
 
-async def test_the_team_is_told_when_a_reply_arrives(client, distribution_data, inbound, maker, monkeypatch):
+async def test_the_team_is_told_when_a_reply_needs_them(client, distribution_data, with_agent, maker, monkeypatch):
     sent = []
 
     async def notify(subject, text):
         sent.append(subject)
 
     monkeypatch.setattr("app.routes.outreach_inbound.notify_operators", notify)
+    monkeypatch.setattr("app.services.outreach_agent.notify_operators", notify)
     t = await _thread(maker, client, distribution_data)
-    await _post(client, _reply(t))
-    assert sent == ["An outlet replied"]
+    cfg = (await client.get("/v1/admin/outreach/config", headers=OPS)).json()["config"]
+    await client.put("/v1/admin/outreach/config", json={**cfg, "paused": True}, headers=OPS)
+    await _post(client, _reply(t, "Hello?", message_id="<p1@e.example.com>"))
+    assert sent == ["An outlet replied"]  # the agent is paused, so a person has to look
+    await client.put("/v1/admin/outreach/config", json={**cfg, "paused": False}, headers=OPS)
+    await _post(client, _reply(t, "Can you tell me more?", message_id="<p2@e.example.com>"))
+    await get_queue().drain()
+    assert sent == [
+        "An outlet replied",
+        "A reply is waiting for your approval",
+    ]  # the agent drafted an answer and asked for approval
 
 
 # ---------- the provider's signature ----------

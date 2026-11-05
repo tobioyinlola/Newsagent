@@ -42,23 +42,6 @@
         "title": "Approval",
         "type": "object"
       },
-      "ApproveIn": {
-        "properties": {
-          "interview_mode": {
-            "default": "invite",
-            "pattern": "^(invite|live)$",
-            "title": "Interview Mode",
-            "type": "string"
-          },
-          "with_interview": {
-            "default": false,
-            "title": "With Interview",
-            "type": "boolean"
-          }
-        },
-        "title": "ApproveIn",
-        "type": "object"
-      },
       "AssetOut": {
         "properties": {
           "format": {
@@ -3454,7 +3437,7 @@
           },
           "mode": {
             "default": "draft",
-            "pattern": "^(draft|balanced|auto)$",
+            "pattern": "^(draft|policy)$",
             "title": "Mode",
             "type": "string"
           },
@@ -7667,6 +7650,24 @@
         "title": "DraftIn",
         "type": "object"
       },
+      "app__routes__outreach__ApproveIn": {
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          }
+        },
+        "title": "ApproveIn",
+        "type": "object"
+      },
       "app__routes__outreach__StatusIn": {
         "properties": {
           "ai_paused": {
@@ -7700,6 +7701,23 @@
           }
         },
         "title": "StatusIn",
+        "type": "object"
+      },
+      "app__schemas__api__ApproveIn": {
+        "properties": {
+          "interview_mode": {
+            "default": "invite",
+            "pattern": "^(invite|live)$",
+            "title": "Interview Mode",
+            "type": "string"
+          },
+          "with_interview": {
+            "default": false,
+            "title": "With Interview",
+            "type": "boolean"
+          }
+        },
+        "title": "ApproveIn",
         "type": "object"
       }
     }
@@ -11341,6 +11359,336 @@
           }
         },
         "summary": "Get Thread",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/threads/{id}/account-details": {
+      "get": {
+        "description": "The account details an outlet sent, in full. Each reveal is recorded. Verify them with the outlet another way before paying.",
+        "operationId": "reveal_account_v1_admin_outreach_threads__id__account_details_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Reveal Account V1 Admin Outreach Threads  Id  Account Details Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reveal Account",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/threads/{id}/account-details/verify": {
+      "post": {
+        "operationId": "verify_account_v1_admin_outreach_threads__id__account_details_verify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Verify Account V1 Admin Outreach Threads  Id  Account Details Verify Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Account",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/threads/{id}/ai-draft": {
+      "post": {
+        "description": "Ask the agent to read the newest reply again and draft an answer (it ignores a pause, since a person asked).",
+        "operationId": "ask_for_draft_v1_admin_outreach_threads__id__ai_draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ask For Draft V1 Admin Outreach Threads  Id  Ai Draft Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ask For Draft",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/threads/{id}/messages/{mid}/approve": {
+      "post": {
+        "operationId": "approve_v1_admin_outreach_threads__id__messages__mid__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "mid",
+            "required": true,
+            "schema": {
+              "title": "Mid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__routes__outreach__ApproveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Approve V1 Admin Outreach Threads  Id  Messages  Mid  Approve Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/threads/{id}/messages/{mid}/discard": {
+      "post": {
+        "operationId": "discard_v1_admin_outreach_threads__id__messages__mid__discard_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "mid",
+            "required": true,
+            "schema": {
+              "title": "Mid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Discard V1 Admin Outreach Threads  Id  Messages  Mid  Discard Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Discard",
         "tags": [
           "outreach"
         ]
@@ -19624,7 +19972,7 @@
               "schema": {
                 "anyOf": [
                   {
-                    "$ref": "#/components/schemas/ApproveIn"
+                    "$ref": "#/components/schemas/app__schemas__api__ApproveIn"
                   },
                   {
                     "type": "null"
@@ -20634,6 +20982,29 @@
         "summary": "Heygen Webhook",
         "tags": [
           "system"
+        ]
+      }
+    },
+    "/v1/webhooks/inbound-email": {
+      "post": {
+        "operationId": "inbound_email_v1_webhooks_inbound_email_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Inbound Email V1 Webhooks Inbound Email Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Inbound Email",
+        "tags": [
+          "outreach"
         ]
       }
     },

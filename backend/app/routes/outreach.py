@@ -15,7 +15,7 @@ from app.routes.distribution import OUTLETS
 from app.routes.distribution_operations import save_setting
 from app.services import distribution as dist
 from app.services import distribution_catalog as catalog_service
-from app.services import outreach
+from app.services import outreach, outreach_agent
 from app.services.audit import audit
 
 router = APIRouter(tags=["outreach"])
@@ -32,6 +32,10 @@ async def get_config(
     return {
         "config": cfg.model_dump(mode="json"),
         "variables": outreach.VARIABLE_NAMES,
+        "steps": [
+            {"id": k, "label": v["label"], "never_auto": v["never_auto"], "default": v["default"]}
+            for k, v in outreach_agent.STEPS.items()
+        ],
         "engine_on": outreach.enabled(),
         "reply_domain": get_settings().outreach_reply_domain,
     }
@@ -43,6 +47,9 @@ async def put_config(
     p: Principal = Depends(require("operations.manage")),
     db: AsyncSession = Depends(get_session),
 ) -> dict:
+    for step, value in body.policy.items():
+        if step not in outreach_agent.STEPS or value not in {"auto", "approve"}:
+            raise HTTPException(422, f"Unknown step or setting: {step}")
     await outreach.save_config(db, p.user.email, body)
     return {"config": body.model_dump(mode="json")}
 
@@ -291,6 +298,23 @@ async def list_threads(
     return {"threads": rows, "counts": counts}
 
 
+SAFE_AI = (
+    "step",
+    "intent",
+    "confidence",
+    "reasons",
+    "summary",
+    "suspicious",
+    "has_account_details",
+    "automatic",
+    "sender_mismatch",
+    "opt_out",
+    "error",
+    "approved_by",
+    "edited",
+)
+
+
 def _message_out(m: OutreachMessage) -> dict:
     return {
         "id": m.id,
@@ -301,7 +325,7 @@ def _message_out(m: OutreachMessage) -> dict:
         "body": m.body,
         "sender": m.sender,
         "actor": m.actor,
-        "ai": m.ai,
+        "ai": {k: v for k, v in (m.ai or {}).items() if k in SAFE_AI},
         "created_at": outreach.when(m.created_at),
         "sent_at": outreach.when(m.sent_at),
     }
@@ -322,7 +346,9 @@ async def get_thread(
     msgs = (
         (
             await db.execute(
-                select(OutreachMessage).where(OutreachMessage.thread_id == id).order_by(OutreachMessage.created_at)
+                select(OutreachMessage)
+                .where(OutreachMessage.thread_id == id, OutreachMessage.status != "discarded")
+                .order_by(OutreachMessage.created_at)
             )
         )
         .scalars()
@@ -396,3 +422,138 @@ async def set_status(
     )
     await db.commit()
     return _thread_row(t, None)
+
+
+# ---------- the agent's drafts ----------
+class ApproveIn(BaseModel):
+    body: str | None = Field(default=None, max_length=20000)
+
+
+async def _message(db: AsyncSession, thread_id: str, mid: str) -> OutreachMessage:
+    m = await db.get(OutreachMessage, mid)
+    if m is None or m.thread_id != thread_id:
+        raise HTTPException(404, "Message not found")
+    return m
+
+
+@router.post("/v1/admin/outreach/threads/{id}/messages/{mid}/approve")
+async def approve(
+    id: str,
+    mid: str,
+    body: ApproveIn,
+    tasks: BackgroundTasks,
+    p: Principal = Depends(require("operations.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    t = await _thread(db, id)
+    draft = await _message(db, id, mid)
+    try:
+        msg = await outreach_agent.approve_draft(db, t, draft, p.user.email, body.body)
+    except outreach.CannotSend as e:
+        raise HTTPException(409, str(e)) from e
+    audit(
+        db,
+        p.user.email,
+        "outreach.draft_approved",
+        target_type="outreach_thread",
+        target_id=id,
+        detail={"step": draft.ai.get("step")},
+    )
+    await db.commit()
+    tasks.add_task(dist.deliver_request, t.request_id)
+    return _message_out(msg)
+
+
+@router.post("/v1/admin/outreach/threads/{id}/messages/{mid}/discard")
+async def discard(
+    id: str, mid: str, p: Principal = Depends(require("operations.manage")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    t = await _thread(db, id)
+    draft = await _message(db, id, mid)
+    if draft.kind != "ai_draft" or draft.status != "pending_approval":
+        raise HTTPException(409, "That draft is no longer waiting for approval.")
+    draft.status = "discarded"
+    pending = (
+        await db.execute(
+            select(OutreachMessage.id)
+            .where(
+                OutreachMessage.thread_id == id, OutreachMessage.status == "pending_approval", OutreachMessage.id != mid
+            )
+            .limit(1)
+        )
+    ).first()
+    if not pending and t.status == "needs_approval":
+        t.status = "replied"
+    audit(db, p.user.email, "outreach.draft_discarded", target_type="outreach_thread", target_id=id)
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post("/v1/admin/outreach/threads/{id}/ai-draft")
+async def ask_for_draft(
+    id: str, p: Principal = Depends(require("operations.manage")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Ask the agent to read the newest reply again and draft an answer (it ignores a pause, since a person asked)."""
+    t = await _thread(db, id)
+    last = (
+        await db.execute(
+            select(OutreachMessage)
+            .where(
+                OutreachMessage.thread_id == id,
+                OutreachMessage.direction == "in",
+                OutreachMessage.status.in_(["received"]),
+            )
+            .order_by(OutreachMessage.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if last is None:
+        raise HTTPException(409, "There is no reply to answer yet.")
+    last.ai = {**last.ai, "processed": False}
+    await db.commit()
+    outreach_agent.schedule(t.id, last.id, force=True)
+    return {"ok": True}
+
+
+# ---------- account details ----------
+@router.get("/v1/admin/outreach/threads/{id}/account-details")
+async def reveal_account(
+    id: str, p: Principal = Depends(require("operations.manage")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """The account details an outlet sent, in full. Each reveal is recorded. Verify them with the outlet another way before paying."""
+    import json
+
+    from app.services import crypto
+
+    t = await _thread(db, id)
+    enc = (t.facts or {}).get("account_details_enc")
+    if not enc:
+        raise HTTPException(404, "No account details were sent")
+    originals = []
+    for m in (
+        await db.execute(
+            select(OutreachMessage).where(OutreachMessage.thread_id == id, OutreachMessage.direction == "in")
+        )
+    ).scalars():
+        if (m.ai or {}).get("original_enc"):
+            originals.append({"id": m.id, "text": crypto.decrypt(m.ai["original_enc"])})
+    audit(db, p.user.email, "outreach.account_details_viewed", target_type="outreach_thread", target_id=id)
+    await db.commit()
+    return {
+        "details": json.loads(crypto.decrypt(enc)),
+        "messages": originals,
+        "verified": bool((t.facts or {}).get("account_verified_by")),
+    }
+
+
+@router.post("/v1/admin/outreach/threads/{id}/account-details/verify")
+async def verify_account(
+    id: str, p: Principal = Depends(require("operations.manage")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    t = await _thread(db, id)
+    if not (t.facts or {}).get("account_details_enc"):
+        raise HTTPException(404, "No account details were sent")
+    t.facts = {**t.facts, "account_verified_by": p.user.email, "account_verified_at": utcnow().isoformat()}
+    audit(db, p.user.email, "outreach.account_details_verified", target_type="outreach_thread", target_id=id)
+    await db.commit()
+    return {"ok": True}

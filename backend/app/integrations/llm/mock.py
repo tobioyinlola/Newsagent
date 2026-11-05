@@ -15,6 +15,51 @@ class MockScriptLLM(ScriptLLM):
     def estimate_cost(self, brief_text: str) -> float:
         return 0.01
 
+    async def analyze_outreach_reply(self, context: dict) -> dict:
+        """A deterministic stand-in for the model, used in development and tests: it reads obvious cues in the reply."""
+        text = str(context.get("latest", ""))
+        low = text.lower()
+        out: dict = {"intent": "unclear", "confidence": 0.9, "summary": text[:120], "quoted_price": None, "currency": None, "deadline": None, "asks": [], "account_details": None, "suspicious": False}
+        if not text.strip():
+            return {**out, "confidence": 0.1}
+        if re.search(r"ignore (all |your )?(previous|prior) instructions|system prompt", low):
+            out["suspicious"] = True
+        acct = re.search(r"account (number|no\.?)\D{0,6}(\d{6,})", low)
+        iban = re.search(r"\b([a-z]{2}\d{2}[a-z0-9]{10,30})\b", low)
+        if acct or iban:
+            out.update(intent="sends_account_details", account_details={"account_number": acct.group(2) if acct else None, "iban": iban.group(1).upper() if iban else None, "bank_name": (re.search(r"bank[:\s]+([A-Za-z ]{3,30})", text) or [None, None])[1]})
+        elif re.search(r"(not interested|no thanks|cannot publish|can't publish|decline)", low):
+            out["intent"] = "declines"
+        elif re.search(r"(complain|legal|lawyer|sue\b|scam|spam)", low):
+            out["intent"] = "complaint"
+        elif m := re.search(r"([$€£₦]|usd|ngn|eur|gbp)\s?([\d,]+(?:\.\d+)?)|([\d,]+(?:\.\d+)?)\s?(usd|ngn|dollars|naira)", low):
+            amount = (m.group(2) or m.group(3) or "0").replace(",", "")
+            out.update(intent="quotes_price", quoted_price=float(amount), currency=(m.group(1) or m.group(4) or "").upper()[:3] or None)
+        elif re.search(r"how (will|do) you pay|payment (terms|method)|pay us", low):
+            out["intent"] = "requests_payment_terms"
+        elif "?" in text:
+            out.update(intent="asks_question", asks=[text.strip()[:100]])
+        elif re.search(r"(yes|sure|happy to|can do|we can)", low):
+            out["intent"] = "accepts"
+        return out
+
+    async def draft_outreach_reply(self, context: dict, analysis: dict) -> dict:
+        who = context.get("contact_name") or "there"
+        sign = context.get("sender_name") or "The Cover Founder team"
+        intent = analysis.get("intent")
+        step, body = "other", "Thank you for your message. Could you tell us more about how we can proceed?"
+        if intent == "quotes_price":
+            step, body = "discuss_price", "Thank you for sharing your rate. I will confirm it with the team and come back to you shortly."
+        elif intent == "sends_account_details":
+            step, body = "confirm_account_details", "Thank you for sending your details. We will review them and confirm shortly."
+        elif intent == "accepts":
+            step, body = "ask_rates", "Thank you, that is great news. Could you share your rate for a sponsored article and your usual turnaround time?"
+        elif intent == "asks_question":
+            step, body = "answer_question", "Thanks for your question. I will check and come back to you shortly."
+        elif intent == "requests_payment_terms":
+            step, body = "payment_terms", "Thank you. I will check the payment arrangements with the team and come back to you."
+        return {"subject": "", "body": f"Hello {who},\n\n{body}\n\nKind regards,\n{sign}", "step": step}
+
     async def parse_brief(self, brief_text: str, website_url: str | None) -> dict:
         sentences = [x.strip() for x in re.split(r"(?<=[.!?])\s+|\n+", brief_text.strip()) if x.strip()]
         first = (sentences[0] if sentences else brief_text).rstrip(".!?")[:200]
