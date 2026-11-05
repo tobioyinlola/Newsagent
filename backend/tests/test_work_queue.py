@@ -237,6 +237,9 @@ async def test_two_thousand_videos_are_all_taken_in_order_without_exceeding_capa
     base = datetime.now(UTC) - timedelta(hours=1)
     pids = []
     async with maker() as s:
+        for i in range(n):  # Postgres enforces the link from a project to its workspace
+            s.add(Workspace(id=f"ws{i}", name=f"Biz {i}", credit_balance=Decimal("0")))
+        await s.flush()
         for i in range(n):
             p = Project(id=new_id(), workspace_id=f"ws{i}", state="rendering_anchor", state_changed_at=base)
             s.add(p)
