@@ -132,7 +132,7 @@ test("while a video is being made the distribution pop-up shows once, and shows 
     return route.fulfill({ json: [] });
   });
   await page.goto("/ai-newsroom/making");
-  const popup = page.getByRole("alertdialog", { name: "Take your story to over 25,000 media outlets?" });
+  const popup = page.getByRole("alertdialog", { name: "Take your story to over 2,500 media outlets?" });
   await expect(popup).toBeVisible();
   await expect(popup.getByText("Your video is being made.")).toBeVisible();
   await page.screenshot({ path: "/tmp/cf-making-distribution-prompt.png" });

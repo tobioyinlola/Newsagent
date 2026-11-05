@@ -118,7 +118,7 @@ test("AI interview: understands the announcement, interviews on camera, then mak
   // the presenter is created and the interview is merged in, with no further clicks
   await expect(page.getByRole("heading", { name: "Your video", exact: true })).toBeVisible({ timeout: 90_000 });
   // a finished video offers distribution once, in a pop-up over the page; "Maybe later" closes it for this video
-  await expect(page.getByRole("alertdialog", { name: "Take your story to over 25,000 media outlets?" })).toBeVisible();
+  await expect(page.getByRole("alertdialog", { name: "Take your story to over 2,500 media outlets?" })).toBeVisible();
   await page.getByRole("button", { name: "Maybe later" }).click();
   await expect(page.getByRole("link", { name: "Download" }).first()).toBeVisible();
   await expect(page.getByText("AI-generated anchor")).toHaveCount(0); // no label wording around the video (covers: BIV-GFX-009)
