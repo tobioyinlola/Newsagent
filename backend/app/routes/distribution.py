@@ -85,14 +85,25 @@ NAMES = [
     "MSN",
     "NewsBreak",
     "USA Wire",
+    # Canadian news channels (appended)
+    "Toronto Star",
+    "Montreal Gazette",
+    "Toronto Sun",
+    "Vancouver Sun",
+    "Hello! Canada",
+    "National Post",
+    "Financial Post",
+    "Canada-Wide Newswire",
 ]
 # Keep the existing IDs stable: drafts and paid requests refer to these outlets by ID.
 OUTLET_CATEGORIES = {
     "Media outlets": NAMES[:12],
     "Crypto News Channels": NAMES[12:17],
-    "Tech News Channels": NAMES[17:22] + NAMES[53:],  # the owner's sheet: US channels (and The Globe and Mail, a Canadian one)
+    "Tech News Channels": NAMES[17:22]
+    + NAMES[53:61],  # the owner's sheet: US channels (and The Globe and Mail, a Canadian one)
     "Nigeria News Channels": NAMES[22:38] + NAMES[47:53],
     "Entertainment News Channels": NAMES[38:47],
+    "Canada News Channels": NAMES[61:],
 }
 CATEGORY_BY_NAME = {name: category for category, names in OUTLET_CATEGORIES.items() for name in names}
 # Owner-supplied prices: original Credit on CF values plus the Nigerian sheet's final CF Credit + Margins values (already include its five-credit margin).
@@ -148,6 +159,15 @@ DEFAULT_OUTLET_CREDITS = {
     "MSN": "94.9",
     "NewsBreak": "44.2",
     "USA Wire": "19.5",
+    # Canada news channels: the sheet's CF Credit + Margins value (30% margin added).
+    "Toronto Star": "1084.2",
+    "Montreal Gazette": "241.8",
+    "Toronto Sun": "241.8",
+    "Vancouver Sun": "217.1",
+    "Hello! Canada": "1565.2",
+    "National Post": "1878.5",
+    "Financial Post": "1878.5",
+    "Canada-Wide Newswire": "386.1",
     # Entertainment news channels: the sheet's CF Credit + Margins value (61) for every one of them.
     "Naijaloaded": "61",
     "Tooxclusive": "61",
@@ -211,13 +231,27 @@ _ABROAD = {
     "Bar Chart": "United States",
     "Benzinga": "United States",
     "The Globe and Mail": "Canada",
+    "Toronto Star": "Canada",
+    "Montreal Gazette": "Canada",
+    "Toronto Sun": "Canada",
+    "Vancouver Sun": "Canada",
+    "Hello! Canada": "Canada",
+    "National Post": "Canada",
+    "Financial Post": "Canada",
+    "Canada-Wide Newswire": "Canada",
     "Daily Nation": "Kenya",
 }
 
 
 def outlet_tags(name: str) -> tuple[str, str | None]:
     """(topic, country) for an outlet. The crypto channels cover Africa as a whole, so they have no single country."""
-    topic = "Technology" if name in _TECH or name in _CRYPTO or name in _US_TECH else "Gossip Blogs" if name in _GOSSIP else "General News"
+    topic = (
+        "Technology"
+        if name in _TECH or name in _CRYPTO or name in _US_TECH
+        else "Gossip Blogs"
+        if name in _GOSSIP
+        else "General News"
+    )
     return topic, None if name in _CRYPTO else _ABROAD.get(name, "Nigeria")
 
 
@@ -360,7 +394,9 @@ async def outlets(p: Principal = Depends(current_principal), db: AsyncSession = 
     shown = [o for o in items if not catalog_service.is_hidden(o)]  # free channels are hidden for now
     return {
         "outlets": shown,
-        "quote_version": catalog_service.version(items),  # always over the full list, so a submit's price check still matches
+        "quote_version": catalog_service.version(
+            items
+        ),  # always over the full list, so a submit's price check still matches
         "coming_soon": _coming_soon(shown),
         "filters": _filters(),
     }
@@ -382,7 +418,11 @@ async def public_outlets(response: Response, db: AsyncSession = Depends(get_sess
     response.headers["Cache-Control"] = "public, max-age=60"
     shown = [o for o in await catalog_service.catalog(db) if not catalog_service.is_hidden(o)]
     keep = ("id", "name", "topic", "category", "region", "country", "credits")
-    return {"outlets": [{k: o[k] for k in keep} for o in shown], "coming_soon": _coming_soon(shown), "filters": _filters()}
+    return {
+        "outlets": [{k: o[k] for k in keep} for o in shown],
+        "coming_soon": _coming_soon(shown),
+        "filters": _filters(),
+    }
 
 
 @router.get("/v1/distribution/stories")
@@ -545,22 +585,17 @@ async def submit(
     if body.announcement_source == "platform" and not body.story_project_id:
         raise HTTPException(422, "Select the platform story you want to use")
     await validate(db, body, p.workspace.id)
-    if (
-        not body.outlet_ids
-        or not all(
-            x.strip()
-            for x in [
-                body.headline,
-                body.announcement,
-                body.contact_name,
-                body.contact_email,
-                body.phone,
-            ]
-        )
+    if not body.outlet_ids or not all(
+        x.strip()
+        for x in [
+            body.headline,
+            body.announcement,
+            body.contact_name,
+            body.contact_email,
+            body.phone,
+        ]
     ):
-        raise HTTPException(
-            422, "Choose outlets, add your release and all contact details"
-        )
+        raise HTTPException(422, "Choose outlets, add your release and all contact details")
     try:
         TypeAdapter(EmailStr).validate_python(body.contact_email)
     except ValidationError as e:
