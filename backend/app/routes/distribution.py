@@ -94,6 +94,20 @@ NAMES = [
     "National Post",
     "Financial Post",
     "Canada-Wide Newswire",
+    # UK and European news channels (appended)
+    "The Sun (UK)",
+    "Rolling Stones UK",
+    "London Loves Business",
+    "Business Matters UK",
+    "Property Portfolio Investor UK",
+    "Techround UK",
+    "Luxury Lifestyle Magazine UK",
+    "Vanity Fair Germany",
+    "Mashable NL",
+    "European Business Review",
+    "Vogue Switzerland",
+    "Forbes Liechtenstein",
+    "Portugal News",
 ]
 # Keep the existing IDs stable: drafts and paid requests refer to these outlets by ID.
 OUTLET_CATEGORIES = {
@@ -103,7 +117,8 @@ OUTLET_CATEGORIES = {
     + NAMES[53:61],  # the owner's sheet: US channels (and The Globe and Mail, a Canadian one)
     "Nigeria News Channels": NAMES[22:38] + NAMES[47:53],
     "Entertainment News Channels": NAMES[38:47],
-    "Canada News Channels": NAMES[61:],
+    "Canada News Channels": NAMES[61:69],
+    "UK & Europe News Channels": NAMES[69:],
 }
 CATEGORY_BY_NAME = {name: category for category, names in OUTLET_CATEGORIES.items() for name in names}
 # Owner-supplied prices: original Credit on CF values plus the Nigerian sheet's final CF Credit + Margins values (already include its five-credit margin).
@@ -168,6 +183,20 @@ DEFAULT_OUTLET_CREDITS = {
     "National Post": "1878.5",
     "Financial Post": "1878.5",
     "Canada-Wide Newswire": "386.1",
+    # UK and Europe news channels: the sheet's CF Credit + Margins value.
+    "The Sun (UK)": "9149.4",
+    "Rolling Stones UK": "1589.9",
+    "London Loves Business": "722.8",
+    "Business Matters UK": "482.3",
+    "Property Portfolio Investor UK": "482.3",
+    "Techround UK": "422.5",
+    "Luxury Lifestyle Magazine UK": "313.3",
+    "Vanity Fair Germany": "239.2",
+    "Mashable NL": "1011.4",
+    "European Business Review": "180.7",
+    "Vogue Switzerland": "109.2",
+    "Forbes Liechtenstein": "180.7",
+    "Portugal News": "422.5",
     # Entertainment news channels: the sheet's CF Credit + Margins value (61) for every one of them.
     "Naijaloaded": "61",
     "Tooxclusive": "61",
@@ -184,7 +213,7 @@ TOPICS = ("Technology", "General News", "Gossip Blogs")
 LOCATIONS = {
     "Africa": ("Nigeria", "Ghana", "Kenya", "Uganda"),
     "North America": ("Canada", "United States"),
-    "Europe": ("United Kingdom",),
+    "Europe": ("United Kingdom", "Germany", "Netherlands", "Switzerland", "Liechtenstein", "Portugal"),
 }
 REGION_OF = {country: region for region, countries in LOCATIONS.items() for country in countries}
 _TECH = ("Techpoint Africa", "Tech Next", "Tech Cabal", "Techeconomy", "Condia")
@@ -231,6 +260,19 @@ _ABROAD = {
     "Bar Chart": "United States",
     "Benzinga": "United States",
     "The Globe and Mail": "Canada",
+    "The Sun (UK)": "United Kingdom",
+    "Rolling Stones UK": "United Kingdom",
+    "London Loves Business": "United Kingdom",
+    "Business Matters UK": "United Kingdom",
+    "Property Portfolio Investor UK": "United Kingdom",
+    "Techround UK": "United Kingdom",
+    "Luxury Lifestyle Magazine UK": "United Kingdom",
+    "Vanity Fair Germany": "Germany",
+    "Mashable NL": "Netherlands",
+    "European Business Review": "United Kingdom",
+    "Vogue Switzerland": "Switzerland",
+    "Forbes Liechtenstein": "Liechtenstein",
+    "Portugal News": "Portugal",
     "Toronto Star": "Canada",
     "Montreal Gazette": "Canada",
     "Toronto Sun": "Canada",
@@ -247,7 +289,7 @@ def outlet_tags(name: str) -> tuple[str, str | None]:
     """(topic, country) for an outlet. The crypto channels cover Africa as a whole, so they have no single country."""
     topic = (
         "Technology"
-        if name in _TECH or name in _CRYPTO or name in _US_TECH
+        if name in _TECH or name in _CRYPTO or name in _US_TECH or name == "Techround UK"
         else "Gossip Blogs"
         if name in _GOSSIP
         else "General News"

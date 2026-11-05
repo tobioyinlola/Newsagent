@@ -71,10 +71,10 @@ async def draft(client, data):
 
 async def test_catalog_draft_video_and_admin_progress(client, distribution_data):
     catalog = (await client.get("/v1/distribution/outlets", headers=OWNER)).json()
-    assert len(catalog["outlets"]) == 69
+    assert len(catalog["outlets"]) == 82
     assert all(o["credits"] == "0" for o in catalog["outlets"])
     assert sum(o["name"] == "Premium Times" for o in catalog["outlets"]) == 1
-    assert catalog["coming_soon"] == ["Ghana", "Uganda", "United Kingdom"]
+    assert catalog["coming_soon"] == ["Ghana", "Uganda"]
     videos = (await client.get("/v1/distribution/videos", headers=OWNER)).json()
     assert videos[0]["headline"] == "Acme launches"
     assert "A new product." in videos[0]["announcement"]
@@ -685,8 +685,8 @@ async def test_outlet_categories_match_groups_and_preserve_existing_ids(client, 
     monkeypatch.setattr(get_settings(), "hide_free_distribution_outlets", False)  # this checks the full catalog
     data = (await client.get("/v1/distribution/outlets", headers=OWNER)).json()
     outlets = data["outlets"]
-    assert len(outlets) == 69
-    assert len({o["id"] for o in outlets}) == 69
+    assert len(outlets) == 82
+    assert len({o["id"] for o in outlets}) == 82
     assert [o["name"] for o in outlets].count("Premium Times") == 1
     expected = {
         "Media outlets": routes.NAMES[:12],
