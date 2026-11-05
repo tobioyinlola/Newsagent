@@ -34,7 +34,7 @@ function MobileMenu({ open, onClose, signedIn }: { open: boolean; onClose: () =>
         <div className="mt-auto flex flex-col gap-3 pt-6">
           {signedIn ? <Link to="/dashboard" onClick={onClose} className="rounded-sm border-2 border-brand-green bg-brand-green px-4 py-3 text-center font-bold text-ink">Dashboard</Link> : (
             <>
-              <Link to="/signup" onClick={onClose} className="rounded-sm border-2 border-brand-green bg-brand-green px-4 py-3 text-center font-bold text-ink">Publish your free story!</Link>
+              <Link to="/signup" onClick={onClose} className="rounded-sm border-2 border-brand-green bg-brand-green px-4 py-3 text-center font-bold text-ink">Sign up now!</Link>
               <Link to="/login" onClick={onClose} className="rounded-sm border-2 border-white/60 px-4 py-3 text-center font-bold text-white">Sign in</Link>
             </>
           )}
@@ -60,7 +60,7 @@ export function PublicNavigation() {
           <div className="flex items-center gap-2">
             {signedIn ? <Link to="/dashboard" className="rounded-full border border-brand-green bg-brand-green px-4 py-2 text-sm font-bold text-ink transition-colors hover:bg-white">Dashboard</Link> : (
               <><Link to="/login" className="whitespace-nowrap rounded-full border border-white/40 px-4 py-2 text-sm font-bold transition-colors hover:border-brand-green hover:text-brand-green">Sign in</Link>
-              <Link to="/signup" className="hidden whitespace-nowrap rounded-full border border-brand-green bg-brand-green px-4 py-2 text-sm font-bold text-ink transition-colors hover:bg-white lg:inline-block">Publish your free story!</Link></>
+              <Link to="/signup" className="hidden whitespace-nowrap rounded-full border border-brand-green bg-brand-green px-4 py-2 text-sm font-bold text-ink transition-colors hover:bg-white lg:inline-block">Sign up now!</Link></>
             )}
             <button type="button" onClick={() => setMenu(true)} aria-expanded={menu} aria-controls="site-menu" aria-label="Open menu" className="flex h-10 w-10 items-center justify-center rounded-full border border-brand-green text-brand-green transition-colors hover:bg-brand-green hover:text-ink md:hidden">
               <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 7h16M4 12h16M4 17h16" /></svg>

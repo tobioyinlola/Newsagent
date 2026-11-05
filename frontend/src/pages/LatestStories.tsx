@@ -81,7 +81,7 @@ export function LatestStories() {
               <div className="border border-white/15 p-10 text-center">
                 <h2 className="text-2xl font-bold text-white">The first story could be yours.</h2>
                 <p className="mx-auto mt-2 max-w-md text-white/70">Tell us about your announcement. We interview you, make the video and write the press release, and it appears here.</p>
-                <div className="mt-6 flex justify-center"><Cta to="/signup" primary>Publish your free story!</Cta></div>
+                <div className="mt-6 flex justify-center"><Cta to="/signup" primary>Sign up here</Cta></div>
               </div>
             ) : (
               <>

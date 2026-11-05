@@ -4,8 +4,8 @@ import { expect, test } from "@playwright/test";
 test("open sign-up: business name, email, password, emailed code, dashboard", async ({ page, request }) => {
   const email = `owner${Date.now()}@newbiz.example.com`;
   await page.goto("/");
-  await page.getByRole("link", { name: "Publish your free story!" }).first().click();
-  await expect(page.getByRole("heading", { name: "Publish your story free" })).toBeVisible();
+  await page.getByRole("link", { name: "Sign up now!" }).first().click();
+  await expect(page.getByRole("heading", { name: "Sign up", exact: true })).toBeVisible();
   await page.getByLabel("Business name").fill("NewBiz Ltd");
   await page.getByLabel("Country").fill("Nigeri"); // pick from the list rather than typing it all
   await page.getByRole("option", { name: "Nigeria" }).click();
@@ -86,4 +86,14 @@ test("signup navigation stays usable on small screens", async ({ page }) => {
   await expect(page.getByLabel("Business name")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: "/tmp/signup-mobile-refined.png", fullPage: true });
+});
+
+test("the home page's two main buttons say what they do and go to the right place", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: "Sign up now!" }).first()).toBeVisible(); // the top menu says it is a sign-up
+  await page.getByRole("link", { name: "Sign up here" }).first().click();
+  await expect(page).toHaveURL(/\/signup$/);
+  await page.goto("/");
+  await page.getByRole("link", { name: "Get media attention" }).click();
+  await expect(page).toHaveURL(/\/press-distribution$/);
 });

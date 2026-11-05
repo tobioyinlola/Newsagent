@@ -48,7 +48,7 @@ export function CFNews() {
             <div className="mt-8 border border-white/15 p-10 text-center">
               <h2 className="text-2xl font-bold text-white">CF News is coming soon.</h2>
               <p className="mx-auto mt-2 max-w-md text-white/70">Breaking news from the Cover Founder News Desk will appear here.</p>
-              <div className="mt-6 flex justify-center"><Cta to="/signup" primary>Publish your free story!</Cta></div>
+              <div className="mt-6 flex justify-center"><Cta to="/signup" primary>Sign up here</Cta></div>
             </div>
           )}
           <Link to="/latest-stories" className="mt-8 inline-flex text-sm font-bold text-brand-green hover:underline">Browse CF Featured Stories →</Link>

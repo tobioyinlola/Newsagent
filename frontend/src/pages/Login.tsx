@@ -164,7 +164,7 @@ export function Signup() {
     <Shell signup>
       <ChosenOutlets />
       {created && <Toast>{peekAfterAuth() ? "Account created. Taking you to your distribution request…" : "Account created. Taking you to your dashboard…"}</Toast>}
-      <Card title={inviteCode ? "Create your workspace" : "Publish your story free"}>
+      <Card title={inviteCode ? "Create your workspace" : "Sign up"}>
         {inviteCode && preview.isError ? (
           <Notice tone="warn">This invite link is not valid or has expired. You can <Link className="underline" to="/signup">sign up here</Link> instead, or <Link className="underline" to="/login">sign in</Link>.</Notice>
         ) : inviteCode && preview.isLoading ? (

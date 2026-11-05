@@ -80,7 +80,7 @@ export function StoryPage() {
               <div className="mt-12 border border-white/15 p-6 text-center">
                 <p className="text-lg font-bold text-white">Have news of your own?</p>
                 <p className="mt-1 text-sm text-white/70">We interview you, make the video and write the press release. It appears here.</p>
-                <div className="mt-4 flex justify-center"><Cta to="/signup" primary>Publish your free story!</Cta></div>
+                <div className="mt-4 flex justify-center"><Cta to="/signup" primary>Sign up here</Cta></div>
               </div>
               {(more.data ?? []).filter((c) => c.slug !== s.slug).length > 0 && <div className="mt-10"><StoryRow title="More stories" cards={(more.data ?? []).filter((c) => c.slug !== s.slug)} /></div>}
             </>
