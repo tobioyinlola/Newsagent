@@ -89,19 +89,21 @@ def _utc(t: datetime | None) -> datetime | None:
     return None if t is None else (t if t.tzinfo else t.replace(tzinfo=UTC))
 
 
+def _sum(*kinds: str):
+    """The total of this wallet's ledger rows of these kinds (zero when there are none)."""
+    return func.coalesce(func.sum(case((CreditTransaction.kind.in_(kinds), CreditTransaction.amount), else_=0)), 0)
+
+
 async def _rows(session: AsyncSession, q: str = "") -> list[WalletRow]:
-    s = lambda *kinds: func.coalesce(
-        func.sum(case((CreditTransaction.kind.in_(kinds), CreditTransaction.amount), else_=0)), 0
-    )  # noqa: E731
     agg = {
         r.workspace_id: r
         for r in (
             await session.execute(
                 select(
                     CreditTransaction.workspace_id,
-                    s("purchase").label("bought"),
-                    s("grant").label("free"),
-                    s(*USAGE_KINDS).label("used"),
+                    _sum("purchase").label("bought"),
+                    _sum("grant").label("free"),
+                    _sum(*USAGE_KINDS).label("used"),
                     func.max(CreditTransaction.created_at).label("last"),
                 ).group_by(CreditTransaction.workspace_id)
             )
