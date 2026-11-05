@@ -40,7 +40,23 @@ export function Wallets() {
       <ErrorBox error={list.error ?? (err ? new Error(err) : null)} />
       <Card>
         {list.isLoading ? <p aria-busy="true">Loading…</p> : d && d.items.length === 0 ? <p className="text-sm text-muted">{term ? "No wallets match that search." : "No wallets yet."}</p> : (
-          <div className="overflow-x-auto">
+          <>
+          <ul className="space-y-3 sm:hidden" aria-label="Customer wallets">
+            {d?.items.map((w) => (
+              <li key={w.workspace_id} className="rounded-lg border border-line p-3 text-sm">
+                <div className="flex items-start justify-between gap-2"><Link className="font-bold underline" to={`/customers/${w.workspace_id}#wallet`}>{w.company}</Link><span className={`shrink-0 rounded-sm px-1.5 py-0.5 text-xs font-bold ${w.status === "suspended" ? "bg-brand-red" : "bg-lime-tint"}`}>{w.status}</span></div>
+                <p className="break-all text-xs text-muted">{w.owner_email}</p>
+                <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+                  <div><dt className="text-xs text-muted">Credits left</dt><dd className={`font-semibold tabular-nums ${Number(w.balance) <= 0 ? "text-red-700" : ""}`}>{num(w.balance)}</dd></div>
+                  <div><dt className="text-xs text-muted">Used</dt><dd className="tabular-nums">{num(w.used)}</dd></div>
+                  <div><dt className="text-xs text-muted">Bought</dt><dd className="tabular-nums">{num(w.bought)}</dd></div>
+                  <div><dt className="text-xs text-muted">Given free</dt><dd className="tabular-nums">{num(w.free)}</dd></div>
+                </dl>
+                <p className="mt-2 text-xs text-muted">Last activity: {ago(w.last_activity_at)}</p>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto sm:block">
             <table className="w-full text-sm"><caption className="sr-only">Customer wallets</caption>
               <thead><tr className="text-left text-muted"><th className="py-1">Company</th><th>Owner</th><th>Status</th><th className="text-right">Credits left</th><th className="text-right">Bought</th><th className="text-right">Given free</th><th className="text-right">Used</th><th>Last activity</th></tr></thead>
               <tbody>{d?.items.map((w) => (
@@ -54,6 +70,7 @@ export function Wallets() {
                 </tr>))}</tbody>
             </table>
           </div>
+          </>
         )}
         {d && d.total > PAGE && (
           <div className="mt-3 flex items-center justify-between text-sm">

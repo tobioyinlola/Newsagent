@@ -142,7 +142,17 @@ function WalletHistory({ id, balance }: { id: string; balance: string }) {
       </div>
       <ErrorBox error={q.error ?? (err ? new Error(err) : null)} />
       {q.isLoading ? <p aria-busy="true">Loading…</p> : d && d.items.length === 0 ? <p className="text-sm text-muted">Nothing here yet.</p> : (
-        <div className="overflow-x-auto">
+        <>
+        <ol className="space-y-2 sm:hidden" aria-label="Wallet history, newest first">
+          {d?.items.map((t) => (
+            <li key={t.id} className="rounded-lg border border-line p-3 text-sm">
+              <div className="flex items-baseline justify-between gap-2"><span className="font-semibold">{t.label}</span><span className={`font-semibold tabular-nums ${Number(t.amount) < 0 ? "text-red-700" : "text-green-800"}`}>{Number(t.amount) > 0 ? "+" : ""}{num(t.amount)}</span></div>
+              {(t.description || t.stage) && <p className="text-xs text-muted">{t.description ?? ""}{t.stage ? ` (${t.stage})` : ""}{t.project_id ? ` · ${t.project_id.slice(0, 6)}` : ""}</p>}
+              <p className="mt-1 flex justify-between gap-2 text-xs text-muted"><span>{stamp(t.when)}</span><span>Balance after: <span className="tabular-nums">{num(t.balance_after)}</span></span></p>
+            </li>
+          ))}
+        </ol>
+        <div className="hidden overflow-x-auto sm:block">
           <table className="w-full text-sm"><caption className="sr-only">Wallet history, newest first</caption>
             <thead><tr className="text-left text-muted"><th className="py-1">When</th><th>What</th><th>Details</th><th className="text-right">Credits</th><th className="text-right">Balance after</th></tr></thead>
             <tbody>{d?.items.map((t) => (
@@ -155,6 +165,7 @@ function WalletHistory({ id, balance }: { id: string; balance: string }) {
               </tr>))}</tbody>
           </table>
         </div>
+        </>
       )}
       {d && d.total > size && (
         <div className="mt-3 flex items-center justify-between text-sm">
