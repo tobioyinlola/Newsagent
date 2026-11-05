@@ -21,9 +21,9 @@ test("completed video to distribution draft, checked images, wallet submission, 
   await page.addInitScript(t => localStorage.setItem("newsagent.token", t), signup.token);
   await page.goto(`/ai-newsroom/${project.id}`);
   // a finished video offers distribution once, in a pop-up over the page; "Maybe later" closes it for this video
-  await expect(page.getByRole("alertdialog", { name: "Take your story to over 25,000 media outlets?" })).toBeVisible();
+  await expect(page.getByRole("alertdialog", { name: "Take your story to over 2,500 media outlets?" })).toBeVisible();
   await page.getByRole("button", { name: "Maybe later" }).click();
-  await expect(page.getByRole("heading", { name: "Distribute to over 20,000 media outlets" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Distribute to over 2,500 media outlets" })).toBeVisible();
   await page.getByRole("link", { name: "Choose distribution outlets" }).click();
   await page.getByRole("button", { name: "Start a distribution request" }).click();
   await page.getByRole("button", { name: "Continue", exact: true }).click();

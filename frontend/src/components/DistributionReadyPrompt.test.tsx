@@ -10,7 +10,7 @@ beforeEach(() => {
 afterEach(() => { cleanup(); localStorage.clear(); });
 it("opens the correct project in distribution without initiating payment", () => {
   render(<MemoryRouter><DistributionReadyPrompt projectId="ready-123" workspaceId="workspace-one" /><Location /></MemoryRouter>);
-  expect(screen.getByText(/25,000/)).toBeTruthy();
+  expect(screen.getByText(/2,500/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Yes, choose outlets" }));
   expect(screen.getByTestId("path").textContent).toBe("/distribution/request?project=ready-123");
   expect(screen.queryByRole("alertdialog")).toBeNull();
