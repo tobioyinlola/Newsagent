@@ -30,6 +30,7 @@ from app.routes import (
     news_desk,
     ops,
     outreach,
+    outreach_inbound,
     payment_reconciliation,
     presenter,
     press_release,
@@ -205,6 +206,7 @@ def create_app() -> FastAPI:
         account.router,
         ops.router,
         outreach.router,
+        outreach_inbound.router,
     ):
         app.include_router(r)
     return app

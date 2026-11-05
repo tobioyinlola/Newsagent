@@ -144,7 +144,12 @@ class Settings(BaseSettings):
     # AI outreach to distribution outlets (templates, a reply inbox, an agent that answers within approval rules). off = the original one-way email.
     outreach_ai: str = "off"  # off | on
     outreach_reply_domain: str = ""  # replies come back to outreach+<token>@<this domain> (a domain that receives mail); blank = the plain reply-to address
-    outreach_inbound_secret: str = ""  # shared secret the inbound-mail webhook must present
+    outreach_inbound_secret: str = ""  # the inbound-mail webhook's secret: a shared secret (X-Inbound-Secret header) or the provider's whsec_ signing secret
+    outreach_imap_host: str = ""  # alternatively, a mailbox the app reads itself (IMAP over SSL); blank = off
+    outreach_imap_port: int = 993
+    outreach_imap_user: str = ""
+    outreach_imap_password: str = ""
+    outreach_imap_folder: str = "INBOX"
     llm_max_concurrency: int = 16  # writing calls in flight at once per process; the rest wait their turn
     llm_retries: int = 2  # a busy or briefly failing writing provider is asked again this many times
     queue_mode: str = "legacy"
