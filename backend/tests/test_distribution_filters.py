@@ -24,6 +24,7 @@ def test_known_outlets_are_filed_where_the_owner_expects():
     assert (by["Benzinga"]["country"], by["Benzinga"]["region"]) == ("United States", "North America")
     assert by["The Globe and Mail"]["country"] == "Canada"
     assert by["CoinSpeaks"]["topic"] == "Technology" and by["CoinSpeaks"]["country"] is None
+    assert (by["Condia"]["topic"], by["Condia"]["country"]) == ("Technology", "Nigeria")
 
 
 def test_outlet_ids_did_not_change():

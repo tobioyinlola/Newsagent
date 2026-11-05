@@ -49,10 +49,10 @@ test("completed video to distribution draft, checked images, wallet submission, 
   }
   await expect(page.getByRole("heading", { name: "General News · Ghana", exact: true })).toHaveCount(0); // no outlets there yet: no empty section
   await page.getByRole("button", { name: /^Technology/ }).click(); // the topic filter: 4 Nigerian tech sites and the 5 crypto channels
-  await expect(page.getByRole("checkbox")).toHaveCount(22); // 4 Nigerian tech sites, 5 crypto channels and the 13 tech news channels
+  await expect(page.getByRole("checkbox")).toHaveCount(23); // 5 Nigerian tech sites (with Condia), 5 crypto channels and the 13 tech news channels
   await page.getByRole("checkbox", { name: /^CoinSpeaks/ }).check();
   await page.getByRole("button", { name: /^General News/ }).click();
-  await expect(page.getByRole("checkbox")).toHaveCount(27); // the news outlets that cost credits (the rest are hidden for now)
+  await expect(page.getByRole("checkbox")).toHaveCount(26); // the news outlets that cost credits (the rest are hidden for now)
   await expect(page.getByRole("checkbox", { name: /^Tribune / }).locator("..")).toContainText("18.8");
   await expect(page.getByRole("checkbox", { name: /^Daily Nation / }).locator("..")).toContainText("651.6");
   await expect(page.getByRole("checkbox", { name: /^Pilot Newspaper / })).toHaveCount(1);

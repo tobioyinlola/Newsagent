@@ -17,7 +17,7 @@ test("a visitor picks outlets by topic and place, signs up, and finds them in th
   await page.getByRole("button", { name: /^Technology/ }).click();
   await page.getByLabel("Region", { exact: true }).selectOption("Africa");
   await page.getByLabel("Country", { exact: true }).selectOption("Nigeria");
-  await expect(page.getByRole("checkbox")).toHaveCount(4); // Techpoint Africa, Tech Next, Tech Cabal, Techeconomy
+  await expect(page.getByRole("checkbox")).toHaveCount(5); // Techpoint Africa, Tech Next, Tech Cabal, Techeconomy, Condia
   await page.getByLabel("Country", { exact: true }).selectOption("Ghana");
   await expect(page.getByText("We have no outlets in Ghana yet. They are coming soon.")).toBeVisible();
   await page.getByLabel("Country", { exact: true }).selectOption("Nigeria");
