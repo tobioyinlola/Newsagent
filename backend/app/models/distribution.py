@@ -56,6 +56,10 @@ class DistributionMail(Base, TimestampMixin):
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     claim_token: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    thread_id: Mapped[str | None] = mapped_column(String(32), nullable=True)  # an outreach conversation this mail belongs to
+    reply_to: Mapped[str | None] = mapped_column(String(320), nullable=True)  # where the outlet's reply should come back to
+    message_id: Mapped[str | None] = mapped_column(String(300), nullable=True)  # the RFC Message-ID it is sent with
+    in_reply_to: Mapped[str | None] = mapped_column(String(300), nullable=True)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error: Mapped[str] = mapped_column(String(300), default="")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

@@ -29,17 +29,33 @@ async def catalogue() -> list[Presenter]:
 
 
 def featured() -> list[Presenter]:
-    """The house presenters, offered first. Configured, so a new one is an environment change, not a deploy."""
+    """The house presenters, offered first. Configured, so a new one is an environment change, not a deploy.
+    Each entry is `id|name|gender|voice_id|picture` separated by `;`; only id and name are required. The voice is this presenter's own
+    (e.g. a female African-English voice); the picture is a file name in the site's /presenters folder (default `<id>.jpg`)."""
     out = []
-    for item in get_settings().heygen_featured_presenters.split(";"):
+    for item in (get_settings().heygen_featured_presenters + ";" + get_settings().heygen_extra_presenters).split(";"):
         parts = [x.strip() for x in item.split("|")]
         if len(parts) >= 2 and parts[0]:
+            picture = parts[4] if len(parts) > 4 and parts[4] else f"{parts[0]}.jpg"
             out.append(
                 Presenter(
-                    parts[0], parts[1], parts[2] if len(parts) > 2 else "", f"/presenters/{parts[0]}.jpg", "landscape"
+                    parts[0],
+                    parts[1],
+                    parts[2] if len(parts) > 2 else "",
+                    f"/presenters/{picture}",
+                    "landscape",
+                    voice_id=parts[3] if len(parts) > 3 else "",
                 )
             )
     return out
+
+
+def own_voice(avatar_id: str, required_gender: str | None = None) -> str | None:
+    """A house presenter's own voice, when it has one (and, if a gender is required, when she or he is that gender)."""
+    for p in featured():
+        if p.id == avatar_id and p.voice_id:
+            return p.voice_id if not required_gender or p.gender.lower() == required_gender else None
+    return None
 
 
 async def search(q: str = "", gender: str = "", limit: int = 48) -> list[Presenter]:

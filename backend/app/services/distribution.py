@@ -14,7 +14,7 @@ from app.db import session_maker
 from app.integrations import registry
 from app.models import Asset, DistributionActivity, DistributionMail, DistributionPlacement, DistributionRequest
 from app.models.base import new_id, utcnow
-from app.services import email_templates
+from app.services import email_templates, outreach
 from app.services.distribution_catalog import BODY, SUBJECT, settings
 from app.services.notifications import send_email
 
@@ -58,27 +58,31 @@ def customer_recipients(row):
     return sorted({x.strip().lower() for x in [row.created_by, row.data["contact_email"]]})
 
 
-async def queue_mail(db, row, kind, recipient, subject, body, *, key, placement=None):
+async def queue_mail(db, row, kind, recipient, subject, body, *, key, placement=None, thread_id=None, reply_to=None, message_id=None, in_reply_to=None):
     recipient = recipient.strip().lower()
     dedupe = f"{row.id}:{kind}:" + hashlib.sha256((key + ":" + recipient).encode()).hexdigest()
     existing = (
         await db.execute(select(DistributionMail.id).where(DistributionMail.dedupe_key == dedupe))
     ).scalar_one_or_none()
     if existing:
-        return
-    db.add(
-        DistributionMail(
-            request_id=row.id,
-            placement_id=placement.id if placement else None,
-            dedupe_key=dedupe,
-            kind=kind,
-            recipient=recipient,
-            subject=subject.replace("\n", " ").replace("\r", " ")[:300],
-            body=body,
-        )
+        return None
+    mail = DistributionMail(
+        request_id=row.id,
+        placement_id=placement.id if placement else None,
+        dedupe_key=dedupe,
+        kind=kind,
+        recipient=recipient,
+        subject=subject.replace("\n", " ").replace("\r", " ")[:300],
+        body=body,
+        thread_id=thread_id,
+        reply_to=reply_to,
+        message_id=message_id,
+        in_reply_to=in_reply_to,
     )
+    db.add(mail)
     activity(db, row, "email_queued", {"kind": kind, "recipient": recipient}, placement=placement)
     await db.flush()
+    return mail
 
 
 async def queue_receipts(db, row):
@@ -176,7 +180,9 @@ async def plan_submission(db, row, catalog):
         db.add(placement)
         await db.flush()
         placement.outreach_subject, placement.outreach_body = await outreach_copy(db, row, placement, config)
-        if config.get("direct_access") and placement.contact_email:
+        if config.get("direct_access") and placement.contact_email and outreach.enabled():
+            await outreach.start_thread(db, row, placement, config)  # a conversation, with a reply address that finds its way back
+        elif config.get("direct_access") and placement.contact_email:
             await queue_mail(
                 db,
                 row,
@@ -293,7 +299,16 @@ async def send_confirmation(db: AsyncSession, row: DistributionRequest, *, deadl
                     else "You are a configured recipient of Cover Founder distribution notifications."
                 )
                 html, text = email_templates.render(mail.subject, mail.body, footer=footer)
-                success = await send_email(mail.recipient, mail.subject, text, html=html)
+                if mail.thread_id:  # a conversation email: replies come back to its tagged address
+                    headers = {"Message-ID": mail.message_id} if mail.message_id else {}
+                    if mail.in_reply_to:
+                        headers["In-Reply-To"] = mail.in_reply_to
+                        headers["References"] = mail.in_reply_to
+                    success = await send_email(
+                        mail.recipient, mail.subject, text, html=html, reply_to=mail.reply_to, headers=headers
+                    )
+                else:
+                    success = await send_email(mail.recipient, mail.subject, text, html=html)
             else:
                 success = await send_email(mail.recipient, mail.subject, mail.body)
         except Exception:  # An adapter or test double must not bypass persisted retry handling.
@@ -319,6 +334,7 @@ async def send_confirmation(db: AsyncSession, row: DistributionRequest, *, deadl
                 "email_sent" if success else "email_failed",
                 {"mail_id": ident, "kind": mail.kind, "recipient": mail.recipient},
             )
+            await outreach.mark_delivery(db, mail, success)
         await db.commit()
     receipts = (
         (

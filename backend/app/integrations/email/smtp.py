@@ -12,9 +12,22 @@ class SmtpEmail(EmailProvider):
     def __init__(self, host: str = "localhost", port: int = 1025) -> None:
         self.host, self.port = host, port
 
-    async def send(self, to: str, subject: str, text: str, html: str | None = None) -> None:
+    async def send(
+        self,
+        to: str,
+        subject: str,
+        text: str,
+        html: str | None = None,
+        *,
+        reply_to: str | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         msg = EmailMessage()
         msg["From"], msg["To"], msg["Subject"] = get_settings().email_from, to, subject
+        if reply_to:
+            msg["Reply-To"] = reply_to
+        for name, value in (headers or {}).items():
+            msg[name] = value
         msg.set_content(text)
         if html:
             msg.add_alternative(html, subtype="html")

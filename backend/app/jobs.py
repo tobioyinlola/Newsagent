@@ -165,6 +165,12 @@ async def reconcile_projects(now: datetime | None = None) -> int:
     return len(fixed)
 
 
+async def _requeue_outreach() -> int:
+    from app.services import outreach, outreach_agent
+
+    return await outreach_agent.requeue_unprocessed() if outreach.enabled() else 0
+
+
 async def run_sweep() -> dict:
     """Every few minutes: re-send work whose queue message was lost (broker restart, failed publish, killed worker)."""
     from app.services.distribution import retry_confirmations
@@ -177,6 +183,7 @@ async def run_sweep() -> dict:
         "distribution_emails": await retry_confirmations(),
         "payments_reconciled": await reconcile_pending(),
         "transfer_emails": await deliver_notifications(),
+        "outreach_replies_requeued": await _requeue_outreach(),
     }
 
 

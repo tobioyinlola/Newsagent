@@ -67,6 +67,11 @@ def lease_for(stage: str) -> timedelta:
 
 
 async def run_step(step: str, payload: dict) -> None:
+    if step == "outreach_reply":  # an outlet's reply for the outreach agent to read (not tied to a project's state)
+        from app.services.outreach_agent import handle_reply
+
+        await handle_reply(payload["thread_id"], payload["message_id"], bool(payload.get("force")))
+        return
     if step == "process_take":  # per-take work isn't tied to the project's state
         from app.pipeline.takes import process_take
 

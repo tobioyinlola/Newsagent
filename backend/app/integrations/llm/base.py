@@ -101,6 +101,14 @@ class NewsDraft(BaseModel):
 
 
 class ScriptLLM(ABC):
+    async def analyze_outreach_reply(self, context: dict) -> dict:
+        """Read an outlet's reply (untrusted text) and return structured facts. See services/outreach_agent.py for the shape."""
+        raise NotImplementedError("Outreach replies are not configured for this provider")
+
+    async def draft_outreach_reply(self, context: dict, analysis: dict) -> dict:
+        """Write our next email in an outreach conversation: {"subject", "body", "step"}."""
+        raise NotImplementedError("Outreach replies are not configured for this provider")
+
     async def write_news(self, source_text: str, source_name: str) -> NewsDraft:
         raise NotImplementedError("News rewriting is not configured for this provider")
 
