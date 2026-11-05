@@ -6,7 +6,7 @@ from tests.conftest import OWNER
 
 
 def test_every_outlet_has_a_valid_topic_and_place():
-    assert len(OUTLETS) == len(NAMES) == 61
+    assert len(OUTLETS) == len(NAMES) == 91
     for o in OUTLETS.values():
         assert o["topic"] in TOPICS, o["name"]
         assert o["region"] in LOCATIONS, o["name"]
@@ -46,7 +46,7 @@ async def test_a_visitor_can_browse_outlets_without_signing_in(client, maker):
     assert set(body["coming_soon"]) == {
         c for c in REGION_OF if c not in shown_countries
     }  # exactly the places with nothing to show
-    assert {"Ghana", "Uganda", "United Kingdom"} <= set(body["coming_soon"])
+    assert {"Ghana", "Uganda"} <= set(body["coming_soon"])
 
 
 async def test_the_signed_in_list_has_the_same_tags_and_filters(client, workspace):

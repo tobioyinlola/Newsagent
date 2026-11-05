@@ -27,7 +27,7 @@ export function emptyReason(outlets: Tagged[], f: Facets): string | null {
 
 // ---------- showing the outlets in groups: by topic, then by place ----------
 const DEFAULT_TOPICS = ["Technology", "General News", "Gossip Blogs"];
-const DEFAULT_LOCATIONS = [{ region: "Africa", countries: ["Nigeria", "Ghana", "Kenya", "Uganda"] }, { region: "North America", countries: ["Canada", "United States"] }, { region: "Europe", countries: ["United Kingdom"] }];
+const DEFAULT_LOCATIONS = [{ region: "Africa", countries: ["Nigeria", "Ghana", "Kenya", "Uganda"] }, { region: "North America", countries: ["Canada", "United States"] }, { region: "Middle East", countries: ["United Arab Emirates", "Qatar"] }, { region: "Europe", countries: ["United Kingdom", "Germany", "Netherlands", "Switzerland", "Liechtenstein", "Portugal"] }];
 export type LocationGroup<T> = { key: string; label: string; items: T[] };
 export type TopicGroup<T> = { topic: string; count: number; locations: LocationGroup<T>[] };
 

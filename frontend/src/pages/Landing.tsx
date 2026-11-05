@@ -425,7 +425,7 @@ export function StatsStrip() {
   const tiles: [string, string, string][] = [
     [n(d?.videos), "Videos created", "Finished news segments"],
     [String(CONTINENTS.length), "Continents coverage", CONTINENTS.join(" · ")],
-    ["25K+", "Media platforms", "Distribution coverage"],
+    ["2,500+", "Media platforms", "Distribution coverage"],
   ];
   return (
     <section aria-label="Cover Founder in numbers" className="bg-ink px-4 py-12 md:px-8">
