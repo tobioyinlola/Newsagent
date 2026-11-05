@@ -18,6 +18,7 @@ test("invite to shared video", async ({ page, browser }) => {
   await expect(fp.getByText("Acme Farms")).toBeVisible();
   await fp.getByLabel("Password", { exact: true }).fill("correct horse battery");
   await fp.getByLabel("Confirm password", { exact: true }).fill("correct horse battery");
+  await fp.getByLabel(/I have read and agree to the Terms of Use/).check(); // agreeing to the Terms and Privacy Policy is required to sign up
   await fp.getByRole("button", { name: "Continue" }).click();
   await expect(fp.getByLabel("6-digit code")).toBeVisible();
   const mail = await (await fp.request.get("http://localhost:8000/v1/dev/last-email", { params: { to: "founder@startup.example.com" } })).json();
@@ -96,6 +97,8 @@ test("sign up with a password, verify the emailed code, sign out, sign back in, 
   await page.getByLabel("Confirm password", { exact: true }).fill(pw + "x");
   await expect(page.getByText("The passwords don’t match.")).toBeVisible();
   await page.getByLabel("Confirm password", { exact: true }).fill(pw);
+  await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled(); // not until the Terms are agreed to
+  await page.getByLabel(/I have read and agree to the Terms of Use/).check();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByLabel("6-digit code")).toBeVisible();
   await page.getByLabel("6-digit code").fill("000000");
