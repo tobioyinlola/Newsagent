@@ -198,7 +198,7 @@ test("operators delete a customer's video from the back office; customers can't"
   expect((await request.delete(`${API}/v1/projects/${p.id}`, { headers: a.headers })).status()).toBe(405);
   await asOperator(page);
   await page.goto(`/admin/customers/${a.workspace}`);
-  await expect(page.getByRole("cell", { name: p.id.slice(0, 6) })).toBeVisible();
+  await expect(page.getByRole("cell", { name: p.id.slice(0, 6), exact: true })).toBeVisible();
   page.on("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "Delete video" }).click();
   await expect(page.getByText("No videos yet.")).toBeVisible();
