@@ -721,5 +721,68 @@
       433,
       57
     ]
+  },
+  "Fortune": {
+    "src": "/distribution-logos/fortune.jpg",
+    "source": "Supplied by the owner (empty margins trimmed)",
+    "website": "https://fortune.com/",
+    "dimensions": [
+      267,
+      72
+    ]
+  },
+  "Fox Business": {
+    "src": "/distribution-logos/fox-business.jpg",
+    "source": "Supplied by the owner (empty margins trimmed)",
+    "website": "https://www.foxbusiness.com/",
+    "dimensions": [
+      270,
+      148
+    ]
+  },
+  "New York Weekly": {
+    "src": "/distribution-logos/new-york-weekly.jpg",
+    "source": "Supplied by the owner (empty margins trimmed)",
+    "website": "https://nyweekly.com/",
+    "dimensions": [
+      138,
+      48
+    ]
+  },
+  "Associated Press": {
+    "src": "/distribution-logos/associated-press.jpg",
+    "source": "Supplied by the owner (empty margins trimmed)",
+    "website": "https://apnews.com/",
+    "dimensions": [
+      148,
+      125
+    ]
+  },
+  "Bloomberg": {
+    "src": "/distribution-logos/bloomberg.jpg",
+    "source": "Supplied by the owner (empty margins trimmed)",
+    "website": "https://www.bloomberg.com/",
+    "dimensions": [
+      264,
+      61
+    ]
+  },
+  "Apple News": {
+    "src": "/distribution-logos/apple-news.jpg",
+    "source": "Supplied by the owner (empty margins trimmed)",
+    "website": "https://www.apple.com/apple-news/",
+    "dimensions": [
+      64,
+      79
+    ]
+  },
+  "Reuters": {
+    "src": "/distribution-logos/reuters.jpg",
+    "source": "Supplied by the owner (empty margins trimmed)",
+    "website": "https://www.reuters.com/",
+    "dimensions": [
+      269,
+      98
+    ]
   }
 }

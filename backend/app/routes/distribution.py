@@ -118,6 +118,15 @@ NAMES = [
     "Qatar Tribune",
     "Dubai Weekly",
     "Arabian Startup",
+    # United States news channels (appended)
+    "US-Wide Newswire",
+    "Fortune",
+    "Apple News",
+    "Associated Press",
+    "New York Weekly",
+    "Reuters",
+    "Bloomberg",
+    "Fox Business",
 ]
 # Keep the existing IDs stable: drafts and paid requests refer to these outlets by ID.
 OUTLET_CATEGORIES = {
@@ -129,7 +138,8 @@ OUTLET_CATEGORIES = {
     "Entertainment News Channels": NAMES[38:47],
     "Canada News Channels": NAMES[61:69],
     "UK & Europe News Channels": NAMES[69:82],
-    "Middle East News Channels": NAMES[82:],
+    "Middle East News Channels": NAMES[82:91],
+    "US News Channels": NAMES[91:],
 }
 CATEGORY_BY_NAME = {name: category for category, names in OUTLET_CATEGORIES.items() for name in names}
 # Owner-supplied prices: original Credit on CF values plus the Nigerian sheet's final CF Credit + Margins values (already include its five-credit margin).
@@ -218,6 +228,15 @@ DEFAULT_OUTLET_CREDITS = {
     "Qatar Tribune": "431.6",
     "Dubai Weekly": "157.3",
     "Arabian Startup": "157.3",
+    # US news channels: the sheet's CF Credit + Margins value (30% margin added).
+    "US-Wide Newswire": "867.1",
+    "Fortune": "843.7",
+    "Apple News": "301.6",
+    "Associated Press": "241.8",
+    "New York Weekly": "239.2",
+    "Reuters": "1084.2",
+    "Bloomberg": "4815.2",
+    "Fox Business": "4695.6",
     # Entertainment news channels: the sheet's CF Credit + Margins value (61) for every one of them.
     "Naijaloaded": "61",
     "Tooxclusive": "61",
@@ -282,6 +301,14 @@ _ABROAD = {
     "Bar Chart": "United States",
     "Benzinga": "United States",
     "The Globe and Mail": "Canada",
+    "US-Wide Newswire": "United States",
+    "Fortune": "United States",
+    "Apple News": "United States",
+    "Associated Press": "United States",
+    "New York Weekly": "United States",
+    "Reuters": "United States",
+    "Bloomberg": "United States",
+    "Fox Business": "United States",
     "Gulf Business": "United Arab Emirates",
     "Forbes Middle East": "United Arab Emirates",
     "Arabian Business": "United Arab Emirates",
