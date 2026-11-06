@@ -8,6 +8,8 @@ export const MIN_ANSWER_S = rule<number>("BIV-INT-005");
 const COUNTDOWN = rule<{ countdown_s: number; record_before_end_s: number }>("BIV-INT-013");
 export const COUNTDOWN_S = COUNTDOWN.countdown_s;
 // The recording starts this many seconds before the countdown ends (never earlier than the countdown itself).
+// The still used as the video's cover is taken this many seconds before the countdown ends, while the founder is composed (eyes open).
+export const STILL_AT_S = Math.min(2, COUNTDOWN.countdown_s);
 export const RECORD_BEFORE_END_S = Math.min(COUNTDOWN.record_before_end_s, COUNTDOWN.countdown_s);
 export const ROUND_UP_S = rule<number>("BIV-INT-007");
 

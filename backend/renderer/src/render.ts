@@ -45,12 +45,14 @@ export async function renderOne(opts: {
 
 export async function renderThumbnail(format: "16x9" | "9x16", props: NewsProps | Record<string, unknown>, outFile: string, composition?: string) {
   const url = await getBundle();
-  const comp = await selectComposition({ serveUrl: url, id: `${compositionName(composition)}-${format}`, inputProps: props, browserExecutable });
+  // the cover shows the still taken while the founder was composed (during the countdown), not a frame of them mid-sentence
+  const stillProps = { ...props, coverStill: true };
+  const comp = await selectComposition({ serveUrl: url, id: `${compositionName(composition)}-${format}`, inputProps: stillProps, browserExecutable });
   const lead = (props as { brandCards?: boolean }).brandCards ? Math.round(INTRO_SECONDS * comp.fps) : 0; // skip the opening card
   // a merged interview names the moment its cover should come from (the guest talking); otherwise a little after the opening
   const at = (props as { thumbnailAtSeconds?: number }).thumbnailAtSeconds;
   const frame = typeof at === "number" && at >= 0 ? Math.round(at * comp.fps) : lead + 45;
-  await renderStill({ composition: comp, serveUrl: url, output: outFile, frame: Math.min(frame, comp.durationInFrames - 1), inputProps: props, browserExecutable });
+  await renderStill({ composition: comp, serveUrl: url, output: outFile, frame: Math.min(frame, comp.durationInFrames - 1), inputProps: stillProps, browserExecutable });
 }
 
 // H.264 needs even dimensions: reject scales that would produce odd pixel sizes before launching Chrome.
