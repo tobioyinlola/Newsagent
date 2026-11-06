@@ -63,12 +63,12 @@ export function Layout() {
   };
   const rail = collapsed && !open; // the phone slide-over is always full width
 
-  const item = (to: string, label: string, icon: ReactNode) => (
+  const item = (to: string, label: string, icon: ReactNode, show = true) => (
     <NavLink
       to={to}
       title={rail ? label : undefined}
       className={({ isActive }) =>
-        `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold ${rail ? "justify-center" : ""} ${isActive ? "bg-brand-green text-ink" : "text-white hover:bg-stripe"}`
+        `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold ${rail ? "justify-center" : ""} ${isActive && show ? "bg-brand-green text-ink" : "text-white hover:bg-stripe"}`
       }
     >
       {icon}
@@ -125,7 +125,8 @@ export function Layout() {
           {item("/referrals", "Referral", ICONS.referral)}
           {item("/distribution/request", "Distribution", ICONS.videos)}
           {item("/analytics", "Analytics", ICONS.videos)}
-          {item("/settings", "Settings", <Icon><circle cx="12" cy="12" r="3" /><path d="m9 3 6 0 1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1Z" /></Icon>)}
+          {item("/settings/billing", "Buy credits", ICONS.credits)}
+          {item("/settings", "Settings", <Icon><circle cx="12" cy="12" r="3" /><path d="m9 3 6 0 1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1Z" /></Icon>, !loc.pathname.startsWith("/settings/billing"))}
 
           <div className="mt-auto space-y-2 border-t-2 border-stripe pt-3">
             {me.data && !rail && (
