@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getToken } from "../lib/auth";
-import { ALL, groupOutlets, matches, readPick, savePick, setAfterAuth, type Facets, type OutletFilters as FilterList } from "../lib/distributionFilters";
+import { ALL, groupOutlets, matches, outletTitle, readPick, savePick, setAfterAuth, type Facets, type OutletFilters as FilterList } from "../lib/distributionFilters";
 import { DistributionOutletLogo } from "./DistributionOutletLogo";
 import { OutletFilters } from "./OutletFilters";
 
@@ -71,7 +71,7 @@ export function OutletBrowser() {
                                 <input type="checkbox" className="h-5 w-5 shrink-0 accent-[#8BE04E]" checked={on} onChange={() => toggle(o.id)} />
                                 <DistributionOutletLogo name={o.name} />
                                 <span className="min-w-0 flex-1">
-                                  <span className="block truncate font-bold text-white">{o.name}</span>
+                                  <span className="block truncate font-bold text-white">{outletTitle(o)}</span>
                                   <span className="block break-words text-xs text-white/65">{o.topic} · {o.country ?? o.region}</span>
                                   <span className="mt-1 block text-sm font-bold text-brand-green">{credits(Number(o.credits))}</span>
                                 </span>

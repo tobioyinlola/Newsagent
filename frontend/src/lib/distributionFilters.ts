@@ -26,16 +26,49 @@ export function emptyReason(outlets: Tagged[], f: Facets): string | null {
 }
 
 // ---------- showing the outlets in groups: by topic, then by place ----------
-const DEFAULT_TOPICS = ["Technology", "General News", "Gossip Blogs"];
+const DEFAULT_TOPICS = ["General News", "Technology", "Gossip Blogs"];
+// The order the topics are shown in (a topic not named here follows, in the order the server sent it).
+const TOPIC_ORDER = ["General News", "Technology", "Gossip Blogs"];
+type Bucket = { label: string; countries: string[] };
+// How places are combined and ordered inside a topic.
+// `join`: these countries share one section (it sits where the first of them would).
+// `order`: these sections come first, in this order; any place not named follows in the usual order.
+const PLACES: Record<string, { join?: Bucket[]; order?: Bucket[] }> = {
+  Technology: { join: [{ label: "US & Canada", countries: ["United States", "Canada"] }] },
+  "General News": {
+    order: [
+      { label: "Canada", countries: ["Canada"] },
+      { label: "United States", countries: ["United States"] },
+      { label: "Nigeria", countries: ["Nigeria"] },
+      { label: "United Kingdom", countries: ["United Kingdom"] },
+      { label: "United Arab Emirates", countries: ["United Arab Emirates"] },
+      { label: "Qatar", countries: ["Qatar"] },
+      { label: "Kenya", countries: ["Kenya"] },
+      { label: "Europe", countries: ["Germany", "Netherlands", "Switzerland", "Liechtenstein", "Portugal"] },
+    ],
+  },
+};
 const DEFAULT_LOCATIONS = [{ region: "Africa", countries: ["Nigeria", "Ghana", "Kenya", "Uganda"] }, { region: "North America", countries: ["Canada", "United States"] }, { region: "Middle East", countries: ["United Arab Emirates", "Qatar"] }, { region: "Europe", countries: ["United Kingdom", "Germany", "Netherlands", "Switzerland", "Liechtenstein", "Portugal"] }];
 export type LocationGroup<T> = { key: string; label: string; items: T[] };
 export type TopicGroup<T> = { topic: string; count: number; locations: LocationGroup<T>[] };
 
 /** The outlets as sections: each topic (Technology, General News, ...) with the places inside it (Nigeria, Kenya, ...). Empty groups are left out. */
 export function groupOutlets<T extends Tagged>(outlets: T[], filters?: OutletFilters): TopicGroup<T>[] {
-  const topics = filters?.topics ?? DEFAULT_TOPICS;
+  const sent = filters?.topics ?? DEFAULT_TOPICS;
+  const topics = [...sent].sort((a, b) => { const x = TOPIC_ORDER.indexOf(a), y = TOPIC_ORDER.indexOf(b); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y); });
   const locations = filters?.locations ?? DEFAULT_LOCATIONS;
-  const place = (o: Tagged): { key: string; label: string; rank: number } => {
+  const place = (o: Tagged, topic: string): { key: string; label: string; rank: number } => {
+    const rules = PLACES[topic];
+    const fixed = o.country ? rules?.order?.findIndex((b) => b.countries.includes(o.country as string)) ?? -1 : -1;
+    if (fixed >= 0 && rules?.order) return { key: `${topic}/${rules.order[fixed].label}`, label: rules.order[fixed].label, rank: fixed };
+    const joined = o.country ? rules?.join?.find((b) => b.countries.includes(o.country as string)) : undefined;
+    if (joined) return { key: `${topic}/${joined.label}`, label: joined.label, rank: Math.min(...joined.countries.map((c) => placeRank({ region: locations.find((l) => l.countries.includes(c))?.region, country: c }))) };
+    const first = rules?.order ? rules.order.length : 0; // places not named in `order` follow the named ones
+    const p = defaultPlace(o);
+    return { ...p, rank: p.rank + first };
+  };
+  const placeRank = (o: Tagged) => defaultPlace(o).rank;
+  const defaultPlace = (o: Tagged): { key: string; label: string; rank: number } => {
     const r = locations.findIndex((l) => l.region === o.region);
     const base = (r < 0 ? locations.length : r) * 100;
     if (o.country) {
@@ -52,7 +85,7 @@ export function groupOutlets<T extends Tagged>(outlets: T[], filters?: OutletFil
     if (!inTopic.length) continue;
     const byPlace = new Map<string, { rank: number; group: LocationGroup<T> }>();
     for (const o of inTopic) {
-      const p = place(o);
+      const p = place(o, topic);
       const g = byPlace.get(p.key) ?? { rank: p.rank, group: { key: p.key, label: p.label, items: [] } };
       g.group.items.push(o);
       byPlace.set(p.key, g);
@@ -60,6 +93,16 @@ export function groupOutlets<T extends Tagged>(outlets: T[], filters?: OutletFil
     out.push({ topic, count: inTopic.length, locations: [...byPlace.values()].sort((a, b) => a.rank - b.rank).map((x) => x.group) });
   }
   return out;
+}
+
+/** The name shown for an outlet. In Europe (the United Kingdom has its own section) the country goes in brackets after the publication:
+ *  "Vogue Switzerland" is shown as "Vogue (Switzerland)", "Mashable NL" as "Mashable (Netherlands)". */
+const COUNTRY_WORDS: Record<string, string[]> = { Netherlands: ["NL"] };
+export function outletTitle(o: { name: string; region?: string; country?: string | null }): string {
+  if (o.region !== "Europe" || !o.country || o.country === "United Kingdom") return o.name;
+  const words = [o.country, ...(COUNTRY_WORDS[o.country] ?? [])];
+  const ends = words.find((w) => o.name.toLowerCase().endsWith(` ${w.toLowerCase()}`));
+  return `${ends ? o.name.slice(0, o.name.length - ends.length - 1) : o.name} (${o.country})`;
 }
 
 // ---------- the saved choice ----------
