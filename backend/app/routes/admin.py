@@ -246,6 +246,49 @@ async def put_story_back(
     return {"published": True, "slug": project.story_slug}
 
 
+class PresenterIn(BaseModel):
+    anchor_id: str | None = None  # a presenter to use; none: the default presenter
+
+
+@router.post("/projects/{project_id}/presenter")
+async def change_presenter(
+    project_id: str,
+    body: PresenterIn,
+    request: Request,
+    op: Principal = Depends(require("content.manage")),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Make a finished video again with a different presenter (the default one unless a look is named). The presenter's clips are
+    made again (a vendor cost, never the customer's credits), the founder's recorded answers are never changed, and the previous
+    video stays where it is until the new one is ready."""
+    from app.pipeline.advance import advance
+    from app.services import presenters
+
+    project = await _project(session, project_id)
+    if project.state != "final_ready":
+        raise HTTPException(409, "A video can get a new presenter once it is finished.")
+    new = await presenters.resolve(body.anchor_id)
+    if new == project.anchor_id:
+        raise HTTPException(409, "This video already has that presenter.")
+    before = project.anchor_id
+    project.anchor_id = new
+    audit(
+        session,
+        op.user.email,
+        "video.presenter",
+        target_type="project",
+        target_id=project_id,
+        detail={"from": before, "to": new},
+        request=request,
+    )
+    sm.transition(project, "rendering_anchor")
+    project.revision_pending = False
+    project.completed_at = None
+    await session.commit()
+    await advance(session, project_id)
+    return {"ok": True, "presenter": new, "note": "The founder's recorded answers are never changed."}
+
+
 class WordingIn(BaseModel):
     find: str = Field(min_length=1, max_length=100)
     replace: str = Field(min_length=1, max_length=100)

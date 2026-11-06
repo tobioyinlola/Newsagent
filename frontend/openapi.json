@@ -4267,6 +4267,23 @@
         "title": "PresenterClipUploadOut",
         "type": "object"
       },
+      "PresenterIn": {
+        "properties": {
+          "anchor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Id"
+          }
+        },
+        "title": "PresenterIn",
+        "type": "object"
+      },
       "PresenterOut": {
         "properties": {
           "gender": {
@@ -13061,6 +13078,77 @@
           }
         },
         "summary": "Delete Video",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/v1/admin/projects/{project_id}/presenter": {
+      "post": {
+        "description": "Make a finished video again with a different presenter (the default one unless a look is named). The presenter's clips are\nmade again (a vendor cost, never the customer's credits), the founder's recorded answers are never changed, and the previous\nvideo stays where it is until the new one is ready.",
+        "operationId": "change_presenter_v1_admin_projects__project_id__presenter_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresenterIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Change Presenter V1 Admin Projects  Project Id  Presenter Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Presenter",
         "tags": [
           "admin"
         ]
