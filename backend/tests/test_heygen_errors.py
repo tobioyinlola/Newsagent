@@ -74,16 +74,20 @@ async def test_a_required_female_voice_is_female_even_when_the_looks_own_voice_i
 
     heygen._LOOKS.clear()
     heygen._VOICES.clear()
+    heygen._VOICE_GENDERS.clear()
     monkeypatch.setattr(get_settings(), "heygen_voice_female", "")
     sent = {}
 
     def handler(request):
         p = request.url.path
         if p.startswith("/v3/avatars/looks"):
-            return httpx.Response(200, json={"data": {"id": "anchor", "name": "Studio anchor", "default_voice_id": "his-voice"}})
+            return httpx.Response(
+                200, json={"data": {"id": "anchor", "name": "Studio anchor", "default_voice_id": "his-voice"}}
+            )
         if p == "/v3/voices":
             voices = [
                 {"voice_id": "m-uk", "language": "English (UK)", "gender": "male"},
+                {"voice_id": "his-configured", "language": "English (US)", "gender": "male"},
                 {"voice_id": "f-us", "language": "English (US)", "gender": "female"},
                 {"voice_id": "f-uk", "language": "English (UK)", "gender": "female"},
             ]
@@ -102,6 +106,12 @@ async def test_a_required_female_voice_is_female_even_when_the_looks_own_voice_i
     monkeypatch.setattr(get_settings(), "heygen_voice_female", "our-chosen-female")
     await HeyGenProvider().submit(req)
     assert sent["voice_id"] == "our-chosen-female"
+
+    # ... unless HeyGen lists that voice as a man's: she never speaks with a male voice, whatever the setting says
+    heygen._VOICES.clear()
+    monkeypatch.setattr(get_settings(), "heygen_voice_female", "his-configured")
+    await HeyGenProvider().submit(req)
+    assert sent["voice_id"] == "f-uk"
 
 
 def test_the_news_desk_uses_the_new_presenter_in_the_same_studio_with_a_female_voice():
