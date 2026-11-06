@@ -75,10 +75,9 @@ class Settings(BaseSettings):
     # The look used when a project doesn't choose a presenter. Required for real runs: HeyGen needs an avatar id.
     heygen_default_avatar_id: str = ""
     # Editorial Breaking Story presenter only. The customer video pipeline keeps using heygen_default_avatar_id.
-    # This is the female news-desk look already listed as coming soon in the presenter catalogue.
-    news_desk_avatar_id: str = (
-        "294e7a4a0fc0e8bc6d4990e34f5365fc"  # "Studio anchor": at a news desk, face clear of the headline
-    )
+    # The current presenter is a Black woman in a navy suit, placed in the same studio the earlier "Studio anchor" (294e7a4a...) sat in:
+    # the set, screens and layout are unchanged, only the presenter is new (a photo look made 2026-11-06; see docs/news-desk-videos.md).
+    news_desk_avatar_id: str = "5fd82622f3171300278aafcc2a2593c5"
     news_desk_voice_gender: str = (
         "female"  # the News Desk presenter always speaks with a voice of this gender ("" = the look's own)
     )

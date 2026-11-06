@@ -5,7 +5,7 @@ import { pickMime } from "../founder/media";
 import { ChunkStore } from "../founder/store";
 import { TakeUploader } from "../founder/uploader";
 import { grabFrame, uploadSnapshot } from "./snapshot";
-import { answerTiming, COUNTDOWN_S, RECORD_BEFORE_END_S, ROUND_UP_S, mmss } from "./timing";
+import { answerTiming, COUNTDOWN_S, RECORD_BEFORE_END_S, ROUND_UP_S, STILL_AT_S, mmss } from "./timing";
 import type { Realtime } from "./realtime";
 import { type VoiceLine, speak } from "./voice";
 import { VoiceWave } from "./VoiceWave";
@@ -141,10 +141,17 @@ export function InterviewRoom(p: RoomProps) {
     const stopped = new Promise<void>((resolve, reject) => { rec.onstop = () => resolve(); rec.onerror = () => reject(new Error("Your browser interrupted the recording. Please try this answer again.")); });
     // The recording starts two seconds before the countdown ends (BIV-INT-013), so nothing the founder says early or right as it
     // ends is lost to the recorder starting up. The lead-in is cut off again when the answer is cleaned up (trimmed to the speech).
+    let snapped = false; // true once a still of this answer is on its way
     setPhase("countdown");
     for (let seconds = COUNTDOWN_S; seconds > 0; seconds--) {
       setCountdown(seconds);
       if (seconds <= RECORD_BEFORE_END_S && rec.state === "inactive") rec.start(CHUNK_MS);
+      if (seconds === STILL_AT_S) { // the cover picture: taken while they are composed and looking at the camera, eyes open
+        window.setTimeout(async () => {
+          const b = video.current ? await grabFrame(video.current) : null;
+          if (b) { snapped = true; void uploadSnapshot(p.token, take.id, b).catch(() => { snapped = false; }); }
+        }, 400);
+      }
       await sleep(FAST ? 10 : 1000);
       if (ctl.current.aborted || lost.current) {
         rec.ondataavailable = null; rec.onerror = null; // nothing from a recording we are throwing away is uploaded
@@ -158,7 +165,6 @@ export function InterviewRoom(p: RoomProps) {
     setCountdown(0);
     setPhase("answering");
     const started = Date.now();
-    let snapped = false;
     const tick = window.setInterval(async () => {
       const s = (Date.now() - started) / 1000;
       setAnsElapsed(s);

@@ -45,6 +45,7 @@ export type MergeProps = {
   studio?: string;
   anchorFullFrame?: boolean;
   anchorCovers?: boolean;
+  coverStill?: boolean; // set only when the cover picture is rendered: an answer shows its still (taken during the countdown) instead of the video
   anchorPlate?: boolean; // a cut-out presenter shown on the newsroom plate (the male reporter's room) instead of the drawn blue set
   scenes: Scene[];
   totalSeconds: number;
@@ -165,7 +166,7 @@ const ColumnAnswer: React.FC<{ scene: Extract<Scene, { type: "answer" }>; founde
   );
 };
 
-const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout: MergeProps["layout"]; brand: MergeProps["brand"]; fullFrame?: boolean; plate?: boolean; enters?: boolean }> = ({ scene, layout, brand, fullFrame, plate, enters = true }) => {
+const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout: MergeProps["layout"]; brand: MergeProps["brand"]; fullFrame?: boolean; plate?: boolean; coverStill?: boolean; enters?: boolean }> = ({ scene, layout, brand, fullFrame, plate, coverStill, enters = true }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
   const portrait = height > width;
@@ -173,7 +174,9 @@ const AnswerScene: React.FC<{ scene: Extract<Scene, { type: "answer" }>; layout:
 
 
   const volume = useEdgeVolume();
-  const founder = scene.src ? (
+  const founder = coverStill && scene.posterSrc ? (
+    <Img src={url(scene.posterSrc)} style={{ width: "100%", height: "100%", objectFit: layout === "pip" ? "contain" : "cover", objectPosition: layout === "column" ? "50% 28%" : "50% 50%" }} />
+  ) : scene.src ? (
     <OffthreadVideo src={url(scene.src)} startFrom={Math.round((scene.startFromSeconds ?? 0) * fps)} volume={volume} style={{ width: "100%", height: "100%", objectFit: layout === "pip" ? "contain" : "cover", objectPosition: layout === "column" ? "50% 28%" : "50% 50%" }} />
   ) : (
     <>
@@ -268,7 +271,7 @@ export const InterviewMerge: React.FC<MergeProps> = (p) => {
         {p.scenes.map((s, i) => (
           <Series.Sequence key={i} durationInFrames={Math.max(1, Math.round(s.seconds * fps))}>
             <SceneEdge>
-            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} fullFrame={p.anchorFullFrame} plate={p.anchorPlate} enters={starts[i]} /> : s.type === "clip" ? <ClipScene src={s.src} /> : s.type === "broll" ? <BrollScene scene={s} /> : <><AnchorScene src={s.src} portrait={portrait} fullFrame={p.anchorFullFrame} covers={p.anchorCovers} plate={p.anchorPlate} /><LowerThird name={p.presenter?.name} title={p.presenter?.title} headline={s.headline ?? p.headline} enters={starts[i]} /></>}
+            {s.type === "answer" ? <AnswerScene scene={s} layout={s.layout ?? p.layout} brand={p.brand} fullFrame={p.anchorFullFrame} plate={p.anchorPlate} coverStill={p.coverStill} enters={starts[i]} /> : s.type === "clip" ? <ClipScene src={s.src} /> : s.type === "broll" ? <BrollScene scene={s} /> : <><AnchorScene src={s.src} portrait={portrait} fullFrame={p.anchorFullFrame} covers={p.anchorCovers} plate={p.anchorPlate} /><LowerThird name={p.presenter?.name} title={p.presenter?.title} headline={s.headline ?? p.headline} enters={starts[i]} /></>}
             </SceneEdge>
           </Series.Sequence>
         ))}
