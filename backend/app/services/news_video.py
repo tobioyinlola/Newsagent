@@ -26,12 +26,21 @@ def news_desk_avatar() -> str:
     return get_settings().news_desk_avatar_id or get_settings().heygen_default_avatar_id or ""
 
 
+# Looks whose picture is the News Desk studio: its two side screens carry misspelled AI-made text ("BEAING NEWS"), so our boards go over them.
+# The earlier Studio anchor, and the current presenter (the same studio with a new presenter in it).
+NEWS_DESK_STUDIO_LOOKS = frozenset({"294e7a4a0fc0e8bc6d4990e34f5365fc", "5fd82622f3171300278aafcc2a2593c5"})
+
+
 def news_desk_covers() -> bool:
-    """Does the News Desk presenter's studio picture need our boards over its own screens? Same setting as the business videos
-    (HEYGEN_FULLFRAME_AVATAR_IDS: a look listed without ':plain' has screens to cover). Unlisted looks are left as they are."""
+    """Does the News Desk presenter's studio picture need our boards over its own screens? A look listed in HEYGEN_FULLFRAME_AVATAR_IDS
+    follows its entry (without ':plain' it has screens to cover); an unlisted look gets the boards only if it is one of the News Desk
+    studio pictures, and is otherwise left as it is."""
     from app.pipeline.steps import _fullframe_entries
 
-    return _fullframe_entries().get(news_desk_avatar(), False)
+    look = news_desk_avatar()
+    listed = _fullframe_entries()
+    return listed[look] if look in listed else look in NEWS_DESK_STUDIO_LOOKS
+
 
 log = logging.getLogger("news_video")
 _tasks: set[asyncio.Task] = set()

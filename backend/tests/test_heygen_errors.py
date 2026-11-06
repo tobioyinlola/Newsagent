@@ -104,8 +104,8 @@ async def test_a_required_female_voice_is_female_even_when_the_looks_own_voice_i
     assert sent["voice_id"] == "our-chosen-female"
 
 
-def test_the_news_desk_uses_the_studio_anchor_with_a_female_voice():
+def test_the_news_desk_uses_the_new_presenter_in_the_same_studio_with_a_female_voice():
     from app.config import Settings
 
     s = Settings()
-    assert s.news_desk_avatar_id == "294e7a4a0fc0e8bc6d4990e34f5365fc" and s.news_desk_voice_gender == "female"
+    assert s.news_desk_avatar_id == "5fd82622f3171300278aafcc2a2593c5" and s.news_desk_voice_gender == "female"
