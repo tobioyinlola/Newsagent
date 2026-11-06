@@ -73,6 +73,7 @@ export function CustomerDetail() {
   const del = useMutation({ mutationFn: (pid: string) => unwrap(api.DELETE("/v1/admin/projects/{project_id}", path(pid))), onSuccess: refresh });
   const takeDown = useMutation({ mutationFn: (pid: string) => unwrap(api.DELETE("/v1/admin/projects/{project_id}/publication", path(pid))), onSuccess: refresh });
   const putBack = useMutation({ mutationFn: (pid: string) => unwrap(api.POST("/v1/admin/projects/{project_id}/publication", path(pid))), onSuccess: refresh });
+  const remake = useMutation({ mutationFn: (pid: string) => unwrap(api.POST("/v1/admin/projects/{project_id}/presenter", { ...path(pid), body: {} })), onSuccess: refresh });
   if (q.isLoading) return <p aria-busy="true">Loading…</p>;
   if (q.error || !q.data) return <><Link className="underline" to="/customers">← Customers</Link><ErrorBox error={q.error ?? new Error("Not found")} /></>;
   const c = q.data;
@@ -107,11 +108,12 @@ export function CustomerDetail() {
                   ? <Button variant="secondary" disabled={takeDown.isPending} onClick={() => { if (confirm("Take this story off Latest Stories? The video stays.")) takeDown.mutate(p.id); }}>Take story down</Button>
                   : <Button variant="secondary" disabled={putBack.isPending} onClick={() => putBack.mutate(p.id)}>Publish story</Button>)}
                 {p.state === "final_ready" && <WordingFix projectId={p.id} onDone={refresh} />}
+                {p.state === "final_ready" && can("content.manage") && <Button variant="secondary" disabled={remake.isPending} onClick={() => { if (confirm("Make this video again with the default presenter? The presenter's clips are made again (a vendor cost, not the customer's credits), the founder's answers are never changed, and the current video stays until the new one is ready.")) remake.mutate(p.id); }}>Remake with the default presenter</Button>}
                 <Button variant="danger" disabled={del.isPending} onClick={() => { if (confirm("Delete this video and all its files? This can't be undone.")) del.mutate(p.id); }}>Delete video</Button>
               </td>)}</tr>)}</tbody>
           </table>
         )}
-        <ErrorBox error={del.error ?? takeDown.error ?? putBack.error} />
+        <ErrorBox error={del.error ?? takeDown.error ?? putBack.error ?? remake.error} />
       </Card>
       <WalletHistory id={id} balance={c.credits} />
       <Card title="Payments">
