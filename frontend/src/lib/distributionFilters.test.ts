@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { ALL, counts, emptyReason, groupOutlets, isAllowedAfter, matches, peekAfterAuth, readPick, savePick, setAfterAuth, takeAfterAuth, clearPick } from "./distributionFilters";
+import { ALL, counts, emptyReason, groupOutlets, isAllowedAfter, matches, outletTitle, peekAfterAuth, readPick, savePick, setAfterAuth, takeAfterAuth, clearPick } from "./distributionFilters";
 
 const outlets = [
   { id: "1", topic: "Technology", region: "Africa", country: "Nigeria" },
@@ -64,13 +64,45 @@ describe("grouping", () => {
   const more = [...outlets, { id: "6", topic: "Technology", region: "Africa", country: null }, { id: "7", topic: "Technology", region: "North America", country: "United States" }, { id: "8", region: "Europe", country: "United Kingdom" }];
   it("groups by topic, then by place, in a steady order, leaving empty groups out", () => {
     const g = groupOutlets(more, filters);
-    expect(g.map((x) => `${x.topic}:${x.count}`)).toEqual(["Technology:3", "General News:3", "Gossip Blogs:1", "Others:1"]);
-    expect(g[0].locations.map((l) => l.label)).toEqual(["Nigeria", "Africa (region-wide)", "United States"]); // countries first, then the whole region, then the next region
-    expect(g[1].locations.map((l) => `${l.label}:${l.items.length}`)).toEqual(["Nigeria:1", "Kenya:1", "United States:1"]);
+    expect(g.map((x) => `${x.topic}:${x.count}`)).toEqual(["General News:3", "Technology:3", "Gossip Blogs:1", "Others:1"]); // General News first
+    expect(g[1].locations.map((l) => l.label)).toEqual(["Nigeria", "Africa (region-wide)", "US & Canada"]); // countries first, then the whole region, then the next region
+    expect(g[0].locations.map((l) => `${l.label}:${l.items.length}`)).toEqual(["United States:1", "Nigeria:1", "Kenya:1"]);
     expect(groupOutlets(outlets.filter((o) => o.country === "Kenya"), filters).map((x) => x.topic)).toEqual(["General News"]);
     expect(groupOutlets([], filters)).toEqual([]);
   });
   it("works without the filter list too", () => {
-    expect(groupOutlets(outlets)[0].topic).toBe("Technology");
+    expect(groupOutlets(outlets)[0].topic).toBe("General News");
+  });
+  it("joins the United States and Canada in Technology", () => {
+    const tech = [
+      { id: "a", topic: "Technology", region: "North America", country: "United States" },
+      { id: "b", topic: "Technology", region: "North America", country: "Canada" },
+      { id: "c", topic: "Technology", region: "Africa", country: "Nigeria" },
+    ];
+    const g = groupOutlets(tech, filters)[0];
+    expect(g.locations.map((l) => `${l.label}:${l.items.length}`)).toEqual(["Nigeria:1", "US & Canada:2"]);
+  });
+  it("orders General News: Canada, United States, Nigeria, United Kingdom, the Gulf, then the rest of Europe together", () => {
+    const at = (id: string, region: string, country: string) => ({ id, topic: "General News", region, country });
+    const news = [
+      at("1", "Europe", "Portugal"), at("2", "Middle East", "Qatar"), at("3", "Europe", "United Kingdom"), at("4", "Africa", "Nigeria"), at("5", "Europe", "Germany"),
+      at("6", "North America", "United States"), at("7", "Middle East", "United Arab Emirates"), at("8", "North America", "Canada"), at("9", "Africa", "Kenya"), at("10", "Europe", "Switzerland"),
+    ];
+    const g = groupOutlets(news, filters)[0];
+    expect(g.locations.map((l) => l.label)).toEqual(["Canada", "United States", "Nigeria", "United Kingdom", "United Arab Emirates", "Qatar", "Kenya", "Europe"]);
+    expect(g.locations[7].items.map((o) => o.id)).toEqual(["1", "5", "10"]);
+  });
+});
+
+describe("outlet names", () => {
+  it("shows the country in brackets for European outlets, and leaves the others alone", () => {
+    const eu = (name: string, country: string) => outletTitle({ name, region: "Europe", country });
+    expect(eu("Vogue Switzerland", "Switzerland")).toBe("Vogue (Switzerland)");
+    expect(eu("Vanity Fair Germany", "Germany")).toBe("Vanity Fair (Germany)");
+    expect(eu("Mashable NL", "Netherlands")).toBe("Mashable (Netherlands)");
+    expect(eu("Forbes Liechtenstein", "Liechtenstein")).toBe("Forbes (Liechtenstein)");
+    expect(eu("Portugal News", "Portugal")).toBe("Portugal News (Portugal)");
+    expect(outletTitle({ name: "The Sun (UK)", region: "Europe", country: "United Kingdom" })).toBe("The Sun (UK)");
+    expect(outletTitle({ name: "Reuters", region: "North America", country: "United States" })).toBe("Reuters");
   });
 });

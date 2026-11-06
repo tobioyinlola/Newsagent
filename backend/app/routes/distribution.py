@@ -251,7 +251,7 @@ DEFAULT_OUTLET_CREDITS = {
     "P mp Kulture": "61",
 }
 # Where an outlet can be found, for the filters visitors and customers use: a topic and a country (the region follows from the country).
-TOPICS = ("Technology", "General News", "Gossip Blogs")
+TOPICS = ("General News", "Technology", "Gossip Blogs")
 LOCATIONS = {
     "Africa": ("Nigeria", "Ghana", "Kenya", "Uganda"),
     "North America": ("Canada", "United States"),

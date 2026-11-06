@@ -13,6 +13,15 @@ test("a visitor picks outlets by topic and place, signs up, and finds them in th
   await expect(page.getByRole("heading", { level: 3, name: /^Technology \d+ outlets$/ })).toBeVisible();
   await expect(page.getByRole("heading", { level: 4, name: "Nigeria (Technology Channels)" }).first()).toBeVisible();
   await expect(page.getByRole("heading", { level: 4, name: "United States" }).first()).toBeVisible();
+  // General News comes first, with its places in the owner's order; Technology joins the United States and Canada
+  const topics = await page.getByRole("heading", { level: 3 }).allTextContents();
+  expect(topics.findIndex((t) => t.startsWith("General News"))).toBeLessThan(topics.findIndex((t) => t.startsWith("Technology")));
+  const places = await page.getByRole("heading", { level: 4 }).allTextContents();
+  const news = places.filter((t) => t.includes("(General News Channels)")).map((t) => t.replace(" (General News Channels)", ""));
+  expect(news.slice(0, 6)).toEqual(["Canada", "United States", "Nigeria", "United Kingdom", "United Arab Emirates", "Qatar"]);
+  expect(news.at(-1)).toBe("Europe");
+  expect(places).toContain("US & Canada (Technology Channels)");
+  await expect(page.getByText("Vogue (Switzerland)")).toBeVisible();
   await page.screenshot({ path: "test-results/public-grouped.png" });
   await page.getByRole("button", { name: /^Technology/ }).click();
   await page.getByLabel("Region", { exact: true }).selectOption("Africa");

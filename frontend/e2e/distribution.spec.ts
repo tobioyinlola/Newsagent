@@ -44,7 +44,7 @@ test("completed video to distribution draft, checked images, wallet submission, 
   expect(await outletList.evaluate(e => e.scrollHeight > e.clientHeight)).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   // the outlets are shown by topic, then by place
-  for (const name of ["Technology · Nigeria", "Technology · Africa (region-wide)", "Technology · United States", "Technology · United Kingdom", "General News · Nigeria", "General News · Kenya", "General News · Canada", "General News · United Kingdom", "General News · United Arab Emirates", "Gossip Blogs · Nigeria"]) {
+  for (const name of ["Technology · Nigeria", "Technology · Africa (region-wide)", "Technology · US & Canada", "Technology · United Kingdom", "General News · Nigeria", "General News · Kenya", "General News · Canada", "General News · Europe", "General News · United Kingdom", "General News · United Arab Emirates", "Gossip Blogs · Nigeria"]) {
     await expect(page.getByRole("heading", { name, exact: true })).toHaveCount(1);
   }
   await expect(page.getByRole("heading", { name: "General News · Ghana", exact: true })).toHaveCount(0); // no outlets there yet: no empty section
