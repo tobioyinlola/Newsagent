@@ -49,46 +49,63 @@ real numbers. With no value, there is no banner and nothing loads.
 
 To stop all tracking, clear the value and redeploy.
 
-## 1b. Google Tag Manager (optional)
+## 1b. Your Tag Manager container (`GTM-MX2M47JB`)
 
-Container: `GTM-MX2M47JB`. Add in Vercel (Production only), then redeploy:
+Add these in Vercel (Production only), next to the Analytics id, then redeploy. **Set both.**
 
 | Name | Value |
 |---|---|
+| `VITE_GA_MEASUREMENT_ID` | `G-L3JSNEQF7K` |
 | `VITE_GTM_ID` | `GTM-MX2M47JB` |
-| `VITE_GA_VIA_GTM` | leave empty (see the warning below) |
 
-**Do not paste the snippet Google gives you into `index.html`.** It is an inline `<script>`, which the site's security policy refuses, and
-it would load for everyone straight away: before they choose about cookies, for browsers that send Do Not Track, on private links, and
-on the back office. Our code loads the same container from Google's address, after the consent rules, and never on those pages.
+**What that container is.** We downloaded Google's real file for `GTM-MX2M47JB` and read it: it is not a separate container with its own tags.
+It holds exactly the same configuration as the Analytics stream `G-L3JSNEQF7K` (17 tags, all for that one stream): it is the "Google tag"
+Analytics creates for the stream. So the two are the same thing, and **when `VITE_GTM_ID` is set, the container is the only Google script
+we load** (never `gtag.js` as well, which would run the same tag twice). Leave `VITE_GTM_ID` empty to load `gtag.js` directly instead; the
+result is identical. If you later add your own tags to a container, they load too, and each needs its consent settings checked.
 
-What the container receives, from our code:
-- the consent state, set **before** the container loads (`analytics_storage` denied until Accept; advertising always denied);
-- `page_view` data-layer events with a cleaned address (`page_location`, `page_path`, `page_title`) each time the screen changes;
-- `sign_up`, `video_started`, `video_ready` and `purchase` events. Use **Custom Event** triggers with those names.
+**Do not paste Google's snippet into `index.html`.** It is an inline `<script>`, which the site's security policy refuses (we tested it),
+and it would load for everyone straight away: before they choose about cookies, for Do Not Track, on private links and on the back office.
 
-**Avoid counting everything twice.** Analytics is already sent to directly (`G-L3JSNEQF7K`). So, in the container, do **not** add a GA4 tag for
-the same measurement id, unless you also set `VITE_GA_VIA_GTM=true` (then we stop sending directly and the container is the only
-sender). If you do use the container for GA4:
-- set the GA4 configuration tag to **not** send a page view when it loads (our `page_view` event does that, with the cleaned address);
-- don't use GTM's built-in *Page View* or *History Change* triggers for GA4: they report the raw address, which can contain private codes;
-- in each tag's *Consent settings*, require `analytics_storage` (and `ad_storage` etc. for anything advertising-related).
+**Security policy.** Extra vendors (Meta, LinkedIn, Google Ads, custom scripts) load more addresses, and the policy only allows Google's
+measurement addresses. Each new vendor must be added deliberately in `frontend/security-headers.mjs` (then regenerate `vercel.json`).
+Tag Manager's preview/debug mode is blocked by default for the same reason. The `<noscript>` frame isn't used (this is a JavaScript app).
 
-**Security policy.** Custom HTML tags and extra pixels (Meta, LinkedIn, Google Ads) load more scripts, and the site's security policy only
-allows Google's measurement addresses. Each new vendor needs its addresses added deliberately in `frontend/security-headers.mjs` (and
-`vercel.json` regenerated); anything else is blocked, which is the point. GTM **preview/debug mode** is also blocked by default for the
-same reason.
+## 1c. How we know it works (and how to check again)
 
-The `<noscript>` iframe Google suggests for visitors without JavaScript isn't used: this is a JavaScript app, and the policy blocks frames.
+`pnpm check:ga` (in `frontend/`; needs internet and Chromium) downloads Google's **real** `gtag.js` and `gtm.js` for your ids, runs them in a real
+browser against the real build, and records every measurement the browser would send. The measurements are answered locally, so **nothing is
+sent to Google and nothing is counted in your account**. 34 checks, run once for the direct tag and once for the container:
+
+- every screen is counted exactly once, in order, with a **cleaned address and title** (never the page's own title or the real address);
+- **no private code, payment session id, search term or email address** is sent, even when someone types an email into a form;
+- Google's own automatic events (scroll, outbound click, form, download, site search) are **never** sent;
+- analytics cookies are denied until Accept (`gcs=G100`), granted after (`gcs=G101`), and the `_ga` cookies appear only then;
+- one visit is one session, and every hit is for `G-L3JSNEQF7K`;
+- sign_up, video_started, video_ready and purchase arrive with the cleaned address; a repeated purchase is sent once;
+- a declined visitor, a Do Not Track browser and a private link send **nothing** and don't even load Google's script.
+
+Run it after changing anything about analytics, or after changing the data stream's settings in your Google account.
+
+### What the real script showed about your stream (and why the code keeps Google shut)
+
+Your stream has *every* enhanced-measurement feature on: automatic page views including **page changes on browser history events**, scrolls,
+outbound clicks, file downloads, form interactions, video, site search, and **automatic collection of user-provided data** (emails, phones,
+addresses). Left alone, Google's tag then sends its own page view on load and on every in-app page change **using the real address and
+the page's real title** (with any `?code=` or payment session id), counting every page twice next to ours.
+
+Nothing we can pass to the tag (`send_page_view: false`, a cleaned `page_location`, `set`) stops that. So the code keeps Google's tag **shut**
+(`ga-disable-G-L3JSNEQF7K`) and opens it only for the instant we hand it one of our own cleaned events. The check above proves it. This
+means **the settings below are no longer required for correct numbers**; they are still worth switching off, as a second line of defence.
 
 ## 2. Settings to change in Google Analytics (one time)
 
 In analytics.google.com, for the property that owns `G-L3JSNEQF7K`:
 
-1. **Admin > Data streams > (the web stream) > Enhanced measurement.** Open the gear and turn **off**:
-   - *Page views > Page changes based on browser history events* (we send each page view ourselves, with private codes removed; leaving
-     this on double-counts and sends the raw address);
-   - *Site search* and *Form interactions*.
+1. **Admin > Data streams > (the web stream) > Enhanced measurement.** Open the gear and turn **off** everything you don't use, in
+   particular *Page changes based on browser history events*, *Site search* and *Form interactions* (the code already stops these
+   from reaching Google; switching them off is a second line of defence). Also look at **Data collection > User-provided data collection**
+   (it is on for your stream) and turn it off: we never send emails, but there is no reason to leave it on.
 2. **Admin > Data collection and modification > Data retention:** set event data retention to **14 months**.
 3. **Data collection:** leave *Google signals* **off**. (The site also tells Google not to use advertising features.)
 4. **Admin > Events:** mark `sign_up`, `video_started`, `video_ready` and `purchase` as **key events**.

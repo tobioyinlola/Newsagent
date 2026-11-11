@@ -13,7 +13,8 @@
     "e2e:real": "bash e2e-real/make-media.sh && playwright test -c playwright.real.config.ts",
     "gen:vercel": "node scripts/gen-vercel-json.mjs",
     "gen:api": "openapi-typescript openapi.json -o src/api/schema.d.ts",
-    "gen:api:check": "pnpm gen:api && git diff --exit-code src/api/schema.d.ts"
+    "gen:api:check": "pnpm gen:api && git diff --exit-code src/api/schema.d.ts",
+    "check:ga": "node scripts/check-google-analytics.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",

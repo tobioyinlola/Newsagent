@@ -3,12 +3,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const ID = "G-L3JSNEQF7K";
 type Mod = { ga: typeof import("./ga"); consent: typeof import("./consent") };
 
-async function load(id: string | undefined = ID, gtm = "", viaGtm = ""): Promise<Mod> {
+async function load(id: string | undefined = ID, gtm = ""): Promise<Mod> {
   vi.resetModules();
   vi.stubEnv("VITE_GA_MEASUREMENT_ID", id ?? "");
   vi.stubEnv("VITE_GTM_ID", gtm);
-  vi.stubEnv("VITE_GA_VIA_GTM", viaGtm);
   return { ga: await import("./ga"), consent: await import("./consent") };
+}
+// Google's script reports "loaded"; we then wait a moment for it to finish with what was queued before anything is handed to it.
+async function loaded() {
+  document.querySelectorAll<HTMLScriptElement>("script[src*=googletagmanager]").forEach((el) => el.onload?.(new Event("load")));
+  await new Promise((r) => setTimeout(r, 250));
 }
 const sent = () => (window.dataLayer ?? []).map((e) => Array.from(e as ArrayLike<unknown>));
 const events = (name: string) => sent().filter((e) => e[0] === "event" && e[1] === name).map((e) => e[2] as Record<string, unknown>);
@@ -56,6 +60,7 @@ describe("until they choose: counted without cookies. After Decline or a privacy
     expect(document.querySelector("script[src*=googletagmanager]")).not.toBeNull();
     expect(sent().find((e) => e[0] === "consent" && e[1] === "default")?.[2]).toMatchObject({ analytics_storage: "denied", ad_storage: "denied", ad_user_data: "denied", ad_personalization: "denied" });
     ga.trackPageView("/signup", "");
+    await loaded();
     expect(events("page_view")).toHaveLength(1);
     expect(document.cookie).not.toContain("_ga");
   });
@@ -119,25 +124,34 @@ describe("after Accept", () => {
     consent.setConsent("granted");
     ga.startAnalytics();
     ga.trackPageView("/ai-newsroom/0123456789abcdef0123456789abcdef", "?token=secret&utm_campaign=welcome");
+    await loaded();
     const [e] = events("page_view");
     expect(e).toEqual({ page_location: `${location.origin}/ai-newsroom/:id?utm_campaign=welcome`, page_path: "/ai-newsroom/:id", page_title: "/ai-newsroom/:id" });
     ga.trackPageView("/i/abc123", "");
     ga.trackPageView("/admin/marketing", "");
     expect(events("page_view")).toHaveLength(1);
+    ga.trackPageView("/signup", "");
+    expect(events("page_view")[1]).toMatchObject({ page_path: "/signup", page_referrer: `${location.origin}/ai-newsroom/:id?utm_campaign=welcome` }); // the page before, inside the app
   });
   it("reports the five moments with numbers and labels only", async () => {
     const { ga, consent } = await load();
     consent.setConsent("granted");
     ga.startAnalytics();
+    history.replaceState({}, "", "/billing/stripe/9f86d081884c7d659a2feaa0c55ad015?session_id=cs_secret_1");
     ga.track.signUp();
     ga.track.videoStarted("guided");
     ga.track.videoReady();
     ga.track.purchase({ id: "chk_1", value: 20, currency: "USD", credits: 10 });
     ga.track.purchase({ id: "chk_1", value: 20, currency: "USD", credits: 10 }); // coming back to the receipt
-    expect(events("sign_up")).toEqual([{ method: "email" }]);
-    expect(events("video_started")).toEqual([{ flow: "guided" }]);
-    expect(events("video_ready")).toEqual([{}]);
-    expect(events("purchase")).toEqual([{ transaction_id: "chk_1", value: 20, currency: "USD", items: [{ item_id: "credits", item_name: "Credits", quantity: 10, price: 2 }] }]);
+    await loaded();
+    // every one carries the cleaned address and title: left out, Google would fill in the real address, which holds the payment session id
+    const page = { page_location: `${location.origin}/billing/stripe/:id`, page_path: "/billing/stripe/:id", page_title: "/billing/stripe/:id" };
+    expect(events("sign_up")).toEqual([{ ...page, method: "email" }]);
+    expect(events("video_started")).toEqual([{ ...page, flow: "guided" }]);
+    expect(events("video_ready")).toEqual([page]);
+    expect(events("purchase")).toEqual([{ ...page, transaction_id: "chk_1", value: 20, currency: "USD", items: [{ item_id: "credits", item_name: "Credits", quantity: 10, price: 2 }] }]);
+    expect(JSON.stringify(sent())).not.toContain("session_id");
+    history.replaceState({}, "", "/");
   });
   it("stops sending, and removes Google's cookies, when they change their mind", async () => {
     const { ga, consent } = await load();
@@ -192,26 +206,19 @@ describe("Google Tag Manager", () => {
     ga.trackPageView("/ai-newsroom/0123456789abcdef0123456789abcdef", "?token=secret&utm_campaign=welcome");
     ga.trackPageView("/i/abc", "");
     ga.track.signUp();
+    await loaded();
     expect(objectEvents("page_view")).toEqual([{ event: "page_view", page_location: `${location.origin}/ai-newsroom/:id?utm_campaign=welcome`, page_path: "/ai-newsroom/:id", page_title: "/ai-newsroom/:id" }]);
-    expect(objectEvents("sign_up")).toEqual([{ event: "sign_up", method: "email" }]);
-    expect(events("page_view")).toHaveLength(0); // no Analytics gtag command: this build has no Analytics id of its own
+    expect(objectEvents("sign_up")).toHaveLength(1);
+    expect(events("sign_up")).toHaveLength(1); // and as a gtag command, which the Google tag inside the container processes
   });
-  it("when both are set, Analytics is still sent to directly and the container also gets the events", async () => {
+  it("when both ids are set, the container is the ONLY thing loaded: it carries the Analytics tag, so also loading gtag.js would run it twice", async () => {
     const { ga } = await load(ID, GTM);
     ga.startAnalytics();
-    expect(scripts().sort()).toEqual([`https://www.googletagmanager.com/gtag/js?id=${ID}`, `https://www.googletagmanager.com/gtm.js?id=${GTM}`].sort());
-    ga.trackPageView("/signup", "");
-    expect(events("page_view")).toHaveLength(1);
-    expect(objectEvents("page_view")).toHaveLength(1);
-  });
-  it("VITE_GA_VIA_GTM stops the direct Analytics sending, so a container that sends to Analytics doesn't count everything twice", async () => {
-    const { ga } = await load(ID, GTM, "true");
-    ga.startAnalytics();
     expect(scripts()).toEqual([`https://www.googletagmanager.com/gtm.js?id=${GTM}`]);
-    expect(sent().find((e) => e[0] === "config")).toBeUndefined();
     ga.trackPageView("/signup", "");
-    expect(events("page_view")).toHaveLength(0);
-    expect(objectEvents("page_view")).toHaveLength(1);
+    await loaded();
+    expect(events("page_view")).toHaveLength(1);
+    expect(sent().filter((e) => e[0] === "config")).toHaveLength(1); // the stream is configured once
   });
   it("Decline removes Google's cookies whatever measurement id set them, and stops Analytics", async () => {
     const { ga, consent } = await load(ID, GTM);
@@ -223,8 +230,45 @@ describe("Google Tag Manager", () => {
     consent.setConsent("denied");
     ga.stopAnalytics();
     expect(document.cookie).toBe("keep_me=1");
-    expect(window[`ga-disable-${ID}`]).toBe(true);
     ga.trackPageView("/", "");
+    await loaded();
     expect(objectEvents("page_view")).toHaveLength(0);
+  });
+});
+
+describe("Google is kept shut except while we hand it one of our own events", () => {
+  it("opens only for the moment of each send (Google's own automatic events would otherwise carry the raw address)", async () => {
+    const { ga } = await load();
+    ga.startAnalytics();
+    const flag = () => window[`ga-disable-${ID}`];
+    expect(flag()).toBe(true); // shut from the very start, so Google's own first automatic page view is dropped
+    await loaded();
+    expect(flag()).toBe(true); // and still shut once it has loaded
+    const seen: (boolean | undefined)[] = [];
+    const real = window.gtag!;
+    window.gtag = (...a: unknown[]) => { if (a[0] === "event") seen.push(flag()); real(...a); };
+    ga.trackPageView("/signup", "");
+    expect(seen).toEqual([false]); // open while the event was handed over
+    expect(flag()).toBe(true); // shut again straight after
+  });
+  it("keeps what was queued before Google loaded, in order, and loses none of it", async () => {
+    const { ga } = await load();
+    ga.startAnalytics();
+    ga.trackPageView("/", "");
+    ga.trackPageView("/signup", "");
+    ga.track.signUp();
+    expect(events("page_view")).toHaveLength(0); // nothing is handed over while Google is still loading
+    await loaded();
+    expect(events("page_view").map((e) => e.page_path)).toEqual(["/", "/signup"]);
+    expect(events("sign_up")).toHaveLength(1);
+  });
+  it("hands over nothing that was queued if they decline before Google has loaded", async () => {
+    const { ga, consent } = await load();
+    ga.startAnalytics();
+    ga.trackPageView("/", "");
+    consent.setConsent("denied");
+    ga.stopAnalytics();
+    await loaded();
+    expect(events("page_view")).toHaveLength(0);
   });
 });

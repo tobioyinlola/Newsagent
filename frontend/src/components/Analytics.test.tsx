@@ -13,6 +13,7 @@ async function mount(path = "/", id = "G-L3JSNEQF7K") {
   render(<MemoryRouter initialEntries={[path]}><TrackingConsent /></MemoryRouter>);
   return consent;
 }
+const loaded = async () => { document.querySelectorAll<HTMLScriptElement>("script[src*=googletagmanager]").forEach((el) => el.onload?.(new Event("load"))); await act(async () => { await new Promise((r) => setTimeout(r, 250)); }); };
 const script = () => document.querySelector("script[src*=googletagmanager]");
 
 beforeEach(() => { fetchMock.mockClear(); vi.stubGlobal("fetch", fetchMock); localStorage.clear(); sessionStorage.clear(); document.head.innerHTML = ""; window.dataLayer = undefined; window.gtag = undefined; Object.defineProperty(navigator, "doNotTrack", { value: "0", configurable: true }); });
@@ -31,6 +32,7 @@ describe("the cookie notice", () => {
     await mount("/signup?token=secret&utm_source=cover_founder&utm_medium=email&utm_campaign=welcome");
     expect(visits()).toEqual([{ path: "/signup", referrer_host: "", utm_source: "cover_founder", utm_medium: "email", utm_campaign: "welcome" }]); // the secret is not sent
     expect(script()).not.toBeNull(); // Google counts it too, with analytics cookies denied
+    await loaded();
     const consentDefault = (window.dataLayer ?? []).map((e) => Array.from(e as ArrayLike<unknown>)).find((e) => e[0] === "consent" && e[1] === "default");
     expect(consentDefault?.[2]).toMatchObject({ analytics_storage: "denied" });
     expect(document.cookie).not.toContain("_ga");
@@ -43,6 +45,7 @@ describe("the cookie notice", () => {
     expect(updates.at(-1)?.[2]).toEqual({ analytics_storage: "granted" });
     expect(screen.queryByRole("region", { name: "Cookie choices" })).toBeNull();
     expect(visits()).toHaveLength(1);
+    await loaded();
     expect((window.dataLayer ?? []).map((e) => Array.from(e as ArrayLike<unknown>)).filter((e) => e[1] === "page_view")).toHaveLength(1);
   });
   it("declining switches Google off for them, but our own cookie-free count carries on", async () => {
