@@ -118,3 +118,42 @@ class MarketingRecipient(Base):
     status: Mapped[str] = mapped_column(String(10), default="pending", index=True)  # pending | sent | skipped | failed
     reason: Mapped[str] = mapped_column(String(40), default="")
     done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class MarketingWorkflow(Base, TimestampMixin):
+    """A sequence sent to people as they come to match a segment: emails and waits, with an optional goal that ends it early."""
+
+    __tablename__ = "marketing_workflows"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(120))
+    status: Mapped[str] = mapped_column(String(10), default="draft", index=True)  # draft | active | paused | stopped
+    trigger_segment_id: Mapped[str] = mapped_column(ForeignKey("marketing_segments.id"))
+    rules: Mapped[dict] = mapped_column(
+        JSON, default=dict
+    )  # who gets in: the segment's rules, fixed when it was switched on
+    steps: Mapped[list] = mapped_column(
+        JSON, default=list
+    )  # [{type: wait|email, ...}], email versions fixed when switched on
+    goal_segment_id: Mapped[str | None] = mapped_column(ForeignKey("marketing_segments.id"), nullable=True)
+    goal_rules: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # anyone who matches this leaves the workflow
+    settings: Mapped[dict] = mapped_column(JSON, default=dict)  # sending hours
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[str] = mapped_column(String(320), default="")
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class MarketingEnrollment(Base):
+    """One person's place in one workflow."""
+
+    __tablename__ = "marketing_enrollments"
+    __table_args__ = (UniqueConstraint("workflow_id", "user_id"),)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    workflow_id: Mapped[str] = mapped_column(ForeignKey("marketing_workflows.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(10), default="active")  # active | completed | exited
+    exit_reason: Mapped[str] = mapped_column(String(40), default="")
+    step_index: Mapped[int] = mapped_column(Integer, default=0)  # the next step to run
+    attempts: Mapped[int] = mapped_column(Integer, default=0)  # tries at the current step
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    entered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

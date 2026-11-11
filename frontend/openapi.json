@@ -1,6 +1,24 @@
 {
   "components": {
     "schemas": {
+      "ActivateBody": {
+        "properties": {
+          "confirm_count": {
+            "title": "Confirm Count",
+            "type": "integer"
+          },
+          "include_existing": {
+            "default": false,
+            "title": "Include Existing",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "confirm_count"
+        ],
+        "title": "ActivateBody",
+        "type": "object"
+      },
       "Approval": {
         "properties": {
           "funds_confirmed": {
@@ -1959,6 +1977,59 @@
         "title": "DownloadsOut",
         "type": "object"
       },
+      "EmailStep": {
+        "properties": {
+          "copy_id": {
+            "title": "Copy Id",
+            "type": "string"
+          },
+          "copy_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Copy Version"
+          },
+          "only_if_rules": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Only If Rules"
+          },
+          "only_if_segment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Only If Segment Id"
+          },
+          "type": {
+            "const": "email",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "copy_id"
+        ],
+        "title": "EmailStep",
+        "type": "object"
+      },
       "EventIn": {
         "properties": {
           "kind": {
@@ -2245,6 +2316,31 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Hours": {
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "end": {
+            "default": 18,
+            "maximum": 24.0,
+            "minimum": 1.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "start": {
+            "default": 9,
+            "maximum": 23.0,
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "title": "Hours",
         "type": "object"
       },
       "InterviewInviteIn": {
@@ -7668,6 +7764,34 @@
         "title": "VoicePrepareOut",
         "type": "object"
       },
+      "WaitStep": {
+        "properties": {
+          "days": {
+            "default": 0,
+            "maximum": 90.0,
+            "minimum": 0.0,
+            "title": "Days",
+            "type": "integer"
+          },
+          "hours": {
+            "default": 0,
+            "maximum": 23.0,
+            "minimum": 0.0,
+            "title": "Hours",
+            "type": "integer"
+          },
+          "type": {
+            "const": "wait",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "WaitStep",
+        "type": "object"
+      },
       "WalletList": {
         "properties": {
           "items": {
@@ -7817,6 +7941,64 @@
           "replace"
         ],
         "title": "WordingIn",
+        "type": "object"
+      },
+      "WorkflowIn": {
+        "properties": {
+          "goal_segment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Segment Id"
+          },
+          "hours": {
+            "$ref": "#/components/schemas/Hours"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "email": "#/components/schemas/EmailStep",
+                  "wait": "#/components/schemas/WaitStep"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/WaitStep"
+                },
+                {
+                  "$ref": "#/components/schemas/EmailStep"
+                }
+              ]
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Steps",
+            "type": "array"
+          },
+          "trigger_segment_id": {
+            "title": "Trigger Segment Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "trigger_segment_id",
+          "steps"
+        ],
+        "title": "WorkflowIn",
         "type": "object"
       },
       "WorkspaceAdminOut": {
@@ -12202,6 +12384,485 @@
           }
         },
         "summary": "Status",
+        "tags": [
+          "marketing"
+        ]
+      }
+    },
+    "/v1/admin/marketing/workflows": {
+      "get": {
+        "operationId": "list_workflows_v1_admin_marketing_workflows_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Workflows V1 Admin Marketing Workflows Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Workflows",
+        "tags": [
+          "marketing"
+        ]
+      },
+      "post": {
+        "operationId": "create_workflow_v1_admin_marketing_workflows_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Workflow V1 Admin Marketing Workflows Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Workflow",
+        "tags": [
+          "marketing"
+        ]
+      }
+    },
+    "/v1/admin/marketing/workflows/starter": {
+      "post": {
+        "description": "The ready-made welcome sequence, as a draft to open and change before switching on.",
+        "operationId": "make_starter_v1_admin_marketing_workflows_starter_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Make Starter V1 Admin Marketing Workflows Starter Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Make Starter",
+        "tags": [
+          "marketing"
+        ]
+      }
+    },
+    "/v1/admin/marketing/workflows/{workflow_id}": {
+      "delete": {
+        "operationId": "delete_workflow_v1_admin_marketing_workflows__workflow_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Workflow",
+        "tags": [
+          "marketing"
+        ]
+      },
+      "get": {
+        "operationId": "get_workflow_v1_admin_marketing_workflows__workflow_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Workflow V1 Admin Marketing Workflows  Workflow Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Workflow",
+        "tags": [
+          "marketing"
+        ]
+      },
+      "put": {
+        "operationId": "update_workflow_v1_admin_marketing_workflows__workflow_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Workflow V1 Admin Marketing Workflows  Workflow Id  Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Workflow",
+        "tags": [
+          "marketing"
+        ]
+      }
+    },
+    "/v1/admin/marketing/workflows/{workflow_id}/activate": {
+      "post": {
+        "operationId": "activate_workflow_v1_admin_marketing_workflows__workflow_id__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Activate Workflow V1 Admin Marketing Workflows  Workflow Id  Activate Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Activate Workflow",
+        "tags": [
+          "marketing"
+        ]
+      }
+    },
+    "/v1/admin/marketing/workflows/{workflow_id}/{action}": {
+      "post": {
+        "description": "pause (everyone freezes where they are), resume, or stop (everyone still in leaves; this can't be undone).",
+        "operationId": "workflow_action_v1_admin_marketing_workflows__workflow_id___action__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "action",
+            "required": true,
+            "schema": {
+              "title": "Action",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Workflow Action V1 Admin Marketing Workflows  Workflow Id   Action  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Workflow Action",
         "tags": [
           "marketing"
         ]

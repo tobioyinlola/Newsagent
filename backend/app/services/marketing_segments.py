@@ -298,6 +298,12 @@ def reachable_clause() -> list[ColumnElement[bool]]:
     return [Workspace.suspended.is_(False), ~out, ~sup]
 
 
+async def matches(db: AsyncSession, rules: Rules, user_id: str) -> bool:
+    """Whether one person matches the rules right now."""
+    q = members_query(rules).where(User.id == user_id).with_only_columns(User.id).limit(1)
+    return (await db.execute(q)).first() is not None
+
+
 async def preview(db: AsyncSession, rules: Rules, sample: int = 10) -> dict:
     now = datetime.now(UTC)
     q = members_query(rules, now)

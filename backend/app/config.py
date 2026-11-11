@@ -153,6 +153,7 @@ class Settings(BaseSettings):
         3.0  # a video's progress is worked out at most this often per project (with the Celery queue); 0 = always fresh
     )
     # AI outreach to distribution outlets (templates, a reply inbox, an agent that answers within approval rules). off = the original one-way email.
+    marketing_default_timezone: str = "Africa/Lagos"  # for sending hours, when a customer's country is not one we know
     marketing_email: str = "off"  # off | on | dry_run (dry_run only writes the log; nothing is sent)
     outreach_ai: str = "off"  # off | on
     outreach_reply_domain: str = ""  # replies come back to outreach+<token>@<this domain> (a domain that receives mail); blank = the plain reply-to address

@@ -34,11 +34,13 @@ from app.models.marketing import (
     MarketingCampaign,
     MarketingCopy,
     MarketingCopyVersion,
+    MarketingEnrollment,
     MarketingPref,
     MarketingRecipient,
     MarketingSegment,
     MarketingSend,
     MarketingSuppression,
+    MarketingWorkflow,
 )
 from app.models.news_desk import NewsImage, NewsStory, NewsVideo
 from app.models.outreach import OutreachMessage, OutreachOptout, OutreachThread
@@ -52,10 +54,12 @@ __all__ = [
     "MarketingCopy",
     "MarketingRecipient",
     "MarketingCopyVersion",
+    "MarketingEnrollment",
     "MarketingPref",
     "MarketingSegment",
     "MarketingSend",
     "MarketingSuppression",
+    "MarketingWorkflow",
     "OutreachOptout",
     "OutreachThread",
     "WorkItem",

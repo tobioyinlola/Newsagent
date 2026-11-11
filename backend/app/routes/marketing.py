@@ -19,12 +19,14 @@ from app.models import (
     MarketingSegment,
     MarketingSend,
     MarketingSuppression,
+    MarketingWorkflow,
 )
 from app.models.base import utcnow
-from app.services import marketing, ratelimit
+from app.services import marketing, marketing_starter, ratelimit
 from app.services import marketing_campaigns as campaigns
 from app.services import marketing_copy as copies
 from app.services import marketing_segments as segs
+from app.services import marketing_workflows as workflows
 from app.services.audit import audit
 
 router = APIRouter(tags=["marketing"])
@@ -598,6 +600,228 @@ async def delete_campaign(
         raise HTTPException(409, "Only a draft can be deleted.")
     audit(db, p.user.email, "marketing.campaign_deleted", target_type="campaign", target_id=c.id, request=request)
     await db.delete(c)
+    await db.commit()
+
+
+# ---------- workflows ----------
+class ActivateBody(BaseModel):
+    include_existing: bool = False  # false: only people who match from now on; true: today's matches go through it too
+    confirm_count: int  # how many people who match can be emailed right now, as shown to the operator
+
+
+def _wf_out(w: MarketingWorkflow, seg_names: dict[str, str]) -> dict:
+    return {
+        "id": w.id,
+        "name": w.name,
+        "status": w.status,
+        "trigger_segment_id": w.trigger_segment_id,
+        "trigger_segment_name": seg_names.get(w.trigger_segment_id, ""),
+        "goal_segment_id": w.goal_segment_id,
+        "goal_segment_name": seg_names.get(w.goal_segment_id or "", ""),
+        "steps": w.steps,
+        "hours": w.settings or {},
+        "activated_at": w.activated_at.isoformat() if w.activated_at else None,
+        "created_by": w.created_by,
+        "created_at": w.created_at.isoformat(),
+    }
+
+
+async def _seg_names(db: AsyncSession) -> dict[str, str]:
+    return {s.id: s.name for s in (await db.execute(select(MarketingSegment))).scalars()}
+
+
+async def _wf(db: AsyncSession, workflow_id: str) -> MarketingWorkflow:
+    w = await db.get(MarketingWorkflow, workflow_id)
+    if w is None or w.archived_at is not None:
+        raise HTTPException(404, "That workflow doesn't exist.")
+    return w
+
+
+async def _checked(db: AsyncSession, body: workflows.WorkflowIn) -> None:
+    try:
+        await workflows.check(db, body)
+    except workflows.Invalid as e:
+        raise HTTPException(422, str(e)) from None
+
+
+def _apply(w: MarketingWorkflow, body: workflows.WorkflowIn) -> None:
+    w.name, w.trigger_segment_id, w.goal_segment_id = body.name.strip(), body.trigger_segment_id, body.goal_segment_id
+    w.steps = [s.model_dump(exclude_none=True) for s in body.steps]
+    w.settings = body.hours.model_dump()
+
+
+@router.get("/v1/admin/marketing/workflows")
+async def list_workflows(
+    p: Principal = Depends(require("marketing.view")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    names = await _seg_names(db)
+    rows = (
+        (
+            await db.execute(
+                select(MarketingWorkflow)
+                .where(MarketingWorkflow.archived_at.is_(None))
+                .order_by(MarketingWorkflow.created_at.desc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    out = []
+    for w in rows:
+        item = _wf_out(w, names)
+        if w.status != "draft":
+            item["stats"] = await workflows.stats(db, w)
+        out.append(item)
+    return {"items": out}
+
+
+@router.post("/v1/admin/marketing/workflows/starter", status_code=201)
+async def make_starter(
+    request: Request, p: Principal = Depends(require("marketing.manage")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """The ready-made welcome sequence, as a draft to open and change before switching on."""
+    w = await marketing_starter.build(db, p.user.email)
+    audit(
+        db,
+        p.user.email,
+        "marketing.workflow_created",
+        target_type="workflow",
+        target_id=w.id,
+        detail={"starter": True},
+        request=request,
+    )
+    await db.commit()
+    return _wf_out(w, await _seg_names(db))
+
+
+@router.post("/v1/admin/marketing/workflows", status_code=201)
+async def create_workflow(
+    body: workflows.WorkflowIn,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    await _checked(db, body)
+    w = MarketingWorkflow(created_by=p.user.email)
+    _apply(w, body)
+    db.add(w)
+    await db.flush()
+    audit(db, p.user.email, "marketing.workflow_created", target_type="workflow", target_id=w.id, request=request)
+    await db.commit()
+    return _wf_out(w, await _seg_names(db))
+
+
+@router.get("/v1/admin/marketing/workflows/{workflow_id}")
+async def get_workflow(
+    workflow_id: str, p: Principal = Depends(require("marketing.view")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    w = await _wf(db, workflow_id)
+    out = _wf_out(w, await _seg_names(db))
+    out["stats"] = await workflows.stats(db, w)
+    seg = await db.get(MarketingSegment, w.trigger_segment_id)
+    if w.status == "draft" and seg is not None:  # who would be let in if it were switched on now
+        out["preview"] = await segs.preview(db, segs.Rules.model_validate(seg.rules), sample=5)
+    return out
+
+
+@router.put("/v1/admin/marketing/workflows/{workflow_id}")
+async def update_workflow(
+    workflow_id: str,
+    body: workflows.WorkflowIn,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    w = await _wf(db, workflow_id)
+    if w.status != "draft":
+        raise HTTPException(409, "Only a draft can be edited. Stop this workflow and make a new one from it.")
+    await _checked(db, body)
+    _apply(w, body)
+    audit(db, p.user.email, "marketing.workflow_changed", target_type="workflow", target_id=w.id, request=request)
+    await db.commit()
+    return _wf_out(w, await _seg_names(db))
+
+
+@router.post("/v1/admin/marketing/workflows/{workflow_id}/activate")
+async def activate_workflow(
+    workflow_id: str,
+    body: ActivateBody,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    w = await _wf(db, workflow_id)
+    if w.status != "draft":
+        raise HTTPException(409, "This workflow has already been switched on.")
+    if marketing.engine_mode() == "off":
+        raise HTTPException(
+            409, "Marketing email is switched off on the server (MARKETING_EMAIL), so nothing would be sent."
+        )
+    await _checked(
+        db,
+        workflows.WorkflowIn(
+            name=w.name,
+            trigger_segment_id=w.trigger_segment_id,
+            steps=w.steps,
+            goal_segment_id=w.goal_segment_id,
+            hours=workflows.Hours.model_validate(w.settings or {}),
+        ),
+    )
+    seg = await db.get(MarketingSegment, w.trigger_segment_id)
+    now_count = (await segs.preview(db, segs.Rules.model_validate(seg.rules), sample=0))["reachable"] if seg else 0
+    if now_count != body.confirm_count:
+        raise HTTPException(
+            409, f"The numbers changed: {now_count} people match now, not {body.confirm_count}. Please look again."
+        )
+    await workflows.activate(db, w, body.include_existing)
+    audit(
+        db,
+        p.user.email,
+        "marketing.workflow_activated",
+        target_type="workflow",
+        target_id=w.id,
+        detail={"include_existing": body.include_existing, "matching_now": now_count},
+        request=request,
+    )
+    await db.commit()
+    return _wf_out(w, await _seg_names(db))
+
+
+@router.post("/v1/admin/marketing/workflows/{workflow_id}/{action}")
+async def workflow_action(
+    workflow_id: str,
+    action: str,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    """pause (everyone freezes where they are), resume, or stop (everyone still in leaves; this can't be undone)."""
+    w = await _wf(db, workflow_id)
+    if action == "pause" and w.status == "active":
+        w.status = "paused"
+    elif action == "resume" and w.status == "paused":
+        w.status = "active"
+    elif action == "stop" and w.status in {"active", "paused"}:
+        await workflows.stop(db, w)
+    else:
+        raise HTTPException(409, "That isn't possible for this workflow right now.")
+    audit(db, p.user.email, f"marketing.workflow_{action}", target_type="workflow", target_id=w.id, request=request)
+    await db.commit()
+    return _wf_out(w, await _seg_names(db))
+
+
+@router.delete("/v1/admin/marketing/workflows/{workflow_id}", status_code=204)
+async def delete_workflow(
+    workflow_id: str,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> None:
+    w = await _wf(db, workflow_id)
+    if w.status != "draft":
+        raise HTTPException(409, "Only a draft can be deleted. Stop it instead.")
+    audit(db, p.user.email, "marketing.workflow_deleted", target_type="workflow", target_id=w.id, request=request)
+    await db.delete(w)
     await db.commit()
 
 
