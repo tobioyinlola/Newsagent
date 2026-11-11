@@ -638,6 +638,41 @@ async def schedule_campaign(
     return await _campaign_out(db, c, True)
 
 
+class CampaignTestBody(BaseModel):
+    variant: Literal["A", "B"] = "A"
+
+
+@router.post("/v1/admin/marketing/campaigns/{campaign_id}/test")
+async def test_campaign(
+    campaign_id: str,
+    body: CampaignTestBody,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Send the campaign's email exactly as it will go out (with example details) to the signed-in person's own address."""
+    c = await _campaign(db, campaign_id)
+    ver = (
+        await db.execute(
+            select(MarketingCopyVersion).where(
+                MarketingCopyVersion.copy_id == c.copy_id, MarketingCopyVersion.version == c.copy_version
+            )
+        )
+    ).scalar_one_or_none()
+    if ver is None:
+        raise HTTPException(409, "This campaign's email is no longer available.")
+    if not await ratelimit.hit(f"marketing-test:{p.user.id}", 10, 3600):
+        raise HTTPException(429, "That's a lot of test emails. Try again in a while.")
+    values = copies.sample_values()
+    r = copies.rendered(ver, values)
+    subject = copies.fill(c.subject_b, values) if body.variant == "B" and c.subject_b else r["subject"]
+    try:
+        await marketing.send_test(db, p.user, subject, r["text"], r["html"])
+    except Exception:  # noqa: BLE001
+        raise HTTPException(502, "The test email couldn't be sent. Try again in a moment.") from None
+    await db.commit()
+    return {"sent_to": p.user.email}
+
+
 @router.post("/v1/admin/marketing/campaigns/{campaign_id}/cancel")
 async def cancel_campaign(
     campaign_id: str,

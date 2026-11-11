@@ -220,3 +220,17 @@ async def test_permissions(client, maker, workspace):
     assert (await client.get("/v1/admin/marketing/campaigns", headers=OWNER)).status_code in (401, 403)
     assert (await client.post(f"/v1/admin/marketing/campaigns/{cid}/cancel", headers=OWNER)).status_code in (401, 403)
     assert marketing.engine_mode() == "off"
+
+
+async def test_a_campaign_test_goes_to_the_signed_in_person_only(client, maker, workspace):
+    cid, *_ = await _setup(client, maker, 2)
+    r = await client.post(f"/v1/admin/marketing/campaigns/{cid}/test", json={}, headers=OPS)
+    assert r.status_code == 200 and r.json()["sent_to"] == "ops@example.com"
+    (m,) = [x for x in registry.get_email().sent if x["to"] == "ops@example.com"]
+    assert m["subject"].startswith("[Test] ") and "/v1/m/" not in m["html"]  # never tracked, never to the audience
+    assert _mail() == []  # nobody in the segment got anything
+    assert (await client.post(f"/v1/admin/marketing/campaigns/{cid}/test", json={}, headers=OWNER)).status_code in (
+        401,
+        403,
+    )
+    assert (await client.post("/v1/admin/marketing/campaigns/nope/test", json={}, headers=OPS)).status_code == 404
