@@ -1,19 +1,28 @@
 // One source of truth for the web app's security headers. Used by `vite preview` (so tests enforce it) and rendered
 // into the production Caddyfile by scripts/gen-caddyfile.mjs. API_ORIGIN / STORAGE_ORIGIN are where the browser may
 // connect: the API, and the object storage that presigned upload/download URLs point at.
-export function securityHeaders(env = process.env) {
+// What Google Analytics needs, and nothing more: its script, and the places it reports to. Only the public site gets these;
+// the operator back office (/admin) is served with `analytics: false` and never loads Google's code.
+export const ANALYTICS_ORIGINS = {
+  script: ["https://www.googletagmanager.com"],
+  connect: ["https://www.google-analytics.com", "https://*.google-analytics.com", "https://*.analytics.google.com", "https://www.googletagmanager.com"],
+  img: ["https://www.google-analytics.com", "https://*.google-analytics.com", "https://www.googletagmanager.com"],
+};
+
+export function securityHeaders(env = process.env, { analytics = true } = {}) {
   const api = env.API_ORIGIN || "http://localhost:8000";
   const origins = [...new Set([api, env.STORAGE_ORIGIN || api])].join(" ");
   // the presenter picker shows the avatar vendor's public preview pictures
   const presenterImages = env.PRESENTER_IMG_ORIGINS || "https://resource2.heygen.ai https://files2.heygen.ai";
   // the optional LiveKit interview room: its signalling is a websocket (and its fallback https) to LIVEKIT_ORIGIN, e.g. wss://x.livekit.cloud
   const live = (env.LIVEKIT_ORIGIN || "").split(/\s+/).filter(Boolean).flatMap((o) => [o, o.replace(/^wss:/, "https:")]);
-  const connect = [...new Set([...origins.split(" "), ...live])].join(" ");
+  const ga = analytics ? ANALYTICS_ORIGINS : { script: [], connect: [], img: [] };
+  const connect = [...new Set([...origins.split(" "), ...live, ...ga.connect])].join(" ");
   const csp = [
     "default-src 'self'",
-    "script-src 'self'",
+    ["script-src 'self'", ...ga.script].join(" "),
     "style-src 'self' 'unsafe-inline'", // React inline styles (the app sets colours/widths via style=)
-    `img-src 'self' data: blob: ${origins} ${presenterImages}`,
+    `img-src 'self' data: blob: ${origins} ${presenterImages}${ga.img.length ? " " + ga.img.join(" ") : ""}`,
     `media-src 'self' blob: ${origins}`,
     `connect-src 'self' ${connect}`,
     "font-src 'self'",

@@ -17,7 +17,11 @@ const API_TARGET = process.env.API_TARGET || "https://backend-production-73a97.u
 // Link-preview crawlers (WhatsApp, LinkedIn, X, Facebook, Slack, search bots) get a small page with the story's headline, summary and
 // cover picture from the API, because the app itself has none of that in its HTML. People always get the app.
 const CRAWLERS = "facebookexternalhit|Facebot|WhatsApp|LinkedInBot|Twitterbot|Slackbot|TelegramBot|Discordbot|SkypeUriPreview|Pinterest|redditbot|Googlebot|bingbot|Applebot|Signal|Viber|Mastodon|Embedly|Iframely|MicrosoftPreview|Teams|Google-PageRenderer|vkShare|Bluesky|Cardyb";
-const headers = Object.entries(securityHeaders(env)).map(([key, value]) => ({ key, value }));
+const toList = (h) => Object.entries(h).map(([key, value]) => ({ key, value }));
+// The public site may load Google Analytics (after a visitor accepts). The operator back office under /admin never does: it gets the
+// strict policy with no third-party script or reporting address.
+const publicHeaders = toList(securityHeaders(env, { analytics: true }));
+const adminHeaders = toList(securityHeaders(env, { analytics: false }));
 const config = {
   $schema: "https://openapi.vercel.sh/vercel.json",
   installCommand: "pnpm install --frozen-lockfile",
@@ -33,7 +37,10 @@ const config = {
     { source: "/(.*)", destination: "/index.html" },
   ],
   headers: [
-    { source: "/(.*)", headers: [...headers, { key: "Cache-Control", value: "no-cache" }] },
+    { source: "/((?!admin).*)", headers: publicHeaders },
+    { source: "/admin", headers: adminHeaders },
+    { source: "/admin/(.*)", headers: adminHeaders },
+    { source: "/(.*)", headers: [{ key: "Cache-Control", value: "no-cache" }] },
     { source: "/assets/(.*)", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
   ],
 };

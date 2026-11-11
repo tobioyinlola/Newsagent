@@ -5,8 +5,10 @@ switch, the person's opt-out, the suppression list, a minimum gap between emails
 receipts and other account emails do not use this path and are never held back by it."""
 
 import logging
+import re
 import secrets
 from datetime import timedelta
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
@@ -58,6 +60,26 @@ async def pref_for(db: AsyncSession, user_id: str) -> MarketingPref:
         db.add(pref)
         await db.flush()
     return pref
+
+
+def _slug(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60] or "email"
+
+
+def with_campaign_tags(url: str, *, name: str, content: str = "") -> str:
+    """Add Google Analytics campaign tags (utm_*) to a link that goes to OUR OWN site, so a sign-up or purchase can be traced to the
+    campaign or workflow that brought it. Links to other websites are left exactly as written, and a tag already on the link is kept."""
+    base = urlsplit(get_settings().app_base_url)
+    parts = urlsplit(url)
+    if (parts.scheme, parts.netloc) != (base.scheme, base.netloc):
+        return url
+    tags = {"utm_source": "cover_founder", "utm_medium": "email", "utm_campaign": _slug(name)}
+    if content:
+        tags["utm_content"] = _slug(content)
+    have = parse_qsl(parts.query, keep_blank_values=True)
+    present = {k for k, _ in have}
+    query = urlencode(have + [(k, v) for k, v in tags.items() if k not in present])
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, query, parts.fragment))
 
 
 def tracking_url(kind: str, token: str) -> str:

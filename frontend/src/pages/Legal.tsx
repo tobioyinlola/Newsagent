@@ -228,6 +228,7 @@ const PRIVACY: Section[] = [
       ["Distribution", "Outlets you chose, contact name and email, logos, pictures, request and status history, outlet messages and published links", "You and outlets"],
       ["Referrals", "Your referral code, who joined with it, rewards earned. We never show a referred person’s email address to the referrer", "You and referred businesses"],
       ["Usage and audience data", "Views of stories and shared videos (visits, engaged views, completion), page and feature use, a random per-tab session identifier that we keep only as a one-way digest", "Your device"],
+      ["Website analytics (only if you accept)", "Which pages are visited and the steps people reach (such as signing up or buying credits), with a cookie identifier, your approximate location and basic device and browser details. Private links, your name, email and company name are never included", "Your device, through Google Analytics"],
       ["Technical and security data", "IP address, browser and device type, sign-in and session records, error logs, audit records of changes", "Your device and our systems"],
       ["Messages", "Emails and messages you send us, and our emails to you (codes, receipts, video-ready, distribution updates)", "You and us"],
     ] },
@@ -241,6 +242,7 @@ const PRIVACY: Section[] = [
       ["Take payments, give credits, send receipts, prevent fraud and keep financial records", "Contract, legal obligation and our legitimate interest in preventing fraud"],
       ["Screen content for safety (automated checks and human review), enforce our Terms, keep the Service secure, fix errors", "Our legitimate interests in running a safe service, and legal obligation"],
       ["Measure how stories are viewed and show you your results; improve the Service", "Our legitimate interests (we use limited, first-party measurement)"],
+      ["Understand how our website and app are used, using Google Analytics, so we can improve them", "Your consent, given in the cookie notice. We do nothing with Google Analytics unless you accept, and you can withdraw consent at any time"],
       ["Run referrals and rewards", "Contract and legitimate interests"],
       ["Contact you about your account, service updates and, where allowed, news about our features (you can opt out of marketing)", "Contract, legitimate interests and, where required, consent"],
       ["Comply with law and respond to lawful requests", "Legal obligation"],
@@ -270,6 +272,7 @@ const PRIVACY: Section[] = [
       ["Payments", "Process card payments on their own hosted page", "Stripe"],
       ["Email", "Send codes, receipts and notices", "Resend or an email service we configure"],
       ["Security and quality", "Scan uploads for malware, monitor errors", "ClamAV, Sentry"],
+      ["Website analytics (only if you accept)", "Show us which pages are used and where people leave, so we can improve the Service", "Google Analytics (Google)"],
     ] },
     "These providers may only use the data to provide their service to us, and must protect it. The list can change; we will keep this policy current.",
   ] },
@@ -308,13 +311,16 @@ const PRIVACY: Section[] = [
     "We use AI to write content, create the presenter and voice, transcribe your answers and screen content. These tools help us make and review your material; they are not used to make solely automated decisions that have legal or similarly significant effects on you. If an automated check blocks or holds your content, a person can review it, and you can contact us.",
   ] },
   { id: "storage", title: "Cookies and similar storage", body: [
-    "We use only what the Service needs: your sign-in token, small settings in your browser (such as the collapsed menu, notices you have closed and which notifications you have read), a referral code held for the length of your visit, and a random per-tab identifier for audience measurement, kept only as a one-way digest. We do not use advertising cookies or third-party trackers on our pages. Blocking this storage may stop parts of the Service working.",
+    "We use what the Service needs: your sign-in token, small settings in your browser (such as the collapsed menu, notices you have closed, your cookie choice and which notifications you have read), a referral code held for the length of your visit, and a random per-tab identifier for audience measurement, kept only as a one-way digest. Blocking this storage may stop parts of the Service working.",
+    "Analytics cookies (only if you accept). If you click Accept in the cookie notice, we use Google Analytics, a service of Google, to understand how our website and app are used. It sets cookies (named _ga and _ga_ followed by an identifier) that last up to 13 months, and receives the pages you visit, the steps you reach (such as signing up, starting a video or buying credits), your approximate location and basic device and browser details. We remove private link codes and project and payment numbers from page addresses before they are sent, and we never send your name, email address or company name. We do not use Google’s advertising features, and we do not use advertising cookies. We never measure the private interview and share links, or our team’s back office.",
+    "Your choice. Nothing from Google loads until you accept. You can change your mind at any time from Cookie settings in the footer of our website, or in Settings in the app: turning it off stops the measurement and removes the cookies. If your browser sends a Do Not Track or Global Privacy Control signal, we treat it as a refusal.",
   ] },
   { id: "children", title: "Children", body: [
     "The Service is for people aged 18 and over. We do not knowingly collect data from children. If you think a child has given us data, contact us and we will delete it.",
   ] },
   { id: "changes", title: "Changes to this policy", body: [
     "We may update this policy. We will post the new version with its effective date and, for important changes, tell you by email or in the app. The version you agreed to at sign-up is recorded against your account.",
+    "Most recent change (11 November 2026): we added optional Google Analytics, which runs only if you accept it, described under “Cookies and similar storage”. It does not change what you agreed to at sign-up.",
   ] },
   { id: "contact", title: "Contact us", body: [
     `${NAME}. Privacy questions and requests: ${EMAIL}. Please include your account email so we can find your data.`,

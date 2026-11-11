@@ -8,6 +8,8 @@ import { Logo } from "../components/Logo";
 import { ScrollRow, StoryTile, useStories } from "../components/StoryCards";
 import { PublicNavigation, SiteLink } from "../components/PublicNavigation";
 import { getToken } from "../lib/auth";
+import { openCookieSettings } from "../lib/consent";
+import { gaConfigured } from "../lib/ga";
 
 // The public landing page. Layout: dark site with poster-style art (sunburst, mountains, clouds) drawn in the brand palette,
 // product "screens" built from real app states, and product walkthroughs.
@@ -405,7 +407,7 @@ export function Footer() {
         </div>
         <div className="mt-12 flex flex-wrap items-center justify-between gap-3 text-xs text-white/60">
           <p className="font-bold">© {new Date().getFullYear()} Cover Founder. All rights reserved.</p>
-          <p className="flex gap-4">{link("Terms of Use", "/terms")}{link("Privacy Policy", "/privacy")}</p>
+          <p className="flex flex-wrap gap-4">{link("Terms of Use", "/terms")}{link("Privacy Policy", "/privacy")}{gaConfigured && <button type="button" onClick={openCookieSettings} className="inline-flex min-h-11 items-center text-white/80 hover:text-brand-green md:min-h-0">Cookie settings</button>}</p>
         </div>
       </div>
       <p aria-hidden="true" className="pointer-events-none mt-6 select-none whitespace-nowrap bg-gradient-to-b from-white/35 to-transparent bg-clip-text text-center font-mono text-[11vw] font-bold leading-[0.85] text-transparent md:text-[9.5rem]">COVER FOUNDER</p>
