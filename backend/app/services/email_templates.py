@@ -46,6 +46,7 @@ def render(
     footer: str = "You are receiving this because of activity on your Cover Founder account.",
     footer_link: tuple[str, str] | None = None,
     preheader: str = "",
+    pixel: str = "",
 ) -> tuple[str, str]:
     """(html, text). `body`/`after` are plain text with blank lines between paragraphs."""
     code_html = (
@@ -89,6 +90,11 @@ def render(
         if preheader
         else ""
     )
+    pixel_html = (
+        f'<img src="{escape(pixel, quote=True)}" width="1" height="1" alt="" style="display:block;border:0;width:1px;height:1px">'
+        if pixel
+        else ""
+    )
     html = (
         f'<!doctype html><html><body style="margin:0;padding:0;background:{PAPER}">{hidden}'
         f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{PAPER}"><tr><td align="center" style="padding:24px 12px">'
@@ -99,7 +105,7 @@ def render(
         f'<tr><td style="padding:32px 28px 12px"><h1 style="margin:0 0 18px;font:700 24px/1.25 {HEAD};color:{INK}">{escape(heading)}</h1>'
         f"{_paragraphs(body)}{code_html}{details_html}{button_html}{_paragraphs(after) if after else ''}</td></tr>"
         f'<tr><td style="padding:16px 28px 28px;border-top:1px solid #E3E3DC;font:12px/1.5 {BODY};color:{MUTED}">{escape(footer)}{footer_html}</td></tr>'
-        "</table></td></tr></table></body></html>"
+        f"</table></td></tr></table>{pixel_html}</body></html>"
     )
     text = f"{heading}\n\n{body.strip()}\n"
     if code:

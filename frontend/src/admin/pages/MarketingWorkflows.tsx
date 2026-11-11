@@ -8,7 +8,7 @@ import type { Preview } from "../lib/segments";
 
 type Step = { type: "email"; copy_id: string; copy_version?: number; only_if_segment_id?: string | null } | { type: "wait"; days: number; hours: number };
 type Hours = { enabled: boolean; start: number; end: number };
-type Stats = { active: number; completed: number; exited: number; exits: Record<string, number>; sent_by_step: Record<string, number> };
+type Stats = { active: number; completed: number; exited: number; exits: Record<string, number>; sent_by_step: Record<string, number>; opened_by_step?: Record<string, number>; clicked_by_step?: Record<string, number> };
 type Workflow = { id: string; name: string; status: "draft" | "active" | "paused" | "stopped"; trigger_segment_id: string; trigger_segment_name: string; goal_segment_id: string | null; goal_segment_name: string; steps: Step[]; hours: Hours; stats?: Stats; preview?: Preview };
 type Pick = { id: string; name: string };
 
@@ -26,7 +26,7 @@ function Funnel({ w, copyName, segName }: { w: Workflow; copyName: (id: string) 
       <ol className="space-y-2">
         {w.steps.map((s, i) => (
           <li key={i} className="rounded-lg border border-line px-3 py-2">
-            {s.type === "wait" ? <span className="text-muted">Wait {waitText(s)}</span> : <span><b>Email:</b> {copyName(s.copy_id)}{s.copy_version ? ` (v${s.copy_version})` : ""}{s.only_if_segment_id && <span className="text-muted"> · only if in “{segName(s.only_if_segment_id)}”</span>}{st && <span className="ml-2 rounded-sm bg-lime-tint px-1.5 py-0.5 text-xs font-semibold">{num(st.sent_by_step[String(i)] ?? 0)} sent</span>}</span>}
+            {s.type === "wait" ? <span className="text-muted">Wait {waitText(s)}</span> : <span><b>Email:</b> {copyName(s.copy_id)}{s.copy_version ? ` (v${s.copy_version})` : ""}{s.only_if_segment_id && <span className="text-muted"> · only if in “{segName(s.only_if_segment_id)}”</span>}{st && <span className="ml-2 rounded-sm bg-lime-tint px-1.5 py-0.5 text-xs font-semibold">{num(st.sent_by_step[String(i)] ?? 0)} sent</span>}{st && (st.sent_by_step[String(i)] ?? 0) > 0 && <span className="ml-2 text-xs text-muted">{num(st.opened_by_step?.[String(i)] ?? 0)} opened · {num(st.clicked_by_step?.[String(i)] ?? 0)} clicked</span>}</span>}
           </li>
         ))}
       </ol>

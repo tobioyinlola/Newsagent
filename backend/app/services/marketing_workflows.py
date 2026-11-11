@@ -367,10 +367,16 @@ async def stats(db: AsyncSession, wf: MarketingWorkflow) -> dict:
         totals[status] += n
         if status == "exited":
             exits[reason or "other"] = n
-    sent = dict(
-        (
+    per_ref = {
+        ref: (n, o, c)
+        for ref, n, o, c in (
             await db.execute(
-                select(MarketingSend.ref, func.count())
+                select(
+                    MarketingSend.ref,
+                    func.count(),
+                    func.count(MarketingSend.opened_at),
+                    func.count(MarketingSend.clicked_at),
+                )
                 .where(
                     MarketingSend.kind == "workflow",
                     MarketingSend.ref.like(f"{wf.id}:%"),
@@ -379,6 +385,9 @@ async def stats(db: AsyncSession, wf: MarketingWorkflow) -> dict:
                 .group_by(MarketingSend.ref)
             )
         ).all()
-    )
-    by_step = {i: sent.get(f"{wf.id}:{i}", 0) for i, s in enumerate(wf.steps) if s["type"] == "email"}
-    return {**totals, "exits": exits, "sent_by_step": by_step}
+    }
+    emails = [i for i, st in enumerate(wf.steps) if st["type"] == "email"]
+    by_step = {i: per_ref.get(f"{wf.id}:{i}", (0, 0, 0))[0] for i in emails}
+    opened = {i: per_ref.get(f"{wf.id}:{i}", (0, 0, 0))[1] for i in emails}
+    clicked = {i: per_ref.get(f"{wf.id}:{i}", (0, 0, 0))[2] for i in emails}
+    return {**totals, "exits": exits, "sent_by_step": by_step, "opened_by_step": opened, "clicked_by_step": clicked}

@@ -3310,6 +3310,11 @@
             "minimum": 1.0,
             "title": "Per Minute",
             "type": "integer"
+          },
+          "track": {
+            "default": true,
+            "title": "Track",
+            "type": "boolean"
           }
         },
         "title": "MarketingConfig",

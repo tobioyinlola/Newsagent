@@ -6,7 +6,7 @@ import { ago, num } from "../lib/format";
 import { useCan } from "../lib/can";
 import type { Preview } from "../lib/segments";
 
-type Counts = { pending: number; sent: number; skipped: number; failed: number; skipped_by_reason: Record<string, number> };
+type Counts = { pending: number; sent: number; skipped: number; failed: number; skipped_by_reason: Record<string, number>; opened?: number; clicked?: number };
 type Campaign = { id: string; name: string; status: "draft" | "scheduled" | "sending" | "sent" | "cancelled"; segment_id: string; segment_name: string; copy_id: string; copy_name: string; copy_version: number; audience: number; send_at: string | null; started_at: string | null; finished_at: string | null; created_by: string; counts?: Counts; preview?: Preview; email?: { subject: string; preheader: string; html: string } | null };
 type Pick = { id: string; name: string };
 
@@ -23,6 +23,7 @@ function Progress({ c }: { c: Campaign }) {
     <div className="space-y-1 text-sm">
       <div className="h-2 overflow-hidden rounded-full bg-line" role="progressbar" aria-label="Campaign progress" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><div className="h-full bg-brand-green" style={{ width: `${pct}%` }} /></div>
       <p><b>{num(k.sent)}</b> sent · {num(k.pending)} waiting · {num(k.skipped)} skipped · {num(k.failed)} failed (of {num(c.audience)})</p>
+      {k.sent > 0 && k.opened !== undefined && <p><b>{num(k.opened)}</b> opened ({Math.round((k.opened / k.sent) * 100)}%) · <b>{num(k.clicked ?? 0)}</b> clicked the button ({Math.round(((k.clicked ?? 0) / k.sent) * 100)}%)<span className="block text-xs text-muted">Opens are approximate: some mail apps load images for everyone, others block them. Clicks are the more reliable number.</span></p>}
       {Object.keys(k.skipped_by_reason).length > 0 && <p className="text-xs text-muted">Skipped: {Object.entries(k.skipped_by_reason).map(([r, n]) => `${n} ${WHY[r] ?? r}`).join(", ")}</p>}
     </div>
   );

@@ -4,9 +4,9 @@ from datetime import UTC, datetime, timedelta
 from html import escape
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import Principal, require
@@ -867,3 +867,43 @@ async def unsubscribe(token: str, request: Request, db: AsyncSession = Depends(g
         "You're unsubscribed",
         "You won't get marketing emails from Cover Founder. Account emails (sign-in codes, receipts) still arrive.",
     )
+
+
+# ---------- tracking (public; the token is the proof, and it can only ever open the one link stored with that email) ----------
+PIXEL = bytes.fromhex(
+    "47494638396101000100800000000000ffffff21f90401000000002c00000000010001000002024401003b"
+)  # a 1x1 transparent GIF
+NO_STORE = {"Cache-Control": "no-store, private", "Referrer-Policy": "no-referrer"}
+
+
+@router.get("/v1/m/o/{token}.gif", include_in_schema=False)
+async def opened(token: str, db: AsyncSession = Depends(get_session)) -> Response:
+    """The picture in a marketing email. Mail apps load it when the email is opened (some load it for everyone, so opens are approximate)."""
+    now = utcnow()
+    await db.execute(
+        update(MarketingSend)
+        .where(MarketingSend.track_token == token)
+        .values(open_count=MarketingSend.open_count + 1, opened_at=func.coalesce(MarketingSend.opened_at, now))
+    )
+    await db.commit()
+    return Response(PIXEL, media_type="image/gif", headers=NO_STORE)  # the same answer for a token we don't know
+
+
+@router.get("/v1/m/c/{token}", include_in_schema=False)
+async def clicked(token: str, db: AsyncSession = Depends(get_session)) -> RedirectResponse:
+    """The button in a marketing email: count the click, then go to the link that was stored with the email. Nothing in the address
+    can change where it goes."""
+    from app.config import get_settings
+
+    row = (await db.execute(select(MarketingSend).where(MarketingSend.track_token == token))).scalar_one_or_none()
+    url = row.click_url if row is not None else None
+    if row is None or not url or not url.startswith(("https://", "http://")):
+        return RedirectResponse(get_settings().app_base_url, status_code=302, headers=NO_STORE)
+    now = utcnow()
+    row.click_count += 1
+    row.clicked_at = row.clicked_at or now
+    row.opened_at = (
+        row.opened_at or now
+    )  # someone who clicked certainly opened it, even if their mail app blocks pictures
+    await db.commit()
+    return RedirectResponse(url, status_code=302, headers=NO_STORE)

@@ -15,6 +15,7 @@ from app.models import (
     MarketingCampaign,
     MarketingCopyVersion,
     MarketingRecipient,
+    MarketingSend,
     User,
 )
 from app.models.base import utcnow
@@ -41,7 +42,14 @@ async def counts(db: AsyncSession, campaign_id: str) -> dict:
         totals[status] += n
         if status == "skipped":
             by_reason[reason or "other"] = n
-    return {**totals, "skipped_by_reason": by_reason}
+    seen = (
+        await db.execute(
+            select(func.count(MarketingSend.opened_at), func.count(MarketingSend.clicked_at)).where(
+                MarketingSend.kind == "campaign", MarketingSend.ref == campaign_id, MarketingSend.status == "sent"
+            )
+        )
+    ).one()
+    return {**totals, "skipped_by_reason": by_reason, "opened": seen[0], "clicked": seen[1]}
 
 
 async def start(db: AsyncSession, c: MarketingCampaign) -> None:

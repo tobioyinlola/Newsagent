@@ -27,6 +27,7 @@ class MarketingConfig(BaseModel):
     paused: bool = False  # the kill switch: nothing marketing goes out while true
     min_gap_days: int = Field(2, ge=0, le=60)  # at most one marketing email to a person in this many days
     daily_cap: int = Field(500, ge=0, le=100000)  # at most this many marketing emails a day, in total
+    track: bool = True  # count opens (a tiny picture) and clicks on the button (a link through our site)
     per_minute: int = Field(20, ge=1, le=600)  # how fast a campaign is delivered, so a big list is spread out
 
 
@@ -57,6 +58,11 @@ async def pref_for(db: AsyncSession, user_id: str) -> MarketingPref:
         db.add(pref)
         await db.flush()
     return pref
+
+
+def tracking_url(kind: str, token: str) -> str:
+    """The address an email's open picture (o) or button (c) points at. Like the unsubscribe link, it is on the app's own domain."""
+    return f"{get_settings().app_base_url.rstrip('/')}/v1/m/{kind}/{token}"
 
 
 def unsubscribe_url(token: str) -> str:
@@ -142,8 +148,9 @@ async def send(
     now = utcnow()
     reason = await _skip_reason(db, user, cfg, now)
 
-    def log_row(status: str, why: str = "") -> MarketingSend:
+    def log_row(status: str, why: str = "", **extra) -> MarketingSend:
         row = MarketingSend(
+            **extra,
             user_id=user.id,
             kind=kind,
             ref=ref,
@@ -156,7 +163,10 @@ async def send(
         return row
 
     if reason:
-        if reason not in {"paused", "daily_cap"}:  # these pass by themselves and are retried every minute: don't log each try
+        if reason not in {
+            "paused",
+            "daily_cap",
+        }:  # these pass by themselves and are retried every minute: don't log each try
             log_row("skipped", reason)
         return f"skipped:{reason}"
     if mode == "dry_run":
@@ -164,16 +174,23 @@ async def send(
         return "dry_run"
     pref = await pref_for(db, user.id)
     link = unsubscribe_url(pref.token)
+    token = click_url = pixel = None
+    if cfg.track:
+        token = secrets.token_urlsafe(24)
+        pixel = tracking_url("o", token) + ".gif"
+        if button:
+            click_url, button = button[1], (button[0], tracking_url("c", token))
     html, text = templates.render(
         heading or subject,
         body,
         button=button,
         preheader=preheader,
+        pixel=pixel or "",
         footer="You are receiving this because you have a Cover Founder account. You can stop these emails at any time.",
         footer_link=("Unsubscribe", link),
     )
     headers = {"List-Unsubscribe": f"<{link}>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"}
-    row = log_row("sent")
+    row = log_row("sent", track_token=token, click_url=click_url)
     try:
         await db.flush()
     except IntegrityError:  # the same send raced in from another worker

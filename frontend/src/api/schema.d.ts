@@ -5528,6 +5528,11 @@ export interface components {
              * @default 20
              */
             per_minute: number;
+            /**
+             * Track
+             * @default true
+             */
+            track: boolean;
         };
         /** MeOut */
         MeOut: {

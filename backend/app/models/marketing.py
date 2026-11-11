@@ -42,6 +42,13 @@ class MarketingSend(Base):
         String(120), nullable=True
     )  # a retry of the same send does nothing
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    # tracking: the secret in this email's open pixel and button link, where the button really goes, and what came back
+    track_token: Mapped[str | None] = mapped_column(String(40), unique=True, nullable=True)
+    click_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    open_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    click_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    clicked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class MarketingSegment(Base, TimestampMixin):

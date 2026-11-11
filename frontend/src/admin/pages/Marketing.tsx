@@ -9,7 +9,7 @@ import { CopiesTab } from "./MarketingCopies";
 import { WorkflowsTab } from "./MarketingWorkflows";
 import { blankCondition, cleanRules, type Condition, describe, type FieldDef, OP_LABEL, type Preview, type Rules, type Segment } from "../lib/segments";
 
-type Status = { engine: "off" | "on" | "dry_run"; config: { paused: boolean; min_gap_days: number; daily_cap: number; per_minute: number }; sent_today: number; opted_out: number; suppressed: number };
+type Status = { engine: "off" | "on" | "dry_run"; config: { paused: boolean; min_gap_days: number; daily_cap: number; per_minute: number; track: boolean }; sent_today: number; opted_out: number; suppressed: number };
 const ENGINE: Record<Status["engine"], string> = { off: "Off: nothing is sent", dry_run: "Dry run: logged, not sent", on: "On" };
 const EMPTY: Rules = { match: "all", conditions: [] };
 
@@ -115,7 +115,7 @@ export function MarketingAdmin() {
   const list = useQuery({ queryKey: ["segments"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/segments")).then((r) => (r as unknown as { items: Segment[] }).items) });
   const detail = useQuery({ queryKey: ["segment", viewing], enabled: !!viewing, queryFn: () => unwrap(api.GET("/v1/admin/marketing/segments/{segment_id}", { params: { path: { segment_id: viewing! } } })) as unknown as Promise<Segment> });
   const pause = useMutation({
-    mutationFn: (paused: boolean) => unwrap(api.PUT("/v1/admin/marketing/config", { body: { ...status.data!.config, paused } })),
+    mutationFn: (change: Partial<Status["config"]>) => unwrap(api.PUT("/v1/admin/marketing/config", { body: { ...status.data!.config, ...change } })),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["marketing-status"] }),
   });
   const remove = useMutation({
@@ -133,9 +133,10 @@ export function MarketingAdmin() {
             <div className="space-y-1">
               <p><b>{ENGINE[s.engine]}</b>{s.config.paused && <span className="ml-2 rounded-sm bg-brand-red px-1.5 py-0.5 text-xs font-bold">Paused</span>}</p>
               <p className="text-muted">{num(s.sent_today)} sent today (limit {num(s.config.daily_cap)}) · at most one email per person every {s.config.min_gap_days} days · up to {num(s.config.per_minute)} a minute · {num(s.opted_out)} unsubscribed · {num(s.suppressed)} blocked addresses</p>
+              <label className="flex items-center gap-2 text-muted"><input type="checkbox" checked={s.config.track} disabled={!manage || pause.isPending} onChange={(e) => pause.mutate({ track: e.target.checked })} /> Count opens and clicks (adds a tiny picture, and sends the button through our site)</label>
               {s.engine === "off" && <p className="text-muted">Marketing email is switched off on the server (MARKETING_EMAIL). Segments still work.</p>}
             </div>
-            {manage && <Button variant={s.config.paused ? "primary" : "danger"} disabled={pause.isPending} onClick={() => pause.mutate(!s.config.paused)}>{s.config.paused ? "Resume sending" : "Pause all marketing"}</Button>}
+            {manage && <Button variant={s.config.paused ? "primary" : "danger"} disabled={pause.isPending} onClick={() => pause.mutate({ paused: !s.config.paused })}>{s.config.paused ? "Resume sending" : "Pause all marketing"}</Button>}
           </div>
         </Card>
       )}
