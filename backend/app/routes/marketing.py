@@ -1112,8 +1112,18 @@ async def clicked(token: str, db: AsyncSession = Depends(get_session)) -> Redire
     row.opened_at = (
         row.opened_at or now
     )  # someone who clicked certainly opened it, even if their mail app blocks pictures
+    name, content = "", ""
+    if row.kind == "campaign":
+        c = await db.get(MarketingCampaign, row.ref)
+        name = c.name if c else ""
+    elif row.kind == "workflow":
+        wid, _, step = row.ref.partition(":")
+        w = await db.get(MarketingWorkflow, wid)
+        name, content = (w.name if w else ""), (f"step {int(step) + 1}" if step.isdigit() else "")
     await db.commit()
-    return RedirectResponse(url, status_code=302, headers=NO_STORE)
+    # arriving on our own site, the visit carries the campaign's name, so Google Analytics can credit the sign-up or purchase to it
+    tagged = marketing.with_campaign_tags(url, name=name or "marketing email", content=content)
+    return RedirectResponse(tagged, status_code=302, headers=NO_STORE)
 
 
 # ---------- the customer's own choice ----------

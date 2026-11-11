@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { track } from "../lib/ga";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, unwrap } from "../api/client";
@@ -21,7 +22,7 @@ export function NewProjectClassic() {
       await unwrap(api.POST("/v1/projects/{project_id}/script/generate", { params: { path: { project_id: p.id } } }));
       return p;
     },
-    onSuccess: (p) => nav(`/ai-newsroom/${p.id}`),
+    onSuccess: (p) => { track.videoStarted("classic"); nav(`/ai-newsroom/${p.id}`); },
   });
   return (
     <Card title="New video">

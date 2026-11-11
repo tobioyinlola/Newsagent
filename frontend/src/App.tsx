@@ -1,5 +1,6 @@
 import { Suspense, lazy, type ComponentType, type ReactNode } from "react";
 import { Navigate, Route, Routes, useParams, useLocation } from "react-router-dom";
+import { TrackingConsent } from "./components/Analytics";
 import { BackButton } from "./components/BackButton";
 import { RequireAuth } from "./components/RequireAuth";
 
@@ -55,6 +56,8 @@ const OldProject = () => <Navigate to={`/ai-newsroom/${useParams().id}`} replace
 
 export function App() {
   return (
+    <>
+    <TrackingConsent />
     <Routes>
       <Route path="/" element={dark(<Landing />)} />
       <Route path="/ai-newsroom" element={dark(<Newsroom />)} />
@@ -106,5 +109,6 @@ export function App() {
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
+    </>
   );
 }

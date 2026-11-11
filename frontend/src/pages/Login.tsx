@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { track } from "../lib/ga";
 import { type ReactNode, useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { api, type Schemas, unwrap } from "../api/client";
@@ -156,7 +157,7 @@ export function Signup() {
   });
   const verify = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/auth/signup/verify", { body: { ...(inviteCode ? { invite_code: inviteCode } : { email: email.trim() }), code: code.trim() } })),
-    onSuccess: (s) => { try { sessionStorage.removeItem("newsagent.referral"); } catch { /* storage may be unavailable */ } setCreated(true); window.setTimeout(() => finish(s), 1800); },
+    onSuccess: (s) => { try { sessionStorage.removeItem("newsagent.referral"); } catch { /* storage may be unavailable */ } track.signUp(); setCreated(true); window.setTimeout(() => finish(s), 1800); },
   });
   const mismatch = confirm.length > 0 && confirm !== password;
   if (getToken() && !created) return <Navigate to={peekAfterAuth() ?? "/dashboard"} replace />;

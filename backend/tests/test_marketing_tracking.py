@@ -172,3 +172,44 @@ async def test_workflow_numbers_are_per_email(client, maker, workspace, on):
     await client.get(f"/v1/m/c/{token}", follow_redirects=False)
     st = (await client.get(f"/v1/admin/marketing/workflows/{wid}", headers=OPS)).json()["stats"]
     assert st["sent_by_step"] == {"0": 1} and st["opened_by_step"] == {"0": 1} and st["clicked_by_step"] == {"0": 1}
+
+
+async def test_a_button_to_our_own_site_carries_the_campaign_name_for_analytics(client, maker, workspace, on):
+    for i in range(2):
+        await _person(maker, f"p{i}@x.test", joined=2, country="Nigeria")
+    seg = (await client.post("/v1/admin/marketing/segments", json={"name": "NG", "rules": NG}, headers=OPS)).json()[
+        "id"
+    ]
+    mine = {**COPY, "name": "Mine", "button_url": "/ai-newsroom/new?keep=1"}
+    copy = (await client.post("/v1/admin/marketing/copies", json=mine, headers=OPS)).json()["id"]
+    cid = (
+        await client.post(
+            "/v1/admin/marketing/campaigns",
+            json={"name": "Welcome Nudge: Week 1!", "segment_id": seg, "copy_id": copy},
+            headers=OPS,
+        )
+    ).json()["id"]
+    await client.post(f"/v1/admin/marketing/campaigns/{cid}/schedule", json={"confirm_count": 2}, headers=OPS)
+    await mcamp.deliver_due()
+    async with maker() as s:
+        token = (await s.execute(select(MarketingSend.track_token).limit(1))).scalar_one()
+    r = await client.get(f"/v1/m/c/{token}", follow_redirects=False)
+    base = get_settings().app_base_url
+    assert r.status_code == 302
+    assert (
+        r.headers["location"]
+        == f"{base}/ai-newsroom/new?keep=1&utm_source=cover_founder&utm_medium=email&utm_campaign=welcome-nudge-week-1"
+    )
+
+
+async def test_campaign_tags_leave_other_sites_alone_and_respect_tags_already_there():
+    base = get_settings().app_base_url
+    assert (
+        marketing.with_campaign_tags("https://example.com/go?x=1", name="Spring") == "https://example.com/go?x=1"
+    )  # not ours
+    assert marketing.with_campaign_tags(f"{base}/x?utm_campaign=mine&a=1", name="Spring", content="step 2") == (
+        f"{base}/x?utm_campaign=mine&a=1&utm_source=cover_founder&utm_medium=email&utm_content=step-2"
+    )
+    assert marketing.with_campaign_tags(f"{base}/x#top", name="!!!").endswith("utm_campaign=email#top")
+    lookalike = f"{base}.evil.example/x"
+    assert marketing.with_campaign_tags(lookalike, name="A") == lookalike  # a look-alike host is not our site

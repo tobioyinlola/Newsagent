@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { track } from "../lib/ga";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
@@ -56,6 +57,9 @@ export function StripeReturn() {
   useEffect(() => {
     if (paid) for (const key of ["me", "billing-summary", "ledger", "payment-checkouts"]) void qc.invalidateQueries({ queryKey: [key] });
   }, [paid, qc]);
+  useEffect(() => {
+    if (paid && payment) track.purchase({ id: payment.checkout_id, value: Number(payment.amount_usd), currency: "USD", credits: Number(payment.credits) });
+  }, [paid, payment]);
   const waited = Date.now() - startedAt >= WAIT_MS;
   const showSuccess = paid && !dismissed && payment;
 
