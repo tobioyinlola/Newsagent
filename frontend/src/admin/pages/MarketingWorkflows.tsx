@@ -6,10 +6,10 @@ import { num } from "../lib/format";
 import { useCan } from "../lib/can";
 import type { Preview } from "../lib/segments";
 
-type Step = { type: "email"; copy_id: string; copy_version?: number; only_if_segment_id?: string | null } | { type: "wait"; days: number; hours: number };
+type Step = { type: "email"; copy_id: string; copy_version?: number; only_if_segment_id?: string | null } | { type: "wait"; days: number; hours: number } | { type: "branch"; segment_id: string; yes_to?: number | null; no_to?: number | null } | { type: "end" };
 type Hours = { enabled: boolean; start: number; end: number };
 type Stats = { active: number; completed: number; exited: number; exits: Record<string, number>; sent_by_step: Record<string, number>; opened_by_step?: Record<string, number>; clicked_by_step?: Record<string, number> };
-type Workflow = { id: string; name: string; status: "draft" | "active" | "paused" | "stopped"; trigger_segment_id: string; trigger_segment_name: string; goal_segment_id: string | null; goal_segment_name: string; steps: Step[]; hours: Hours; stats?: Stats; preview?: Preview };
+type Workflow = { id: string; name: string; status: "draft" | "active" | "paused" | "stopped"; trigger_segment_id: string; trigger_segment_name: string; goal_segment_id: string | null; goal_segment_name: string; steps: Step[]; hours: Hours; reentry_days?: number | null; stats?: Stats; preview?: Preview };
 type Pick = { id: string; name: string };
 
 const STATUS: Record<Workflow["status"], [string, string]> = { draft: ["Draft", "bg-paper"], active: ["On", "bg-lime-tint"], paused: ["Paused", "bg-peach-tint"], stopped: ["Stopped", "bg-brand-red"] };
@@ -17,6 +17,13 @@ const EXIT: Record<string, string> = { goal_reached: "reached the goal", existin
 const Badge = ({ s }: { s: Workflow["status"] }) => <span className={`rounded-sm px-1.5 py-0.5 text-xs font-bold ${STATUS[s][1]}`}>{STATUS[s][0]}</span>;
 const DEFAULT_HOURS: Hours = { enabled: true, start: 9, end: 18 };
 const waitText = (s: { days: number; hours: number }) => [s.days && `${s.days} day${s.days === 1 ? "" : "s"}`, s.hours && `${s.hours} hour${s.hours === 1 ? "" : "s"}`].filter(Boolean).join(" ");
+
+// Branch targets are step numbers, so they must follow the steps when one is moved or removed.
+function retarget(steps: Step[], map: (old: number) => number | null): Step[] {
+  const fix = (t?: number | null) => (t == null ? null : map(t));
+  return steps.map((s) => (s.type === "branch" ? { ...s, yes_to: fix(s.yes_to), no_to: fix(s.no_to) } : s));
+}
+const target = (t: number | null | undefined, at: number) => (t != null && t > at ? t : null); // only forward jumps are allowed; anything else means "finish"
 
 function Funnel({ w, copyName, segName }: { w: Workflow; copyName: (id: string) => string; segName: (id: string) => string }) {
   const st = w.stats;
@@ -26,7 +33,7 @@ function Funnel({ w, copyName, segName }: { w: Workflow; copyName: (id: string) 
       <ol className="space-y-2">
         {w.steps.map((s, i) => (
           <li key={i} className="rounded-lg border border-line px-3 py-2">
-            {s.type === "wait" ? <span className="text-muted">Wait {waitText(s)}</span> : <span><b>Email:</b> {copyName(s.copy_id)}{s.copy_version ? ` (v${s.copy_version})` : ""}{s.only_if_segment_id && <span className="text-muted"> · only if in “{segName(s.only_if_segment_id)}”</span>}{st && <span className="ml-2 rounded-sm bg-lime-tint px-1.5 py-0.5 text-xs font-semibold">{num(st.sent_by_step[String(i)] ?? 0)} sent</span>}{st && (st.sent_by_step[String(i)] ?? 0) > 0 && <span className="ml-2 text-xs text-muted">{num(st.opened_by_step?.[String(i)] ?? 0)} opened · {num(st.clicked_by_step?.[String(i)] ?? 0)} clicked</span>}</span>}
+            {s.type === "wait" ? <span className="text-muted">Wait {waitText(s)}</span> : s.type === "end" ? <span className="text-muted">Finish here</span> : s.type === "branch" ? <span><b>If</b> in “{segName(s.segment_id)}”: {s.yes_to != null ? `go to step ${s.yes_to + 1}` : "finish"}; otherwise {s.no_to != null ? `go to step ${s.no_to + 1}` : "finish"}</span> : <span><b>Email:</b> {copyName(s.copy_id)}{s.copy_version ? ` (v${s.copy_version})` : ""}{s.only_if_segment_id && <span className="text-muted"> · only if in “{segName(s.only_if_segment_id)}”</span>}{st && <span className="ml-2 rounded-sm bg-lime-tint px-1.5 py-0.5 text-xs font-semibold">{num(st.sent_by_step[String(i)] ?? 0)} sent</span>}{st && (st.sent_by_step[String(i)] ?? 0) > 0 && <span className="ml-2 text-xs text-muted">{num(st.opened_by_step?.[String(i)] ?? 0)} opened · {num(st.clicked_by_step?.[String(i)] ?? 0)} clicked</span>}</span>}
           </li>
         ))}
       </ol>
@@ -41,14 +48,18 @@ function Builder({ wf, segments, copies, onDone }: { wf: Workflow | null; segmen
   const [goal, setGoal] = useState(wf?.goal_segment_id ?? "");
   const [hours, setHours] = useState<Hours>(wf?.hours && "start" in wf.hours ? wf.hours : DEFAULT_HOURS);
   const [steps, setSteps] = useState<Step[]>(wf?.steps ?? [{ type: "email", copy_id: "" }]);
+  const [again, setAgain] = useState(!!wf?.reentry_days);
+  const [days, setDays] = useState(wf?.reentry_days ?? 30);
   const patch = (i: number, p: Partial<Step>) => setSteps(steps.map((s, j) => (j === i ? ({ ...s, ...p } as Step) : s)));
-  const move = (i: number, d: -1 | 1) => { const j = i + d; if (j < 0 || j >= steps.length) return; const n = [...steps]; [n[i], n[j]] = [n[j], n[i]]; setSteps(n); };
-  const body = () => ({ name, trigger_segment_id: trigger, goal_segment_id: goal || null, hours, steps: steps.map((s) => (s.type === "email" ? { type: "email" as const, copy_id: s.copy_id, only_if_segment_id: s.only_if_segment_id || null } : s)) });
+  const move = (i: number, d: -1 | 1) => { const j = i + d; if (j < 0 || j >= steps.length) return; const n = [...steps]; [n[i], n[j]] = [n[j], n[i]]; setSteps(retarget(n, (k) => (k === i ? j : k === j ? i : k))); };
+  const remove = (i: number) => setSteps(retarget(steps.filter((_, j) => j !== i), (k) => (k === i ? null : k > i ? k - 1 : k)));
+  const label = (s: Step, k: number) => `Step ${k + 1}: ${s.type === "email" ? copies.find((c) => c.id === s.copy_id)?.name ?? "email" : s.type === "wait" ? `wait ${waitText(s)}` : s.type === "end" ? "finish" : "branch"}`;
+  const body = () => ({ name, trigger_segment_id: trigger, goal_segment_id: goal || null, hours, reentry_days: again ? days : null, steps: steps.map((s, i) => (s.type === "email" ? { type: "email" as const, copy_id: s.copy_id, only_if_segment_id: s.only_if_segment_id || null } : s.type === "branch" ? { type: "branch" as const, segment_id: s.segment_id, yes_to: target(s.yes_to, i), no_to: target(s.no_to, i) } : s)) });
   const save = useMutation({
     mutationFn: () => (wf ? unwrap(api.PUT("/v1/admin/marketing/workflows/{workflow_id}", { params: { path: { workflow_id: wf.id } }, body: body() as never })) : unwrap(api.POST("/v1/admin/marketing/workflows", { body: body() as never }))),
     onSuccess: async (r) => { await qc.invalidateQueries({ queryKey: ["workflows"] }); await qc.invalidateQueries({ queryKey: ["workflow"] }); onDone((r as unknown as Workflow).id); },
   });
-  const ready = name.trim() && trigger && steps.length > 0 && steps.every((s) => (s.type === "email" ? s.copy_id : s.days + s.hours > 0));
+  const ready = name.trim() && trigger && steps.length > 0 && steps.every((s) => (s.type === "email" ? s.copy_id : s.type === "wait" ? s.days + s.hours > 0 : s.type === "branch" ? s.segment_id : true));
   return (
     <Card title={wf ? "Edit workflow" : "New workflow"} actions={<Button variant="secondary" onClick={() => onDone(wf?.id)}>Cancel</Button>}>
       <div className="space-y-4 text-sm">
@@ -63,17 +74,29 @@ function Builder({ wf, segments, copies, onDone }: { wf: Workflow | null; segmen
             {steps.map((s, i) => (
               <li key={i} className="space-y-2 rounded-xl border border-line p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <b>{i + 1}. {s.type === "email" ? "Send an email" : "Wait"}</b>
+                  <b>{i + 1}. {s.type === "email" ? "Send an email" : s.type === "wait" ? "Wait" : s.type === "branch" ? "Branch" : "Finish here"}</b>
                   <div className="flex gap-2">
                     <Button variant="secondary" type="button" aria-label={`Move step ${i + 1} up`} disabled={i === 0} onClick={() => move(i, -1)}>↑</Button>
                     <Button variant="secondary" type="button" aria-label={`Move step ${i + 1} down`} disabled={i === steps.length - 1} onClick={() => move(i, 1)}>↓</Button>
-                    <Button variant="secondary" type="button" aria-label={`Remove step ${i + 1}`} onClick={() => setSteps(steps.filter((_, j) => j !== i))}>Remove</Button>
+                    <Button variant="secondary" type="button" aria-label={`Remove step ${i + 1}`} onClick={() => remove(i)}>Remove</Button>
                   </div>
                 </div>
                 {s.type === "email" ? (
                   <div className="grid gap-2 sm:grid-cols-2">
                     <label className="block">Email<select className={inputCls} value={s.copy_id} onChange={(e) => patch(i, { copy_id: e.target.value })}><option value="">Choose an email…</option>{copies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
                     <label className="block">Only send if they’re in (optional)<select className={inputCls} value={s.only_if_segment_id ?? ""} onChange={(e) => patch(i, { only_if_segment_id: e.target.value || null })}><option value="">Everyone</option>{segments.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
+                  </div>
+                ) : s.type === "end" ? (
+                  <p className="text-muted">Anyone who gets here leaves the workflow as finished.</p>
+                ) : s.type === "branch" ? (
+                  <div className="space-y-2">
+                    <label className="block">If they’re in<select className={inputCls} value={s.segment_id} onChange={(e) => patch(i, { segment_id: e.target.value })}><option value="">Choose a segment…</option>{segments.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {([["yes_to", "go to"], ["no_to", "if not, go to"]] as const).map(([k, text]) => (
+                        <label key={k} className="block">{text}<select aria-label={k === "yes_to" ? `Step ${i + 1} if in the group` : `Step ${i + 1} if not in the group`} className={inputCls} value={String(target(s[k], i) ?? "")} onChange={(e) => patch(i, { [k]: e.target.value === "" ? null : Number(e.target.value) } as Partial<Step>)}><option value="">Finish</option>{steps.map((t, n) => (n > i ? <option key={n} value={n}>{label(t, n)}</option> : null))}</select></label>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted">A branch can only jump forward, so a workflow can never loop. Put “Finish here” at the end of a path to stop people running on into the other one.</p>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2"><input aria-label="Days" type="number" min={0} max={90} className={`${inputCls} !w-20`} value={s.days} onChange={(e) => patch(i, { days: Number(e.target.value) })} /> days <input aria-label="Hours" type="number" min={0} max={23} className={`${inputCls} !w-20`} value={s.hours} onChange={(e) => patch(i, { hours: Number(e.target.value) })} /> hours</div>
@@ -84,12 +107,20 @@ function Builder({ wf, segments, copies, onDone }: { wf: Workflow | null; segmen
           <div className="flex gap-2">
             <Button type="button" variant="secondary" onClick={() => setSteps([...steps, { type: "email", copy_id: "" }])}>Add an email</Button>
             <Button type="button" variant="secondary" onClick={() => setSteps([...steps, { type: "wait", days: 1, hours: 0 }])}>Add a wait</Button>
+            <Button type="button" variant="secondary" onClick={() => setSteps([...steps, { type: "branch", segment_id: "", yes_to: null, no_to: null }])}>Add a branch</Button>
+            <Button type="button" variant="secondary" onClick={() => setSteps([...steps, { type: "end" }])}>Add a finish</Button>
           </div>
         </fieldset>
         <fieldset className="space-y-2">
           <legend className="font-semibold">Sending hours</legend>
           <label className="flex items-center gap-2"><input type="checkbox" checked={hours.enabled} onChange={(e) => setHours({ ...hours, enabled: e.target.checked })} /> Only email during the day where the person lives</label>
           {hours.enabled && <div className="flex items-center gap-2">between <input aria-label="From hour" type="number" min={0} max={23} className={`${inputCls} !w-20`} value={hours.start} onChange={(e) => setHours({ ...hours, start: Number(e.target.value) })} /> and <input aria-label="To hour" type="number" min={1} max={24} className={`${inputCls} !w-20`} value={hours.end} onChange={(e) => setHours({ ...hours, end: Number(e.target.value) })} /> o’clock <span className="text-xs text-muted">(by their country; Nigeria’s time if we don’t know it)</span></div>}
+        </fieldset>
+        <fieldset className="space-y-2">
+          <legend className="font-semibold">Going through again</legend>
+          <label className="flex items-center gap-2"><input type="checkbox" checked={again} onChange={(e) => setAgain(e.target.checked)} /> Let people go through it again</label>
+          {again && <div className="flex flex-wrap items-center gap-2">once they have finished, and at least <input aria-label="Days before re-entry" type="number" min={7} max={365} className={`${inputCls} !w-24`} value={days} onChange={(e) => setDays(Number(e.target.value))} /> days have passed, if they match “who gets in” again.</div>}
+          {!again && <p className="text-xs text-muted">Off: everyone goes through at most once.</p>}
         </fieldset>
         <ErrorBox error={save.error} />
         <Button disabled={!ready || save.isPending} onClick={() => save.mutate()}>{save.isPending ? "Saving…" : "Save draft"}</Button>
@@ -128,7 +159,7 @@ function Detail({ id, segments, copies, engine, manage, onClose }: { id: string;
       <ErrorBox error={q.error ?? act.error ?? on.error ?? del.error} />
       {!w ? <p aria-busy="true">Loading…</p> : (
         <div className="space-y-4 text-sm">
-          <p><Badge s={w.status} /> <span className="ml-2 text-muted">Who gets in: {w.trigger_segment_name}{w.goal_segment_name && ` · Goal: ${w.goal_segment_name}`}{w.hours.enabled ? ` · Sends ${w.hours.start}:00 to ${w.hours.end}:00 local time` : " · Sends at any hour"}</span></p>
+          <p><Badge s={w.status} /> <span className="ml-2 text-muted">Who gets in: {w.trigger_segment_name}{w.goal_segment_name && ` · Goal: ${w.goal_segment_name}`}{w.hours.enabled ? ` · Sends ${w.hours.start}:00 to ${w.hours.end}:00 local time` : " · Sends at any hour"}{w.reentry_days ? ` · People can go through again after ${w.reentry_days} days` : ""}</span></p>
           <Funnel w={w} copyName={copyName} segName={segName} />
           {w.status === "draft" && w.preview && <p><b className="text-lg tabular-nums">{num(reach)}</b> people match “{w.trigger_segment_name}” and can be emailed right now.</p>}
           {w.status === "draft" && engine === "off" && <Notice tone="warn">Marketing email is switched off on the server (MARKETING_EMAIL), so this can’t be switched on yet.</Notice>}

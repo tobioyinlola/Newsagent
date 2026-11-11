@@ -46,6 +46,12 @@ function CopyEditor({ options, copy, onDone }: { options: Options; copy: Copy | 
     requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(at + tag.length, at + tag.length); });
   };
 
+  const [brief, setBrief] = useState("");
+  const [drafted, setDrafted] = useState(false);
+  const write = useMutation({
+    mutationFn: () => unwrap(api.POST("/v1/admin/marketing/copies/draft", { body: { brief, category: draft.category } })),
+    onSuccess: (r) => { const d = r as unknown as { subject: string; preheader: string; body: string }; set({ subject: d.subject, preheader: d.preheader, body: d.body }); setDrafted(true); },
+  });
   const save = useMutation({
     mutationFn: () => copy ? unwrap(api.PUT("/v1/admin/marketing/copies/{copy_id}", { params: { path: { copy_id: copy.id } }, body: draft })) : unwrap(api.POST("/v1/admin/marketing/copies", { body: draft })),
     onSuccess: async () => { await qc.invalidateQueries({ queryKey: ["copies"] }); await qc.invalidateQueries({ queryKey: ["copy"] }); onDone(); },
@@ -65,6 +71,17 @@ function CopyEditor({ options, copy, onDone }: { options: Options; copy: Copy | 
             <label className="block text-sm font-semibold">Name<input className={inputCls} value={draft.name} maxLength={120} placeholder="Day 3: make your first video" onChange={(e) => set({ name: e.target.value })} /></label>
             <label className="block text-sm font-semibold">Kind<select className={inputCls} value={draft.category} onChange={(e) => set({ category: e.target.value })}>{options.categories.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}</select></label>
           </div>
+          {manage && (
+            <div className="space-y-2 rounded-xl border border-line bg-paper p-3 text-sm">
+              <label className="block font-semibold">Need a first draft? Say what the email is for<textarea rows={2} className={inputCls} value={brief} maxLength={1000} placeholder="e.g. Remind people who signed up last week to make their first video" onChange={(e) => { setBrief(e.target.value); setDrafted(false); }} /></label>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" variant="secondary" disabled={brief.trim().length < 10 || write.isPending} onClick={() => write.mutate()}>{write.isPending ? "Writing…" : "Write a draft with AI"}</Button>
+                <span className="text-xs text-muted">It fills the subject, preview line and message below, replacing what’s there. Read it and change it before you use it.</span>
+              </div>
+              {drafted && <Notice tone="ok">Draft added below. Check the facts and wording, then add a button if you want one.</Notice>}
+              <ErrorBox error={write.error} />
+            </div>
+          )}
           <label className="block text-sm font-semibold">Subject<input ref={refs.subject} className={inputCls} value={draft.subject} maxLength={200} onFocus={() => (focus.current = "subject")} onChange={(e) => set({ subject: e.target.value })} /></label>
           <label className="block text-sm font-semibold">Preview line <span className="font-normal text-muted">(the grey text beside the subject)</span><input ref={refs.preheader} className={inputCls} value={draft.preheader} maxLength={200} onFocus={() => (focus.current = "preheader")} onChange={(e) => set({ preheader: e.target.value })} /></label>
           <label className="block text-sm font-semibold">Message<textarea ref={refs.body} rows={9} className={inputCls} value={draft.body} onFocus={() => (focus.current = "body")} onChange={(e) => set({ body: e.target.value })} placeholder={"Hi {{first_name|there}},\n\nLeave a blank line between paragraphs."} /></label>
