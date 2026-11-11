@@ -44,6 +44,7 @@ def render(
     after: str = "",
     details: list[tuple[str, str]] | None = None,
     footer: str = "You are receiving this because of activity on your Cover Founder account.",
+    footer_link: tuple[str, str] | None = None,
 ) -> tuple[str, str]:
     """(html, text). `body`/`after` are plain text with blank lines between paragraphs."""
     code_html = (
@@ -77,6 +78,11 @@ def render(
         if button
         else ""
     )
+    footer_html = (
+        f' <a href="{escape(absolute(footer_link[1]), quote=True)}" style="color:{PURPLE}">{escape(footer_link[0])}</a>'
+        if footer_link
+        else ""
+    )
     html = (
         f'<!doctype html><html><body style="margin:0;padding:0;background:{PAPER}">'
         f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{PAPER}"><tr><td align="center" style="padding:24px 12px">'
@@ -86,7 +92,7 @@ def render(
         f'style="display:block;border:0;width:174px;height:60px;color:{GREEN};font:700 18px {HEAD}"></td></tr>'
         f'<tr><td style="padding:32px 28px 12px"><h1 style="margin:0 0 18px;font:700 24px/1.25 {HEAD};color:{INK}">{escape(heading)}</h1>'
         f"{_paragraphs(body)}{code_html}{details_html}{button_html}{_paragraphs(after) if after else ''}</td></tr>"
-        f'<tr><td style="padding:16px 28px 28px;border-top:1px solid #E3E3DC;font:12px/1.5 {BODY};color:{MUTED}">{escape(footer)}</td></tr>'
+        f'<tr><td style="padding:16px 28px 28px;border-top:1px solid #E3E3DC;font:12px/1.5 {BODY};color:{MUTED}">{escape(footer)}{footer_html}</td></tr>'
         "</table></td></tr></table></body></html>"
     )
     text = f"{heading}\n\n{body.strip()}\n"
@@ -99,6 +105,8 @@ def render(
     if after:
         text += f"\n{after.strip()}\n"
     text += f"\n--\n{footer}\n"
+    if footer_link:
+        text += f"{footer_link[0]}: {absolute(footer_link[1])}\n"
     return html, text
 
 
