@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, new_id, utcnow
@@ -56,3 +56,32 @@ class MarketingSegment(Base, TimestampMixin):
     )  # {"match": "all"|"any", "conditions": [{field, op, value}]}
     created_by: Mapped[str] = mapped_column(String(320), default="")
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class MarketingCopy(Base, TimestampMixin):
+    """One piece of email copy. Its words live in versions, so an email already sent can always be traced to what it said."""
+
+    __tablename__ = "marketing_copies"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(120))
+    category: Mapped[str] = mapped_column(
+        String(20), default="product"
+    )  # onboarding | activation | billing | win_back | product
+    current_version: Mapped[int] = mapped_column(Integer, default=1)
+    created_by: Mapped[str] = mapped_column(String(320), default="")
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class MarketingCopyVersion(Base):
+    __tablename__ = "marketing_copy_versions"
+    __table_args__ = (UniqueConstraint("copy_id", "version"),)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    copy_id: Mapped[str] = mapped_column(ForeignKey("marketing_copies.id", ondelete="CASCADE"), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    subject: Mapped[str] = mapped_column(String(200))
+    preheader: Mapped[str] = mapped_column(String(200), default="")
+    body: Mapped[str] = mapped_column(Text)
+    button_label: Mapped[str] = mapped_column(String(60), default="")
+    button_url: Mapped[str] = mapped_column(String(500), default="")
+    created_by: Mapped[str] = mapped_column(String(320), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

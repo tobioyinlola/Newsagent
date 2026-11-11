@@ -121,6 +121,7 @@ async def send(
     *,
     button: tuple[str, str] | None = None,
     heading: str | None = None,
+    preheader: str = "",
     kind: str = "campaign",
     ref: str = "",
     idempotency_key: str | None = None,
@@ -165,6 +166,7 @@ async def send(
         heading or subject,
         body,
         button=button,
+        preheader=preheader,
         footer="You are receiving this because you have a Cover Founder account. You can stop these emails at any time.",
         footer_link=("Unsubscribe", link),
     )
@@ -182,3 +184,10 @@ async def send(
         row.status, row.idempotency_key = "failed", None
         return "failed"
     return "sent"
+
+
+async def send_test(db: AsyncSession, to: User, subject: str, text: str, html: str, *, provider=None) -> None:
+    """A copy sent to the operator's own address to check it. It skips the opt-out, gap and cap (it is one email to oneself),
+    works while the engine is off, is marked as a test, and never counts toward the caps. Raises if the email can't go."""
+    await (provider or registry.get_email()).send(to.email, f"[Test] {subject}", text, html)
+    db.add(MarketingSend(user_id=to.id, kind="test", subject=subject[:500], status="test"))

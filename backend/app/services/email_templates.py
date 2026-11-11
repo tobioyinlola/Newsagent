@@ -45,6 +45,7 @@ def render(
     details: list[tuple[str, str]] | None = None,
     footer: str = "You are receiving this because of activity on your Cover Founder account.",
     footer_link: tuple[str, str] | None = None,
+    preheader: str = "",
 ) -> tuple[str, str]:
     """(html, text). `body`/`after` are plain text with blank lines between paragraphs."""
     code_html = (
@@ -83,8 +84,13 @@ def render(
         if footer_link
         else ""
     )
+    hidden = (  # the grey line a mail app shows beside the subject; invisible in the opened email
+        f'<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">{escape(preheader)}</div>'
+        if preheader
+        else ""
+    )
     html = (
-        f'<!doctype html><html><body style="margin:0;padding:0;background:{PAPER}">'
+        f'<!doctype html><html><body style="margin:0;padding:0;background:{PAPER}">{hidden}'
         f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{PAPER}"><tr><td align="center" style="padding:24px 12px">'
         f'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#fff;border:2px solid {INK}">'
         f'<tr><td style="background:{INK};padding:18px 28px;font:700 18px {HEAD};color:{GREEN};letter-spacing:1px">'
