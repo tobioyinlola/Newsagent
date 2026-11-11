@@ -149,8 +149,8 @@ function Detail({ id, segments, copies, engine, manage, onClose }: { id: string;
         <ConfirmDialog title="Switch this workflow on?" confirmLabel="Switch on" onConfirm={() => on.mutate()} onCancel={() => setAsking(null)}>
           <p>The words and rules are fixed as they are now. Emails go out a few at a time, inside the sending hours.</p>
           <fieldset className="mt-3 space-y-2">
-            <label className="flex items-start gap-2"><input type="radio" className="mt-1" checked={!existing} onChange={() => setExisting(false)} /><span><b>Only people who match from now on.</b> The {num(reach)} who match today are left out.</span></label>
-            <label className="flex items-start gap-2"><input type="radio" className="mt-1" checked={existing} onChange={() => setExisting(true)} /><span><b>Include the {num(reach)} who match today</b> as well, and everyone who matches later.</span></label>
+            <label className="flex items-start gap-2"><input type="radio" className="mt-1" checked={!existing} onChange={() => setExisting(false)} /><span><b>Only people who match from now on.</b> {reach === 1 ? "The 1 person who matches today is" : `The ${num(reach)} people who match today are`} left out.</span></label>
+            <label className="flex items-start gap-2"><input type="radio" className="mt-1" checked={existing} onChange={() => setExisting(true)} /><span><b>Include {reach === 1 ? "the 1 person who matches" : `the ${num(reach)} people who match`} today</b> as well, and everyone who matches later.</span></label>
           </fieldset>
         </ConfirmDialog>
       )}
