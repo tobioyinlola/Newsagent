@@ -978,6 +978,21 @@
         "title": "CampaignBody",
         "type": "object"
       },
+      "CampaignTestBody": {
+        "properties": {
+          "variant": {
+            "default": "A",
+            "enum": [
+              "A",
+              "B"
+            ],
+            "title": "Variant",
+            "type": "string"
+          }
+        },
+        "title": "CampaignTestBody",
+        "type": "object"
+      },
       "CaptionsOut": {
         "properties": {
           "captions": {
@@ -11697,6 +11712,77 @@
           }
         },
         "summary": "Schedule Campaign",
+        "tags": [
+          "marketing"
+        ]
+      }
+    },
+    "/v1/admin/marketing/campaigns/{campaign_id}/test": {
+      "post": {
+        "description": "Send the campaign's email exactly as it will go out (with example details) to the signed-in person's own address.",
+        "operationId": "test_campaign_v1_admin_marketing_campaigns__campaign_id__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignTestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Test Campaign V1 Admin Marketing Campaigns  Campaign Id  Test Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Test Campaign",
         "tags": [
           "marketing"
         ]
