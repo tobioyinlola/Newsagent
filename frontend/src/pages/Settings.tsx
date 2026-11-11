@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useMe } from "../components/Layout";
 import { Card } from "../components/ui";
+import { EmailPreferences } from "../components/EmailPreferences";
 import { Account } from "./Account";
 
 const tabs = [
@@ -23,5 +24,5 @@ export function Settings() {
 
 export function ProfileSettings() {
   const me = useMe();
-  return <div className="space-y-5"><Card title="Your profile"><div className="flex items-center gap-4"><span aria-hidden="true" className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-ink bg-brand-green text-xl font-bold">{me.data?.workspace_name.slice(0, 1).toUpperCase() || "CF"}</span><div className="min-w-0"><p className="break-words font-bold">{me.data?.workspace_name}</p><p className="break-all text-sm text-muted">{me.data?.email}</p></div></div><dl className="mt-6 grid gap-4 border-t border-line pt-5 sm:grid-cols-2"><div><dt className="text-xs text-muted">Workspace</dt><dd className="mt-1 break-words font-semibold">{me.data?.workspace_name}</dd></div><div><dt className="text-xs text-muted">Email address</dt><dd className="mt-1 break-all font-semibold">{me.data?.email}</dd></div></dl><Link className="mt-5 inline-flex min-h-11 items-center text-sm font-bold underline" to="/brand">Manage your brand kit →</Link></Card><Account /></div>;
+  return <div className="space-y-5"><Card title="Your profile"><div className="flex items-center gap-4"><span aria-hidden="true" className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-ink bg-brand-green text-xl font-bold">{me.data?.workspace_name.slice(0, 1).toUpperCase() || "CF"}</span><div className="min-w-0"><p className="break-words font-bold">{me.data?.workspace_name}</p><p className="break-all text-sm text-muted">{me.data?.email}</p></div></div><dl className="mt-6 grid gap-4 border-t border-line pt-5 sm:grid-cols-2"><div><dt className="text-xs text-muted">Workspace</dt><dd className="mt-1 break-words font-semibold">{me.data?.workspace_name}</dd></div><div><dt className="text-xs text-muted">Email address</dt><dd className="mt-1 break-all font-semibold">{me.data?.email}</dd></div></dl><Link className="mt-5 inline-flex min-h-11 items-center text-sm font-bold underline" to="/brand">Manage your brand kit →</Link></Card><EmailPreferences /><Account /></div>;
 }

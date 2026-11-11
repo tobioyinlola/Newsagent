@@ -36,6 +36,8 @@ PERMISSIONS: tuple[Perm, ...] = (
     Perm("settings.manage", "Change system switches and limits", "Operations"),
     Perm("presenter.manage", "Manage the presenter clip library", "Content"),
     Perm("content.manage", "Delete videos and take stories down or put them back", "Content"),
+    Perm("marketing.view", "See marketing segments, email copy and workflows", "Marketing"),
+    Perm("marketing.manage", "Create segments, copy and workflows, and send marketing email", "Marketing"),
     Perm("audit.view", "See the audit log", "Security"),
     Perm("team.manage", "Invite and manage the back-office team", "Security"),
 )

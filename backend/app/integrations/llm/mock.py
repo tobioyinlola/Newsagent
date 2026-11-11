@@ -60,6 +60,14 @@ class MockScriptLLM(ScriptLLM):
             step, body = "payment_terms", "Thank you. I will check the payment arrangements with the team and come back to you."
         return {"subject": "", "body": f"Hello {who},\n\n{body}\n\nKind regards,\n{sign}", "step": step}
 
+    async def draft_marketing_copy(self, brief: str, category: str, tags: list[str]) -> dict:
+        topic = " ".join(brief.split())[:200].rstrip(".")
+        return {
+            "subject": topic[:58] or "News from Cover Founder",
+            "preheader": "A quick note from Cover Founder.",
+            "body": f"Hi {{{{first_name|there}}}},\n\n{topic}.\n\n{{{{company}}}} is set up and ready when you are.",
+        }
+
     async def parse_brief(self, brief_text: str, website_url: str | None) -> dict:
         sentences = [x.strip() for x in re.split(r"(?<=[.!?])\s+|\n+", brief_text.strip()) if x.strip()]
         first = (sentences[0] if sentences else brief_text).rstrip(".!?")[:200]
