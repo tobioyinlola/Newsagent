@@ -4,14 +4,16 @@ from html import escape
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import Principal, require
 from app.db import get_session
-from app.models import MarketingPref, MarketingSend, MarketingSuppression
+from app.models import MarketingPref, MarketingSegment, MarketingSend, MarketingSuppression
 from app.models.base import utcnow
 from app.services import marketing
+from app.services import marketing_segments as segs
 from app.services.audit import audit
 
 router = APIRouter(tags=["marketing"])
@@ -61,6 +63,122 @@ async def put_config(
     )
     await db.commit()
     return {"config": body.model_dump()}
+
+
+# ---------- segments ----------
+class SegmentBody(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    description: str = Field("", max_length=1000)
+    rules: dict
+
+
+class PreviewBody(BaseModel):
+    rules: dict
+
+
+def _seg(s: MarketingSegment) -> dict:
+    return {
+        "id": s.id,
+        "name": s.name,
+        "description": s.description,
+        "rules": s.rules,
+        "created_by": s.created_by,
+        "created_at": s.created_at.isoformat(),
+    }
+
+
+async def _live(db: AsyncSession, segment_id: str) -> MarketingSegment:
+    s = await db.get(MarketingSegment, segment_id)
+    if s is None or s.archived_at is not None:
+        raise HTTPException(404, "That segment doesn't exist.")
+    return s
+
+
+def _rules(raw: dict) -> segs.Rules:
+    try:
+        return segs.validate(raw)
+    except segs.Invalid as e:
+        raise HTTPException(422, str(e)) from None
+
+
+@router.get("/v1/admin/marketing/segment-fields")
+async def segment_fields(p: Principal = Depends(require("marketing.view"))) -> dict:
+    return {"fields": segs.catalog()}
+
+
+@router.get("/v1/admin/marketing/segments")
+async def list_segments(
+    p: Principal = Depends(require("marketing.view")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    rows = (
+        await db.execute(
+            select(MarketingSegment)
+            .where(MarketingSegment.archived_at.is_(None))
+            .order_by(MarketingSegment.created_at.desc())
+        )
+    ).scalars()
+    return {"items": [_seg(s) for s in rows]}
+
+
+@router.post("/v1/admin/marketing/segments/preview")
+async def preview_rules(
+    body: PreviewBody, p: Principal = Depends(require("marketing.view")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    return await segs.preview(db, _rules(body.rules))
+
+
+@router.post("/v1/admin/marketing/segments", status_code=201)
+async def create_segment(
+    body: SegmentBody,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    rules = _rules(body.rules)
+    s = MarketingSegment(
+        name=body.name.strip(), description=body.description.strip(), rules=rules.model_dump(), created_by=p.user.email
+    )
+    db.add(s)
+    await db.flush()
+    audit(db, p.user.email, "marketing.segment_created", target_type="segment", target_id=s.id, request=request)
+    await db.commit()
+    return _seg(s)
+
+
+@router.get("/v1/admin/marketing/segments/{segment_id}")
+async def get_segment(
+    segment_id: str, p: Principal = Depends(require("marketing.view")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    s = await _live(db, segment_id)
+    return {**_seg(s), "preview": await segs.preview(db, segs.Rules.model_validate(s.rules))}
+
+
+@router.put("/v1/admin/marketing/segments/{segment_id}")
+async def update_segment(
+    segment_id: str,
+    body: SegmentBody,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    s = await _live(db, segment_id)
+    s.name, s.description, s.rules = body.name.strip(), body.description.strip(), _rules(body.rules).model_dump()
+    audit(db, p.user.email, "marketing.segment_changed", target_type="segment", target_id=s.id, request=request)
+    await db.commit()
+    return _seg(s)
+
+
+@router.delete("/v1/admin/marketing/segments/{segment_id}", status_code=204)
+async def archive_segment(
+    segment_id: str,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> None:
+    s = await _live(db, segment_id)
+    s.archived_at = utcnow()
+    audit(db, p.user.email, "marketing.segment_archived", target_type="segment", target_id=s.id, request=request)
+    await db.commit()
 
 
 # ---------- unsubscribe (public; the token is the proof) ----------
