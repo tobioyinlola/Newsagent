@@ -1856,6 +1856,23 @@ export interface paths {
         patch: operations["patch_system_settings_v1_admin_settings_patch"];
         trace?: never;
     };
+    "/v1/admin/site-visits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Site Visits */
+        get: operations["site_visits_v1_admin_site_visits_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/staff": {
         parameters: {
             query?: never;
@@ -4135,6 +4152,26 @@ export interface paths {
         get: operations["story_preview_v1_public_stories__slug__preview_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/visit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Visit
+         * @description One page opened on the public site. Counts nothing (and says nothing) if it must not be counted.
+         */
+        post: operations["visit_v1_public_visit_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7364,6 +7401,31 @@ export interface components {
             limit: number | string;
             /** Vendor */
             vendor: string;
+        };
+        /** VisitIn */
+        VisitIn: {
+            /** Path */
+            path: string;
+            /**
+             * Referrer Host
+             * @default
+             */
+            referrer_host: string;
+            /**
+             * Utm Campaign
+             * @default
+             */
+            utm_campaign: string;
+            /**
+             * Utm Medium
+             * @default
+             */
+            utm_medium: string;
+            /**
+             * Utm Source
+             * @default
+             */
+            utm_source: string;
         };
         /** VoiceLine */
         VoiceLine: {
@@ -12062,6 +12124,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    site_visits_v1_admin_site_visits_get: {
+        parameters: {
+            query?: {
+                start?: string | null;
+                end?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -16864,6 +16962,37 @@ export interface operations {
                 content: {
                     "text/html": string;
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    visit_v1_public_visit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VisitIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

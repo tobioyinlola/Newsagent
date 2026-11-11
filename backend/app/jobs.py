@@ -198,5 +198,10 @@ async def run_hourly() -> dict:
 
 async def run_daily() -> dict:
     from app.services.analytics import prune_events
+    from app.services.site_visits import prune_marks
 
-    return {"purged_takes": await purge_old_raw_takes(), "analytics_session_markers_pruned": await prune_events()}
+    return {
+        "purged_takes": await purge_old_raw_takes(),
+        "analytics_session_markers_pruned": await prune_events(),
+        "site_visit_markers_pruned": await prune_marks(),
+    }

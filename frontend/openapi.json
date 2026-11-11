@@ -7868,6 +7868,44 @@
         "title": "VendorBudgetSet",
         "type": "object"
       },
+      "VisitIn": {
+        "properties": {
+          "path": {
+            "maxLength": 300,
+            "title": "Path",
+            "type": "string"
+          },
+          "referrer_host": {
+            "default": "",
+            "maxLength": 253,
+            "title": "Referrer Host",
+            "type": "string"
+          },
+          "utm_campaign": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Utm Campaign",
+            "type": "string"
+          },
+          "utm_medium": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Utm Medium",
+            "type": "string"
+          },
+          "utm_source": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Utm Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "VisitIn",
+        "type": "object"
+      },
       "VoiceLine": {
         "properties": {
           "audio_url": {
@@ -16420,6 +16458,91 @@
         ]
       }
     },
+    "/v1/admin/site-visits": {
+      "get": {
+        "operationId": "site_visits_v1_admin_site_visits_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Site Visits V1 Admin Site Visits Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Site Visits",
+        "tags": [
+          "site-visits"
+        ]
+      }
+    },
     "/v1/admin/staff": {
       "get": {
         "operationId": "team_v1_admin_staff_get",
@@ -24484,6 +24607,41 @@
         "summary": "Story Preview",
         "tags": [
           "stories"
+        ]
+      }
+    },
+    "/v1/public/visit": {
+      "post": {
+        "description": "One page opened on the public site. Counts nothing (and says nothing) if it must not be counted.",
+        "operationId": "visit_v1_public_visit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisitIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Visit",
+        "tags": [
+          "site-visits"
         ]
       }
     },
