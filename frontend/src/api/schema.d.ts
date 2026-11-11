@@ -4668,6 +4668,7 @@ export interface components {
             ab_mode: "split" | "winner";
             /** Copy Id */
             copy_id: string;
+            hours?: components["schemas"]["Hours"] | null;
             /**
              * Metric
              * @default opens

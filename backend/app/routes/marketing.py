@@ -415,6 +415,7 @@ class CampaignBody(BaseModel):
     test_percent: int = Field(20, ge=10, le=50)  # winner mode: the share of people who get the test
     wait_hours: int = Field(4, ge=1, le=72)  # winner mode: hours to wait for results before the winner goes to the rest
     metric: Literal["opens", "clicks"] = "opens"
+    hours: workflows.Hours | None = None  # only email during the day where each person lives
 
 
 def _apply_test(c: MarketingCampaign, body: CampaignBody) -> None:
@@ -426,6 +427,7 @@ def _apply_test(c: MarketingCampaign, body: CampaignBody) -> None:
             copies.check_tags(sb, "Second subject line")
         except copies.Invalid as e:
             raise HTTPException(422, str(e)) from None
+    c.hours = body.hours.model_dump() if body.hours else None
     c.subject_b, c.ab_mode, c.test_percent, c.wait_hours, c.metric = (
         sb or None,
         body.ab_mode,
@@ -466,6 +468,7 @@ async def _campaign_out(db: AsyncSession, c: MarketingCampaign, detail: bool = F
         "created_by": c.created_by,
         "scheduled_by": c.scheduled_by,
         "created_at": c.created_at.isoformat(),
+        "hours": c.hours,
         "test": {
             "subject_b": c.subject_b,
             "mode": c.ab_mode,

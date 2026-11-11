@@ -124,6 +124,9 @@ class MarketingCampaign(Base, TimestampMixin):
     )  # winner mode: how long to wait for results
     metric: Mapped[str] = mapped_column(String(8), default="opens", server_default="opens")  # opens | clicks
     winner: Mapped[str | None] = mapped_column(String(1), nullable=True)
+    hours: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True
+    )  # {enabled, start, end}: email only in the day where they live
     decide_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
@@ -140,6 +143,9 @@ class MarketingRecipient(Base):
     )  # pending | held | sent | skipped | failed
     reason: Mapped[str] = mapped_column(String(40), default="")
     variant: Mapped[str] = mapped_column(String(1), default="", server_default="")  # A | B (empty: not decided yet)
+    send_after: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )  # waiting for their morning
     done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 

@@ -8,7 +8,7 @@ import hashlib
 import logging
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import session_maker
@@ -18,15 +18,19 @@ from app.models import (
     MarketingRecipient,
     MarketingSend,
     User,
+    Workspace,
 )
 from app.models.base import utcnow
 from app.services import marketing
 from app.services import marketing_copy as copies
 from app.services import marketing_segments as segs
+from app.services.marketing_hours import Hours, next_open, tz_for
 
 log = logging.getLogger("marketing.campaigns")
 # These skips are about the moment, not the person: leave the recipient waiting and try again on a later tick.
 WAIT = {"paused", "daily_cap", "engine_off"}
+SCAN_BATCH = 200  # people looked at in one go
+MAX_SCANS = 10  # batches per campaign per minute, so people waiting for their morning never hide the ones who can be sent to now
 
 
 async def counts(db: AsyncSession, campaign_id: str) -> dict:
@@ -50,8 +54,20 @@ async def counts(db: AsyncSession, campaign_id: str) -> dict:
             )
         )
     ).one()
+    deferred = (
+        await db.execute(
+            select(func.count())
+            .select_from(MarketingRecipient)
+            .where(
+                MarketingRecipient.campaign_id == campaign_id,
+                MarketingRecipient.status == "pending",
+                MarketingRecipient.send_after > utcnow(),
+            )
+        )
+    ).scalar_one()
     return {
         **totals,
+        "deferred": deferred,  # waiting for the sending hours where they live
         "skipped_by_reason": by_reason,
         "opened": seen[0],
         "clicked": seen[1],
@@ -128,12 +144,19 @@ async def start(db: AsyncSession, c: MarketingCampaign) -> None:
 
 
 async def _deliver_one(
-    db: AsyncSession, c: MarketingCampaign, r: MarketingRecipient, version: MarketingCopyVersion
+    db: AsyncSession, c: MarketingCampaign, r: MarketingRecipient, version: MarketingCopyVersion, now: datetime
 ) -> str:
     user = await db.get(User, r.user_id)
     if user is None:
         r.status, r.reason, r.done_at = "skipped", "account_gone", utcnow()
         return "skipped"
+    if c.hours and c.hours.get("enabled"):
+        h = Hours.model_validate(c.hours)
+        ws = await db.get(Workspace, user.workspace_id)
+        later = next_open(now, tz_for(ws.country if ws else None), h.start, h.end)
+        if later is not None:  # outside their day: leave them waiting, and don't look at them again until it opens
+            r.send_after = later
+            return "deferred"
     values = await copies.values_for(db, user)
     f = copies.fields_for(version, values)
     if r.variant.upper() == "B" and c.subject_b:  # b: the winner, sent to everyone who was waiting
@@ -209,31 +232,46 @@ async def deliver_due(now: datetime | None = None) -> dict:
                     )
                 )
             ).scalar_one()
-            batch = (
-                (
-                    await db.execute(
-                        select(MarketingRecipient)
-                        .where(MarketingRecipient.campaign_id == c.id, MarketingRecipient.status == "pending")
-                        .order_by(MarketingRecipient.id)
-                        .limit(budget)
+            scans = 0
+            while budget > 0 and scans < MAX_SCANS:
+                scans += 1
+                batch = (
+                    (
+                        await db.execute(
+                            select(MarketingRecipient)
+                            .where(
+                                MarketingRecipient.campaign_id == c.id,
+                                MarketingRecipient.status == "pending",
+                                or_(MarketingRecipient.send_after.is_(None), MarketingRecipient.send_after <= now),
+                            )
+                            .order_by(MarketingRecipient.id)
+                            .limit(SCAN_BATCH)
+                        )
                     )
+                    .scalars()
+                    .all()
                 )
-                .scalars()
-                .all()
-            )
-            for r in batch:
-                try:
-                    out = await _deliver_one(db, c, r, version)
-                except Exception:  # noqa: BLE001  one bad row must not stop the rest
-                    log.exception("campaign %s: recipient %s failed", c.id, r.id)
-                    r.status, r.reason, r.done_at = "failed", "error", utcnow()
-                    out = "failed"
-                await db.commit()
-                if out == "wait":
-                    budget = 0  # paused or at today's limit: nobody else will get through either; try again next tick
+                if not batch:
                     break
-                delivered += 1
-                budget -= 1
+                for r in batch:
+                    try:
+                        out = await _deliver_one(db, c, r, version, now)
+                    except Exception:  # noqa: BLE001  one bad row must not stop the rest
+                        log.exception("campaign %s: recipient %s failed", c.id, r.id)
+                        r.status, r.reason, r.done_at = "failed", "error", utcnow()
+                        out = "failed"
+                    await db.commit()
+                    if out == "wait":
+                        budget = (
+                            0  # paused or at today's limit: nobody else will get through either; try again next tick
+                        )
+                        break
+                    if out == "deferred":
+                        continue  # waiting for their morning: costs nothing, and the next person is looked at
+                    delivered += 1
+                    budget -= 1
+                    if budget <= 0:
+                        break
             left = (
                 await db.execute(
                     select(func.count())

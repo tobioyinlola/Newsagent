@@ -8,8 +8,9 @@ import type { Preview } from "../lib/segments";
 
 type Variants = Record<string, { sent: number; opened: number; clicked: number }>;
 type Test = { subject_b: string | null; mode: "split" | "winner"; test_percent: number; wait_hours: number; metric: "opens" | "clicks"; winner: "A" | "B" | null; decide_at: string | null };
-type Counts = { pending: number; held?: number; variants?: Variants; sent: number; skipped: number; failed: number; skipped_by_reason: Record<string, number>; opened?: number; clicked?: number };
-type Campaign = { id: string; name: string; status: "draft" | "scheduled" | "sending" | "sent" | "cancelled"; segment_id: string; segment_name: string; copy_id: string; copy_name: string; copy_version: number; audience: number; send_at: string | null; started_at: string | null; finished_at: string | null; created_by: string; test?: Test; email_b?: { subject: string }; counts?: Counts; preview?: Preview; email?: { subject: string; preheader: string; html: string } | null };
+type CampaignHours = { enabled: boolean; start: number; end: number };
+type Counts = { deferred?: number; pending: number; held?: number; variants?: Variants; sent: number; skipped: number; failed: number; skipped_by_reason: Record<string, number>; opened?: number; clicked?: number };
+type Campaign = { id: string; name: string; status: "draft" | "scheduled" | "sending" | "sent" | "cancelled"; segment_id: string; segment_name: string; copy_id: string; copy_name: string; copy_version: number; audience: number; send_at: string | null; started_at: string | null; finished_at: string | null; created_by: string; hours?: CampaignHours | null; test?: Test; email_b?: { subject: string }; counts?: Counts; preview?: Preview; email?: { subject: string; preheader: string; html: string } | null };
 type Pick = { id: string; name: string };
 
 const STATUS: Record<Campaign["status"], [string, string]> = { draft: ["Draft", "bg-paper"], scheduled: ["Scheduled", "bg-peach-tint"], sending: ["Sending", "bg-lilac"], sent: ["Sent", "bg-lime-tint"], cancelled: ["Cancelled", "bg-brand-red"] };
@@ -24,7 +25,7 @@ function Progress({ c }: { c: Campaign }) {
   return (
     <div className="space-y-1 text-sm">
       <div className="h-2 overflow-hidden rounded-full bg-line" role="progressbar" aria-label="Campaign progress" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><div className="h-full bg-brand-green" style={{ width: `${pct}%` }} /></div>
-      <p><b>{num(k.sent)}</b> sent · {num(k.pending + (k.held ?? 0))} waiting · {num(k.skipped)} skipped · {num(k.failed)} failed (of {num(c.audience)})</p>
+      <p><b>{num(k.sent)}</b> sent · {num(k.pending + (k.held ?? 0))} waiting{(k.deferred ?? 0) > 0 ? ` (${num(k.deferred ?? 0)} for their morning)` : ""} · {num(k.skipped)} skipped · {num(k.failed)} failed (of {num(c.audience)})</p>
       {k.sent > 0 && k.opened !== undefined && <p><b>{num(k.opened)}</b> opened ({Math.round((k.opened / k.sent) * 100)}%) · <b>{num(k.clicked ?? 0)}</b> clicked the button ({Math.round(((k.clicked ?? 0) / k.sent) * 100)}%)<span className="block text-xs text-muted">Opens are approximate: some mail apps load images for everyone, others block them. Clicks are the more reliable number.</span></p>}
       {Object.keys(k.skipped_by_reason).length > 0 && <p className="text-xs text-muted">Skipped: {Object.entries(k.skipped_by_reason).map(([r, n]) => `${n} ${WHY[r] ?? r}`).join(", ")}</p>}
     </div>
@@ -60,7 +61,7 @@ function TestResults({ c }: { c: Campaign }) {
   );
 }
 
-function TestSettings({ c, onSaved }: { c: Campaign; onSaved: () => void }) {
+function CampaignSettings({ c, onSaved }: { c: Campaign; onSaved: () => void }) {
   const t = c.test;
   const [on, setOn] = useState(!!t?.subject_b);
   const [b, setB] = useState(t?.subject_b ?? "");
@@ -68,11 +69,21 @@ function TestSettings({ c, onSaved }: { c: Campaign; onSaved: () => void }) {
   const [percent, setPercent] = useState(t?.test_percent ?? 20);
   const [hours, setHours] = useState(t?.wait_hours ?? 4);
   const [metric, setMetric] = useState<Test["metric"]>(t?.metric ?? "opens");
+  const [hoursOn, setHoursOn] = useState(!!c.hours?.enabled);
+  const [start, setStart] = useState(c.hours?.start ?? 9);
+  const [end, setEnd] = useState(c.hours?.end ?? 18);
   const save = useMutation({
-    mutationFn: () => unwrap(api.PUT("/v1/admin/marketing/campaigns/{campaign_id}", { params: { path: { campaign_id: c.id } }, body: { name: c.name, segment_id: c.segment_id, copy_id: c.copy_id, subject_b: on ? b : "", ab_mode: mode, test_percent: percent, wait_hours: hours, metric } })),
+    mutationFn: () => unwrap(api.PUT("/v1/admin/marketing/campaigns/{campaign_id}", { params: { path: { campaign_id: c.id } }, body: { name: c.name, segment_id: c.segment_id, copy_id: c.copy_id, subject_b: on ? b : "", ab_mode: mode, test_percent: percent, wait_hours: hours, metric, hours: hoursOn ? { enabled: true, start, end } : null } })),
     onSuccess: onSaved,
   });
   return (
+    <div className="space-y-3">
+    <fieldset className="space-y-2 rounded-xl border border-line p-3">
+      <legend className="px-1 font-semibold">Sending hours</legend>
+      <label className="flex items-center gap-2"><input type="checkbox" checked={hoursOn} onChange={(e) => setHoursOn(e.target.checked)} /> Only email people during the day where they live</label>
+      {hoursOn && <div className="flex flex-wrap items-center gap-2">between <input aria-label="From hour" type="number" min={0} max={23} className={`${inputCls} !w-20`} value={start} onChange={(e) => setStart(Number(e.target.value))} /> and <input aria-label="To hour" type="number" min={1} max={24} className={`${inputCls} !w-20`} value={end} onChange={(e) => setEnd(Number(e.target.value))} /> o’clock <span className="text-xs text-muted">(by their country; Nigeria’s time if we don’t know it). Anyone outside it waits for the morning, so a big campaign can take a day or more to finish.</span></div>}
+      {!hoursOn && <p className="text-xs text-muted">Off: everyone is emailed as soon as it starts, whatever the time where they live.</p>}
+    </fieldset>
     <fieldset className="space-y-2 rounded-xl border border-line p-3">
       <legend className="px-1 font-semibold">Subject line test</legend>
       <label className="flex items-center gap-2"><input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} /> Try a second subject line</label>
@@ -90,9 +101,10 @@ function TestSettings({ c, onSaved }: { c: Campaign; onSaved: () => void }) {
           )}
         </div>
       )}
-      <ErrorBox error={save.error} />
-      <Button variant="secondary" disabled={save.isPending || (on && !b.trim())} onClick={() => save.mutate()}>{save.isPending ? "Saving…" : "Save test settings"}</Button>
     </fieldset>
+    <ErrorBox error={save.error} />
+    <Button variant="secondary" disabled={save.isPending || (on && !b.trim()) || (hoursOn && start >= end)} onClick={() => save.mutate()}>{save.isPending ? "Saving…" : "Save settings"}</Button>
+    </div>
   );
 }
 
@@ -122,11 +134,11 @@ function Detail({ id, manage, engine, onClose }: { id: string; manage: boolean; 
       {!c ? <p aria-busy="true">Loading…</p> : (
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-4 text-sm">
-            <p><Badge s={c.status} /> <span className="ml-2 text-muted">{c.segment_name} · “{c.copy_name}” version {c.copy_version} · by {c.created_by}</span></p>
+            <p><Badge s={c.status} /> <span className="ml-2 text-muted">{c.segment_name} · “{c.copy_name}” version {c.copy_version} · by {c.created_by}{c.hours?.enabled ? ` · sends ${c.hours.start}:00 to ${c.hours.end}:00 local time` : ""}</span></p>
             {c.send_at && c.status !== "draft" && <p>{c.status === "scheduled" ? "Goes out" : "Started"} {new Date(c.send_at).toLocaleString()}{c.finished_at && <> · finished {ago(c.finished_at)}</>}</p>}
             <Progress c={c} />
             <TestResults c={c} />
-            {manage && c.status === "draft" && <TestSettings key={JSON.stringify(c.test)} c={c} onSaved={() => void qc.invalidateQueries({ queryKey: ["campaign", id] })} />}
+            {manage && c.status === "draft" && <CampaignSettings key={JSON.stringify([c.test, c.hours])} c={c} onSaved={() => void qc.invalidateQueries({ queryKey: ["campaign", id] })} />}
             {c.preview && (
               <div className="space-y-1"><p><b className="text-lg tabular-nums">{num(reach)}</b> people can be emailed{c.preview.excluded > 0 && <span className="text-muted"> ({num(c.preview.excluded)} more match but will be skipped)</span>}.</p>
                 {c.preview.sample.length > 0 && <ul className="divide-y divide-line rounded-lg border border-line">{c.preview.sample.map((s) => <li key={s.user_id} className="break-all px-3 py-1.5">{s.email} <span className="text-muted">· {s.company}</span></li>)}</ul>}
@@ -154,7 +166,7 @@ function Detail({ id, manage, engine, onClose }: { id: string; manage: boolean; 
           </div>
         </div>
       )}
-      {asking === "send" && c && <ConfirmDialog title="Send this campaign?" confirmLabel={later ? "Schedule it" : "Send now"} onConfirm={() => send.mutate()} onCancel={() => setAsking(null)}>“{c.email?.subject}” will go to <b>{num(reach)}</b> people {later && when ? `at ${new Date(when).toLocaleString()}` : "now"}, a few every minute. You can cancel while it is going out.</ConfirmDialog>}
+      {asking === "send" && c && <ConfirmDialog title="Send this campaign?" confirmLabel={later ? "Schedule it" : "Send now"} onConfirm={() => send.mutate()} onCancel={() => setAsking(null)}>“{c.email?.subject}” will go to <b>{num(reach)}</b> people {later && when ? `at ${new Date(when).toLocaleString()}` : "now"}, a few every minute{c.hours?.enabled ? `, only during ${c.hours.start}:00 to ${c.hours.end}:00 where each person lives (the rest wait for the morning)` : ""}. You can cancel while it is going out.</ConfirmDialog>}
       {asking === "cancel" && <ConfirmDialog title="Cancel this campaign?" confirmLabel="Cancel campaign" cancelLabel="Keep it going" onConfirm={() => cancel.mutate()} onCancel={() => setAsking(null)}>Anyone not yet emailed won’t be. Emails already sent can’t be taken back.</ConfirmDialog>}
       {asking === "delete" && <ConfirmDialog title="Delete this draft?" confirmLabel="Delete" onConfirm={() => del.mutate()} onCancel={() => setAsking(null)} />}
     </Card>

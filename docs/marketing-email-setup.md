@@ -4,7 +4,7 @@ Marketing email (Back office > Marketing) sends through the same sender as every
 sign-in codes. Go in this order.
 
 ## 1. Before anything is sent
-- **Migrations:** run `alembic upgrade head` on staging first (marketing adds `0040` to `0047`), then production.
+- **Migrations:** run `alembic upgrade head` on staging first (marketing adds `0040` to `0048`), then production.
 - **Worker:** the Celery worker and beat must be running. Marketing runs as the `marketing.deliver` task, once a minute.
 - **Permissions:** `marketing.view` and `marketing.manage` (admins have both). Give them to other roles under Team.
 
@@ -30,6 +30,7 @@ Without it, bad addresses keep getting emailed and hurt delivery for everyone.
   never counted or held back.
 - **Pause all marketing** stops every send within a minute. Workflows freeze where they are; campaigns wait.
 - Workflows send 9:00 to 18:00 in the person's country (`MARKETING_DEFAULT_TIMEZONE`, default Africa/Lagos, for countries we don't know).
-  Campaigns send at the time you pick.
+  Campaigns send at the time you pick, unless you switch on "Sending hours" for that campaign: then each person is emailed during
+  the same kind of window where they live, and anyone outside it waits for the morning (so a big campaign can take a day or more).
 - Opens are approximate (some mail apps load images for everyone). Clicks are the reliable number. Tracking can be switched off.
 - Before emailing existing users, confirm that the Terms and Privacy Policy they accepted allow product marketing email.

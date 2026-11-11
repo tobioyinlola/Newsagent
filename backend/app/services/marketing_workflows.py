@@ -6,15 +6,13 @@ who matches it. Every email goes through marketing.send(), so opt-outs, pause, t
 idempotency key means a step is never sent twice to one person. Emails go out inside the sending hours of the person's country."""
 
 import logging
-from datetime import UTC, datetime, time, timedelta
+from datetime import datetime, timedelta
 from typing import Annotated, Literal
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
 from app.db import session_maker
 from app.models import (
     MarketingCopy,
@@ -30,32 +28,13 @@ from app.models.base import utcnow
 from app.services import marketing, marketing_campaigns
 from app.services import marketing_copy as copies
 from app.services import marketing_segments as segs
+from app.services.marketing_hours import Hours, next_open, tz_for
 
 log = logging.getLogger("marketing.workflows")
 WAIT = {"paused", "daily_cap", "engine_off"}  # about the moment, not the person: stop for now, try again next minute
 LEAVE = {"opted_out", "suppressed", "account_inactive"}  # the person can't be emailed: they leave the workflow
 ENROLL_PER_TICK = 200
 MAX_TRIES = 3
-
-COUNTRY_TZ = {
-    "nigeria": "Africa/Lagos",
-    "ghana": "Africa/Accra",
-    "kenya": "Africa/Nairobi",
-    "south africa": "Africa/Johannesburg",
-    "egypt": "Africa/Cairo",
-    "united kingdom": "Europe/London",
-    "uk": "Europe/London",
-    "england": "Europe/London",
-    "united states": "America/New_York",
-    "usa": "America/New_York",
-    "us": "America/New_York",
-    "canada": "America/Toronto",
-    "india": "Asia/Kolkata",
-    "united arab emirates": "Asia/Dubai",
-    "uae": "Asia/Dubai",
-    "germany": "Europe/Berlin",
-    "france": "Europe/Paris",
-}
 
 
 class Invalid(ValueError):
@@ -102,18 +81,6 @@ class EndStep(BaseModel):
 Step = Annotated[WaitStep | EmailStep | BranchStep | EndStep, Field(discriminator="type")]
 
 
-class Hours(BaseModel):
-    enabled: bool = True
-    start: int = Field(9, ge=0, le=23)
-    end: int = Field(18, ge=1, le=24)
-
-    @model_validator(mode="after")
-    def _order(self) -> "Hours":
-        if self.start >= self.end:
-            raise ValueError("The sending hours must start before they end.")
-        return self
-
-
 class WorkflowIn(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     trigger_segment_id: str
@@ -121,26 +88,6 @@ class WorkflowIn(BaseModel):
     goal_segment_id: str | None = None
     hours: Hours = Field(default_factory=Hours)
     reentry_days: int | None = Field(None, ge=7, le=365)  # empty: nobody goes through twice
-
-
-# ---------- sending hours ----------
-def tz_for(country: str | None) -> ZoneInfo:
-    for name in (COUNTRY_TZ.get((country or "").strip().lower()), get_settings().marketing_default_timezone, "UTC"):
-        if name:
-            try:
-                return ZoneInfo(name)
-            except ZoneInfoNotFoundError:
-                continue
-    return ZoneInfo("UTC")
-
-
-def next_open(now: datetime, tz: ZoneInfo, start: int, end: int) -> datetime | None:
-    """None if `now` is inside the sending hours where the person lives; otherwise when the hours next open (UTC)."""
-    local = now.astimezone(tz)
-    if start <= local.hour < end:
-        return None
-    day = local.date() if local.hour < start else local.date() + timedelta(days=1)
-    return datetime.combine(day, time(start), tzinfo=tz).astimezone(UTC)
 
 
 # ---------- checking and switching on ----------

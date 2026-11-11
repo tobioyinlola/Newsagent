@@ -914,6 +914,16 @@
             "title": "Copy Id",
             "type": "string"
           },
+          "hours": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Hours"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "metric": {
             "default": "opens",
             "enum": [
