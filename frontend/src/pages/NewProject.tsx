@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { track } from "../lib/ga";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, unwrap } from "../api/client";
@@ -28,7 +29,7 @@ export function NewProject() {
       await unwrap(api.POST("/v1/projects/{project_id}/guided/start", { params: { path: { project_id: p.id } } }));
       return p;
     },
-    onSuccess: (p) => nav(`/ai-newsroom/${p.id}`),
+    onSuccess: (p) => { track.videoStarted("guided"); nav(`/ai-newsroom/${p.id}`); },
   });
   const summary = useQuery({ queryKey: ["billing-summary"], queryFn: () => unwrap(api.GET("/v1/billing/summary")) });
   // out of credits: nothing to start. The popup explains and sends them to buy more.

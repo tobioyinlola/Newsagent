@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { backoffInterval } from "../lib/polling";
+import { track } from "../lib/ga";
 import { Delivery } from "../components/Delivery";
 import { BrollPanel } from "../components/BrollPanel";
 import { ProgressPanel } from "../components/ProgressPanel";
@@ -42,6 +43,14 @@ export function ProjectDetail() {
     refetchInterval: 15000,
   });
   const retry = useMutation({ mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/retry", path)), onSuccess: () => qc.invalidateQueries({ queryKey: ["project", id] }) });
+
+  // A video that becomes ready while this page is open counts as "ready". Opening one that was already finished does not.
+  const seenState = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (state === undefined) return;
+    if (seenState.current !== undefined && seenState.current !== "final_ready" && state === "final_ready") track.videoReady();
+    seenState.current = state;
+  }, [state]);
 
   // Live status: refetch whenever the server pushes a new state.
   useEffect(() => {

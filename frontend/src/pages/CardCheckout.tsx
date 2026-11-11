@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { track } from "../lib/ga";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { DistributionReturnLink } from "../components/DistributionReturnLink";
@@ -25,6 +26,9 @@ export function CardCheckout() {
   useEffect(() => {
     if (paid) for (const key of ["me", "billing-summary", "ledger", "payment-checkouts"]) void qc.invalidateQueries({ queryKey: [key] });
   }, [paid, qc]);
+  useEffect(() => {
+    if (paid && payment) track.purchase({ id: payment.checkout_id, value: Number(payment.amount ?? payment.amount_usd), currency: payment.currency, credits: Number(payment.credits) });
+  }, [paid, payment]);
   const change = (key: keyof CardDetails, value: string) => { setCard(c => ({ ...c, [key]: value })); setErrors(e => ({ ...e, [key]: undefined })); };
   const confirm = async () => {
     if (!payment || busy || attempted) return;

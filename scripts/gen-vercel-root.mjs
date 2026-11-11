@@ -13,7 +13,11 @@ const env = {
 };
 // The API lives on Railway: Vercel forwards the site's /v1/... calls there (no CORS, no build-time variable needed).
 const API_TARGET = process.env.API_TARGET || "https://backend-production-73a97.up.railway.app";
-const headers = Object.entries(securityHeaders(env)).map(([key, value]) => ({ key, value }));
+const toList = (h) => Object.entries(h).map(([key, value]) => ({ key, value }));
+// The public site may load Google Analytics (after a visitor accepts). The operator back office under /admin never does: it gets the
+// strict policy with no third-party script or reporting address.
+const publicHeaders = toList(securityHeaders(env, { analytics: true }));
+const adminHeaders = toList(securityHeaders(env, { analytics: false }));
 const config = {
   $schema: "https://openapi.vercel.sh/vercel.json",
   services: { frontend: { root: "frontend", framework: "vite", buildCommand: "pnpm build" } },
@@ -22,7 +26,10 @@ const config = {
     { source: "/(.*)", destination: { service: "frontend" } },
   ],
   headers: [
-    { source: "/(.*)", headers: [...headers, { key: "Cache-Control", value: "no-cache" }] },
+    { source: "/((?!admin).*)", headers: publicHeaders },
+    { source: "/admin", headers: adminHeaders },
+    { source: "/admin/(.*)", headers: adminHeaders },
+    { source: "/(.*)", headers: [{ key: "Cache-Control", value: "no-cache" }] },
     { source: "/assets/(.*)", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
   ],
 };

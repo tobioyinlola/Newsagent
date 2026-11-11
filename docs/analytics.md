@@ -1,5 +1,7 @@
 # Audience reporting
 
+> This page covers the in-app audience reports, counted from our own database. Website analytics with Google Analytics (consent-based) is in `docs/google-analytics.md`.
+
 Customer navigation: **Analytics** (`/analytics`). The dashboard has a 30-day summary and completed videos link to their own report. Admin navigation: **Reports & analytics** (`/admin/analytics`), under Operations. Admin reports include every workspace; customers only see their own workspace. Filter by story, use 7/30/90 days or a custom UTC range up to 366 days, inspect trend points/the accessible data table, or download CSV.
 
 ## Cover Founder measurements
