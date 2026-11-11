@@ -112,6 +112,19 @@ class MarketingCampaign(Base, TimestampMixin):
     audience: Mapped[int] = mapped_column(Integer, default=0)  # who was picked when sending started
     created_by: Mapped[str] = mapped_column(String(320), default="")
     scheduled_by: Mapped[str] = mapped_column(String(320), default="")
+    # A/B test of the subject line (subject_b empty = no test). split: everyone is split between A and B. winner: a small test
+    # group is split, and after wait_hours the better subject (by metric) goes to everyone else.
+    subject_b: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    ab_mode: Mapped[str] = mapped_column(String(8), default="split", server_default="split")
+    test_percent: Mapped[int] = mapped_column(
+        Integer, default=20, server_default="20"
+    )  # winner mode: share who get the test
+    wait_hours: Mapped[int] = mapped_column(
+        Integer, default=4, server_default="4"
+    )  # winner mode: how long to wait for results
+    metric: Mapped[str] = mapped_column(String(8), default="opens", server_default="opens")  # opens | clicks
+    winner: Mapped[str | None] = mapped_column(String(1), nullable=True)
+    decide_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class MarketingRecipient(Base):
@@ -122,8 +135,11 @@ class MarketingRecipient(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
     campaign_id: Mapped[str] = mapped_column(ForeignKey("marketing_campaigns.id", ondelete="CASCADE"), index=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    status: Mapped[str] = mapped_column(String(10), default="pending", index=True)  # pending | sent | skipped | failed
+    status: Mapped[str] = mapped_column(
+        String(10), default="pending", index=True
+    )  # pending | held | sent | skipped | failed
     reason: Mapped[str] = mapped_column(String(40), default="")
+    variant: Mapped[str] = mapped_column(String(1), default="", server_default="")  # A | B (empty: not decided yet)
     done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 

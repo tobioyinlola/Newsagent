@@ -6,8 +6,10 @@ import { ago, num } from "../lib/format";
 import { useCan } from "../lib/can";
 import type { Preview } from "../lib/segments";
 
-type Counts = { pending: number; sent: number; skipped: number; failed: number; skipped_by_reason: Record<string, number>; opened?: number; clicked?: number };
-type Campaign = { id: string; name: string; status: "draft" | "scheduled" | "sending" | "sent" | "cancelled"; segment_id: string; segment_name: string; copy_id: string; copy_name: string; copy_version: number; audience: number; send_at: string | null; started_at: string | null; finished_at: string | null; created_by: string; counts?: Counts; preview?: Preview; email?: { subject: string; preheader: string; html: string } | null };
+type Variants = Record<string, { sent: number; opened: number; clicked: number }>;
+type Test = { subject_b: string | null; mode: "split" | "winner"; test_percent: number; wait_hours: number; metric: "opens" | "clicks"; winner: "A" | "B" | null; decide_at: string | null };
+type Counts = { pending: number; held?: number; variants?: Variants; sent: number; skipped: number; failed: number; skipped_by_reason: Record<string, number>; opened?: number; clicked?: number };
+type Campaign = { id: string; name: string; status: "draft" | "scheduled" | "sending" | "sent" | "cancelled"; segment_id: string; segment_name: string; copy_id: string; copy_name: string; copy_version: number; audience: number; send_at: string | null; started_at: string | null; finished_at: string | null; created_by: string; test?: Test; email_b?: { subject: string }; counts?: Counts; preview?: Preview; email?: { subject: string; preheader: string; html: string } | null };
 type Pick = { id: string; name: string };
 
 const STATUS: Record<Campaign["status"], [string, string]> = { draft: ["Draft", "bg-paper"], scheduled: ["Scheduled", "bg-peach-tint"], sending: ["Sending", "bg-lilac"], sent: ["Sent", "bg-lime-tint"], cancelled: ["Cancelled", "bg-brand-red"] };
@@ -22,10 +24,75 @@ function Progress({ c }: { c: Campaign }) {
   return (
     <div className="space-y-1 text-sm">
       <div className="h-2 overflow-hidden rounded-full bg-line" role="progressbar" aria-label="Campaign progress" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><div className="h-full bg-brand-green" style={{ width: `${pct}%` }} /></div>
-      <p><b>{num(k.sent)}</b> sent · {num(k.pending)} waiting · {num(k.skipped)} skipped · {num(k.failed)} failed (of {num(c.audience)})</p>
+      <p><b>{num(k.sent)}</b> sent · {num(k.pending + (k.held ?? 0))} waiting · {num(k.skipped)} skipped · {num(k.failed)} failed (of {num(c.audience)})</p>
       {k.sent > 0 && k.opened !== undefined && <p><b>{num(k.opened)}</b> opened ({Math.round((k.opened / k.sent) * 100)}%) · <b>{num(k.clicked ?? 0)}</b> clicked the button ({Math.round(((k.clicked ?? 0) / k.sent) * 100)}%)<span className="block text-xs text-muted">Opens are approximate: some mail apps load images for everyone, others block them. Clicks are the more reliable number.</span></p>}
       {Object.keys(k.skipped_by_reason).length > 0 && <p className="text-xs text-muted">Skipped: {Object.entries(k.skipped_by_reason).map(([r, n]) => `${n} ${WHY[r] ?? r}`).join(", ")}</p>}
     </div>
+  );
+}
+
+const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)}%` : "–");
+
+function TestResults({ c }: { c: Campaign }) {
+  const v = c.counts?.variants ?? {};
+  const t = c.test;
+  if (!t?.subject_b || Object.keys(v).length === 0) return null;
+  return (
+    <div className="space-y-2">
+      <p className="font-semibold">Subject line test</p>
+      <table className="w-full text-sm">
+        <caption className="sr-only">Results for each subject line</caption>
+        <thead><tr className="text-left text-xs text-muted"><th className="py-1">Subject</th><th>Sent</th><th>Opened</th><th>Clicked</th></tr></thead>
+        <tbody>
+          {(["A", "B"] as const).map((k) => (
+            <tr key={k} className="border-t border-line">
+              <td className="py-1.5 pr-2"><b>{k}</b> {k === "A" ? c.email?.subject : c.email_b?.subject}{t.winner === k && <span className="ml-2 rounded-sm bg-lime-tint px-1.5 py-0.5 text-xs font-bold">Winner</span>}</td>
+              <td className="tabular-nums">{num(v[k]?.sent ?? 0)}</td>
+              <td className="tabular-nums">{num(v[k]?.opened ?? 0)} ({pct(v[k]?.opened ?? 0, v[k]?.sent ?? 0)})</td>
+              <td className="tabular-nums">{num(v[k]?.clicked ?? 0)} ({pct(v[k]?.clicked ?? 0, v[k]?.sent ?? 0)})</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {t.mode === "winner" && !t.winner && c.status !== "cancelled" && <p className="text-xs text-muted">{t.decide_at ? `The better subject (by ${t.metric}) goes to everyone else at ${new Date(t.decide_at).toLocaleString()}.` : "Sending the test group first; then we wait for results before choosing."}</p>}
+      {t.winner && <p className="text-xs text-muted">Subject {t.winner} won on {t.metric} and went to everyone who was waiting. These numbers are the test group only.</p>}
+    </div>
+  );
+}
+
+function TestSettings({ c, onSaved }: { c: Campaign; onSaved: () => void }) {
+  const t = c.test;
+  const [on, setOn] = useState(!!t?.subject_b);
+  const [b, setB] = useState(t?.subject_b ?? "");
+  const [mode, setMode] = useState<Test["mode"]>(t?.mode ?? "split");
+  const [percent, setPercent] = useState(t?.test_percent ?? 20);
+  const [hours, setHours] = useState(t?.wait_hours ?? 4);
+  const [metric, setMetric] = useState<Test["metric"]>(t?.metric ?? "opens");
+  const save = useMutation({
+    mutationFn: () => unwrap(api.PUT("/v1/admin/marketing/campaigns/{campaign_id}", { params: { path: { campaign_id: c.id } }, body: { name: c.name, segment_id: c.segment_id, copy_id: c.copy_id, subject_b: on ? b : "", ab_mode: mode, test_percent: percent, wait_hours: hours, metric } })),
+    onSuccess: onSaved,
+  });
+  return (
+    <fieldset className="space-y-2 rounded-xl border border-line p-3">
+      <legend className="px-1 font-semibold">Subject line test</legend>
+      <label className="flex items-center gap-2"><input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} /> Try a second subject line</label>
+      {on && (
+        <div className="space-y-3">
+          <p className="text-xs text-muted">A is the email’s own subject: <b>{c.email?.subject}</b></p>
+          <label className="block">Subject B<input className={inputCls} value={b} maxLength={200} onChange={(e) => setB(e.target.value)} /></label>
+          <label className="flex items-start gap-2"><input type="radio" className="mt-1" checked={mode === "split"} onChange={() => setMode("split")} /><span><b>Split everyone</b> half and half, then compare how they did.</span></label>
+          <label className="flex items-start gap-2"><input type="radio" className="mt-1" checked={mode === "winner"} onChange={() => setMode("winner")} /><span><b>Test a few, then send the better one to the rest.</b> Needs at least 20 people and “Count opens and clicks” on.</span></label>
+          {mode === "winner" && (
+            <div className="flex flex-wrap items-center gap-2 pl-6">
+              Test on <input aria-label="Test share" type="number" min={10} max={50} className={`${inputCls} !w-20`} value={percent} onChange={(e) => setPercent(Number(e.target.value))} />% of people, wait <input aria-label="Hours to wait" type="number" min={1} max={72} className={`${inputCls} !w-20`} value={hours} onChange={(e) => setHours(Number(e.target.value))} /> hours, then pick by
+              <select aria-label="Pick the winner by" className={`${inputCls} !w-auto`} value={metric} onChange={(e) => setMetric(e.target.value as Test["metric"])}><option value="opens">opens (approximate)</option><option value="clicks">clicks</option></select>
+            </div>
+          )}
+        </div>
+      )}
+      <ErrorBox error={save.error} />
+      <Button variant="secondary" disabled={save.isPending || (on && !b.trim())} onClick={() => save.mutate()}>{save.isPending ? "Saving…" : "Save test settings"}</Button>
+    </fieldset>
   );
 }
 
@@ -58,6 +125,8 @@ function Detail({ id, manage, engine, onClose }: { id: string; manage: boolean; 
             <p><Badge s={c.status} /> <span className="ml-2 text-muted">{c.segment_name} · “{c.copy_name}” version {c.copy_version} · by {c.created_by}</span></p>
             {c.send_at && c.status !== "draft" && <p>{c.status === "scheduled" ? "Goes out" : "Started"} {new Date(c.send_at).toLocaleString()}{c.finished_at && <> · finished {ago(c.finished_at)}</>}</p>}
             <Progress c={c} />
+            <TestResults c={c} />
+            {manage && c.status === "draft" && <TestSettings key={JSON.stringify(c.test)} c={c} onSaved={() => void qc.invalidateQueries({ queryKey: ["campaign", id] })} />}
             {c.preview && (
               <div className="space-y-1"><p><b className="text-lg tabular-nums">{num(reach)}</b> people can be emailed{c.preview.excluded > 0 && <span className="text-muted"> ({num(c.preview.excluded)} more match but will be skipped)</span>}.</p>
                 {c.preview.sample.length > 0 && <ul className="divide-y divide-line rounded-lg border border-line">{c.preview.sample.map((s) => <li key={s.user_id} className="break-all px-3 py-1.5">{s.email} <span className="text-muted">· {s.company}</span></li>)}</ul>}
@@ -80,7 +149,7 @@ function Detail({ id, manage, engine, onClose }: { id: string; manage: boolean; 
             </div>
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-semibold">The email <span className="font-normal text-muted">(with example details)</span></p>
+            <p className="text-sm font-semibold">The email <span className="font-normal text-muted">(with example details{c.email_b ? `; subject B would read “${c.email_b.subject}”` : ""})</span></p>
             {c.email ? <><p className="rounded-lg border border-line bg-paper px-3 py-2 text-sm"><b>{c.email.subject}</b>{c.email.preheader && <span className="text-muted"> — {c.email.preheader}</span>}</p><iframe title="Email preview" sandbox="" srcDoc={c.email.html} className="h-[30rem] w-full rounded-lg border border-line bg-white" /></> : <p className="text-sm text-muted">The email isn’t available.</p>}
           </div>
         </div>
@@ -101,7 +170,7 @@ export function CampaignsTab({ engine }: { engine: string }) {
   const segments = useQuery({ queryKey: ["segments"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/segments")).then((r) => (r as unknown as { items: Pick[] }).items) });
   const copies = useQuery({ queryKey: ["copies"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/copies")).then((r) => (r as unknown as { items: Pick[] }).items) });
   const create = useMutation({
-    mutationFn: () => unwrap(api.POST("/v1/admin/marketing/campaigns", { body: form! })),
+    mutationFn: () => unwrap(api.POST("/v1/admin/marketing/campaigns", { body: { ...form!, ab_mode: "split", test_percent: 20, wait_hours: 4, metric: "opens" } })),
     onSuccess: async (c) => { await qc.invalidateQueries({ queryKey: ["campaigns"] }); setForm(null); setOpen((c as unknown as Campaign).id); },
   });
   if (open) return <Detail id={open} manage={manage} engine={engine} onClose={() => setOpen(null)} />;

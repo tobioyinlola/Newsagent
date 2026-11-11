@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime, timedelta
 from html import escape
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -402,6 +403,29 @@ class CampaignBody(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     segment_id: str
     copy_id: str
+    subject_b: str | None = Field(None, max_length=200)  # a second subject line to test against the copy's own
+    ab_mode: Literal["split", "winner"] = "split"
+    test_percent: int = Field(20, ge=10, le=50)  # winner mode: the share of people who get the test
+    wait_hours: int = Field(4, ge=1, le=72)  # winner mode: hours to wait for results before the winner goes to the rest
+    metric: Literal["opens", "clicks"] = "opens"
+
+
+def _apply_test(c: MarketingCampaign, body: CampaignBody) -> None:
+    sb = (body.subject_b or "").strip()
+    if sb:
+        if "\n" in sb or "\r" in sb:
+            raise HTTPException(422, "The second subject line must be one line.")
+        try:
+            copies.check_tags(sb, "Second subject line")
+        except copies.Invalid as e:
+            raise HTTPException(422, str(e)) from None
+    c.subject_b, c.ab_mode, c.test_percent, c.wait_hours, c.metric = (
+        sb or None,
+        body.ab_mode,
+        body.test_percent,
+        body.wait_hours,
+        body.metric,
+    )
 
 
 class ScheduleBody(BaseModel):
@@ -435,6 +459,15 @@ async def _campaign_out(db: AsyncSession, c: MarketingCampaign, detail: bool = F
         "created_by": c.created_by,
         "scheduled_by": c.scheduled_by,
         "created_at": c.created_at.isoformat(),
+        "test": {
+            "subject_b": c.subject_b,
+            "mode": c.ab_mode,
+            "test_percent": c.test_percent,
+            "wait_hours": c.wait_hours,
+            "metric": c.metric,
+            "winner": c.winner,
+            "decide_at": c.decide_at.isoformat() if c.decide_at else None,
+        },
     }
     if detail or c.status in {"sending", "sent", "cancelled"}:
         out["counts"] = await campaigns.counts(db, c.id)
@@ -479,6 +512,7 @@ async def create_campaign(
         rules=seg.rules,
         created_by=p.user.email,
     )
+    _apply_test(c, body)
     db.add(c)
     await db.flush()
     audit(db, p.user.email, "marketing.campaign_created", target_type="campaign", target_id=c.id, request=request)
@@ -502,6 +536,8 @@ async def get_campaign(
         )
     ).scalar_one_or_none()
     out["email"] = copies.rendered(ver, copies.sample_values()) if ver else None
+    if ver and c.subject_b:
+        out["email_b"] = {"subject": copies.fill(c.subject_b, copies.sample_values())}
     return out
 
 
@@ -524,6 +560,7 @@ async def update_campaign(
         copy.current_version,
         seg.rules,
     )
+    _apply_test(c, body)
     audit(db, p.user.email, "marketing.campaign_changed", target_type="campaign", target_id=c.id, request=request)
     await db.commit()
     return await _campaign_out(db, c, True)
@@ -553,6 +590,25 @@ async def schedule_campaign(
     now_count = (await segs.preview(db, segs.Rules.model_validate(c.rules), sample=0))["reachable"]
     if now_count == 0:
         raise HTTPException(422, "This segment has nobody who can be emailed right now.")
+    if c.subject_b:
+        ver = (
+            await db.execute(
+                select(MarketingCopyVersion).where(
+                    MarketingCopyVersion.copy_id == c.copy_id, MarketingCopyVersion.version == c.copy_version
+                )
+            )
+        ).scalar_one()
+        if c.subject_b.strip() == ver.subject.strip():
+            raise HTTPException(422, "The two subject lines are the same. Change the second one, or remove the test.")
+        if c.ab_mode == "winner":
+            if not (await marketing.get_config(db)).track:
+                raise HTTPException(
+                    409, "Picking a winner needs open and click counts. Turn on “Count opens and clicks” first."
+                )
+            if now_count < 20:
+                raise HTTPException(
+                    422, "A test with a winner needs at least 20 people. Use “split everyone” for a smaller group."
+                )
     if now_count != body.confirm_count:
         raise HTTPException(
             409,

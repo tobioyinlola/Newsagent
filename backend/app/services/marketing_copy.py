@@ -67,7 +67,7 @@ class CopyIn(BaseModel):
     button_url: str = Field("", max_length=500)
 
 
-def _check_tags(text: str, what: str) -> None:
+def check_tags(text: str, what: str) -> None:
     for m in TAG.finditer(text):
         t = BY_KEY.get(m.group(1))
         if t is None:
@@ -96,7 +96,7 @@ def validate(c: CopyIn) -> CopyIn:
         ("Message", c.body),
         ("Button text", c.button_label),
     ):
-        _check_tags(text, what)
+        check_tags(text, what)
     if bool(c.button_label) != bool(c.button_url):
         raise Invalid("A button needs both its text and its link, or neither.")
     if c.button_url:

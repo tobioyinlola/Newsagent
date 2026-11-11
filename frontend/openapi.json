@@ -845,8 +845,26 @@
       },
       "CampaignBody": {
         "properties": {
+          "ab_mode": {
+            "default": "split",
+            "enum": [
+              "split",
+              "winner"
+            ],
+            "title": "Ab Mode",
+            "type": "string"
+          },
           "copy_id": {
             "title": "Copy Id",
+            "type": "string"
+          },
+          "metric": {
+            "default": "opens",
+            "enum": [
+              "opens",
+              "clicks"
+            ],
+            "title": "Metric",
             "type": "string"
           },
           "name": {
@@ -858,6 +876,32 @@
           "segment_id": {
             "title": "Segment Id",
             "type": "string"
+          },
+          "subject_b": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject B"
+          },
+          "test_percent": {
+            "default": 20,
+            "maximum": 50.0,
+            "minimum": 10.0,
+            "title": "Test Percent",
+            "type": "integer"
+          },
+          "wait_hours": {
+            "default": 4,
+            "maximum": 72.0,
+            "minimum": 1.0,
+            "title": "Wait Hours",
+            "type": "integer"
           }
         },
         "required": [

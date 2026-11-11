@@ -4536,12 +4536,36 @@ export interface components {
         };
         /** CampaignBody */
         CampaignBody: {
+            /**
+             * Ab Mode
+             * @default split
+             * @enum {string}
+             */
+            ab_mode: "split" | "winner";
             /** Copy Id */
             copy_id: string;
+            /**
+             * Metric
+             * @default opens
+             * @enum {string}
+             */
+            metric: "opens" | "clicks";
             /** Name */
             name: string;
             /** Segment Id */
             segment_id: string;
+            /** Subject B */
+            subject_b?: string | null;
+            /**
+             * Test Percent
+             * @default 20
+             */
+            test_percent: number;
+            /**
+             * Wait Hours
+             * @default 4
+             */
+            wait_hours: number;
         };
         /** CaptionsOut */
         CaptionsOut: {
