@@ -49,6 +49,38 @@ real numbers. With no value, there is no banner and nothing loads.
 
 To stop all tracking, clear the value and redeploy.
 
+## 1b. Google Tag Manager (optional)
+
+Container: `GTM-MX2M47JB`. Add in Vercel (Production only), then redeploy:
+
+| Name | Value |
+|---|---|
+| `VITE_GTM_ID` | `GTM-MX2M47JB` |
+| `VITE_GA_VIA_GTM` | leave empty (see the warning below) |
+
+**Do not paste the snippet Google gives you into `index.html`.** It is an inline `<script>`, which the site's security policy refuses, and
+it would load for everyone straight away: before they choose about cookies, for browsers that send Do Not Track, on private links, and
+on the back office. Our code loads the same container from Google's address, after the consent rules, and never on those pages.
+
+What the container receives, from our code:
+- the consent state, set **before** the container loads (`analytics_storage` denied until Accept; advertising always denied);
+- `page_view` data-layer events with a cleaned address (`page_location`, `page_path`, `page_title`) each time the screen changes;
+- `sign_up`, `video_started`, `video_ready` and `purchase` events. Use **Custom Event** triggers with those names.
+
+**Avoid counting everything twice.** Analytics is already sent to directly (`G-L3JSNEQF7K`). So, in the container, do **not** add a GA4 tag for
+the same measurement id, unless you also set `VITE_GA_VIA_GTM=true` (then we stop sending directly and the container is the only
+sender). If you do use the container for GA4:
+- set the GA4 configuration tag to **not** send a page view when it loads (our `page_view` event does that, with the cleaned address);
+- don't use GTM's built-in *Page View* or *History Change* triggers for GA4: they report the raw address, which can contain private codes;
+- in each tag's *Consent settings*, require `analytics_storage` (and `ad_storage` etc. for anything advertising-related).
+
+**Security policy.** Custom HTML tags and extra pixels (Meta, LinkedIn, Google Ads) load more scripts, and the site's security policy only
+allows Google's measurement addresses. Each new vendor needs its addresses added deliberately in `frontend/security-headers.mjs` (and
+`vercel.json` regenerated); anything else is blocked, which is the point. GTM **preview/debug mode** is also blocked by default for the
+same reason.
+
+The `<noscript>` iframe Google suggests for visitors without JavaScript isn't used: this is a JavaScript app, and the policy blocks frames.
+
 ## 2. Settings to change in Google Analytics (one time)
 
 In analytics.google.com, for the property that owns `G-L3JSNEQF7K`:

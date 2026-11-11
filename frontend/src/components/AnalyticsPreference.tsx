@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { Card } from "./ui";
 import { browserOptOut, getConsent, onConsentChange, setConsent } from "../lib/consent";
-import { gaConfigured } from "../lib/ga";
+import { trackingConfigured } from "../lib/ga";
 
 // Settings > Profile: change the analytics choice without hunting for the footer link.
 export function AnalyticsPreference() {
   const [choice, setChoice] = useState(getConsent);
   useEffect(() => onConsentChange(setChoice), []);
-  if (!gaConfigured) return null;
+  if (!trackingConfigured) return null;
   const blocked = browserOptOut();
   return (
     <Card title="Analytics cookies">

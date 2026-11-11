@@ -3,9 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const ID = "G-L3JSNEQF7K";
 type Mod = { ga: typeof import("./ga"); consent: typeof import("./consent") };
 
-async function load(id: string | undefined = ID): Promise<Mod> {
+async function load(id: string | undefined = ID, gtm = "", viaGtm = ""): Promise<Mod> {
   vi.resetModules();
   vi.stubEnv("VITE_GA_MEASUREMENT_ID", id ?? "");
+  vi.stubEnv("VITE_GTM_ID", gtm);
+  vi.stubEnv("VITE_GA_VIA_GTM", viaGtm);
   return { ga: await import("./ga"), consent: await import("./consent") };
 }
 const sent = () => (window.dataLayer ?? []).map((e) => Array.from(e as ArrayLike<unknown>));
@@ -149,5 +151,80 @@ describe("after Accept", () => {
     expect(document.cookie).not.toContain("_ga");
     ga.trackPageView("/", "");
     expect(events("page_view")).toHaveLength(0);
+  });
+});
+
+const GTM = "GTM-MX2M47JB";
+const scripts = () => Array.from(document.querySelectorAll<HTMLScriptElement>("script[src*=googletagmanager]")).map((e) => e.src);
+const objectEvents = (name: string) => (window.dataLayer ?? []).filter((e) => !(Object.prototype.toString.call(e) === "[object Arguments]") && (e as { event?: string }).event === name) as Record<string, unknown>[];
+
+describe("Google Tag Manager", () => {
+  it("is not loaded at all unless a container id is set", async () => {
+    const { ga } = await load(ID, "");
+    ga.startAnalytics();
+    expect(ga.gtmConfigured).toBe(false);
+    expect(scripts().some((s) => s.includes("gtm.js"))).toBe(false);
+  });
+  it("loads from Google's own address (never inline), after the consent defaults are in place", async () => {
+    const { ga } = await load("", GTM);
+    ga.startAnalytics();
+    expect(scripts()).toEqual([`https://www.googletagmanager.com/gtm.js?id=${GTM}`]);
+    expect(document.querySelectorAll("script:not([src])")).toHaveLength(0); // nothing inline: the site's security policy would refuse it
+    const order = (window.dataLayer ?? []).map((e) => (Object.prototype.toString.call(e) === "[object Arguments]" ? `${Array.from(e as ArrayLike<unknown>)[0]}` : (e as { event?: string }).event));
+    expect(order.indexOf("consent")).toBeGreaterThanOrEqual(0);
+    expect(order.indexOf("consent")).toBeLessThan(order.indexOf("gtm.js"));
+    expect(sent().find((e) => e[0] === "consent" && e[1] === "default")?.[2]).toMatchObject({ analytics_storage: "denied", ad_storage: "denied", ad_user_data: "denied", ad_personalization: "denied" });
+    expect(document.cookie).not.toContain("_ga");
+  });
+  it("is never loaded for someone who declined, or whose browser sends a privacy signal", async () => {
+    const { ga, consent } = await load("", GTM);
+    consent.setConsent("denied");
+    ga.startAnalytics();
+    expect(scripts()).toEqual([]);
+    consent.setConsent(null);
+    Object.defineProperty(navigator, "doNotTrack", { value: "1", configurable: true });
+    ga.startAnalytics();
+    expect(scripts()).toEqual([]);
+  });
+  it("gives the container a clean data layer: page views with the cleaned address, and the key moments, as events a trigger can use", async () => {
+    const { ga } = await load("", GTM);
+    ga.startAnalytics();
+    ga.trackPageView("/ai-newsroom/0123456789abcdef0123456789abcdef", "?token=secret&utm_campaign=welcome");
+    ga.trackPageView("/i/abc", "");
+    ga.track.signUp();
+    expect(objectEvents("page_view")).toEqual([{ event: "page_view", page_location: `${location.origin}/ai-newsroom/:id?utm_campaign=welcome`, page_path: "/ai-newsroom/:id", page_title: "/ai-newsroom/:id" }]);
+    expect(objectEvents("sign_up")).toEqual([{ event: "sign_up", method: "email" }]);
+    expect(events("page_view")).toHaveLength(0); // no Analytics gtag command: this build has no Analytics id of its own
+  });
+  it("when both are set, Analytics is still sent to directly and the container also gets the events", async () => {
+    const { ga } = await load(ID, GTM);
+    ga.startAnalytics();
+    expect(scripts().sort()).toEqual([`https://www.googletagmanager.com/gtag/js?id=${ID}`, `https://www.googletagmanager.com/gtm.js?id=${GTM}`].sort());
+    ga.trackPageView("/signup", "");
+    expect(events("page_view")).toHaveLength(1);
+    expect(objectEvents("page_view")).toHaveLength(1);
+  });
+  it("VITE_GA_VIA_GTM stops the direct Analytics sending, so a container that sends to Analytics doesn't count everything twice", async () => {
+    const { ga } = await load(ID, GTM, "true");
+    ga.startAnalytics();
+    expect(scripts()).toEqual([`https://www.googletagmanager.com/gtm.js?id=${GTM}`]);
+    expect(sent().find((e) => e[0] === "config")).toBeUndefined();
+    ga.trackPageView("/signup", "");
+    expect(events("page_view")).toHaveLength(0);
+    expect(objectEvents("page_view")).toHaveLength(1);
+  });
+  it("Decline removes Google's cookies whatever measurement id set them, and stops Analytics", async () => {
+    const { ga, consent } = await load(ID, GTM);
+    consent.setConsent("granted");
+    ga.startAnalytics();
+    document.cookie = "_ga=GA1.1.123; path=/";
+    document.cookie = "_ga_ABC123XYZ9=GS1.1.456; path=/";
+    document.cookie = "keep_me=1; path=/";
+    consent.setConsent("denied");
+    ga.stopAnalytics();
+    expect(document.cookie).toBe("keep_me=1");
+    expect(window[`ga-disable-${ID}`]).toBe(true);
+    ga.trackPageView("/", "");
+    expect(objectEvents("page_view")).toHaveLength(0);
   });
 });

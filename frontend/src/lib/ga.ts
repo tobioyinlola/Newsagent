@@ -9,6 +9,16 @@ import { getConsent } from "./consent";
 export const GA_ID: string = String(import.meta.env.VITE_GA_MEASUREMENT_ID ?? "").trim();
 export const gaConfigured = /^G-[A-Z0-9]{6,}$/.test(GA_ID);
 
+// Google Tag Manager (optional): a container the marketing team can add tags to without a code change. It is loaded the same careful
+// way as Analytics (never before the visitor's choice is honoured, never on private pages or the back office), and our code gives it a
+// clean `dataLayer` to work from. Set VITE_GA_VIA_GTM=true if the container itself sends to Analytics: we then stop sending to
+// Analytics directly, so nothing is counted twice.
+export const GTM_ID: string = String(import.meta.env.VITE_GTM_ID ?? "").trim();
+export const gtmConfigured = /^GTM-[A-Z0-9]{4,}$/.test(GTM_ID);
+const viaGtm = gtmConfigured && /^(1|true|yes)$/i.test(String(import.meta.env.VITE_GA_VIA_GTM ?? "").trim());
+const directGa = gaConfigured && !viaGtm;
+export const trackingConfigured = directGa || gtmConfigured;
+
 type Params = Record<string, string | number | boolean | undefined | Record<string, unknown>[]>;
 declare global {
   interface Window {
@@ -44,7 +54,7 @@ export function cleanQuery(search: string): string {
 
 let started = false;
 // Sending is allowed unless they declined (or their browser sent a privacy signal, which getConsent() reports as "denied").
-const active = () => gaConfigured && started && getConsent() !== "denied" && typeof window.gtag === "function";
+const active = () => trackingConfigured && started && getConsent() !== "denied" && typeof window.gtag === "function";
 
 // Google's script reads an `arguments` object from the data layer, not an array, so this has to be a plain function.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -54,50 +64,71 @@ function gtag(..._args: unknown[]) {
   window.dataLayer.push(arguments);
 }
 
-// Called on the first measurable page, and again when their choice changes. Cookies are used only after an explicit Accept; until then Google
-// gets cookie-free page views, and after Decline or a privacy signal it gets nothing at all.
+// Called on the first measurable page, and again when their choice changes. Cookies are used only after an explicit Accept; until then
+// Google gets cookie-free page views, and after Decline or a privacy signal it gets nothing at all (and Tag Manager is never loaded).
 export function startAnalytics(): void {
   const consent = getConsent();
-  if (!gaConfigured || consent === "denied") return;
-  window[`ga-disable-${GA_ID}`] = false;
+  if (!trackingConfigured || consent === "denied") return;
+  if (gaConfigured) window[`ga-disable-${GA_ID}`] = false;
   const storage = consent === "granted" ? "granted" : "denied";
   if (started) { window.gtag?.("consent", "update", { analytics_storage: storage }); return; }
   started = true;
   window.dataLayer = window.dataLayer ?? [];
   window.gtag = gtag;
-  // Advertising features stay off for everyone. Analytics cookies are off until they accept.
+  // Advertising features stay off for everyone, and analytics cookies are off until they accept. This is set BEFORE Google's code loads,
+  // so Analytics and any tag inside the Tag Manager container start in that state.
   gtag("consent", "default", { ad_storage: "denied", ad_user_data: "denied", ad_personalization: "denied", analytics_storage: storage });
   gtag("set", "ads_data_redaction", true);
-  gtag("js", new Date());
-  gtag("config", GA_ID, {
-    send_page_view: false, // the app is one page: we send each page view ourselves, with a cleaned address
-    allow_google_signals: false,
-    allow_ad_personalization_signals: false,
-    cookie_expires: 34128000, // 13 months, the longest regulators accept
-    cookie_flags: "SameSite=Lax;Secure",
-  });
+  if (directGa) {
+    gtag("js", new Date());
+    gtag("config", GA_ID, {
+      send_page_view: false, // the app is one page: we send each page view ourselves, with a cleaned address
+      allow_google_signals: false,
+      allow_ad_personalization_signals: false,
+      cookie_expires: 34128000, // 13 months, the longest regulators accept
+      cookie_flags: "SameSite=Lax;Secure",
+    });
+    load(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA_ID)}`);
+  }
+  if (gtmConfigured) {
+    window.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
+    load(`https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(GTM_ID)}`);
+  }
+}
+
+// Google's code goes in as a script element from its own address, never inline: the site's security policy only allows that address.
+function load(src: string) {
   const s = document.createElement("script");
   s.async = true;
-  s.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA_ID)}`;
+  s.src = src;
   document.head.appendChild(s);
 }
 
-// They said no, or changed their mind: stop sending, and remove what Google set.
+// They said no, or changed their mind: stop sending, and remove what Google set (whichever measurement id set it).
 export function stopAnalytics(): void {
-  if (!gaConfigured) return;
-  window[`ga-disable-${GA_ID}`] = true;
+  if (!trackingConfigured) return;
+  if (gaConfigured) window[`ga-disable-${GA_ID}`] = true;
   window.gtag?.("consent", "update", { analytics_storage: "denied" });
-  const names = ["_ga", `_ga_${GA_ID.replace(/^G-/, "")}`, "_gid", "_gat"];
   const host = location.hostname;
   const parent = host.split(".").length > 2 ? host.split(".").slice(-2).join(".") : host;
-  for (const n of names) for (const d of [host, `.${host}`, `.${parent}`]) document.cookie = `${n}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${d}`;
-  for (const n of names) document.cookie = `${n}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+  const names = document.cookie.split(";").map((c) => c.split("=")[0].trim()).filter((n) => /^_(ga|gid|gat)(_|$)/.test(n));
+  for (const n of names) {
+    for (const d of [host, `.${host}`, `.${parent}`]) document.cookie = `${n}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${d}`;
+    document.cookie = `${n}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+  }
+}
+
+// One event, to wherever it is wanted: Analytics directly (as a gtag command) and/or the Tag Manager container (as a data-layer event
+// that a trigger can listen for).
+function emit(name: string, params: Record<string, unknown>) {
+  if (directGa) window.gtag!("event", name, params);
+  if (gtmConfigured) window.dataLayer!.push({ event: name, ...params });
 }
 
 export function trackPageView(pathname: string, search: string): void {
   if (!active() || !isMeasurable(pathname)) return;
   const path = cleanPath(pathname);
-  window.gtag!("event", "page_view", {
+  emit("page_view", {
     page_location: `${location.origin}${path}${cleanQuery(search)}`,
     page_path: path,
     page_title: path, // the page's own title can carry a company or headline, so the cleaned address stands in for it
@@ -106,7 +137,7 @@ export function trackPageView(pathname: string, search: string): void {
 
 export function trackEvent(name: string, params: Params = {}): void {
   if (!active() || !isMeasurable(location.pathname)) return;
-  window.gtag!("event", name, params);
+  emit(name, params);
 }
 
 // The moments that matter, named once. Each sends numbers and labels only.

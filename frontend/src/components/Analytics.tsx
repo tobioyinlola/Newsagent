@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { type Consent, getConsent, browserOptOut, onConsentChange, onOpenCookieSettings, setConsent } from "../lib/consent";
-import { gaConfigured, isMeasurable, startAnalytics, stopAnalytics, trackPageView } from "../lib/ga";
+import { trackingConfigured, isMeasurable, startAnalytics, stopAnalytics, trackPageView } from "../lib/ga";
 import { recordVisit } from "../lib/visits";
 
 // Counts visits, asks once about cookies, and then does what was chosen. Mount it once, inside the router.
@@ -11,7 +11,7 @@ export function TrackingConsent() {
   useEffect(() => onConsentChange(setChoice), []);
   // Google Analytics: cookie-free until they accept, and off after a decline.
   useEffect(() => {
-    if (!gaConfigured) return;
+    if (!trackingConfigured) return;
     if (consent === "denied") stopAnalytics();
     else if (isMeasurable(loc.pathname)) startAnalytics();
   }, [consent, loc.pathname]);
@@ -20,7 +20,7 @@ export function TrackingConsent() {
     recordVisit(loc.pathname, loc.search);
     trackPageView(loc.pathname, loc.search);
   }, [loc.pathname, loc.search]);
-  return gaConfigured && isMeasurable(loc.pathname) ? <CookieBanner consent={consent} /> : null;
+  return trackingConfigured && isMeasurable(loc.pathname) ? <CookieBanner consent={consent} /> : null;
 }
 
 function CookieBanner({ consent }: { consent: Consent | null }) {
