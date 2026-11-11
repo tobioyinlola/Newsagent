@@ -1,5 +1,6 @@
 """Back office: marketing switches and status. Public: the unsubscribe page every marketing email links to."""
 
+from datetime import UTC, datetime, timedelta
 from html import escape
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -11,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import Principal, require
 from app.db import get_session
 from app.models import (
+    MarketingCampaign,
     MarketingCopy,
     MarketingCopyVersion,
     MarketingPref,
@@ -20,6 +22,7 @@ from app.models import (
 )
 from app.models.base import utcnow
 from app.services import marketing, ratelimit
+from app.services import marketing_campaigns as campaigns
 from app.services import marketing_copy as copies
 from app.services import marketing_segments as segs
 from app.services.audit import audit
@@ -390,6 +393,212 @@ async def send_test_copy(
         raise HTTPException(502, "The test email couldn't be sent. Try again in a moment.") from None
     await db.commit()
     return {"sent_to": p.user.email}
+
+
+# ---------- campaigns ----------
+class CampaignBody(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    segment_id: str
+    copy_id: str
+
+
+class ScheduleBody(BaseModel):
+    send_at: datetime | None = None  # empty = send now
+    confirm_count: int  # the audience size the operator was shown; if it has changed they must look again
+
+
+async def _campaign(db: AsyncSession, campaign_id: str) -> MarketingCampaign:
+    c = await db.get(MarketingCampaign, campaign_id)
+    if c is None:
+        raise HTTPException(404, "That campaign doesn't exist.")
+    return c
+
+
+async def _campaign_out(db: AsyncSession, c: MarketingCampaign, detail: bool = False) -> dict:
+    seg = await db.get(MarketingSegment, c.segment_id)
+    copy = await db.get(MarketingCopy, c.copy_id)
+    out = {
+        "id": c.id,
+        "name": c.name,
+        "status": c.status,
+        "segment_id": c.segment_id,
+        "segment_name": seg.name if seg else "",
+        "copy_id": c.copy_id,
+        "copy_name": copy.name if copy else "",
+        "copy_version": c.copy_version,
+        "audience": c.audience,
+        "send_at": c.send_at.isoformat() if c.send_at else None,
+        "started_at": c.started_at.isoformat() if c.started_at else None,
+        "finished_at": c.finished_at.isoformat() if c.finished_at else None,
+        "created_by": c.created_by,
+        "scheduled_by": c.scheduled_by,
+        "created_at": c.created_at.isoformat(),
+    }
+    if detail or c.status in {"sending", "sent", "cancelled"}:
+        out["counts"] = await campaigns.counts(db, c.id)
+    return out
+
+
+async def _pick(db: AsyncSession, body: CampaignBody) -> tuple[MarketingSegment, MarketingCopy]:
+    seg = await db.get(MarketingSegment, body.segment_id)
+    if seg is None or seg.archived_at is not None:
+        raise HTTPException(422, "Choose a segment from the list.")
+    copy = await db.get(MarketingCopy, body.copy_id)
+    if copy is None or copy.archived_at is not None:
+        raise HTTPException(422, "Choose an email copy from the list.")
+    return seg, copy
+
+
+@router.get("/v1/admin/marketing/campaigns")
+async def list_campaigns(
+    p: Principal = Depends(require("marketing.view")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    rows = (
+        (await db.execute(select(MarketingCampaign).order_by(MarketingCampaign.created_at.desc()).limit(100)))
+        .scalars()
+        .all()
+    )
+    return {"items": [await _campaign_out(db, c) for c in rows]}
+
+
+@router.post("/v1/admin/marketing/campaigns", status_code=201)
+async def create_campaign(
+    body: CampaignBody,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    seg, copy = await _pick(db, body)
+    c = MarketingCampaign(
+        name=body.name.strip(),
+        segment_id=seg.id,
+        copy_id=copy.id,
+        copy_version=copy.current_version,
+        rules=seg.rules,
+        created_by=p.user.email,
+    )
+    db.add(c)
+    await db.flush()
+    audit(db, p.user.email, "marketing.campaign_created", target_type="campaign", target_id=c.id, request=request)
+    await db.commit()
+    return await _campaign_out(db, c, True)
+
+
+@router.get("/v1/admin/marketing/campaigns/{campaign_id}")
+async def get_campaign(
+    campaign_id: str, p: Principal = Depends(require("marketing.view")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    c = await _campaign(db, campaign_id)
+    out = await _campaign_out(db, c, True)
+    if c.status in {"draft", "scheduled"}:  # who it would reach if it went now
+        out["preview"] = await segs.preview(db, segs.Rules.model_validate(c.rules))
+    ver = (
+        await db.execute(
+            select(MarketingCopyVersion).where(
+                MarketingCopyVersion.copy_id == c.copy_id, MarketingCopyVersion.version == c.copy_version
+            )
+        )
+    ).scalar_one_or_none()
+    out["email"] = copies.rendered(ver, copies.sample_values()) if ver else None
+    return out
+
+
+@router.put("/v1/admin/marketing/campaigns/{campaign_id}")
+async def update_campaign(
+    campaign_id: str,
+    body: CampaignBody,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    c = await _campaign(db, campaign_id)
+    if c.status != "draft":
+        raise HTTPException(409, "Only a draft can be changed. Cancel this one and make a new campaign.")
+    seg, copy = await _pick(db, body)
+    c.name, c.segment_id, c.copy_id, c.copy_version, c.rules = (
+        body.name.strip(),
+        seg.id,
+        copy.id,
+        copy.current_version,
+        seg.rules,
+    )
+    audit(db, p.user.email, "marketing.campaign_changed", target_type="campaign", target_id=c.id, request=request)
+    await db.commit()
+    return await _campaign_out(db, c, True)
+
+
+@router.post("/v1/admin/marketing/campaigns/{campaign_id}/schedule")
+async def schedule_campaign(
+    campaign_id: str,
+    body: ScheduleBody,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    c = await _campaign(db, campaign_id)
+    if c.status != "draft":
+        raise HTTPException(409, "This campaign has already been scheduled.")
+    if marketing.engine_mode() == "off":
+        raise HTTPException(
+            409, "Marketing email is switched off on the server (MARKETING_EMAIL), so nothing would be sent."
+        )
+    now = utcnow()
+    when = body.send_at
+    if when is not None:
+        when = when if when.tzinfo else when.replace(tzinfo=UTC)
+        if when < now - timedelta(minutes=1):
+            raise HTTPException(422, "Choose a time in the future, or send it now.")
+    now_count = (await segs.preview(db, segs.Rules.model_validate(c.rules), sample=0))["reachable"]
+    if now_count == 0:
+        raise HTTPException(422, "This segment has nobody who can be emailed right now.")
+    if now_count != body.confirm_count:
+        raise HTTPException(
+            409,
+            f"The audience changed: {now_count} people can be emailed now, not {body.confirm_count}. Please look again.",
+        )
+    c.status, c.send_at, c.scheduled_by = "scheduled", when or now, p.user.email
+    audit(
+        db,
+        p.user.email,
+        "marketing.campaign_scheduled",
+        target_type="campaign",
+        target_id=c.id,
+        detail={"send_at": c.send_at.isoformat(), "audience": now_count, "copy_version": c.copy_version},
+        request=request,
+    )
+    await db.commit()
+    return await _campaign_out(db, c, True)
+
+
+@router.post("/v1/admin/marketing/campaigns/{campaign_id}/cancel")
+async def cancel_campaign(
+    campaign_id: str,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    c = await _campaign(db, campaign_id)
+    if c.status not in {"scheduled", "sending"}:
+        raise HTTPException(409, "Only a scheduled or sending campaign can be cancelled.")
+    await campaigns.cancel(db, c)
+    audit(db, p.user.email, "marketing.campaign_cancelled", target_type="campaign", target_id=c.id, request=request)
+    await db.commit()
+    return await _campaign_out(db, c, True)
+
+
+@router.delete("/v1/admin/marketing/campaigns/{campaign_id}", status_code=204)
+async def delete_campaign(
+    campaign_id: str,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> None:
+    c = await _campaign(db, campaign_id)
+    if c.status != "draft":
+        raise HTTPException(409, "Only a draft can be deleted.")
+    audit(db, p.user.email, "marketing.campaign_deleted", target_type="campaign", target_id=c.id, request=request)
+    await db.delete(c)
+    await db.commit()
 
 
 # ---------- unsubscribe (public; the token is the proof) ----------

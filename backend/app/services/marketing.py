@@ -27,6 +27,7 @@ class MarketingConfig(BaseModel):
     paused: bool = False  # the kill switch: nothing marketing goes out while true
     min_gap_days: int = Field(2, ge=0, le=60)  # at most one marketing email to a person in this many days
     daily_cap: int = Field(500, ge=0, le=100000)  # at most this many marketing emails a day, in total
+    per_minute: int = Field(20, ge=1, le=600)  # how fast a campaign is delivered, so a big list is spread out
 
 
 def engine_mode() -> str:
@@ -155,7 +156,8 @@ async def send(
         return row
 
     if reason:
-        log_row("skipped", reason)
+        if reason not in {"paused", "daily_cap"}:  # these pass by themselves and are retried every minute: don't log each try
+            log_row("skipped", reason)
         return f"skipped:{reason}"
     if mode == "dry_run":
         log_row("dry_run")

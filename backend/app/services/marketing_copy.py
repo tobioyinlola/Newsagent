@@ -144,19 +144,28 @@ async def values_for(db: AsyncSession, user: User) -> dict[str, str]:
     }
 
 
-def rendered(c: Wording, values: dict[str, str]) -> dict[str, str]:
-    """The finished email for one set of values: {subject, preheader, text, html}. Works on a CopyIn or a stored version."""
-    subject = fill(c.subject, values)
+def fields_for(c: Wording, values: dict[str, str]) -> dict:
+    """The copy with one person's details filled in, as the parts an email is made from."""
     url = c.button_url
     if url.startswith("/"):
         url = get_settings().app_base_url.rstrip("/") + url
-    button = (fill(c.button_label, values), url) if c.button_label else None
+    return {
+        "subject": fill(c.subject, values),
+        "preheader": fill(c.preheader, values),
+        "body": fill(c.body, values),
+        "button": (fill(c.button_label, values), url) if c.button_label else None,
+    }
+
+
+def rendered(c: Wording, values: dict[str, str]) -> dict[str, str]:
+    """The finished email for one set of values: {subject, preheader, text, html}. Works on a CopyIn or a stored version."""
+    f = fields_for(c, values)
     html, text = templates.render(
-        subject,
-        fill(c.body, values),
-        button=button,
-        preheader=fill(c.preheader, values),
+        f["subject"],
+        f["body"],
+        button=f["button"],
+        preheader=f["preheader"],
         footer="You are receiving this because you have a Cover Founder account. You can stop these emails at any time.",
         footer_link=("Unsubscribe", get_settings().app_base_url.rstrip("/") + "/v1/unsubscribe/preview"),
     )
-    return {"subject": subject, "preheader": fill(c.preheader, values), "text": text, "html": html}
+    return {"subject": f["subject"], "preheader": f["preheader"], "text": text, "html": html}

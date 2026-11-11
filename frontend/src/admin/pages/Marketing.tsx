@@ -4,10 +4,11 @@ import { api, unwrap } from "../api/client";
 import { Button, Card, ConfirmDialog, ErrorBox, inputCls, Notice } from "../components/ui";
 import { ago, num } from "../lib/format";
 import { useCan } from "../lib/can";
+import { CampaignsTab } from "./MarketingCampaigns";
 import { CopiesTab } from "./MarketingCopies";
 import { blankCondition, cleanRules, type Condition, describe, type FieldDef, OP_LABEL, type Preview, type Rules, type Segment } from "../lib/segments";
 
-type Status = { engine: "off" | "on" | "dry_run"; config: { paused: boolean; min_gap_days: number; daily_cap: number }; sent_today: number; opted_out: number; suppressed: number };
+type Status = { engine: "off" | "on" | "dry_run"; config: { paused: boolean; min_gap_days: number; daily_cap: number; per_minute: number }; sent_today: number; opted_out: number; suppressed: number };
 const ENGINE: Record<Status["engine"], string> = { off: "Off: nothing is sent", dry_run: "Dry run: logged, not sent", on: "On" };
 const EMPTY: Rules = { match: "all", conditions: [] };
 
@@ -104,7 +105,7 @@ export function MarketingAdmin() {
   const qc = useQueryClient();
   const can = useCan();
   const manage = can("marketing.manage");
-  const [tab, setTab] = useState<"segments" | "copies">("segments");
+  const [tab, setTab] = useState<"segments" | "copies" | "campaigns">("segments");
   const [editing, setEditing] = useState<Segment | "new" | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
   const [removing, setRemoving] = useState<Segment | null>(null);
@@ -130,7 +131,7 @@ export function MarketingAdmin() {
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
             <div className="space-y-1">
               <p><b>{ENGINE[s.engine]}</b>{s.config.paused && <span className="ml-2 rounded-sm bg-brand-red px-1.5 py-0.5 text-xs font-bold">Paused</span>}</p>
-              <p className="text-muted">{num(s.sent_today)} sent today (limit {num(s.config.daily_cap)}) · at most one email per person every {s.config.min_gap_days} days · {num(s.opted_out)} unsubscribed · {num(s.suppressed)} blocked addresses</p>
+              <p className="text-muted">{num(s.sent_today)} sent today (limit {num(s.config.daily_cap)}) · at most one email per person every {s.config.min_gap_days} days · up to {num(s.config.per_minute)} a minute · {num(s.opted_out)} unsubscribed · {num(s.suppressed)} blocked addresses</p>
               {s.engine === "off" && <p className="text-muted">Marketing email is switched off on the server (MARKETING_EMAIL). Segments still work.</p>}
             </div>
             {manage && <Button variant={s.config.paused ? "primary" : "danger"} disabled={pause.isPending} onClick={() => pause.mutate(!s.config.paused)}>{s.config.paused ? "Resume sending" : "Pause all marketing"}</Button>}
@@ -138,9 +139,9 @@ export function MarketingAdmin() {
         </Card>
       )}
       <div role="tablist" aria-label="Marketing sections" className="flex gap-2">
-        {([["segments", "Segments"], ["copies", "Email copy"]] as const).map(([k, label]) => <button key={k} role="tab" aria-selected={tab === k} type="button" onClick={() => setTab(k)} className={`rounded-lg border px-4 py-2 text-sm font-semibold ${tab === k ? "border-ink bg-brand-green" : "border-line bg-white hover:border-ink"}`}>{label}</button>)}
+        {([["segments", "Segments"], ["copies", "Email copy"], ["campaigns", "Campaigns"]] as const).map(([k, label]) => <button key={k} role="tab" aria-selected={tab === k} type="button" onClick={() => setTab(k)} className={`rounded-lg border px-4 py-2 text-sm font-semibold ${tab === k ? "border-ink bg-brand-green" : "border-line bg-white hover:border-ink"}`}>{label}</button>)}
       </div>
-      {tab === "copies" ? <CopiesTab /> : editing && fields.data ? <Editor fields={fields.data} seg={editing === "new" ? null : editing} onDone={() => { setEditing(null); setViewing(null); }} /> : (
+      {tab === "copies" ? <CopiesTab /> : tab === "campaigns" ? <CampaignsTab engine={s?.engine ?? "off"} /> : editing && fields.data ? <Editor fields={fields.data} seg={editing === "new" ? null : editing} onDone={() => { setEditing(null); setViewing(null); }} /> : (
         <Card title="Segments" actions={manage && <Button onClick={() => setEditing("new")}>New segment</Button>}>
           {list.isLoading ? <p aria-busy="true">Loading…</p> : list.data && list.data.length === 0 ? <p className="text-sm text-muted">No segments yet. A segment is a saved group of people, for example “joined 3 to 7 days ago and has made no video”.</p> : (
             <ul className="space-y-3">

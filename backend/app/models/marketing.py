@@ -85,3 +85,36 @@ class MarketingCopyVersion(Base):
     button_url: Mapped[str] = mapped_column(String(500), default="")
     created_by: Mapped[str] = mapped_column(String(320), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class MarketingCampaign(Base, TimestampMixin):
+    """A one-off send: one copy (a pinned version) to one segment, now or at a time."""
+
+    __tablename__ = "marketing_campaigns"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(120))
+    segment_id: Mapped[str] = mapped_column(ForeignKey("marketing_segments.id"))
+    copy_id: Mapped[str] = mapped_column(ForeignKey("marketing_copies.id"))
+    copy_version: Mapped[int] = mapped_column(Integer)  # the words that go out never change after scheduling
+    rules: Mapped[dict] = mapped_column(JSON, default=dict)  # the segment's rules as they were when it was scheduled
+    # draft | scheduled | sending | sent | cancelled
+    status: Mapped[str] = mapped_column(String(12), default="draft", index=True)
+    send_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    audience: Mapped[int] = mapped_column(Integer, default=0)  # who was picked when sending started
+    created_by: Mapped[str] = mapped_column(String(320), default="")
+    scheduled_by: Mapped[str] = mapped_column(String(320), default="")
+
+
+class MarketingRecipient(Base):
+    """One person in one campaign. Made when sending starts, so the list is fixed and a crash resumes where it stopped."""
+
+    __tablename__ = "marketing_recipients"
+    __table_args__ = (UniqueConstraint("campaign_id", "user_id"),)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    campaign_id: Mapped[str] = mapped_column(ForeignKey("marketing_campaigns.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    status: Mapped[str] = mapped_column(String(10), default="pending", index=True)  # pending | sent | skipped | failed
+    reason: Mapped[str] = mapped_column(String(40), default="")
+    done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
