@@ -30,6 +30,19 @@ from app.models.entities import (
     WebhookEvent,
     Workspace,
 )
+from app.models.marketing import (
+    MarketingCampaign,
+    MarketingCopy,
+    MarketingCopyVersion,
+    MarketingEnrollment,
+    MarketingPref,
+    MarketingRecipient,
+    MarketingSegment,
+    MarketingSend,
+    MarketingSuppression,
+    MarketingWorkflow,
+    UserEvent,
+)
 from app.models.news_desk import NewsImage, NewsStory, NewsVideo
 from app.models.outreach import OutreachMessage, OutreachOptout, OutreachThread
 from app.models.referral import ReferralLink, ReferralReward
@@ -38,6 +51,17 @@ from app.models.work_queue import WorkItem
 
 __all__ = [
     "OutreachMessage",
+    "MarketingCampaign",
+    "MarketingCopy",
+    "MarketingRecipient",
+    "MarketingCopyVersion",
+    "MarketingEnrollment",
+    "MarketingPref",
+    "MarketingSegment",
+    "MarketingSend",
+    "MarketingSuppression",
+    "MarketingWorkflow",
+    "UserEvent",
     "OutreachOptout",
     "OutreachThread",
     "WorkItem",

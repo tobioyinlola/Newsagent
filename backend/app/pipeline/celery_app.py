@@ -52,6 +52,10 @@ celery_app.conf.beat_schedule = {
         "task": "outreach.deliver",
         "schedule": 60.0,
     },  # sends held outreach emails when their time comes
+    "marketing-deliver": {
+        "task": "marketing.deliver",
+        "schedule": 60.0,
+    },  # runs marketing: starts due campaigns, enrols people into workflows and sends their next emails, a few a minute (does nothing unless MARKETING_EMAIL is on)
     "hourly": {"task": "jobs.hourly", "schedule": 3600.0},
     "daily": {"task": "jobs.daily", "schedule": 86400.0},
 }
@@ -148,6 +152,20 @@ def outreach_deliver() -> int:
         return {"n": await outreach.deliver_due()}
 
     return int(_run(go)["n"])
+
+
+@celery_app.task(name="marketing.deliver", ignore_result=True)
+def marketing_deliver() -> int:
+    from app.services import marketing, marketing_workflows
+
+    if marketing.engine_mode() == "off":
+        return 0
+
+    async def go() -> dict:
+        return await marketing_workflows.tick_all()
+
+    r = _run(go)
+    return int(r["campaign_emails"] + r["workflow_emails"])
 
 
 @celery_app.task(name="jobs.sweep")

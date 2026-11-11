@@ -19,6 +19,7 @@ import { Overview } from "./pages/Overview";
 import { Presenter } from "./pages/Presenter";
 import { DistributionAdmin } from "./pages/Distribution";
 import { SHOW_OUTREACH } from "./lib/features";
+import { MarketingAdmin } from "./pages/Marketing";
 import { OutreachAdmin } from "./pages/Outreach";
 import { Wallets } from "./pages/Wallets";
 import { Revenue } from "./pages/Revenue";
@@ -60,6 +61,7 @@ export function App() {
           <Route path="/analytics" element={<Guard any={["operations.view"]}><AnalyticsAdmin /></Guard>} />
           <Route path="/distribution" element={<Guard any={["operations.view"]}><DistributionAdmin /></Guard>} />
           {SHOW_OUTREACH && <Route path="/outreach" element={<Guard any={["operations.view"]}><OutreachAdmin /></Guard>} />}
+          <Route path="/marketing" element={<Guard any={["marketing.view"]}><MarketingAdmin /></Guard>} />
           <Route path="/operations" element={<Guard any={["operations.view"]}><Page title="Operations"><Operations /></Page></Guard>} />
           <Route path="/review" element={<Guard any={["review.manage"]}><Page title="Review queue"><Review /></Page></Guard>} />
           <Route path="/jobs" element={<Guard any={["operations.view"]}><Page title="Jobs"><JobsTab /></Page></Guard>} />

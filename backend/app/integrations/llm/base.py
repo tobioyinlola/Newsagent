@@ -109,6 +109,10 @@ class ScriptLLM(ABC):
         """Write our next email in an outreach conversation: {"subject", "body", "step"}."""
         raise NotImplementedError("Outreach replies are not configured for this provider")
 
+    async def draft_marketing_copy(self, brief: str, category: str, tags: list[str]) -> dict:
+        """Write a first draft of a marketing email from an operator's brief: {"subject", "preheader", "body"}."""
+        raise NotImplementedError("Marketing copy drafting is not configured for this provider")
+
     async def write_news(self, source_text: str, source_name: str) -> NewsDraft:
         raise NotImplementedError("News rewriting is not configured for this provider")
 

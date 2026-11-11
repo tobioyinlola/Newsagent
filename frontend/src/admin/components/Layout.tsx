@@ -40,7 +40,7 @@ type Item = [string, string, ReactNode, string[]];
 const GROUPS: { title: string; items: Item[] }[] = [
   { title: "Business", items: [["/", "Overview", I.overview, ["overview.view"]], ["/customers", "Customers", I.customers, ["customers.view"]], ["/wallets", "Wallets", I.revenue, ["customers.view"]], ["/revenue", "Revenue", I.revenue, ["finance.view"]]] },
   { title: "Operations", items: [["/analytics", "Reports & analytics", I.costs, ["operations.view"]], ["/distribution", "Distribution", I.ops, ["operations.view"]], ...(SHOW_OUTREACH ? ([["/outreach", "Outreach", I.ops, ["operations.view"]]] as Item[]) : []), ["/operations", "Operations", I.ops, ["operations.view"]], ["/review", "Review queue", I.review, ["review.manage"]], ["/jobs", "Jobs", I.jobs, ["operations.view"]], ["/costs", "Costs", I.costs, ["finance.view"]]] },
-  { title: "Admin", items: [["/news-desk", "News Desk", I.clips, []],["/presenter", "Presenter clips", I.clips, ["presenter.manage"]], ["/billing", "Credits", I.packs, ["finance.view"]], ["/setup", "Setup", I.setup, ["customers.manage", "finance.view"]], ["/team", "Team", I.team, ["team.manage"]], ["/audit", "Audit log", I.audit, ["audit.view"]]] },
+  { title: "Admin", items: [["/news-desk", "News Desk", I.clips, []], ["/marketing", "Marketing", I.packs, ["marketing.view"]],["/presenter", "Presenter clips", I.clips, ["presenter.manage"]], ["/billing", "Credits", I.packs, ["finance.view"]], ["/setup", "Setup", I.setup, ["customers.manage", "finance.view"]], ["/team", "Team", I.team, ["team.manage"]], ["/audit", "Audit log", I.audit, ["audit.view"]]] },
   { title: "You", items: [["/security", "Security", I.security, []]] },
 ];
 
