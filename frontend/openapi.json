@@ -294,6 +294,62 @@
         "title": "BillingSummary",
         "type": "object"
       },
+      "BranchStep": {
+        "description": "If they are in the segment, jump to one step; if not, jump to another. A target is a LATER step number (0 is the first\nstep), or empty to finish. Jumps only go forward, so a workflow can never loop.",
+        "properties": {
+          "no_to": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "No To"
+          },
+          "rules": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rules"
+          },
+          "segment_id": {
+            "title": "Segment Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "branch",
+            "title": "Type",
+            "type": "string"
+          },
+          "yes_to": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yes To"
+          }
+        },
+        "required": [
+          "type",
+          "segment_id"
+        ],
+        "title": "BranchStep",
+        "type": "object"
+      },
       "BrandAssetOut": {
         "properties": {
           "content_type": {
@@ -2021,6 +2077,26 @@
         "title": "DownloadsOut",
         "type": "object"
       },
+      "DraftBody": {
+        "properties": {
+          "brief": {
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Brief",
+            "type": "string"
+          },
+          "category": {
+            "default": "product",
+            "title": "Category",
+            "type": "string"
+          }
+        },
+        "required": [
+          "brief"
+        ],
+        "title": "DraftBody",
+        "type": "object"
+      },
       "EmailStep": {
         "properties": {
           "copy_id": {
@@ -2072,6 +2148,21 @@
           "copy_id"
         ],
         "title": "EmailStep",
+        "type": "object"
+      },
+      "EndStep": {
+        "description": "Finish here: the person leaves the workflow as completed.",
+        "properties": {
+          "type": {
+            "const": "end",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "EndStep",
         "type": "object"
       },
       "EventIn": {
@@ -8014,11 +8105,26 @@
             "title": "Name",
             "type": "string"
           },
+          "reentry_days": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 7.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reentry Days"
+          },
           "steps": {
             "items": {
               "discriminator": {
                 "mapping": {
+                  "branch": "#/components/schemas/BranchStep",
                   "email": "#/components/schemas/EmailStep",
+                  "end": "#/components/schemas/EndStep",
                   "wait": "#/components/schemas/WaitStep"
                 },
                 "propertyName": "type"
@@ -8029,6 +8135,12 @@
                 },
                 {
                   "$ref": "#/components/schemas/EmailStep"
+                },
+                {
+                  "$ref": "#/components/schemas/BranchStep"
+                },
+                {
+                  "$ref": "#/components/schemas/EndStep"
                 }
               ]
             },
@@ -11048,6 +11160,108 @@
         ]
       }
     },
+    "/v1/admin/marketing/activity": {
+      "get": {
+        "description": "Every marketing email we sent or chose not to send, newest first: why a person did or didn't get something.",
+        "operationId": "activity_v1_admin_marketing_activity_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Activity V1 Admin Marketing Activity Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Activity",
+        "tags": [
+          "marketing"
+        ]
+      }
+    },
     "/v1/admin/marketing/campaigns": {
       "get": {
         "operationId": "list_campaigns_v1_admin_marketing_campaigns_get",
@@ -11631,6 +11845,68 @@
           }
         },
         "summary": "Create Copy",
+        "tags": [
+          "marketing"
+        ]
+      }
+    },
+    "/v1/admin/marketing/copies/draft": {
+      "post": {
+        "description": "A first draft written by the AI from a short brief. It is only a starting point: nothing is saved or sent.",
+        "operationId": "draft_copy_v1_admin_marketing_copies_draft_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Draft Copy V1 Admin Marketing Copies Draft Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Draft Copy",
         "tags": [
           "marketing"
         ]

@@ -652,6 +652,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/marketing/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Activity
+         * @description Every marketing email we sent or chose not to send, newest first: why a person did or didn't get something.
+         */
+        get: operations["activity_v1_admin_marketing_activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/marketing/campaigns": {
         parameters: {
             query?: never;
@@ -752,6 +772,26 @@ export interface paths {
         put?: never;
         /** Create Copy */
         post: operations["create_copy_v1_admin_marketing_copies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/marketing/copies/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draft Copy
+         * @description A first draft written by the AI from a short brief. It is only a starting point: nothing is saved or sent.
+         */
+        post: operations["draft_copy_v1_admin_marketing_copies_draft_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4321,6 +4361,28 @@ export interface components {
             /** Videos Left */
             videos_left: number;
         };
+        /**
+         * BranchStep
+         * @description If they are in the segment, jump to one step; if not, jump to another. A target is a LATER step number (0 is the first
+         *     step), or empty to finish. Jumps only go forward, so a workflow can never loop.
+         */
+        BranchStep: {
+            /** No To */
+            no_to?: number | null;
+            /** Rules */
+            rules?: {
+                [key: string]: unknown;
+            } | null;
+            /** Segment Id */
+            segment_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "branch";
+            /** Yes To */
+            yes_to?: number | null;
+        };
         /** BrandAssetOut */
         BrandAssetOut: {
             /** Content Type */
@@ -5008,6 +5070,16 @@ export interface components {
             /** Items */
             items: components["schemas"]["DownloadItem"][];
         };
+        /** DraftBody */
+        DraftBody: {
+            /** Brief */
+            brief: string;
+            /**
+             * Category
+             * @default product
+             */
+            category: string;
+        };
         /** EmailStep */
         EmailStep: {
             /** Copy Id */
@@ -5025,6 +5097,17 @@ export interface components {
              * @enum {string}
              */
             type: "email";
+        };
+        /**
+         * EndStep
+         * @description Finish here: the person leaves the workflow as completed.
+         */
+        EndStep: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "end";
         };
         /** EventIn */
         EventIn: {
@@ -7292,8 +7375,10 @@ export interface components {
             hours?: components["schemas"]["Hours"];
             /** Name */
             name: string;
+            /** Reentry Days */
+            reentry_days?: number | null;
             /** Steps */
-            steps: (components["schemas"]["WaitStep"] | components["schemas"]["EmailStep"])[];
+            steps: (components["schemas"]["WaitStep"] | components["schemas"]["EmailStep"] | components["schemas"]["BranchStep"] | components["schemas"]["EndStep"])[];
             /** Trigger Segment Id */
             trigger_segment_id: string;
         };
@@ -8863,6 +8948,45 @@ export interface operations {
             };
         };
     };
+    activity_v1_admin_marketing_activity_get: {
+        parameters: {
+            query?: {
+                q?: string;
+                status?: string;
+                kind?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_campaigns_v1_admin_marketing_campaigns_get: {
         parameters: {
             query?: never;
@@ -9199,6 +9323,43 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    draft_copy_v1_admin_marketing_copies_draft_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

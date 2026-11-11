@@ -169,3 +169,36 @@ def rendered(c: Wording, values: dict[str, str]) -> dict[str, str]:
         footer_link=("Unsubscribe", get_settings().app_base_url.rstrip("/") + "/v1/unsubscribe/preview"),
     )
     return {"subject": f["subject"], "preheader": f["preheader"], "text": text, "html": html}
+
+
+def repair(text: str) -> str:
+    """Make a drafted text safe to save: remove tags we don't know, and give a fallback to any that can come out empty."""
+
+    def one(m: re.Match) -> str:
+        t = BY_KEY.get(m.group(1))
+        if t is None:
+            return ""
+        if t.can_be_empty and not (m.group(2) or "").strip():
+            return f"{{{{{t.key}|there}}}}"
+        return m.group(0)
+
+    return re.sub(r"[ \t]{2,}", " ", TAG.sub(one, text)).strip()
+
+
+async def draft(brief: str, category: str) -> dict:
+    """A first draft from the AI, checked the same way as copy a person wrote. Raises Invalid if it can't be made usable."""
+    from app.integrations import registry
+
+    tags = [f"{{{{{t.key}|there}}}}" if t.can_be_empty else f"{{{{{t.key}}}}}" for t in TAGS]
+    try:
+        raw = await registry.get_llm().draft_marketing_copy(brief, CATEGORIES.get(category, category), tags)
+    except Exception:  # noqa: BLE001
+        raise Invalid("The AI couldn't write a draft just now. Try again in a moment.") from None
+    out = {k: repair(str(raw.get(k, ""))) for k in ("subject", "preheader", "body")}
+    out["subject"] = " ".join(out["subject"].split())[:200]
+    out["preheader"] = " ".join(out["preheader"].split())[:200]
+    try:
+        validate(CopyIn(name="Draft", category=category if category in CATEGORIES else "product", **out))
+    except (Invalid, ValueError):
+        raise Invalid("The AI's draft wasn't usable. Try again, or add more detail to your brief.") from None
+    return out

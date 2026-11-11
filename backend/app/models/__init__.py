@@ -41,6 +41,7 @@ from app.models.marketing import (
     MarketingSend,
     MarketingSuppression,
     MarketingWorkflow,
+    UserEvent,
 )
 from app.models.news_desk import NewsImage, NewsStory, NewsVideo
 from app.models.outreach import OutreachMessage, OutreachOptout, OutreachThread
@@ -60,6 +61,7 @@ __all__ = [
     "MarketingSend",
     "MarketingSuppression",
     "MarketingWorkflow",
+    "UserEvent",
     "OutreachOptout",
     "OutreachThread",
     "WorkItem",

@@ -177,6 +177,19 @@ class MarketingEnrollment(Base):
     exit_reason: Mapped[str] = mapped_column(String(40), default="")
     step_index: Mapped[int] = mapped_column(Integer, default=0)  # the next step to run
     attempts: Mapped[int] = mapped_column(Integer, default=0)  # tries at the current step
+    runs: Mapped[int] = mapped_column(
+        Integer, default=1, server_default="1"
+    )  # how many times they have been through (re-entry)
     next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     entered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class UserEvent(Base):
+    """Something a person did in the product that no other table records (used by marketing segments). Names are in services/user_events.py."""
+
+    __tablename__ = "user_events"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(40), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)

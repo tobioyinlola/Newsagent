@@ -24,6 +24,7 @@ from app.schemas.api import (
     ShareCreated,
     SharePublic,
 )
+from app.services import user_events
 from app.services.captions import suggested_captions
 from app.services.ratelimit import limit
 
@@ -142,6 +143,7 @@ async def create_share(
         raise HTTPException(403, "Sharing is disabled for this workspace")
     token = secrets.token_urlsafe(32)
     session.add(ShareLink(project_id=project_id, token_hash=_hash(token)))
+    user_events.record(session, p.user.id, "video_shared")
     await session.commit()
     # The raw token is returned once and never stored or logged.
     return ShareCreated(url=f"{get_settings().app_base_url}/s/{token}")

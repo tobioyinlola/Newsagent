@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import ColumnElement, Select, and_, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,9 +22,11 @@ from app.models import (
     Project,
     ReferralReward,
     User,
+    UserEvent,
     Workspace,
 )
 from app.services.industries import INDUSTRIES
+from app.services.user_events import EVENTS
 
 
 class Invalid(ValueError):
@@ -32,14 +34,23 @@ class Invalid(ValueError):
 
 
 class Condition(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     field: str
     op: str
     value: Any = None
 
 
 class Rules(BaseModel):
+    """A group of rules joined by all/any. A group can hold single rules and other groups (up to MAX_DEPTH deep)."""
+
+    model_config = ConfigDict(extra="forbid")
     match: Literal["all", "any"] = "all"
-    conditions: list[Condition] = Field(default_factory=list, max_length=20)
+    conditions: list["Condition | Rules"] = Field(default_factory=list, max_length=20)
+
+
+Rules.model_rebuild()
+MAX_DEPTH = 3  # a group inside a group inside a group
+MAX_RULES = 30
 
 
 Build = Callable[[str, Any, datetime], ColumnElement[bool]]
@@ -205,6 +216,32 @@ def _country(op: str, value: Any, now: datetime) -> ColumnElement[bool]:
     return func.lower(Workspace.country).in_([v.strip().lower() for v in value])
 
 
+def _brand(op: str, value: Any, now: datetime) -> ColumnElement[bool]:
+    return _bool(value, Workspace.brand_kit_id.is_not(None))
+
+
+def _did(name: str) -> Build:
+    def build(op: str, value: Any, now: datetime) -> ColumnElement[bool]:
+        return _bool(value, exists().where(UserEvent.user_id == User.id, UserEvent.name == name).correlate(User))
+
+    return build
+
+
+def _since(name: str, what: str) -> Build:
+    """Days since they last did it. Only people who have ever done it can match."""
+
+    def build(op: str, value: Any, now: datetime) -> ColumnElement[bool]:
+        last = (
+            select(func.max(UserEvent.created_at))
+            .where(UserEvent.user_id == User.id, UserEvent.name == name)
+            .correlate(User)
+            .scalar_subquery()
+        )
+        return _age_days(last, op, value, now, what)
+
+    return build
+
+
 NUM = ("gte", "lte", "eq", "between")
 FIELDS: tuple[Field_, ...] = (
     Field_(
@@ -217,6 +254,7 @@ FIELDS: tuple[Field_, ...] = (
     Field_("has_used_credits", "Has spent credits on a video", "Activity", "bool", ("is",), _used_credits),
     Field_("distribution_paid", "Distribution requests paid", "Activity", "number", NUM, _distribution, "requests"),
     Field_("has_referred", "Has referred someone", "Activity", "bool", ("is",), _referred),
+    Field_("has_brand_kit", "Has set up their brand kit", "Activity", "bool", ("is",), _brand),
     Field_("has_bought_credits", "Has bought credits", "Money", "bool", ("is",), _bought),
     Field_("credits_left", "Credits left", "Money", "number", NUM, _balance, "credits"),
     Field_(
@@ -238,6 +276,23 @@ FIELDS: tuple[Field_, ...] = (
         _choice(Workspace.plan, set(), "Plan"),
     ),
 )
+# One pair of rules for each remembered product action (recorded from when marketing was set up, not before).
+FIELDS = FIELDS + tuple(
+    f
+    for name, label in EVENTS.items()
+    for f in (
+        Field_(f"did_{name}", f"Has ever {label}", "Activity", "bool", ("is",), _did(name)),
+        Field_(
+            f"since_{name}",
+            f"Days since they last {label}",
+            "Activity",
+            "number",
+            NUM,
+            _since(name, f"Days since they {label}"),
+            "days",
+        ),
+    )
+)
 BY_KEY = {f.key: f for f in FIELDS}
 
 
@@ -257,6 +312,15 @@ def catalog() -> list[dict]:
     ]
 
 
+def _shape(rules: Rules, depth: int) -> int:
+    """Check the shape of a group and return how many single rules it holds."""
+    if depth > MAX_DEPTH:
+        raise Invalid(f"Groups can only be nested {MAX_DEPTH} deep.")
+    if not rules.conditions:
+        raise Invalid("A group is empty: add a rule to it or remove it.")
+    return sum(_shape(c, depth + 1) if isinstance(c, Rules) else 1 for c in rules.conditions)
+
+
 def validate(raw: dict | Rules) -> Rules:
     """The rules as a Rules, or Invalid with a plain message. Compiles every condition once, so a bad value fails here."""
     try:
@@ -265,6 +329,8 @@ def validate(raw: dict | Rules) -> Rules:
         raise Invalid("The rules aren't in the right shape.") from None
     if not rules.conditions:
         raise Invalid("Add at least one rule.")
+    if _shape(rules, 1) > MAX_RULES:
+        raise Invalid(f"That's a lot of rules. Keep it to {MAX_RULES} or fewer.")
     compile_rules(rules, datetime.now(UTC))
     return rules
 
@@ -272,6 +338,9 @@ def validate(raw: dict | Rules) -> Rules:
 def compile_rules(rules: Rules, now: datetime) -> ColumnElement[bool]:
     parts = []
     for c in rules.conditions:
+        if isinstance(c, Rules):
+            parts.append(compile_rules(c, now))
+            continue
         f = BY_KEY.get(c.field)
         if f is None:
             raise Invalid(f"Unknown rule: {c.field}.")

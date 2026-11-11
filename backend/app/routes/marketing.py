@@ -7,7 +7,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select, update
+from sqlalchemy import ColumnElement, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import Principal, require
@@ -21,6 +21,7 @@ from app.models import (
     MarketingSend,
     MarketingSuppression,
     MarketingWorkflow,
+    User,
 )
 from app.models.base import utcnow
 from app.services import marketing, marketing_starter, ratelimit
@@ -676,6 +677,7 @@ def _wf_out(w: MarketingWorkflow, seg_names: dict[str, str]) -> dict:
         "goal_segment_name": seg_names.get(w.goal_segment_id or "", ""),
         "steps": w.steps,
         "hours": w.settings or {},
+        "reentry_days": (w.settings or {}).get("reentry_days"),
         "activated_at": w.activated_at.isoformat() if w.activated_at else None,
         "created_by": w.created_by,
         "created_at": w.created_at.isoformat(),
@@ -703,7 +705,7 @@ async def _checked(db: AsyncSession, body: workflows.WorkflowIn) -> None:
 def _apply(w: MarketingWorkflow, body: workflows.WorkflowIn) -> None:
     w.name, w.trigger_segment_id, w.goal_segment_id = body.name.strip(), body.trigger_segment_id, body.goal_segment_id
     w.steps = [s.model_dump(exclude_none=True) for s in body.steps]
-    w.settings = body.hours.model_dump()
+    w.settings = {**body.hours.model_dump(), "reentry_days": body.reentry_days}
 
 
 @router.get("/v1/admin/marketing/workflows")
@@ -821,6 +823,7 @@ async def activate_workflow(
             steps=w.steps,
             goal_segment_id=w.goal_segment_id,
             hours=workflows.Hours.model_validate(w.settings or {}),
+            reentry_days=(w.settings or {}).get("reentry_days"),
         ),
     )
     seg = await db.get(MarketingSegment, w.trigger_segment_id)
@@ -879,6 +882,89 @@ async def delete_workflow(
     audit(db, p.user.email, "marketing.workflow_deleted", target_type="workflow", target_id=w.id, request=request)
     await db.delete(w)
     await db.commit()
+
+
+class DraftBody(BaseModel):
+    brief: str = Field(min_length=10, max_length=1000)
+    category: str = "product"
+
+
+@router.post("/v1/admin/marketing/copies/draft")
+async def draft_copy(body: DraftBody, p: Principal = Depends(require("marketing.manage"))) -> dict:
+    """A first draft written by the AI from a short brief. It is only a starting point: nothing is saved or sent."""
+    if not await ratelimit.hit(f"marketing-draft:{p.user.id}", 20, 3600):
+        raise HTTPException(429, "That's a lot of drafts. Try again in a while.")
+    try:
+        return await copies.draft(body.brief.strip(), body.category)
+    except copies.Invalid as e:
+        raise HTTPException(502, str(e)) from None
+
+
+# ---------- activity ----------
+@router.get("/v1/admin/marketing/activity")
+async def activity(
+    q: str = "",
+    status: str = "",
+    kind: str = "",
+    limit: int = 50,
+    offset: int = 0,
+    p: Principal = Depends(require("marketing.view")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Every marketing email we sent or chose not to send, newest first: why a person did or didn't get something."""
+    limit = max(1, min(limit, 200))
+    where: list[ColumnElement[bool]] = []
+    if q.strip():
+        where.append(User.email.ilike(f"%{q.strip()}%"))
+    if status in {"sent", "skipped", "failed", "dry_run", "test"}:
+        where.append(MarketingSend.status == status)
+    if kind in {"campaign", "workflow", "test"}:
+        where.append(MarketingSend.kind == kind)
+    base = select(MarketingSend, User.email).join(User, User.id == MarketingSend.user_id).where(*where)
+    total = (await db.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
+    rows = (await db.execute(base.order_by(MarketingSend.created_at.desc()).offset(offset).limit(limit))).all()
+    camp_ids = {r.ref for r, _ in rows if r.kind == "campaign" and r.ref}
+    wf_ids = {r.ref.split(":")[0] for r, _ in rows if r.kind == "workflow" and r.ref}
+    camp = {
+        c.id: c.name
+        for c in (
+            await db.execute(select(MarketingCampaign).where(MarketingCampaign.id.in_(camp_ids or {"-"})))
+        ).scalars()
+    }
+    wfn = {
+        w.id: w
+        for w in (
+            await db.execute(select(MarketingWorkflow).where(MarketingWorkflow.id.in_(wf_ids or {"-"})))
+        ).scalars()
+    }
+
+    def source(r: MarketingSend) -> str:
+        if r.kind == "campaign":
+            return camp.get(r.ref, "")
+        if r.kind == "workflow":
+            wid, _, idx = r.ref.partition(":")
+            w = wfn.get(wid)
+            return f"{w.name} (step {int(idx) + 1})" if w and idx.isdigit() else (w.name if w else "")
+        return ""
+
+    return {
+        "total": total,
+        "items": [
+            {
+                "id": r.id,
+                "at": r.created_at.isoformat(),
+                "email": email,
+                "kind": r.kind,
+                "source": source(r),
+                "subject": r.subject,
+                "status": r.status,
+                "reason": r.skip_reason,
+                "opened": r.opened_at is not None,
+                "clicked": r.clicked_at is not None,
+            }
+            for r, email in rows
+        ],
+    }
 
 
 # ---------- unsubscribe (public; the token is the proof) ----------

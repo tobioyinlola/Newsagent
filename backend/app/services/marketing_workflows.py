@@ -82,7 +82,24 @@ class EmailStep(BaseModel):
     only_if_rules: dict | None = None  # that segment's rules, fixed when switched on
 
 
-Step = Annotated[WaitStep | EmailStep, Field(discriminator="type")]
+class BranchStep(BaseModel):
+    """If they are in the segment, jump to one step; if not, jump to another. A target is a LATER step number (0 is the first
+    step), or empty to finish. Jumps only go forward, so a workflow can never loop."""
+
+    type: Literal["branch"]
+    segment_id: str
+    rules: dict | None = None  # that segment's rules, fixed when switched on
+    yes_to: int | None = Field(None, ge=0)
+    no_to: int | None = Field(None, ge=0)
+
+
+class EndStep(BaseModel):
+    """Finish here: the person leaves the workflow as completed."""
+
+    type: Literal["end"]
+
+
+Step = Annotated[WaitStep | EmailStep | BranchStep | EndStep, Field(discriminator="type")]
 
 
 class Hours(BaseModel):
@@ -103,6 +120,7 @@ class WorkflowIn(BaseModel):
     steps: list[Step] = Field(min_length=1, max_length=20)
     goal_segment_id: str | None = None
     hours: Hours = Field(default_factory=Hours)
+    reentry_days: int | None = Field(None, ge=7, le=365)  # empty: nobody goes through twice
 
 
 # ---------- sending hours ----------
@@ -136,9 +154,17 @@ async def check(db: AsyncSession, w: WorkflowIn) -> None:
             raise Invalid("Choose the goal from your segments.")
     if not any(s.type == "email" for s in w.steps):
         raise Invalid("Add at least one email.")
-    if w.steps[-1].type == "wait":
-        raise Invalid("The last step should be an email: a wait at the end does nothing.")
+    if w.steps[-1].type in {"wait", "branch"}:
+        raise Invalid("The last step should be an email or an end: a wait or a branch at the end does nothing.")
     for i, s in enumerate(w.steps, 1):
+        if s.type == "branch":
+            only = await db.get(MarketingSegment, s.segment_id)
+            if only is None or only.archived_at is not None:
+                raise Invalid(f"Step {i}: choose the branch group from your segments.")
+            for target in (s.yes_to, s.no_to):
+                if target is not None and not (i - 1 < target < len(w.steps)):
+                    raise Invalid(f"Step {i}: a branch can only jump to a later step (or finish).")
+            continue
         if s.type != "email":
             continue
         copy = await db.get(MarketingCopy, s.copy_id)
@@ -168,6 +194,9 @@ async def activate(db: AsyncSession, wf: MarketingWorkflow, include_existing: bo
             s["copy_version"] = copy.current_version if copy else s.get("copy_version")
             only = await db.get(MarketingSegment, s["only_if_segment_id"]) if s.get("only_if_segment_id") else None
             s["only_if_rules"] = only.rules if only else None
+        elif s["type"] == "branch":
+            seg_b = await db.get(MarketingSegment, s["segment_id"])
+            s["rules"] = seg_b.rules if seg_b else None
         steps.append(s)
     wf.steps = steps
     goal = await db.get(MarketingSegment, wf.goal_segment_id) if wf.goal_segment_id else None
@@ -197,6 +226,12 @@ async def stop(db: AsyncSession, wf: MarketingWorkflow) -> None:
 
 
 # ---------- running ----------
+def _key(wf: MarketingWorkflow, e: MarketingEnrollment) -> str:
+    """One send per person per step per run. The first run keeps the original key; a person who comes back gets fresh ones."""
+    run = "" if e.runs <= 1 else f"r{e.runs}:"
+    return f"wf:{wf.id}:{e.user_id}:{run}{e.step_index}"
+
+
 def _leave(e: MarketingEnrollment, reason: str, now: datetime) -> str:
     e.status, e.exit_reason, e.finished_at, e.next_run_at = "exited", reason, now, None
     return "moved"
@@ -219,6 +254,17 @@ async def _process(db: AsyncSession, wf: MarketingWorkflow, e: MarketingEnrollme
             e.status, e.finished_at, e.next_run_at = "completed", now, None
             return "moved"
         step = wf.steps[e.step_index]
+        if step["type"] == "end":
+            e.status, e.finished_at, e.next_run_at = "completed", now, None
+            return "moved"
+        if step["type"] == "branch":
+            hit = bool(step.get("rules")) and await segs.matches(db, segs.Rules.model_validate(step["rules"]), user.id)
+            target = step.get("yes_to") if hit else step.get("no_to")
+            if target is None or target <= e.step_index:  # finish (a jump back can't happen: it is refused when saving)
+                e.status, e.finished_at, e.next_run_at = "completed", now, None
+                return "moved"
+            e.step_index, e.attempts = target, 0
+            continue
         if step["type"] == "wait":
             _advance(e, now + timedelta(days=step.get("days", 0), hours=step.get("hours", 0)))
             return "moved"
@@ -250,7 +296,7 @@ async def _process(db: AsyncSession, wf: MarketingWorkflow, e: MarketingEnrollme
             preheader=f["preheader"],
             kind="workflow",
             ref=f"{wf.id}:{e.step_index}",
-            idempotency_key=f"wf:{wf.id}:{user.id}:{e.step_index}",
+            idempotency_key=_key(wf, e),
         )
         reason = out.split(":", 1)[1] if out.startswith("skipped:") else ""
         if out in {"sent", "dry_run"}:
@@ -295,6 +341,46 @@ async def enroll_new(db: AsyncSession, wf: MarketingWorkflow, now: datetime) -> 
     return len(ids)
 
 
+async def reenter(db: AsyncSession, wf: MarketingWorkflow, now: datetime) -> int:
+    """Let people back in who finished the workflow long enough ago, and match the segment again (if re-entry is switched on)."""
+    days = (wf.settings or {}).get("reentry_days")
+    if not days:
+        return 0
+    cutoff = now - timedelta(days=days)
+    finished = (
+        exists()
+        .where(
+            MarketingEnrollment.workflow_id == wf.id,
+            MarketingEnrollment.user_id == User.id,
+            MarketingEnrollment.status == "completed",
+            MarketingEnrollment.finished_at <= cutoff,
+        )
+        .correlate(User)
+    )
+    q = (
+        segs.members_query(segs.Rules.model_validate(wf.rules))
+        .where(*segs.reachable_clause(), finished)
+        .with_only_columns(User.id)
+        .limit(ENROLL_PER_TICK)
+    )
+    ids = list((await db.execute(q)).scalars())
+    if not ids:
+        return 0
+    rows = (
+        await db.execute(
+            select(MarketingEnrollment).where(
+                MarketingEnrollment.workflow_id == wf.id, MarketingEnrollment.user_id.in_(ids)
+            )
+        )
+    ).scalars()
+    n = 0
+    for e in rows:
+        e.status, e.exit_reason, e.step_index, e.attempts, e.runs = "active", "", 0, 0, e.runs + 1
+        e.next_run_at, e.finished_at = now, None
+        n += 1
+    return n
+
+
 async def tick(budget: int) -> dict:
     """One minute of work: enrol new matches, then move due people along, sending at most `budget` emails."""
     enrolled = sent = 0
@@ -307,6 +393,7 @@ async def tick(budget: int) -> dict:
         live = (await db.execute(select(MarketingWorkflow).where(MarketingWorkflow.status == "active"))).scalars().all()
         for wf in live:
             enrolled += await enroll_new(db, wf, now)
+            enrolled += await reenter(db, wf, now)
         await db.commit()
         for wf in live:
             due = (

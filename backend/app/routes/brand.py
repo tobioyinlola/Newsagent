@@ -25,7 +25,7 @@ from app.schemas.api import (
     VoiceOut,
 )
 from app.services import brand as brand_svc
-from app.services import uploads
+from app.services import uploads, user_events
 from app.services.ratelimit import limit
 
 router = APIRouter(prefix="/v1", tags=["brand"])
@@ -94,6 +94,7 @@ async def save_brand_kit(
     session.add(kit)
     await session.flush()
     p.workspace.brand_kit_id = kit.id
+    user_events.record(session, p.user.id, "brand_saved")
     await session.commit()
     return _out(kit)
 
