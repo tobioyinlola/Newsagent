@@ -38,7 +38,7 @@ describe("addresses are cleaned before Google sees them", () => {
   });
 });
 
-describe("nothing happens without a yes", () => {
+describe("until they choose: counted without cookies. After Decline or a privacy signal: nothing", () => {
   it("is off entirely when no measurement id is set", async () => {
     const { ga, consent } = await load("");
     expect(ga.gaConfigured).toBe(false);
@@ -48,8 +48,28 @@ describe("nothing happens without a yes", () => {
     expect(document.querySelector("script[src*=googletagmanager]")).toBeNull();
     expect(window.dataLayer).toBeUndefined();
   });
-  it("sends and loads nothing before the visitor accepts", async () => {
+  it("counts a visitor who hasn't chosen yet, with analytics cookies denied and no cookie set", async () => {
     const { ga } = await load();
+    ga.startAnalytics();
+    expect(document.querySelector("script[src*=googletagmanager]")).not.toBeNull();
+    expect(sent().find((e) => e[0] === "consent" && e[1] === "default")?.[2]).toMatchObject({ analytics_storage: "denied", ad_storage: "denied", ad_user_data: "denied", ad_personalization: "denied" });
+    ga.trackPageView("/signup", "");
+    expect(events("page_view")).toHaveLength(1);
+    expect(document.cookie).not.toContain("_ga");
+  });
+  it("lets Google use cookies only after an explicit Accept", async () => {
+    const { ga, consent } = await load();
+    ga.startAnalytics();
+    consent.setConsent("granted");
+    ga.startAnalytics();
+    const updates = sent().filter((e) => e[0] === "consent" && e[1] === "update");
+    expect(updates.at(-1)?.[2]).toEqual({ analytics_storage: "granted" });
+    expect(document.querySelectorAll("script[src*=googletagmanager]")).toHaveLength(1); // not loaded a second time
+  });
+  it("sends nothing and loads nothing after a Decline", async () => {
+    const { ga, consent } = await load();
+    consent.setConsent("denied");
+    ga.startAnalytics();
     ga.trackPageView("/", "");
     ga.track.signUp();
     expect(document.querySelector("script[src*=googletagmanager]")).toBeNull();
@@ -67,19 +87,22 @@ describe("nothing happens without a yes", () => {
     expect(consent.getConsent()).toBe("denied");
     Object.defineProperty(navigator, "globalPrivacyControl", { value: undefined, configurable: true });
   });
-  it("asks again rather than assuming yes when browser storage is blocked", async () => {
-    const { consent } = await load();
+  it("asks again rather than assuming yes when browser storage is blocked, and still counts without cookies", async () => {
+    const { ga, consent } = await load();
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("blocked"); });
     expect(consent.getConsent()).toBeNull();
+    ga.startAnalytics();
+    expect(sent().find((e) => e[0] === "consent" && e[1] === "default")?.[2]).toMatchObject({ analytics_storage: "denied" });
     vi.restoreAllMocks();
   });
 });
 
-describe("after a yes", () => {
-  it("loads Google's script and configures it with advertising features off", async () => {
+describe("after Accept", () => {
+  it("loads Google's script and configures it with advertising features off, and analytics cookies on", async () => {
     const { ga, consent } = await load();
     consent.setConsent("granted");
     ga.startAnalytics();
+    expect(sent().find((e) => e[0] === "consent" && e[1] === "default")?.[2]).toMatchObject({ analytics_storage: "granted", ad_storage: "denied" });
     const script = document.querySelector<HTMLScriptElement>("script[src*=googletagmanager]");
     expect(script?.src).toBe(`https://www.googletagmanager.com/gtag/js?id=${ID}`);
     const config = sent().find((e) => e[0] === "config");

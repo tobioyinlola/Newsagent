@@ -1,7 +1,8 @@
-import { browserOptOut, getConsent } from "./consent";
+import { getConsent } from "./consent";
 
-// Google Analytics 4, used with care:
-//  - it is off unless VITE_GA_MEASUREMENT_ID is set for the build, and nothing loads until the visitor accepts the cookie notice;
+// Google Analytics 4, used with care, in Google's "advanced Consent Mode":
+//  - it is off unless VITE_GA_MEASUREMENT_ID is set for the build;
+//  - until a visitor chooses it counts their visit WITHOUT cookies; if they accept, it also uses cookies; if they decline, it is switched off;
 //  - the private pages (founder interview links, private share links, the back office) are never measured;
 //  - addresses are cleaned before they are sent, so no private link code, checkout number or project number ever reaches Google;
 //  - no names, emails or company names are sent: only what a page is, and what step someone reached.
@@ -42,7 +43,8 @@ export function cleanQuery(search: string): string {
 }
 
 let started = false;
-const active = () => gaConfigured && started && getConsent() === "granted" && typeof window.gtag === "function";
+// Sending is allowed unless they declined (or their browser sent a privacy signal, which getConsent() reports as "denied").
+const active = () => gaConfigured && started && getConsent() !== "denied" && typeof window.gtag === "function";
 
 // Google's script reads an `arguments` object from the data layer, not an array, so this has to be a plain function.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -52,16 +54,20 @@ function gtag(..._args: unknown[]) {
   window.dataLayer.push(arguments);
 }
 
-// Called when (and only when) the visitor has accepted.
+// Called on the first measurable page, and again when their choice changes. Cookies are used only after an explicit Accept; until then Google
+// gets cookie-free page views, and after Decline or a privacy signal it gets nothing at all.
 export function startAnalytics(): void {
-  if (!gaConfigured || browserOptOut()) return;
+  const consent = getConsent();
+  if (!gaConfigured || consent === "denied") return;
   window[`ga-disable-${GA_ID}`] = false;
-  if (started) { window.gtag?.("consent", "update", { analytics_storage: "granted" }); return; }
+  const storage = consent === "granted" ? "granted" : "denied";
+  if (started) { window.gtag?.("consent", "update", { analytics_storage: storage }); return; }
   started = true;
   window.dataLayer = window.dataLayer ?? [];
   window.gtag = gtag;
-  // Advertising features stay off for everyone. Analytics storage is granted because they said yes.
-  gtag("consent", "default", { ad_storage: "denied", ad_user_data: "denied", ad_personalization: "denied", analytics_storage: "granted" });
+  // Advertising features stay off for everyone. Analytics cookies are off until they accept.
+  gtag("consent", "default", { ad_storage: "denied", ad_user_data: "denied", ad_personalization: "denied", analytics_storage: storage });
+  gtag("set", "ads_data_redaction", true);
   gtag("js", new Date());
   gtag("config", GA_ID, {
     send_page_view: false, // the app is one page: we send each page view ourselves, with a cleaned address

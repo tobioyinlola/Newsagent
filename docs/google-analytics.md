@@ -4,8 +4,37 @@ Google Analytics 4 measures how people use the **public website and the customer
 they get (sign up, first video, video ready, credits bought). It is separate from the in-app audience reports (`docs/analytics.md`),
 which count views of stories and shared videos from our own database.
 
-It runs only after a visitor accepts the cookie notice. It never runs on the back office (`/admin`), the founder interview links
-(`/i/...`) or private share links (`/s/...`).
+It uses Google's **advanced Consent Mode**, so it counts everyone, with cookies only for people who accept:
+
+| Visitor | Google Analytics |
+|---|---|
+| Hasn't chosen yet (or ignores the banner) | Counts the visit **without cookies** (page, IP address and browser details; no cookie, no returning-visitor recognition) |
+| Clicked **Accept** | Counts with cookies (`_ga`, 13 months), so returning visitors are recognised |
+| Clicked **Decline** | Switched off, no data sent |
+| Browser sends Do Not Track / Global Privacy Control | Switched off, no data sent |
+
+It never runs on the back office (`/admin`), the founder interview links (`/i/...`) or private share links (`/s/...`).
+
+**Expect Google's numbers to be incomplete for people who haven't accepted.** Without cookies, Google cannot tell that two visits are
+the same person, so those visits are not counted as users on their own. Google estimates them with statistical modelling, and only
+once the property has enough data (roughly 1,000 events a day from people who declined and 1,000 daily users who accepted, for 7
+days). Until then GA4 shows mostly the people who accepted. **The exact count of everyone is the first-party counter below.**
+
+## Our own cookie-free counter (exact, everyone)
+
+Every visit to the public site and customer app is also counted by us, on our own server, with **no cookie and nothing stored on the
+visitor's device**, whatever they chose about cookies. See it in the back office: **Reports & analytics > Website visitors**
+(`/admin/analytics`): visitors and page views per day, where visitors came from (search, social, other websites, and our own
+marketing emails by campaign), and the most visited pages.
+
+- A visitor is a one-way code made from the day, a server secret, their IP address and browser. The IP address is **never stored**, and
+  the code changes every day, so a person is counted **once a day** and can't be followed from one day to the next (someone who comes on
+  two days counts twice). Only daily totals are kept; the codes are deleted after two days.
+- Not counted: robots, browsers sending Do Not Track or Global Privacy Control, the back office, private links.
+- Pages come from a fixed list, so made-up addresses can't fill the tables.
+- It counts people on your own team too. Internal visits can't be removed from it the way a Google Analytics filter can.
+- Needs `TRUST_PROXY_HEADERS=true` on the backend (already required for rate limits), so the visitor's address is read from
+  `X-Forwarded-For` and not the proxy's.
 
 ## 1. Switch it on (one setting)
 
@@ -58,10 +87,11 @@ and purchases. Links to other websites are left alone.
 
 ## 5. Checking it works
 
-1. Open the live site in a private window, click **Accept**, then open **Reports > Realtime** in Analytics. You should appear within a minute.
+1. Open the live site in a private window and look at **Reports > Realtime** in Analytics: you should appear within a minute even before you answer the banner. Then click **Accept** and confirm the `_ga` cookie appears.
+   In the back office, **Reports & analytics > Website visitors** should show the visit right away.
 2. Click around (sign up page, etc.): each screen shows as its own page.
-3. Click **Cookie settings** in the footer and **Decline**: nothing further is sent and the `_ga` cookies are removed.
-4. Open a `/s/...` private link: no banner, nothing sent.
+3. Click **Cookie settings** in the footer and **Decline**: nothing further goes to Google and the `_ga` cookies are removed (our own cookie-free count continues).
+4. Open a `/s/...` private link: no banner, nothing sent or counted.
 
 ## 6. Security policy
 
@@ -71,7 +101,13 @@ no third-party script. Regenerate both files after changing `frontend/security-h
 
 ## 7. Wording
 
-The Privacy Policy now describes Google Analytics (what it receives, that it runs only with consent, how to withdraw, 13-month
-cookies) under *Cookies and similar storage*, the data table, the providers table and the purposes table, and notes the change under
-*Changes to this policy*. `TERMS_VERSION` was **not** changed: the change is a disclosure with its own consent, not a new term people must
+The Privacy Policy describes both measurements (Google Analytics: cookie-free until you choose, cookies only after Accept, off after
+Decline; and our own cookie-free counter) under *Cookies and similar storage*, the data table, the providers table, the purposes table and
+the retention table, and notes the change under *Changes to this policy*.
+
+**Be aware:** counting visitors with Google Analytics before they choose sends their IP address and browser details to Google without
+consent. That is how Google's advanced Consent Mode works and is widely used, but regulators in the UK, EU and Nigeria have not all
+accepted it, and the legal basis we state is "legitimate interests". If you would rather not take that risk, set the visitors-before-choosing
+behaviour to wait for consent (ask a developer; it is a one-line change in `frontend/src/components/Analytics.tsx`). The first-party counter
+stays exact either way. `TERMS_VERSION` was **not** changed: the change is a disclosure with its own consent, not a new term people must
 re-accept. Have your lawyer read the wording if you want it checked.
