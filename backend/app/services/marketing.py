@@ -77,6 +77,25 @@ async def set_opt_out(db: AsyncSession, token: str, out: bool, source: str) -> M
     return pref
 
 
+async def apply_delivery_event(db: AsyncSession, kind: str, emails: list[str]) -> int:
+    """A bounce or complaint reported by the mail provider. kind: hard_bounce | complaint. Returns how many addresses were acted on.
+    A hard bounce blocks the address for marketing. A complaint (they marked it as spam) blocks it AND counts as an unsubscribe for
+    every account that uses it. Both are safe to repeat."""
+    n = 0
+    for raw in emails:
+        email = (raw or "").strip().lower()
+        if not email or "@" not in email:
+            continue
+        await suppress(db, email, "spam complaint" if kind == "complaint" else "hard bounce")
+        if kind == "complaint":
+            for u in (await db.execute(select(User).where(func.lower(User.email) == email))).scalars():
+                pref = await pref_for(db, u.id)
+                if pref.opted_out_at is None:
+                    pref.opted_out_at, pref.source = utcnow(), "complaint"
+        n += 1
+    return n
+
+
 async def suppress(db: AsyncSession, email: str, reason: str) -> None:
     email = email.strip().lower()
     if await db.get(MarketingSuppression, email) is None:

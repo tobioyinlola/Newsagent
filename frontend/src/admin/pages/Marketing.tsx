@@ -7,10 +7,11 @@ import { useCan } from "../lib/can";
 import { CampaignsTab } from "./MarketingCampaigns";
 import { ActivityTab } from "./MarketingActivity";
 import { CopiesTab } from "./MarketingCopies";
+import { OptoutsTab } from "./MarketingOptouts";
 import { WorkflowsTab } from "./MarketingWorkflows";
 import { blankCondition, cleanRules, type Condition, countRules, describe, describeRules, type FieldDef, isGroup, MAX_DEPTH, OP_LABEL, type Preview, type Rules, type Segment } from "../lib/segments";
 
-type Status = { engine: "off" | "on" | "dry_run"; config: { paused: boolean; min_gap_days: number; daily_cap: number; per_minute: number; track: boolean }; sent_today: number; opted_out: number; suppressed: number };
+type Status = { engine: "off" | "on" | "dry_run"; config: { paused: boolean; min_gap_days: number; daily_cap: number; per_minute: number; track: boolean }; sent_today: number; opted_out: number; suppressed: number; bounce_events: boolean };
 const ENGINE: Record<Status["engine"], string> = { off: "Off: nothing is sent", dry_run: "Dry run: logged, not sent", on: "On" };
 const EMPTY: Rules = { match: "all", conditions: [] };
 
@@ -124,7 +125,7 @@ export function MarketingAdmin() {
   const qc = useQueryClient();
   const can = useCan();
   const manage = can("marketing.manage");
-  const [tab, setTab] = useState<"segments" | "copies" | "campaigns" | "workflows" | "activity">("segments");
+  const [tab, setTab] = useState<"segments" | "copies" | "campaigns" | "workflows" | "activity" | "optouts">("segments");
   const [editing, setEditing] = useState<Segment | "new" | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
   const [removing, setRemoving] = useState<Segment | null>(null);
@@ -152,6 +153,7 @@ export function MarketingAdmin() {
               <p><b>{ENGINE[s.engine]}</b>{s.config.paused && <span className="ml-2 rounded-sm bg-brand-red px-1.5 py-0.5 text-xs font-bold">Paused</span>}</p>
               <p className="text-muted">{num(s.sent_today)} sent today (limit {num(s.config.daily_cap)}) · at most one email per person every {s.config.min_gap_days} days · up to {num(s.config.per_minute)} a minute · {num(s.opted_out)} unsubscribed · {num(s.suppressed)} blocked addresses</p>
               <label className="flex items-center gap-2 text-muted"><input type="checkbox" checked={s.config.track} disabled={!manage || pause.isPending} onChange={(e) => pause.mutate({ track: e.target.checked })} /> Count opens and clicks (adds a tiny picture, and sends the button through our site)</label>
+              {s.engine !== "off" && !s.bounce_events && <p className="rounded-lg border border-brand-peach bg-peach-tint px-3 py-2">Bounces and spam complaints aren’t being reported to us yet, so bad addresses won’t block themselves. Set RESEND_EVENTS_SECRET and add the webhook in Resend (see docs/marketing-email-setup.md).</p>}
               {s.engine === "off" && <p className="text-muted">Marketing email is switched off on the server (MARKETING_EMAIL). Segments still work.</p>}
             </div>
             {manage && <Button variant={s.config.paused ? "primary" : "danger"} disabled={pause.isPending} onClick={() => pause.mutate({ paused: !s.config.paused })}>{s.config.paused ? "Resume sending" : "Pause all marketing"}</Button>}
@@ -159,9 +161,9 @@ export function MarketingAdmin() {
         </Card>
       )}
       <div role="tablist" aria-label="Marketing sections" className="flex gap-2">
-        {([["segments", "Segments"], ["copies", "Email copy"], ["campaigns", "Campaigns"], ["workflows", "Workflows"], ["activity", "Activity"]] as const).map(([k, label]) => <button key={k} role="tab" aria-selected={tab === k} type="button" onClick={() => setTab(k)} className={`rounded-lg border px-4 py-2 text-sm font-semibold ${tab === k ? "border-ink bg-brand-green" : "border-line bg-white hover:border-ink"}`}>{label}</button>)}
+        {([["segments", "Segments"], ["copies", "Email copy"], ["campaigns", "Campaigns"], ["workflows", "Workflows"], ["activity", "Activity"], ["optouts", "Opt-outs"]] as const).map(([k, label]) => <button key={k} role="tab" aria-selected={tab === k} type="button" onClick={() => setTab(k)} className={`rounded-lg border px-4 py-2 text-sm font-semibold ${tab === k ? "border-ink bg-brand-green" : "border-line bg-white hover:border-ink"}`}>{label}</button>)}
       </div>
-      {tab === "copies" ? <CopiesTab /> : tab === "campaigns" ? <CampaignsTab engine={s?.engine ?? "off"} /> : tab === "workflows" ? <WorkflowsTab engine={s?.engine ?? "off"} /> : tab === "activity" ? <ActivityTab /> : editing && fields.data ? <Editor fields={fields.data} seg={editing === "new" ? null : editing} onDone={() => { setEditing(null); setViewing(null); }} /> : (
+      {tab === "copies" ? <CopiesTab /> : tab === "campaigns" ? <CampaignsTab engine={s?.engine ?? "off"} /> : tab === "workflows" ? <WorkflowsTab engine={s?.engine ?? "off"} /> : tab === "activity" ? <ActivityTab /> : tab === "optouts" ? <OptoutsTab /> : editing && fields.data ? <Editor fields={fields.data} seg={editing === "new" ? null : editing} onDone={() => { setEditing(null); setViewing(null); }} /> : (
         <Card title="Segments" actions={manage && <Button onClick={() => setEditing("new")}>New segment</Button>}>
           {list.isLoading ? <p aria-busy="true">Loading…</p> : list.data && list.data.length === 0 ? <p className="text-sm text-muted">No segments yet. A segment is a saved group of people, for example “joined 3 to 7 days ago and has made no video”.</p> : (
             <ul className="space-y-3">

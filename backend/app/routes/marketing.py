@@ -1,5 +1,6 @@
 """Back office: marketing switches and status. Public: the unsubscribe page every marketing email links to."""
 
+import json
 from datetime import UTC, datetime, timedelta
 from html import escape
 from typing import Literal
@@ -10,7 +11,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import ColumnElement, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import Principal, require
+from app.auth import Principal, current_principal, require
+from app.config import get_settings
 from app.db import get_session
 from app.models import (
     MarketingCampaign,
@@ -30,6 +32,7 @@ from app.services import marketing_copy as copies
 from app.services import marketing_segments as segs
 from app.services import marketing_workflows as workflows
 from app.services.audit import audit
+from app.services.ratelimit import limit
 
 router = APIRouter(tags=["marketing"])
 
@@ -55,6 +58,9 @@ async def status(p: Principal = Depends(require("marketing.view")), db: AsyncSes
         "sent_today": sent_today,
         "opted_out": opted_out,
         "suppressed": suppressed,
+        "bounce_events": bool(
+            get_settings().resend_events_secret
+        ),  # is the mail provider reporting bounces and complaints to us?
     }
 
 
@@ -968,8 +974,12 @@ async def activity(
 
 
 # ---------- unsubscribe (public; the token is the proof) ----------
-def _page(title: str, message: str, button: str | None = None) -> HTMLResponse:
-    form = f'<form method="post"><button type="submit">{escape(button)}</button></form>' if button else ""
+def _page(title: str, message: str, button: str | None = None, action: str = "") -> HTMLResponse:
+    form = (
+        f'<form method="post" action="{escape(action, quote=True)}"><button type="submit">{escape(button)}</button></form>'
+        if button
+        else ""
+    )
     return HTMLResponse(
         "<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
         f'<title>{escape(title)}</title><body style="font:16px/1.5 Inter,Helvetica,Arial,sans-serif;color:#191A30;max-width:480px;'
@@ -988,7 +998,10 @@ async def unsubscribe_page(token: str, db: AsyncSession = Depends(get_session)) 
     if pref.opted_out_at is not None:
         return _page(
             "You're unsubscribed",
-            "You won't get marketing emails from Cover Founder. Account emails (sign-in codes, receipts) still arrive.",
+            "You won't get marketing emails from Cover Founder. Account emails (sign-in codes, receipts) still arrive. "
+            "Changed your mind? You can start getting them again.",
+            "Resubscribe",
+            f"/v1/unsubscribe/{token}/resubscribe",
         )
     return _page(
         "Stop marketing emails?",
@@ -1007,7 +1020,23 @@ async def unsubscribe(token: str, request: Request, db: AsyncSession = Depends(g
     await db.commit()
     return _page(
         "You're unsubscribed",
-        "You won't get marketing emails from Cover Founder. Account emails (sign-in codes, receipts) still arrive.",
+        "You won't get marketing emails from Cover Founder. Account emails (sign-in codes, receipts) still arrive. "
+        "Pressed it by mistake? You can start getting them again.",
+        "Resubscribe",
+        f"/v1/unsubscribe/{token}/resubscribe",
+    )
+
+
+@router.post("/v1/unsubscribe/{token}/resubscribe", include_in_schema=False)
+async def resubscribe(token: str, db: AsyncSession = Depends(get_session)) -> HTMLResponse:
+    """The button on the unsubscribe page, for someone who changed their mind. A deliberate press, never a link opening."""
+    pref = await marketing.set_opt_out(db, token, False, "resubscribe")
+    if pref is None:
+        raise HTTPException(404, "This link isn't valid.")
+    await db.commit()
+    return _page(
+        "You're subscribed again",
+        "You'll get product tips and offers from Cover Founder again. You can unsubscribe at any time from the link in any of them.",
     )
 
 
@@ -1035,8 +1064,6 @@ async def opened(token: str, db: AsyncSession = Depends(get_session)) -> Respons
 async def clicked(token: str, db: AsyncSession = Depends(get_session)) -> RedirectResponse:
     """The button in a marketing email: count the click, then go to the link that was stored with the email. Nothing in the address
     can change where it goes."""
-    from app.config import get_settings
-
     row = (await db.execute(select(MarketingSend).where(MarketingSend.track_token == token))).scalar_one_or_none()
     url = row.click_url if row is not None else None
     if row is None or not url or not url.startswith(("https://", "http://")):
@@ -1049,3 +1076,129 @@ async def clicked(token: str, db: AsyncSession = Depends(get_session)) -> Redire
     )  # someone who clicked certainly opened it, even if their mail app blocks pictures
     await db.commit()
     return RedirectResponse(url, status_code=302, headers=NO_STORE)
+
+
+# ---------- the customer's own choice ----------
+class MarketingPrefIn(BaseModel):
+    subscribed: bool
+
+
+async def _my_pref(db: AsyncSession, user: User) -> dict:
+    pref = await db.get(MarketingPref, user.id)
+    blocked = await db.get(MarketingSuppression, user.email.strip().lower()) is not None
+    return {"subscribed": not (pref and pref.opted_out_at), "blocked": blocked}
+
+
+@router.get("/v1/me/marketing")
+async def my_marketing(p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> dict:
+    """Whether this person gets product tips and offers by email, and whether we can't deliver to their address at all."""
+    return await _my_pref(db, p.user)
+
+
+@router.put("/v1/me/marketing")
+async def set_my_marketing(
+    body: MarketingPrefIn, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)
+) -> dict:
+    pref = await marketing.pref_for(db, p.user.id)
+    pref.opted_out_at, pref.source = (None if body.subscribed else utcnow()), "account"
+    await db.commit()
+    return await _my_pref(db, p.user)
+
+
+# ---------- unsubscribed and blocked addresses (back office) ----------
+@router.get("/v1/admin/marketing/optouts")
+async def optouts(
+    kind: Literal["blocked", "unsubscribed"] = "blocked",
+    q: str = "",
+    limit: int = 50,
+    offset: int = 0,
+    p: Principal = Depends(require("marketing.view")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    """blocked: addresses we must not mail (hard bounce, spam complaint). unsubscribed: people who chose to stop."""
+    limit = max(1, min(limit, 200))
+    term = f"%{q.strip().lower()}%"
+    if kind == "blocked":
+        base = select(MarketingSuppression).where(MarketingSuppression.email.like(term))
+        total = (await db.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
+        rows = (
+            (await db.execute(base.order_by(MarketingSuppression.created_at.desc()).offset(offset).limit(limit)))
+            .scalars()
+            .all()
+        )
+        items = [{"email": r.email, "reason": r.reason, "at": r.created_at.isoformat()} for r in rows]
+    else:
+        pbase = (
+            select(MarketingPref, User.email)
+            .join(User, User.id == MarketingPref.user_id)
+            .where(MarketingPref.opted_out_at.is_not(None), func.lower(User.email).like(term))
+        )
+        total = (await db.execute(select(func.count()).select_from(pbase.subquery()))).scalar_one()
+        prows = (await db.execute(pbase.order_by(MarketingPref.opted_out_at.desc()).offset(offset).limit(limit))).all()
+        items = [
+            {
+                "email": e,
+                "reason": pr.source or "unsubscribed",
+                "at": pr.opted_out_at.isoformat() if pr.opted_out_at else "",
+            }
+            for pr, e in prows
+        ]
+    return {"total": total, "items": items}
+
+
+@router.delete("/v1/admin/marketing/optouts/blocked/{email}", status_code=204)
+async def unblock(
+    email: str,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> None:
+    """Lift a block on an address (for example a bounce caused by a full mailbox that has since been fixed).
+    This never undoes someone's own unsubscribe."""
+    row = await db.get(MarketingSuppression, email.strip().lower())
+    if row is None:
+        raise HTTPException(404, "That address isn't blocked.")
+    audit(
+        db,
+        p.user.email,
+        "marketing.address_unblocked",
+        target_type="address",
+        target_id=row.email,
+        detail={"reason": row.reason},
+        request=request,
+    )
+    await db.delete(row)
+    await db.commit()
+
+
+# ---------- bounces and complaints from the mail provider ----------
+@router.post(
+    "/v1/webhooks/resend-events", include_in_schema=False, dependencies=[Depends(limit("resend-events", 600, 60))]
+)
+async def resend_events(request: Request, db: AsyncSession = Depends(get_session)) -> dict:
+    """Resend tells us when an email bounced for good or was marked as spam. Closed unless a signing secret is set, and every
+    call must be signed with it."""
+    from app.routes.outreach_inbound import verify_svix
+
+    secret = get_settings().resend_events_secret
+    if not secret:
+        raise HTTPException(404)
+    body = await request.body()
+    if not verify_svix(secret, {k.lower(): v for k, v in request.headers.items()}, body):
+        raise HTTPException(401, "Bad signature.")
+    try:
+        event = json.loads(body)
+        kind = str(event.get("type", ""))
+        data = event.get("data") or {}
+        to = data.get("to") or []
+        emails = [to] if isinstance(to, str) else [str(x) for x in to]
+    except (ValueError, AttributeError, TypeError):
+        raise HTTPException(400, "Unreadable event.") from None
+    action = ""
+    if kind == "email.complained":
+        action = "complaint"
+    elif kind == "email.bounced" and str((data.get("bounce") or {}).get("type", "")).lower() in {"permanent", "hard"}:
+        action = "hard_bounce"  # soft and undetermined bounces are left alone: the next email may well arrive
+    handled = await marketing.apply_delivery_event(db, action, emails) if action else 0
+    await db.commit()
+    return {"ok": True, "handled": handled}
