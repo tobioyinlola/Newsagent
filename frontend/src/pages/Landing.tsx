@@ -286,20 +286,19 @@ function Distribution() {
     <section id="distribution" className="border-t border-white/10 bg-ink px-4 py-20 md:px-8">
       <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
         <div>
-          <Eyebrow>Distribution · coming soon</Eyebrow>
+          <Eyebrow>Distribution</Eyebrow>
           <h2 className="mt-3 text-3xl text-white md:text-5xl">Take your news across borders.</h2>
-          <p className="mt-4 text-white/70">Businesses in one market rarely reach the next. Distribution will place your segment and story with audiences in the regions you choose, paid for with the same credits you use to make the video.</p>
+          <p className="mt-4 text-white/70">Businesses in one market rarely reach the next. Distribution places your segment and story with audiences in the regions you choose, paid for with the same credits you use to make the video.</p>
           <ul className="mt-6 space-y-3 text-white/90">
             {["Pick one region or several for each announcement", "Credits per region, shown before you confirm", "Your video and story stay yours to share anywhere"].map((x) => <li key={x} className="flex gap-3"><span className="text-brand-green" aria-hidden="true">✓</span>{x}</li>)}
           </ul>
-          <div className="mt-8 flex flex-wrap gap-3"><Cta to="/press-distribution#choose" primary>Choose your outlets</Cta><Cta href={`${CONTACT}%20-%20distribution`}>Join the waitlist</Cta></div>
+          <div className="mt-8 flex flex-wrap gap-3"><Cta to="/press-distribution#choose" primary>Choose your outlets</Cta><Cta to="/press-distribution">See how distribution works</Cta></div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {regions.map((r, i) => (
             <div key={r} className="rounded-sm border border-white/10 bg-white/5 p-4">
               <p className="font-mono text-[11px] text-white/50">REGION 0{i + 1}</p>
               <p className="mt-2 font-bold text-white">{r}</p>
-              <p className="mt-3 inline-block rounded-sm border border-brand-peach px-2 py-0.5 font-mono text-[11px] text-brand-peach">COMING SOON</p>
             </div>
           ))}
         </div>
