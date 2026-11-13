@@ -1,5 +1,5 @@
-import { Suspense, lazy, type ComponentType, type ReactNode } from "react";
-import { Navigate, Route, Routes, useParams, useLocation } from "react-router-dom";
+import { Suspense, lazy, useLayoutEffect, type ComponentType, type ReactNode } from "react";
+import { Navigate, Route, Routes, useParams, useLocation, useNavigationType } from "react-router-dom";
 import { TrackingConsent } from "./components/Analytics";
 import { BackButton } from "./components/BackButton";
 import { RequireAuth } from "./components/RequireAuth";
@@ -54,9 +54,20 @@ function SettingsRedirect({ tab }: { tab: string }) {
 // Addresses used before the move to /ai-newsroom, /latest-stories and /press-distribution keep working (emails already sent link to them).
 const OldProject = () => <Navigate to={`/ai-newsroom/${useParams().id}`} replace />;
 
+/** Opening a page from a link starts at its top. Back/forward keep the browser's own position, and a link with a #section is left to that page to scroll. */
+function ScrollToTop() {
+  const { pathname, hash } = useLocation();
+  const type = useNavigationType();
+  useLayoutEffect(() => {
+    if (type !== "POP" && !hash) window.scrollTo(0, 0);
+  }, [pathname, hash, type]);
+  return null;
+}
+
 export function App() {
   return (
     <>
+    <ScrollToTop />
     <TrackingConsent />
     <Routes>
       <Route path="/" element={dark(<Landing />)} />
