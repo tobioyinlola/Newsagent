@@ -321,7 +321,7 @@ const FAQ: { group: string; items: [string, string][] }[] = [
   ] },
   { group: "Credits & access", items: [
     ["How does pricing work?", "You buy a pack of credits and spend them as you make videos. There's no subscription, and a step that fails is never charged."],
-    ["What is distribution?", "Coming soon: placing your segment and story with audiences in the regions you choose (the United States, Canada, the United Kingdom, Nigeria and Kenya to start), paid per region in credits."],
+    ["What is distribution?", "Placing your segment and story with audiences in the regions you choose: the United States, Canada, the United Kingdom, Nigeria and Kenya, with more countries being added. You pay per region in credits, and see the cost before you confirm."],
     ["Who can sign up?", "Anyone can. Press “Sign up here”, enter your business name and email, and confirm the 6-digit code we email you. Invitations from our team still work too."],
     ["Who owns the video?", "You do. Download it, post it anywhere, or share a private link."],
   ] },

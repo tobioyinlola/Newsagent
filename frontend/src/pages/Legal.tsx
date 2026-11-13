@@ -86,7 +86,7 @@ const TERMS: Section[] = [
       "Through Press Distribution you can pay credits to have your announcement, and optionally your video, sent to media outlets you choose. We then contact each outlet and track the result.",
       "You can buy credits, refer other businesses for rewards, and see audience measurements for your videos.",
     ],
-    "We may add, change, pause or remove features at any time, including features that are switched off or marked “coming soon”. Distribution to outlets in the United States, Canada and the United Kingdom is not available until we say so.",
+    "We may add, change, pause or remove features at any time, including features that are switched off or marked “coming soon”.",
   ] },
   { id: "account", title: "Your account and security", body: [
     "Sign-up needs a confirmed email address (we send a 6-digit code) and a password. You are responsible for everything done through your account and for keeping your password and email access secure. Tell us straight away at " + EMAIL + " if you think someone else has used your account.",
