@@ -31,10 +31,10 @@ const PACKAGES: { name: string; reach: string; points: string[]; featured?: bool
 ];
 
 const QUESTIONS: [string, string][] = [
-  ["When can I use distribution?", "You can submit a distribution request for the available Africa outlets now. United States, Canada and United Kingdom coverage is coming soon."],
+  ["When can I use distribution?", "Now. You can submit a distribution request today for outlets in the United States, Canada, the United Kingdom, Nigeria and Kenya."],
   ["How is it priced?", "With the same credits you use for videos. Each package shows its credits before you confirm, and nothing is charged until you do."],
   ["What gets distributed?", "Your news segment (video) and your written story, with your headline, links and social copy."],
-  ["Which regions can I pick?", "Africa is available now. United States, Canada and United Kingdom distribution is coming soon."],
+  ["Which regions can I pick?", "The United States, Canada, the United Kingdom, Nigeria and Kenya, with more countries being added. Pick one region or several; the credits for each are shown before you confirm."],
   ["Will I see where it ran?", "Yes. Every distribution comes with a placement report listing where your story appeared."],
 ];
 
@@ -81,9 +81,9 @@ export function DistributionPage() {
           <DistributionHeroPhoto />
           <div className="relative z-10 mx-auto max-w-6xl">
             <div className="md:max-w-[55%]">
-              <p className="inline-block rounded-sm border border-brand-peach bg-ink/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-brand-peach">Distribution · Africa available</p>
+              <p className="inline-block rounded-sm border border-brand-peach bg-ink/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-brand-peach">Distribution · Now available</p>
               <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">Your news, across <span className="text-brand-green">2,500+ media outlets globally.</span></h1>
-              <p className="mt-5 max-w-xl text-lg text-white/85">Submit your news segment and written announcement for distribution to the available Africa outlets. United States, Canada and United Kingdom coverage is coming soon. Review the credits before submitting.</p>
+              <p className="mt-5 max-w-xl text-lg text-white/85">Submit your news segment and written announcement for distribution to outlets in the United States, Canada, the United Kingdom, Nigeria and Kenya, with more countries being added. Review the credits before submitting.</p>
               <div className="mt-8 flex flex-wrap gap-3"><Cta href="#choose" primary>Choose distribution outlets</Cta><Cta href="#coverage">See coverage</Cta></div>
             </div>
           </div>
