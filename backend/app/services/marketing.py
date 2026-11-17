@@ -118,6 +118,22 @@ async def apply_delivery_event(db: AsyncSession, kind: str, emails: list[str]) -
     return n
 
 
+async def apply_resend_unsubscribe(db: AsyncSession, emails: list[str]) -> int:
+    """Someone used the unsubscribe link in a Resend Broadcast. Mark every account with that address as opted out, so the app's own
+    emails to them stop too. Safe to repeat."""
+    n = 0
+    for raw in emails:
+        email = (raw or "").strip().lower()
+        if "@" not in email:
+            continue
+        for u in (await db.execute(select(User).where(func.lower(User.email) == email))).scalars():
+            pref = await pref_for(db, u.id)
+            if pref.opted_out_at is None:
+                pref.opted_out_at, pref.source = utcnow(), "resend_unsubscribe"
+        n += 1
+    return n
+
+
 async def suppress(db: AsyncSession, email: str, reason: str) -> None:
     email = email.strip().lower()
     if await db.get(MarketingSuppression, email) is None:

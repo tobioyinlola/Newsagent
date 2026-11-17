@@ -146,6 +146,21 @@ def get_email() -> EmailProvider:
     return _get("email", make)  # type: ignore[return-value]
 
 
+def get_broadcast():  # -> BroadcastProvider
+    """Resend Broadcasts for marketing campaigns. In mock mode a recorder."""
+
+    def make():
+        if get_settings().use_mocks:
+            from app.integrations.broadcast.mock import MockBroadcast
+
+            return MockBroadcast()
+        from app.integrations.broadcast.resend import ResendBroadcast
+
+        return ResendBroadcast()
+
+    return _get("broadcast", make)
+
+
 def get_outreach_email() -> EmailProvider:
     """Who sends the outreach emails: the configured mailbox (Gmail / Workspace over SMTP) or, when none is set, the usual sender."""
     s = get_settings()
