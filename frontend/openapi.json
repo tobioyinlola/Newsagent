@@ -4439,6 +4439,60 @@
         "title": "PlanAnswer",
         "type": "object"
       },
+      "PlanIn": {
+        "description": "What someone tells the planner. Nothing here is stored.",
+        "properties": {
+          "budget": {
+            "anyOf": [
+              {
+                "maximum": 10000000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget"
+          },
+          "countries": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Countries",
+            "type": "array"
+          },
+          "goal": {
+            "default": "credibility",
+            "enum": [
+              "credibility",
+              "investors",
+              "customers",
+              "hiring"
+            ],
+            "title": "Goal",
+            "type": "string"
+          },
+          "industry": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry"
+          }
+        },
+        "title": "PlanIn",
+        "type": "object"
+      },
       "PresenterClipOut": {
         "properties": {
           "active": {
@@ -20206,6 +20260,68 @@
         ]
       }
     },
+    "/v1/distribution/plan": {
+      "post": {
+        "description": "Suggested plans for a signed-in customer. With no countries given it starts from the business's own country, and with no\nindustry from the one chosen at sign-up; it also says how far each plan is from the credits in the wallet.",
+        "operationId": "outlet_plan_v1_distribution_plan_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Outlet Plan V1 Distribution Plan Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Outlet Plan",
+        "tags": [
+          "distribution"
+        ]
+      }
+    },
     "/v1/distribution/press-release": {
       "post": {
         "description": "Write a press release from the announcement's details. Nothing is saved or charged: the owner edits it, then chooses outlets.",
@@ -24344,6 +24460,50 @@
           }
         },
         "summary": "Public Outlets",
+        "tags": [
+          "distribution"
+        ]
+      }
+    },
+    "/v1/public/distribution/plan": {
+      "post": {
+        "description": "The same plans for a visitor who is not signed in. Only the answers given are used, and nothing is kept.",
+        "operationId": "public_outlet_plan_v1_public_distribution_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Public Outlet Plan V1 Public Distribution Plan Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Public Outlet Plan",
         "tags": [
           "distribution"
         ]

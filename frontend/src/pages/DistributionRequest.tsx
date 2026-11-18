@@ -15,6 +15,8 @@ import { DistributionFundingDialog } from "../components/DistributionFundingDial
 import { DistributionSteps, DISTRIBUTION_STEPS as steps } from "../components/DistributionSteps";
 import { DistributionMediaOptions } from "../components/DistributionMediaOptions";
 import { Button, Card, ErrorBox, Notice } from "../components/ui";
+import { OutletPlanner } from "../components/OutletPlanner";
+import { planBody, planIds, type PlanResult } from "../lib/outletPlanner";
 
 type Video = { id: string; headline: string; announcement: string; video_url: string | null };
 const request = <T,>(path: string, method = "GET", body?: unknown) => distributionApi<T>(path, getToken(), method, body);
@@ -37,6 +39,7 @@ export function DistributionRequestPage() {
   const [view, setView] = useState(false);
   const [success, setSuccess] = useState(false);
   const [topup, setTopup] = useState(false);
+  const [suggested, setSuggested] = useState<Record<string, string[]>>({}); // what the planner suggested, to mark in the list
   const [funding, setFunding] = useState({ balance: 0, required: 0 });
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const submitting = useRef(false);
@@ -171,7 +174,16 @@ export function DistributionRequestPage() {
       {Object.keys(fieldErrors).length > 0 && <div ref={validationSummary} tabIndex={-1} role="alert" className="rounded-lg border-2 border-brand-red bg-red-tint p-4 focus-visible:outline-2 focus-visible:outline-brand-purple"><p className="font-bold">Complete the required details before continuing.</p><ul className="mt-2 list-inside list-disc text-sm">{Object.values(fieldErrors).map(message => <li key={message}>{message}</li>)}</ul></div>}
       <p role="status" className="text-sm">{saved || "Your progress is saved automatically."}</p>
       {draft.stage === "outlets" && fieldError("outlet_ids")}
-      {draft.stage === "outlets" && <DistributionOutlets outlets={all.map(o => selected.find(s => s.id === o.id) ?? o)} selectedIds={draft.outlet_ids} onChange={outlet_ids => patch({ outlet_ids })} comingSoon={outlets.data?.coming_soon ?? []} filters={outlets.data?.filters} />}
+      {draft.stage === "outlets" && row?.status === "draft" && <OutletPlanner
+        countries={[...new Set(all.map(o => o.country).filter((c): c is string => Boolean(c)))].sort()}
+        fetchPlan={ask => request<PlanResult>("distribution/plan", "POST", planBody(ask))}
+        autoRun
+        appliedIds={draft.outlet_ids}
+        onResult={r => setSuggested(r?.suggested ?? {})}
+        onApply={plan => patch({ outlet_ids: planIds(plan).filter(id => all.some(o => o.id === id)) })}
+        onTopUp={plan => { setFunding({ balance: Number(plan.total_credits) - Number(plan.shortfall_credits ?? 0), required: Number(plan.total_credits) }); setTopup(true); }}
+      />}
+      {draft.stage === "outlets" && <DistributionOutlets suggested={suggested} outlets={all.map(o => selected.find(s => s.id === o.id) ?? o)} selectedIds={draft.outlet_ids} onChange={outlet_ids => patch({ outlet_ids })} comingSoon={outlets.data?.coming_soon ?? []} filters={outlets.data?.filters} />}
       {draft.stage === "content" && <Card title="Choose your video and announcement">
         <label className="block font-semibold">Video (optional)<select aria-label="Video (optional)" aria-invalid={!!fieldErrors.project_id} aria-describedby={fieldErrors.project_id ? "distribution-error-project_id" : undefined} className="mt-2 block min-h-12 w-full rounded-lg border border-ink p-3 font-normal" value={draft.project_id ?? ""} onChange={e => patch({ project_id: e.target.value || null })}><option value="">No video: send the story only</option>{videos.data?.map(v => <option key={v.id} value={v.id}>{v.headline || `Video ${v.id.slice(0, 8)}`}</option>)}</select></label>{fieldError("project_id")}
         {videos.data?.length === 0 && <p className="mt-2 text-sm text-muted">You don't have a finished video yet, so your story will be sent on its own. <Link className="underline" to="/ai-newsroom/new">Create a video</Link></p>}

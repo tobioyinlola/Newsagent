@@ -2890,6 +2890,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/distribution/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Outlet Plan
+         * @description Suggested plans for a signed-in customer. With no countries given it starts from the business's own country, and with no
+         *     industry from the one chosen at sign-up; it also says how far each plan is from the credits in the wallet.
+         */
+        post: operations["outlet_plan_v1_distribution_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/distribution/press-release": {
         parameters: {
             query?: never;
@@ -4036,6 +4057,26 @@ export interface paths {
         get: operations["public_outlets_v1_public_distribution_outlets_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/distribution/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Public Outlet Plan
+         * @description The same plans for a visitor who is not signed in. Only the answers given are used, and nothing is kept.
+         */
+        post: operations["public_outlet_plan_v1_public_distribution_plan_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6171,6 +6212,24 @@ export interface components {
              * @default 0
              */
             trim_start_s: number;
+        };
+        /**
+         * PlanIn
+         * @description What someone tells the planner. Nothing here is stored.
+         */
+        PlanIn: {
+            /** Budget */
+            budget?: number | string | null;
+            /** Countries */
+            countries?: string[];
+            /**
+             * Goal
+             * @default credibility
+             * @enum {string}
+             */
+            goal: "credibility" | "investors" | "customers" | "hiring";
+            /** Industry */
+            industry?: string | null;
         };
         /** PresenterClipOut */
         PresenterClipOut: {
@@ -14353,6 +14412,43 @@ export interface operations {
             };
         };
     };
+    outlet_plan_v1_distribution_plan_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     write_press_release_v1_distribution_press_release_post: {
         parameters: {
             query?: never;
@@ -16788,6 +16884,41 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    public_outlet_plan_v1_public_distribution_plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
