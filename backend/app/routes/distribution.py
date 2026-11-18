@@ -17,6 +17,7 @@ from app.models import Asset, BrandAsset, Brief, DistributionRequest, Project, S
 from app.models.base import utcnow
 from app.services import distribution as fulfillment
 from app.services import distribution_catalog as catalog_service
+from app.services import distribution_planner as planner
 from app.services import ledger
 from app.services.audit import audit
 from app.services.ratelimit import limit
@@ -526,6 +527,43 @@ async def public_outlets(response: Response, db: AsyncSession = Depends(get_sess
         "coming_soon": _coming_soon(shown),
         "filters": _filters(),
     }
+
+
+class PlanIn(BaseModel):
+    """What someone tells the planner. Nothing here is stored."""
+
+    budget: Decimal | None = Field(default=None, ge=0, le=Decimal("10000000"))
+    countries: list[str] = Field(default_factory=list, max_length=10)
+    goal: Literal["credibility", "investors", "customers", "hiring"] = "credibility"
+    industry: str | None = Field(default=None, max_length=30)
+
+
+def _plan_countries(asked: list[str]) -> list[str]:
+    """Match what was typed or picked to the countries we list, ignoring case and anything we do not know."""
+    by_lower = {c.lower(): c for c in REGION_OF}
+    return [by_lower[a.strip().lower()] for a in asked if a.strip().lower() in by_lower]
+
+
+@router.post("/v1/distribution/plan", dependencies=[Depends(limit("outlet-plan", 60, 60))])
+async def outlet_plan(
+    body: PlanIn, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Suggested plans for a signed-in customer. With no countries given it starts from the business's own country, and with no
+    industry from the one chosen at sign-up; it also says how far each plan is from the credits in the wallet."""
+    ws = p.workspace
+    countries = _plan_countries(body.countries) or _plan_countries([ws.country or ""])
+    shown = [o for o in await catalog_service.catalog(db) if not catalog_service.is_hidden(o)]
+    ask = planner.Ask(body.budget, countries, body.goal, body.industry or ws.industry)
+    return planner.recommend(shown, ask, balance=Decimal(ws.credit_balance), known_countries=REGION_OF)
+
+
+@router.post("/v1/public/distribution/plan", dependencies=[Depends(limit("public-outlet-plan", 60, 60))])
+async def public_outlet_plan(body: PlanIn, response: Response, db: AsyncSession = Depends(get_session)) -> dict:
+    """The same plans for a visitor who is not signed in. Only the answers given are used, and nothing is kept."""
+    response.headers["Cache-Control"] = "no-store"
+    shown = [o for o in await catalog_service.catalog(db) if not catalog_service.is_hidden(o)]
+    ask = planner.Ask(body.budget, _plan_countries(body.countries), body.goal, body.industry)
+    return planner.recommend(shown, ask, known_countries=REGION_OF)
 
 
 @router.get("/v1/distribution/stories")
