@@ -40,3 +40,20 @@ export const credits = (v: string | number) => { const n = Number(v); return `${
 
 /** Ids of every outlet in a plan, in order. */
 export const planIds = (p: Plan) => p.outlets.map((o) => o.id);
+
+/** The plan to feature on the "video is ready" prompt: the biggest that fits the wallet, else the smallest with what is missing.
+ *  None when there is nothing personal to say (no country we recognise, or no plans), so the prompt stays as it was. */
+export function featuredPlan(r: PlanResult): { plan: Plan; fits: boolean; balance: number; missing: number } | null {
+  if (!r.plans.length || !r.countries.length) return null;
+  const balance = Number(r.balance_credits ?? 0);
+  const fitting = r.plans.filter((p) => Number(p.total_credits) <= balance);
+  const plan = fitting.length ? fitting[fitting.length - 1] : r.plans[0];
+  const missing = Math.max(0, Number((Number(plan.total_credits) - balance).toFixed(2)));
+  return { plan, fits: missing === 0, balance, missing };
+}
+
+/** "Tribune, Independent, Techeconomy and 2 more" */
+export function outletSummary(p: Plan, show = 3): string {
+  const names = p.outlets.map((o) => o.name);
+  return names.length <= show ? names.join(", ") : `${names.slice(0, show).join(", ")} and ${names.length - show} more`;
+}
