@@ -20,6 +20,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg # the cover tests cut a frame from a real video with it
+      - name: Postgres 16 client tools (the runner's newer pg_dump writes SQL that the Postgres 16 service cannot restore)
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update && sudo apt-get install -y postgresql-client-16
+          echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
+          /usr/lib/postgresql/16/bin/pg_dump --version
       - run: uv sync
       - name: Video Rulebook outputs must be up to date (rules are add-on only; see app/video_rules/rulebook.py)
         run: |
