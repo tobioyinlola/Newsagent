@@ -128,6 +128,9 @@ class MarketingCampaign(Base, TimestampMixin):
         JSON, nullable=True
     )  # {enabled, start, end}: email only in the day where they live
     decide_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # How it goes out: direct (one email each) or broadcast (one Resend Broadcast to a segment). Fixed when sending starts.
+    channel: Mapped[str] = mapped_column(String(10), default="direct", server_default="direct")
+    broadcast_id: Mapped[str] = mapped_column(String(64), default="", server_default="")
 
 
 class MarketingRecipient(Base):

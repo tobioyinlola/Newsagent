@@ -1248,5 +1248,7 @@ async def resend_events(request: Request, db: AsyncSession = Depends(get_session
     elif kind == "email.bounced" and str((data.get("bounce") or {}).get("type", "")).lower() in {"permanent", "hard"}:
         action = "hard_bounce"  # soft and undetermined bounces are left alone: the next email may well arrive
     handled = await marketing.apply_delivery_event(db, action, emails) if action else 0
+    if kind == "contact.updated" and data.get("unsubscribed") is True and data.get("email"):
+        handled += await marketing.apply_resend_unsubscribe(db, [str(data["email"])])  # unsubscribed from a Resend Broadcast
     await db.commit()
     return {"ok": True, "handled": handled}

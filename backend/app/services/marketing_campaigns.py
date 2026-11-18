@@ -6,21 +6,26 @@ one person and the daily cap all apply, and a person is never sent the same camp
 
 import hashlib
 import logging
+import re
 from datetime import datetime, timedelta
 
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.db import session_maker
+from app.integrations import registry
 from app.models import (
     MarketingCampaign,
     MarketingCopyVersion,
     MarketingRecipient,
     MarketingSend,
+    SystemSetting,
     User,
     Workspace,
 )
 from app.models.base import utcnow
+from app.services import email_templates as templates
 from app.services import marketing
 from app.services import marketing_copy as copies
 from app.services import marketing_segments as segs
@@ -29,6 +34,9 @@ from app.services.marketing_hours import Hours, next_open, tz_for
 log = logging.getLogger("marketing.campaigns")
 # These skips are about the moment, not the person: leave the recipient waiting and try again on a later tick.
 WAIT = {"paused", "daily_cap", "engine_off"}
+SYNC_BATCH = 40  # people put into the Resend segment per minute (each is two calls to Resend)
+UNSUBSCRIBE_PLACEHOLDER = "https://placeholder.invalid/unsubscribe"  # swapped for Resend's own unsubscribe link
+RESEND_UNSUBSCRIBE = "{{{RESEND_UNSUBSCRIBE_URL}}}"
 SCAN_BATCH = 200  # people looked at in one go
 MAX_SCANS = 10  # batches per campaign per minute, so people waiting for their morning never hide the ones who can be sent to now
 
@@ -41,7 +49,7 @@ async def counts(db: AsyncSession, campaign_id: str) -> dict:
             .group_by(MarketingRecipient.status, MarketingRecipient.reason)
         )
     ).all()
-    totals = {"pending": 0, "held": 0, "sent": 0, "skipped": 0, "failed": 0}
+    totals = {"pending": 0, "held": 0, "synced": 0, "sent": 0, "skipped": 0, "failed": 0}
     by_reason: dict[str, int] = {}
     for status, reason, n in rows:
         totals[status] += n
@@ -141,6 +149,245 @@ async def start(db: AsyncSession, c: MarketingCampaign) -> None:
                 status = "held"  # waits for the winner
         db.add(MarketingRecipient(campaign_id=c.id, user_id=uid, status=status, variant=variant))
     c.status, c.started_at, c.audience = "sending", utcnow(), len(ids)
+    version = (
+        await db.execute(
+            select(MarketingCopyVersion).where(
+                MarketingCopyVersion.copy_id == c.copy_id, MarketingCopyVersion.version == c.copy_version
+            )
+        )
+    ).scalar_one()
+    c.channel = channel_for(c, version)
+    if c.channel == "broadcast" and len(ids) > get_settings().resend_contact_limit:
+        await db.flush()  # the people are written down, then none of them is emailed
+        await db.execute(
+            update(MarketingRecipient)
+            .where(MarketingRecipient.campaign_id == c.id)
+            .values(status="skipped", reason="resend_contact_limit", done_at=utcnow())
+        )
+        c.status, c.finished_at = "cancelled", utcnow()
+        log.error(
+            "campaign %s: %s people is over the Resend contact limit (%s); nothing was sent. Upgrade the Resend plan and set "
+            "RESEND_CONTACT_LIMIT, or send to a smaller segment.",
+            c.id,
+            len(ids),
+            get_settings().resend_contact_limit,
+        )
+
+
+# ---------- sending as one Resend Broadcast ----------
+def channel_for(c: MarketingCampaign, version: MarketingCopyVersion) -> str:
+    """Resend Broadcasts when it is switched on and the campaign needs nothing a broadcast can't do. A broadcast goes to everyone at once
+    with one subject, and can fill in only the first name, so a subject test, sending hours or other merge tags keep the one-by-one path."""
+    if get_settings().marketing_campaign_channel != "broadcast":
+        return "direct"
+    if c.subject_b or (c.hours and c.hours.get("enabled")):
+        return "direct"
+    text = " ".join((version.subject, version.preheader, version.body, version.button_label))
+    if any(m.group(1) != "first_name" for m in copies.TAG.finditer(text)):
+        return "direct"
+    return "broadcast"
+
+
+def _resend_tags(text: str) -> str:
+    """{{first_name|there}} becomes Resend's {{{contact.first_name|there}}}."""
+    return copies.TAG.sub(lambda m: "{{{contact.first_name|" + (m.group(2) or "there").strip() + "}}}", text)
+
+
+async def _segment_id(db: AsyncSession) -> str:
+    """The one Resend segment every campaign is sent through (the Free plan allows three). Made on first use and remembered."""
+    s = get_settings()
+    if s.resend_segment_id:
+        return s.resend_segment_id
+    row = await db.get(SystemSetting, "marketing_broadcast")
+    sid = str((row.value or {}).get("segment_id") or "") if row else ""
+    if sid:
+        return sid
+    sid = await registry.get_broadcast().ensure_segment("Campaign audience")
+    if row is None:
+        row = SystemSetting(key="marketing_broadcast", value={})
+        db.add(row)
+    row.value, row.updated_by, row.updated_at = {"segment_id": sid}, "system", utcnow()
+    await db.commit()
+    return sid
+
+
+async def _sent_today(db: AsyncSession, now: datetime) -> int:
+    start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    return (
+        await db.execute(
+            select(func.count())
+            .select_from(MarketingSend)
+            .where(MarketingSend.status.in_(("sent", "dry_run")), MarketingSend.created_at >= start)
+        )
+    ).scalar_one()
+
+
+async def _empty_segment(db: AsyncSession, seg: str, *, campaign_id: str | None = None) -> bool:
+    """Take people out of the shared segment after their campaign (a batch a minute). True when it is clean. With `campaign_id`
+    only that campaign's people; without, anyone left over from a campaign that finished or was cancelled."""
+    prov = registry.get_broadcast()
+    q = (
+        select(MarketingRecipient, User.email)
+        .join(User, User.id == MarketingRecipient.user_id)
+        .where(MarketingRecipient.reason == "in_segment")
+    )
+    if campaign_id:
+        q = q.where(MarketingRecipient.campaign_id == campaign_id)
+    else:
+        q = q.join(MarketingCampaign, MarketingCampaign.id == MarketingRecipient.campaign_id).where(
+            MarketingCampaign.status.in_(("sent", "cancelled"))
+        )
+    rows = (await db.execute(q.limit(SYNC_BATCH))).all()
+    for r, email in rows:
+        try:
+            await prov.remove_contact(email, seg)
+        except Exception:  # noqa: BLE001  try again next minute
+            log.exception("campaign %s: could not take %s out of the segment", r.campaign_id, r.id)
+            return False
+        r.reason = ""
+    await db.commit()
+    return len(rows) < SYNC_BATCH
+
+
+async def _deliver_broadcast(
+    db: AsyncSession, c: MarketingCampaign, version: MarketingCopyVersion, cfg: marketing.MarketingConfig, now: datetime
+) -> None:
+    """One minute of work on a broadcast campaign: put its people in the shared segment, send one broadcast, wait for Resend to
+    finish, take them out again. One campaign at a time uses the segment, so people from another campaign are never emailed."""
+    first = (
+        await db.execute(
+            select(MarketingCampaign.id)
+            .where(MarketingCampaign.status == "sending", MarketingCampaign.channel == "broadcast")
+            .order_by(MarketingCampaign.started_at, MarketingCampaign.id)
+            .limit(1)
+        )
+    ).scalar_one()
+    if first != c.id:
+        return
+    prov = registry.get_broadcast()
+    seg = await _segment_id(db)
+    if c.broadcast_id:
+        if await prov.status(c.broadcast_id) != "sent":
+            return  # Resend is still sending; the segment stays as it is until it has finished
+        if await _empty_segment(db, seg, campaign_id=c.id):
+            c.status, c.finished_at = "sent", utcnow()
+            await db.commit()
+        return
+    if not await _empty_segment(db, seg):
+        return  # someone from an earlier campaign is still in the segment
+    pending = (
+        (
+            await db.execute(
+                select(MarketingRecipient)
+                .where(MarketingRecipient.campaign_id == c.id, MarketingRecipient.status == "pending")
+                .order_by(MarketingRecipient.id)
+                .limit(SYNC_BATCH)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    synced = (
+        await db.execute(
+            select(func.count())
+            .select_from(MarketingRecipient)
+            .where(MarketingRecipient.campaign_id == c.id, MarketingRecipient.status == "synced")
+        )
+    ).scalar_one()
+    today = await _sent_today(db, now)
+    for r in pending:
+        user = await db.get(User, r.user_id)
+        if user is None:
+            r.status, r.reason, r.done_at = "skipped", "account_gone", utcnow()
+            await db.commit()
+            continue
+        reason = await marketing._skip_reason(db, user, cfg, now)
+        if not reason and today + synced >= cfg.daily_cap:
+            reason = "daily_cap"  # the people already waiting in the segment count toward today's limit
+        if reason in WAIT:
+            await db.commit()
+            return  # paused or at today's limit: try again next minute
+        if reason:
+            r.status, r.reason, r.done_at = "skipped", reason, utcnow()
+            await db.commit()
+            continue
+        values = await copies.values_for(db, user)
+        try:
+            await prov.add_contact(user.email, values.get("first_name", ""), seg)
+        except Exception:  # noqa: BLE001  one refused contact must not stop the rest
+            log.exception("campaign %s: Resend refused a contact (recipient %s)", c.id, r.id)
+            r.status, r.reason, r.done_at = "failed", "contact_refused", utcnow()
+            await db.commit()
+            continue
+        r.status, r.reason = "synced", "in_segment"
+        synced += 1
+        await db.commit()
+    left = (
+        await db.execute(
+            select(func.count())
+            .select_from(MarketingRecipient)
+            .where(MarketingRecipient.campaign_id == c.id, MarketingRecipient.status == "pending")
+        )
+    ).scalar_one()
+    if left:
+        return  # more people to put in the segment next minute
+    people = (
+        (
+            await db.execute(
+                select(MarketingRecipient).where(
+                    MarketingRecipient.campaign_id == c.id, MarketingRecipient.status == "synced"
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if not people:
+        c.status, c.finished_at = "sent", utcnow()  # nobody could be emailed
+        await db.commit()
+        return
+    subject = _resend_tags(version.subject)
+    button = None
+    if version.button_label:
+        url = version.button_url
+        if url.startswith("/"):
+            url = get_settings().app_base_url.rstrip("/") + url
+        button = (_resend_tags(version.button_label), marketing.with_campaign_tags(url, name=c.name))
+    html, text = templates.render(
+        subject,
+        _resend_tags(version.body),
+        button=button,
+        preheader=_resend_tags(version.preheader),
+        footer="You are receiving this because you have a Cover Founder account. You can stop these emails at any time.",
+        footer_link=("Unsubscribe", UNSUBSCRIBE_PLACEHOLDER),
+    )
+    html, text = html.replace(UNSUBSCRIBE_PLACEHOLDER, RESEND_UNSUBSCRIBE), text.replace(
+        UNSUBSCRIBE_PLACEHOLDER, RESEND_UNSUBSCRIBE
+    )
+    try:
+        c.broadcast_id = await prov.send(seg, c.name, subject, html, text)
+    except Exception:  # noqa: BLE001
+        # Resend may or may not have accepted it. Sending again could email everyone twice, so the campaign stops here: check the
+        # Broadcasts page in Resend, and make a new campaign if nothing went out.
+        log.exception("campaign %s: the broadcast could not be confirmed; stopped to avoid a double send", c.id)
+        for r in people:
+            r.status, r.done_at = "failed", utcnow()
+        c.status, c.finished_at = "cancelled", utcnow()
+        await db.commit()
+        return
+    for r in people:
+        r.status, r.done_at = "sent", utcnow()
+        db.add(
+            MarketingSend(
+                user_id=r.user_id,
+                kind="campaign",
+                ref=c.id,
+                subject=re.sub(r"\{\{\{contact\.first_name\|([^}]*)\}\}\}", r"\1", subject)[:500],
+                status="sent",
+                idempotency_key=f"campaign:{c.id}:{r.user_id}",
+            )
+        )
+    await db.commit()
 
 
 async def _deliver_one(
@@ -232,6 +479,9 @@ async def deliver_due(now: datetime | None = None) -> dict:
                     )
                 )
             ).scalar_one()
+            if c.channel == "broadcast":
+                await _deliver_broadcast(db, c, version, cfg, now)
+                continue
             scans = 0
             while budget > 0 and scans < MAX_SCANS:
                 scans += 1
@@ -321,5 +571,10 @@ async def cancel(db: AsyncSession, c: MarketingCampaign) -> None:
         update(MarketingRecipient)
         .where(MarketingRecipient.campaign_id == c.id, MarketingRecipient.status.in_(("pending", "held")))
         .values(status="skipped", reason="cancelled", done_at=utcnow())
+    )
+    await db.execute(  # in the Resend segment but not sent yet: they keep their "in_segment" mark so they are taken out again
+        update(MarketingRecipient)
+        .where(MarketingRecipient.campaign_id == c.id, MarketingRecipient.status == "synced")
+        .values(status="skipped", done_at=utcnow())
     )
     c.status, c.finished_at = "cancelled", utcnow()
