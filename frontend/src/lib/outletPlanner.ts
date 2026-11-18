@@ -1,9 +1,9 @@
 // The outlet planner: what we ask a person, what comes back, and the few helpers the screens share.
 export const GOALS: { key: Goal; label: string; hint: string }[] = [
-  { key: "credibility", label: "Look credible", hint: "Be seen in respected news outlets" },
-  { key: "investors", label: "Reach investors", hint: "Technology and business readers" },
-  { key: "customers", label: "Win customers", hint: "A broad news audience" },
-  { key: "hiring", label: "Support hiring", hint: "Technology readers and job seekers" },
+  { key: "credibility", label: "Look credible", hint: "General news outlets first" },
+  { key: "investors", label: "Reach investors", hint: "Technology outlets first" },
+  { key: "customers", label: "Win customers", hint: "General news outlets first" },
+  { key: "hiring", label: "Support hiring", hint: "Technology outlets first" },
 ];
 export type Goal = "credibility" | "investors" | "customers" | "hiring";
 

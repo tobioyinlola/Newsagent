@@ -30,6 +30,9 @@ test("completed video to distribution draft, checked images, wallet submission, 
   await expect(page.getByRole("alert").first()).toContainText("Choose at least one media outlet");
   await page.getByRole("navigation", { name: "Distribution steps", exact: true }).getByRole("button", { name: "4. Review & pay" }).click();
   await expect(page.getByRole("heading", { name: "Where would you like to distribute?" })).toBeVisible();
+  // the planner sits above the full list, which is still there; it starts from the business's own country
+  await expect(page.getByRole("heading", { name: "Get a suggested plan" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Available media outlets" })).toBeVisible();
   await page.getByLabel("Empire Magazine Africa").check();
   await page.getByLabel("Techpoint Africa").check();
   await expect(page.getByLabel("Selected outlets")).toContainText("2 selected");

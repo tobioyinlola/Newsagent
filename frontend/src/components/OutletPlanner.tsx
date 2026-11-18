@@ -38,14 +38,14 @@ export function OutletPlanner({ countries, fetchPlan, initialCountries = [], ind
   useEffect(() => { if (autoRun && !ran.current) { ran.current = true; void run(); } }, []);
   const toggle = (c: string) => setPicked((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));
   const t = dark
-    ? { box: "border-white/20 bg-white/5 text-white", muted: "text-white/70", chip: (on: boolean) => (on ? "border-brand-green bg-brand-green text-ink" : "border-white/40 text-white hover:border-brand-green"), field: "border-white/40 bg-ink text-white placeholder:text-white/50", card: "border-white/25 bg-ink", accent: "text-brand-green", btn: "border-brand-green bg-brand-green text-ink hover:bg-white", ghost: "border-white/60 text-white hover:bg-white/10", warn: "text-amber-300" }
-    : { box: "border-ink bg-white text-ink", muted: "text-muted", chip: (on: boolean) => (on ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink"), field: "border-ink bg-paper text-ink", card: "border-line bg-paper", accent: "text-ink", btn: "border-ink bg-brand-green text-ink hover:bg-ink hover:text-brand-green", ghost: "border-ink text-ink hover:bg-ink hover:text-white", warn: "text-red-700" };
+    ? { box: "border-white/20 bg-white/5 text-white", muted: "text-white/70", chip: (on: boolean) => (on ? "border-brand-green bg-brand-green text-ink" : "border-white/40 text-white hover:border-brand-green"), field: "border-white/40 bg-ink text-white placeholder:text-white/50", card: "border-white/25 bg-ink", head: "text-white", accent: "text-brand-green", btn: "border-brand-green bg-brand-green text-ink hover:bg-white", ghost: "border-white/60 text-white hover:bg-white/10", warn: "text-amber-300" }
+    : { box: "border-ink bg-white text-ink", muted: "text-muted", chip: (on: boolean) => (on ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink"), field: "border-ink bg-paper text-ink", card: "border-line bg-paper", head: "text-ink", accent: "text-ink", btn: "border-ink bg-brand-green text-ink hover:bg-ink hover:text-brand-green", ghost: "border-ink text-ink hover:bg-ink hover:text-white", warn: "text-red-700" };
   const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple";
   const inUse = (p: Plan) => appliedIds.length > 0 && appliedIds.length === p.outlets.length && planIds(p).every((id) => appliedIds.includes(id));
   return (
     <section aria-labelledby={`${uid}-h`} className={`rounded-xl border-2 p-4 sm:p-6 ${t.box}`}>
       <p className={`text-xs font-bold uppercase tracking-widest ${t.muted}`}>Not sure where to start?</p>
-      <h2 id={`${uid}-h`} className="mt-1 text-xl font-bold sm:text-2xl">Get a suggested plan</h2>
+      <h2 id={`${uid}-h`} className={`mt-1 text-xl font-bold sm:text-2xl ${t.head}`}>Get a suggested plan</h2>
       <p className={`mt-2 max-w-2xl text-sm ${t.muted}`}>Answer three quick questions and we will suggest outlets that fit. You can still choose anything from the full list below.</p>
       <form className="mt-5 space-y-5" onSubmit={(e) => { e.preventDefault(); void run(); }}>
         <fieldset>
@@ -95,7 +95,7 @@ export function OutletPlanner({ countries, fetchPlan, initialCountries = [], ind
             const short = Number(p.shortfall_credits ?? 0);
             return (
               <article key={p.key} aria-labelledby={`${uid}-${p.key}`} className={`flex flex-col rounded-lg border-2 p-4 ${t.card}`}>
-                <h3 id={`${uid}-${p.key}`} className="text-lg font-bold">{p.name}</h3>
+                <h3 id={`${uid}-${p.key}`} className={`text-lg font-bold ${t.head}`}>{p.name}</h3>
                 <p className={`text-sm ${t.muted}`}>{p.summary}</p>
                 <p className="mt-3 text-2xl font-bold">{credits(p.total_credits)}</p>
                 <p className={`text-xs ${t.muted}`}>{p.outlets.length} {p.outlets.length === 1 ? "outlet" : "outlets"} · from this price, logo and pictures are added at review</p>
