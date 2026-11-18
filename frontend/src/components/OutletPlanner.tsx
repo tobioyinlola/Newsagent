@@ -52,9 +52,9 @@ export function OutletPlanner({ countries, fetchPlan, initialCountries = [], ind
           <legend className="text-sm font-bold">1. Where are the people you want to reach?</legend>
           <div className="mt-2 flex flex-wrap gap-2">
             {countries.map((c) => (
-              <label key={c} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-full border-2 px-4 py-2 text-sm font-bold ${t.chip(picked.includes(c))} ${focus} focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-purple`}>
-                <input type="checkbox" className="sr-only" checked={picked.includes(c)} onChange={() => toggle(c)} />{picked.includes(c) && <span aria-hidden="true">✓ </span>}{c}
-              </label>
+              <button key={c} type="button" aria-pressed={picked.includes(c)} onClick={() => toggle(c)} className={`min-h-11 rounded-full border-2 px-4 py-2 text-sm font-bold ${t.chip(picked.includes(c))} ${focus}`}>
+                {picked.includes(c) && <span aria-hidden="true">✓ </span>}{c}
+              </button>
             ))}
           </div>
           <p className={`mt-1 text-xs ${t.muted}`}>Pick as many as you like. Leave empty to see options anywhere.</p>

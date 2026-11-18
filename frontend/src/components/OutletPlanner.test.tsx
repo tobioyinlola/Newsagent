@@ -21,7 +21,7 @@ describe("OutletPlanner", () => {
   it("asks the three questions and sends the answers", async () => {
     const p = props();
     render(<OutletPlanner {...p} />);
-    fireEvent.click(screen.getByLabelText("Nigeria"));
+    fireEvent.click(screen.getByRole("button", { name: /Nigeria/ }));
     fireEvent.change(screen.getByLabelText(/how many credits/i), { target: { value: "300" } });
     fireEvent.click(screen.getByLabelText(/reach investors/i));
     fireEvent.click(screen.getByRole("button", { name: "Suggest outlets" }));
@@ -78,7 +78,7 @@ describe("OutletPlanner", () => {
     const p = props({ autoRun: true, fetchPlan: vi.fn().mockResolvedValue(result({ countries: ["Nigeria"] })) });
     render(<OutletPlanner {...p} />);
     await waitFor(() => expect(p.fetchPlan).toHaveBeenCalledTimes(1));
-    expect(((await screen.findByLabelText(/Nigeria/)) as HTMLInputElement).checked).toBe(true); // the country the server started from is shown as picked
+    expect((await screen.findByRole("button", { name: /Nigeria/ })).getAttribute("aria-pressed")).toBe("true"); // the country the server started from is shown as picked
   });
 
   it("never promises publication", async () => {
