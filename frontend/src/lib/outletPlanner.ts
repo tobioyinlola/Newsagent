@@ -20,14 +20,15 @@ export type PlanResult = {
   balance_credits?: string;
   empty?: string;
 };
-export type PlanAsk = { budget: string; countries: string[]; goal: Goal; industry?: string | null };
+export type PlanSource = "public" | "request" | "ready_prompt" | "email";
+export type PlanAsk = { budget: string; countries: string[]; goal: Goal; industry?: string | null; source?: PlanSource; auto?: boolean };
 
 const base = () => import.meta.env.VITE_API_URL ?? "";
 
 /** What the planner is sent: a blank or invalid budget means "no limit", so people see what each plan would cost. */
 export function planBody(ask: PlanAsk) {
   const n = Number(ask.budget);
-  return { budget: ask.budget.trim() !== "" && Number.isFinite(n) && n >= 0 ? String(n) : null, countries: ask.countries, goal: ask.goal, industry: ask.industry ?? null };
+  return { budget: ask.budget.trim() !== "" && Number.isFinite(n) && n >= 0 ? String(n) : null, countries: ask.countries, goal: ask.goal, industry: ask.industry ?? null, source: ask.source ?? "public", auto: ask.auto ?? false };
 }
 
 export async function fetchPublicPlan(ask: PlanAsk): Promise<PlanResult> {
@@ -56,4 +57,16 @@ export function featuredPlan(r: PlanResult): { plan: Plan; fits: boolean; balanc
 export function outletSummary(p: Plan, show = 3): string {
   const names = p.outlets.map((o) => o.name);
   return names.length <= show ? names.join(", ") : `${names.slice(0, show).join(", ")} and ${names.length - show} more`;
+}
+
+/** What we keep of a plan when someone acts on it: which one, how many outlets, how many credits. Never who they are. */
+export type PlanRef = { key: Plan["key"]; outlets: number; total_credits: string };
+export const planRef = (p: Plan): PlanRef => ({ key: p.key, outlets: p.outlets.length, total_credits: p.total_credits });
+
+/** Tell the server a plan was used (or carried on to sign-up). It never blocks or breaks the screen: if it fails, nothing happens. */
+export function trackPlan(kind: "used" | "continued", source: PlanSource, plan: PlanRef, token: string | null) {
+  try {
+    const body = JSON.stringify({ kind, source, plan_key: plan.key, outlets: plan.outlets, credits: plan.total_credits });
+    void fetch(`${base()}/v1/${token ? "" : "public/"}distribution/plan/event`, { method: "POST", keepalive: true, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body }).catch(() => undefined);
+  } catch { /* measuring must never get in the way */ }
 }

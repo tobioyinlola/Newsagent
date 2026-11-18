@@ -27,6 +27,7 @@ from app.models import (
     Job,
     ModerationCase,
     PaymentProof,
+    PlannerEvent,
     Project,
     ProviderRequest,
     PublisherSnapshot,
@@ -119,6 +120,7 @@ async def delete_workspace(session: AsyncSession, ws: Workspace) -> None:
     await session.execute(delete(PaymentProof).where(PaymentProof.checkout_id.in_(checkout_ids)))
     distribution_ids = select(DistributionRequest.id).where(DistributionRequest.workspace_id == ws.id)
     await session.execute(delete(PublisherSnapshot).where(PublisherSnapshot.workspace_id == ws.id))
+    await session.execute(delete(PlannerEvent).where(PlannerEvent.workspace_id == ws.id))
     for model in (DistributionActivity, DistributionMail, DistributionPlacement):
         await session.execute(delete(model).where(model.request_id.in_(distribution_ids)))
     await session.execute(delete(DistributionRequest).where(DistributionRequest.workspace_id == ws.id))

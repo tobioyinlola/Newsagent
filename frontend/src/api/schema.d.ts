@@ -1660,6 +1660,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/planner-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Planner Stats Summary
+         * @description How the suggested plans are doing: made, chosen, carried on to sign-up, paid for, and kept as suggested.
+         */
+        get: operations["planner_stats_summary_v1_admin_planner_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/presenter-clips": {
         parameters: {
             query?: never;
@@ -2911,6 +2931,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/distribution/plan/event": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Outlet Plan Event */
+        post: operations["outlet_plan_event_v1_distribution_plan_event_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/distribution/press-release": {
         parameters: {
             query?: never;
@@ -4077,6 +4114,26 @@ export interface paths {
          * @description The same plans for a visitor who is not signed in. Only the answers given are used, and nothing is kept.
          */
         post: operations["public_outlet_plan_v1_public_distribution_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/distribution/plan/event": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Public Outlet Plan Event
+         * @description The same for a visitor who is not signed in. Nothing is kept that says who they are.
+         */
+        post: operations["public_outlet_plan_event_v1_public_distribution_plan_event_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6214,10 +6271,41 @@ export interface components {
             trim_start_s: number;
         };
         /**
+         * PlanEventIn
+         * @description Something a person did with a plan. No identity is sent: a signed-in event is tied to its workspace by the server.
+         */
+        PlanEventIn: {
+            /** Credits */
+            credits: number | string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "used" | "continued";
+            /** Outlets */
+            outlets: number;
+            /**
+             * Plan Key
+             * @enum {string}
+             */
+            plan_key: "essential" | "balanced" | "max";
+            /**
+             * Source
+             * @default public
+             * @enum {string}
+             */
+            source: "public" | "request" | "ready_prompt" | "email";
+        };
+        /**
          * PlanIn
          * @description What someone tells the planner. Nothing here is stored.
          */
         PlanIn: {
+            /**
+             * Auto
+             * @default false
+             */
+            auto: boolean;
             /** Budget */
             budget?: number | string | null;
             /** Countries */
@@ -6230,6 +6318,12 @@ export interface components {
             goal: "credibility" | "investors" | "customers" | "hiring";
             /** Industry */
             industry?: string | null;
+            /**
+             * Source
+             * @default public
+             * @enum {string}
+             */
+            source: "public" | "request" | "ready_prompt" | "email";
         };
         /** PresenterClipOut */
         PresenterClipOut: {
@@ -7683,6 +7777,14 @@ export interface components {
             phone_country: string;
             /** Picture Keys */
             picture_keys?: string[];
+            /** Plan Ids */
+            plan_ids?: string[];
+            /**
+             * Plan Key
+             * @default
+             * @enum {string}
+             */
+            plan_key: "" | "essential" | "balanced" | "max";
             /** Project Id */
             project_id?: string | null;
             /**
@@ -11714,6 +11816,41 @@ export interface operations {
             };
         };
     };
+    planner_stats_summary_v1_admin_planner_stats_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_clips_v1_admin_presenter_clips_get: {
         parameters: {
             query?: never;
@@ -14449,6 +14586,43 @@ export interface operations {
             };
         };
     };
+    outlet_plan_event_v1_distribution_plan_event_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanEventIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     write_press_release_v1_distribution_press_release_post: {
         parameters: {
             query?: never;
@@ -16898,6 +17072,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PlanIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_outlet_plan_event_v1_public_distribution_plan_event_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanEventIn"];
             };
         };
         responses: {

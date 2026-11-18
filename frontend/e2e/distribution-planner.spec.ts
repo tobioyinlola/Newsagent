@@ -22,7 +22,11 @@ test("a visitor gets a suggested plan with reasons, uses it, and can still brows
   await page.screenshot({ path: "test-results/planner-public.png", fullPage: false });
 
   // using a plan selects its outlets, with the price in the bar
+  const used = page.waitForRequest((r) => r.url().includes("/v1/public/distribution/plan/event") && r.method() === "POST");
   await essential.getByRole("button", { name: "Use this plan" }).click();
+  const sent = (await used).postDataJSON();
+  expect(sent).toMatchObject({ kind: "used", source: "public", plan_key: "essential" }); // the plan, and nothing about who they are
+  expect(Object.keys(sent).sort()).toEqual(["credits", "kind", "outlets", "plan_key", "source"]);
   const bar = page.getByRole("region", { name: "Your selection" });
   await expect(bar).toContainText(/[2-3] selected/);
   await expect(essential.getByRole("button", { name: "✓ In use" })).toBeVisible();

@@ -20,18 +20,18 @@ describe("OutletPlanner", () => {
   afterEach(cleanup);
   it("asks the three questions and sends the answers", async () => {
     const p = props();
-    render(<OutletPlanner {...p} />);
+    render(<OutletPlanner source="public" {...p} />);
     fireEvent.click(screen.getByRole("button", { name: /Nigeria/ }));
     fireEvent.change(screen.getByLabelText(/how many credits/i), { target: { value: "300" } });
     fireEvent.click(screen.getByLabelText(/reach investors/i));
     fireEvent.click(screen.getByRole("button", { name: "Suggest outlets" }));
     await waitFor(() => expect(p.fetchPlan).toHaveBeenCalledTimes(1));
-    expect(p.fetchPlan).toHaveBeenCalledWith(expect.objectContaining({ budget: "300", countries: ["Nigeria"], goal: "investors" }));
+    expect(p.fetchPlan).toHaveBeenCalledWith(expect.objectContaining({ budget: "300", countries: ["Nigeria"], goal: "investors", source: "public", auto: false })); // the button was pressed
   });
 
   it("shows each plan with its price and the reasons, and applies the one chosen", async () => {
     const p = props();
-    render(<OutletPlanner {...p} />);
+    render(<OutletPlanner source="public" {...p} />);
     fireEvent.click(screen.getByRole("button", { name: "Suggest outlets" }));
     expect(await screen.findByRole("heading", { name: "Essential" })).toBeTruthy();
     expect(screen.getAllByText("40 credits").length).toBeGreaterThan(0);
@@ -43,14 +43,14 @@ describe("OutletPlanner", () => {
 
   it("passes the suggested outlets up so the full list can mark them", async () => {
     const onResult = vi.fn();
-    render(<OutletPlanner {...props({ onResult })} />);
+    render(<OutletPlanner source="public" {...props({ onResult })} />);
     fireEvent.click(screen.getByRole("button", { name: "Suggest outlets" }));
     await waitFor(() => expect(onResult).toHaveBeenCalledWith(expect.objectContaining({ suggested: expect.objectContaining({ "1": ["Based in Nigeria"] }) })));
   });
 
   it("says how many credits are missing and offers to add them", async () => {
     const onTopUp = vi.fn();
-    render(<OutletPlanner {...props({ onTopUp })} />);
+    render(<OutletPlanner source="public" {...props({ onTopUp })} />);
     fireEvent.click(screen.getByRole("button", { name: "Suggest outlets" }));
     expect(await screen.findByText(/You need 20 credits more for this plan/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Add credits" }));
@@ -58,31 +58,32 @@ describe("OutletPlanner", () => {
   });
 
   it("marks the plan already in use", async () => {
-    render(<OutletPlanner {...props({ appliedIds: ["1", "2"] })} />);
+    render(<OutletPlanner source="public" {...props({ appliedIds: ["1", "2"] })} />);
     fireEvent.click(screen.getByRole("button", { name: "Suggest outlets" }));
     expect((await screen.findByRole("button", { name: "✓ In use" })).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("explains when nothing fits, and when something goes wrong", async () => {
     const empty = props({ fetchPlan: vi.fn().mockResolvedValue(result({ plans: [], suggested: {}, empty: "That budget is below our lowest price." })) });
-    const { unmount } = render(<OutletPlanner {...empty} />);
+    const { unmount } = render(<OutletPlanner source="public" {...empty} />);
     fireEvent.click(screen.getByRole("button", { name: "Suggest outlets" }));
     expect(await screen.findByText("That budget is below our lowest price.")).toBeTruthy();
     unmount();
-    render(<OutletPlanner {...props({ fetchPlan: vi.fn().mockRejectedValue(new Error("Too many tries. Please wait a moment.")) })} />);
+    render(<OutletPlanner source="public" {...props({ fetchPlan: vi.fn().mockRejectedValue(new Error("Too many tries. Please wait a moment.")) })} />);
     fireEvent.click(screen.getByRole("button", { name: "Suggest outlets" }));
     expect((await screen.findByRole("alert")).textContent).toContain("Too many tries");
   });
 
   it("starts from what we know when asked to run straight away", async () => {
     const p = props({ autoRun: true, fetchPlan: vi.fn().mockResolvedValue(result({ countries: ["Nigeria"] })) });
-    render(<OutletPlanner {...p} />);
+    render(<OutletPlanner source="public" {...p} />);
     await waitFor(() => expect(p.fetchPlan).toHaveBeenCalledTimes(1));
+    expect(p.fetchPlan).toHaveBeenCalledWith(expect.objectContaining({ source: "public", auto: true })); // made on its own, so it counts as shown, not asked
     expect((await screen.findByRole("button", { name: /Nigeria/ })).getAttribute("aria-pressed")).toBe("true"); // the country the server started from is shown as picked
   });
 
   it("never promises publication", async () => {
-    render(<OutletPlanner {...props()} />);
+    render(<OutletPlanner source="public" {...props()} />);
     fireEvent.click(screen.getByRole("button", { name: "Suggest outlets" }));
     expect(await screen.findByText(/not guaranteed/)).toBeTruthy();
   });

@@ -4,7 +4,7 @@ import re
 from decimal import Decimal
 from typing import Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, EmailStr, Field, TypeAdapter, ValidationError
 from sqlalchemy import select, update
@@ -18,7 +18,7 @@ from app.models.base import utcnow
 from app.services import distribution as fulfillment
 from app.services import distribution_catalog as catalog_service
 from app.services import distribution_planner as planner
-from app.services import ledger
+from app.services import ledger, planner_stats
 from app.services.audit import audit
 from app.services.ratelimit import limit
 
@@ -403,6 +403,9 @@ class DraftIn(BaseModel):
     logo_key: str = Field(default="", max_length=500)
     picture_keys: list[str] = Field(default_factory=list, max_length=10)
     media_options: dict[str, MediaChoice] = Field(default_factory=dict, max_length=100)
+    # The plan the outlets came from, if any, so we can see whether people keep what is suggested.
+    plan_key: Literal["", "essential", "balanced", "max"] = ""
+    plan_ids: list[str] = Field(default_factory=list, max_length=100)
 
 
 class StatusIn(BaseModel):
@@ -536,6 +539,18 @@ class PlanIn(BaseModel):
     countries: list[str] = Field(default_factory=list, max_length=10)
     goal: Literal["credibility", "investors", "customers", "hiring"] = "credibility"
     industry: str | None = Field(default=None, max_length=30)
+    source: Literal["public", "request", "ready_prompt", "email"] = "public"  # which screen asked, for measuring
+    auto: bool = False  # made straight away, without the person pressing the button
+
+
+class PlanEventIn(BaseModel):
+    """Something a person did with a plan. No identity is sent: a signed-in event is tied to its workspace by the server."""
+
+    kind: Literal["used", "continued"]
+    source: Literal["public", "request", "ready_prompt", "email"] = "public"
+    plan_key: Literal["essential", "balanced", "max"]
+    outlets: int = Field(ge=0, le=100)
+    credits: Decimal = Field(ge=0, le=Decimal("10000000"))
 
 
 def _plan_countries(asked: list[str]) -> list[str]:
@@ -554,7 +569,10 @@ async def outlet_plan(
     countries = _plan_countries(body.countries) or _plan_countries([ws.country or ""])
     shown = [o for o in await catalog_service.catalog(db) if not catalog_service.is_hidden(o)]
     ask = planner.Ask(body.budget, countries, body.goal, body.industry or ws.industry)
-    return planner.recommend(shown, ask, balance=Decimal(ws.credit_balance), known_countries=REGION_OF)
+    out = planner.recommend(shown, ask, balance=Decimal(ws.credit_balance), known_countries=REGION_OF)
+    planner_stats.record(db, "shown" if body.auto else "asked", body.source, workspace_id=ws.id)
+    await db.commit()
+    return out
 
 
 @router.post("/v1/public/distribution/plan", dependencies=[Depends(limit("public-outlet-plan", 60, 60))])
@@ -563,7 +581,46 @@ async def public_outlet_plan(body: PlanIn, response: Response, db: AsyncSession 
     response.headers["Cache-Control"] = "no-store"
     shown = [o for o in await catalog_service.catalog(db) if not catalog_service.is_hidden(o)]
     ask = planner.Ask(body.budget, _plan_countries(body.countries), body.goal, body.industry)
-    return planner.recommend(shown, ask, known_countries=REGION_OF)
+    out = planner.recommend(shown, ask, known_countries=REGION_OF)
+    planner_stats.record(db, "shown" if body.auto else "asked", "email" if body.source == "email" else "public")
+    await db.commit()
+    return out
+
+
+@router.post("/v1/distribution/plan/event", dependencies=[Depends(limit("outlet-plan-event", 120, 60))])
+async def outlet_plan_event(
+    body: PlanEventIn, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)
+) -> dict:
+    planner_stats.record(
+        db, body.kind, body.source, workspace_id=p.workspace.id, plan_key=body.plan_key, outlets=body.outlets, credits=body.credits
+    )
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post("/v1/public/distribution/plan/event", dependencies=[Depends(limit("public-outlet-plan-event", 60, 60))])
+async def public_outlet_plan_event(body: PlanEventIn, db: AsyncSession = Depends(get_session)) -> dict:
+    """The same for a visitor who is not signed in. Nothing is kept that says who they are."""
+    planner_stats.record(
+        db,
+        body.kind,
+        "email" if body.source == "email" else "public",
+        plan_key=body.plan_key,
+        outlets=body.outlets,
+        credits=body.credits,
+    )
+    await db.commit()
+    return {"ok": True}
+
+
+@router.get("/v1/admin/planner-stats")
+async def planner_stats_summary(
+    days: int = Query(30, ge=1, le=365),
+    p: Principal = Depends(require("operations.view")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    """How the suggested plans are doing: made, chosen, carried on to sign-up, paid for, and kept as suggested."""
+    return await planner_stats.summary(db, days)
 
 
 @router.get("/v1/distribution/stories")
@@ -802,6 +859,17 @@ async def submit(
         target_id=id,
         detail={"credits": str(total), "outlets": len(body.outlet_ids)},
     )
+    if body.plan_key:
+        planner_stats.record(
+            db,
+            "submitted",
+            "request",
+            workspace_id=p.workspace.id,
+            plan_key=body.plan_key,
+            outlets=len(body.outlet_ids),
+            credits=total,
+            unchanged=set(body.outlet_ids) == set(body.plan_ids),  # kept exactly as suggested
+        )
     await fulfillment.plan_submission(db, row, catalog)
     await db.commit()
     tasks.add_task(fulfillment.deliver_request, row.id)

@@ -42,6 +42,33 @@ test("a finished video offers a plan made for the business, and starts the reque
   await expect(page.getByText(new RegExp(`You chose ${count} outlets?`))).toBeVisible();
   await page.getByRole("button", { name: "Start a distribution request" }).click();
   await expect(page.getByLabel("Selected outlets")).toContainText(`${count} selected`); // the plan's outlets arrive chosen
+
+  // the draft remembers which plan it began from, and the numbers saw it happen
+  const draftId = new URL(page.url()).searchParams.get("draft")!;
+  const draft = await (await request.get(`${API}/v1/distribution/${draftId}`, { headers: { Authorization: `Bearer ${token}` } })).json();
+  expect(draft.data.plan_key).toBe("balanced");
+  expect(draft.data.plan_ids).toHaveLength(count);
+  const stats = await (await request.get(`${API}/v1/admin/planner-stats?days=1`, { headers: OPS })).json();
+  expect(stats.by_source.ready_prompt.shown).toBeGreaterThan(0);
+  expect(stats.by_source.ready_prompt.used).toBeGreaterThan(0);
+});
+
+// The link in the credit-reminder email: it goes straight to a plan made for them, and starting it keeps the plan.
+test("the email link shows a plan made for the business and starts a request with its outlets chosen", async ({ page, request }) => {
+  const { token } = await readyBusiness(request, { country: "Nigeria", credits: "250" });
+  await page.addInitScript((t) => localStorage.setItem("newsagent.token", t), token);
+  await page.goto("/distribution/request?plan=1");
+  await expect(page.getByRole("heading", { name: "Get a suggested plan" })).toBeVisible();
+  await expect(page.getByRole("article").first()).toBeVisible(); // made straight away from what we know
+  await page.screenshot({ path: "test-results/email-landing.png" });
+  await page.getByRole("button", { name: "Start with this plan" }).first().click();
+  await expect(page).toHaveURL(/distribution\/request\?draft=/);
+  await expect(page.getByLabel("Selected outlets")).toContainText(/[1-9]\d* selected/);
+  const draft = await (await request.get(`${API}/v1/distribution/${new URL(page.url()).searchParams.get("draft")!}`, { headers: { Authorization: `Bearer ${token}` } })).json();
+  expect(["essential", "balanced", "max"]).toContain(draft.data.plan_key);
+  const stats = await (await request.get(`${API}/v1/admin/planner-stats?days=1`, { headers: OPS })).json();
+  expect(stats.by_source.email.shown).toBeGreaterThan(0);
+  expect(stats.by_source.email.used).toBeGreaterThan(0);
 });
 
 test("a business whose country we cannot place sees the prompt as before", async ({ page, request }) => {

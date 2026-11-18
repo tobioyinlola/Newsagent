@@ -4439,9 +4439,74 @@
         "title": "PlanAnswer",
         "type": "object"
       },
+      "PlanEventIn": {
+        "description": "Something a person did with a plan. No identity is sent: a signed-in event is tied to its workspace by the server.",
+        "properties": {
+          "credits": {
+            "anyOf": [
+              {
+                "maximum": 10000000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Credits"
+          },
+          "kind": {
+            "enum": [
+              "used",
+              "continued"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "outlets": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Outlets",
+            "type": "integer"
+          },
+          "plan_key": {
+            "enum": [
+              "essential",
+              "balanced",
+              "max"
+            ],
+            "title": "Plan Key",
+            "type": "string"
+          },
+          "source": {
+            "default": "public",
+            "enum": [
+              "public",
+              "request",
+              "ready_prompt",
+              "email"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "plan_key",
+          "outlets",
+          "credits"
+        ],
+        "title": "PlanEventIn",
+        "type": "object"
+      },
       "PlanIn": {
         "description": "What someone tells the planner. Nothing here is stored.",
         "properties": {
+          "auto": {
+            "default": false,
+            "title": "Auto",
+            "type": "boolean"
+          },
           "budget": {
             "anyOf": [
               {
@@ -4488,6 +4553,17 @@
               }
             ],
             "title": "Industry"
+          },
+          "source": {
+            "default": "public",
+            "enum": [
+              "public",
+              "request",
+              "ready_prompt",
+              "email"
+            ],
+            "title": "Source",
+            "type": "string"
           }
         },
         "title": "PlanIn",
@@ -8483,6 +8559,25 @@
             "maxItems": 10,
             "title": "Picture Keys",
             "type": "array"
+          },
+          "plan_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Plan Ids",
+            "type": "array"
+          },
+          "plan_key": {
+            "default": "",
+            "enum": [
+              "",
+              "essential",
+              "balanced",
+              "max"
+            ],
+            "title": "Plan Key",
+            "type": "string"
           },
           "project_id": {
             "anyOf": [
@@ -15688,6 +15783,70 @@
         ]
       }
     },
+    "/v1/admin/planner-stats": {
+      "get": {
+        "description": "How the suggested plans are doing: made, chosen, carried on to sign-up, paid for, and kept as suggested.",
+        "operationId": "planner_stats_summary_v1_admin_planner_stats_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Planner Stats Summary V1 Admin Planner Stats Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Planner Stats Summary",
+        "tags": [
+          "distribution"
+        ]
+      }
+    },
     "/v1/admin/presenter-clips": {
       "get": {
         "operationId": "list_clips_v1_admin_presenter_clips_get",
@@ -20322,6 +20481,67 @@
         ]
       }
     },
+    "/v1/distribution/plan/event": {
+      "post": {
+        "operationId": "outlet_plan_event_v1_distribution_plan_event_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanEventIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Outlet Plan Event V1 Distribution Plan Event Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Outlet Plan Event",
+        "tags": [
+          "distribution"
+        ]
+      }
+    },
     "/v1/distribution/press-release": {
       "post": {
         "description": "Write a press release from the announcement's details. Nothing is saved or charged: the owner edits it, then chooses outlets.",
@@ -24504,6 +24724,50 @@
           }
         },
         "summary": "Public Outlet Plan",
+        "tags": [
+          "distribution"
+        ]
+      }
+    },
+    "/v1/public/distribution/plan/event": {
+      "post": {
+        "description": "The same for a visitor who is not signed in. Nothing is kept that says who they are.",
+        "operationId": "public_outlet_plan_event_v1_public_distribution_plan_event_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanEventIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Public Outlet Plan Event V1 Public Distribution Plan Event Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Public Outlet Plan Event",
         "tags": [
           "distribution"
         ]

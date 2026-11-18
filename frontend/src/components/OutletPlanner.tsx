@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { credits, GOALS, planIds, type Goal, type Plan, type PlanAsk, type PlanResult } from "../lib/outletPlanner";
+import { credits, GOALS, planIds, type Goal, type Plan, type PlanAsk, type PlanResult, type PlanSource } from "../lib/outletPlanner";
 
 type Props = {
+  source: PlanSource; // which screen this is, for measuring
   countries: string[]; // the countries we have outlets in
   fetchPlan: (ask: PlanAsk) => Promise<PlanResult>;
   initialCountries?: string[];
@@ -16,7 +17,7 @@ type Props = {
 };
 
 // "Not sure where to start?": three questions, then up to three ready-made plans. The full list of outlets stays on the page.
-export function OutletPlanner({ countries, fetchPlan, initialCountries = [], industry = null, dark = false, autoRun = false, appliedIds = [], onResult, onApply, applyLabel = "Use this plan", onTopUp }: Props) {
+export function OutletPlanner({ source, countries, fetchPlan, initialCountries = [], industry = null, dark = false, autoRun = false, appliedIds = [], onResult, onApply, applyLabel = "Use this plan", onTopUp }: Props) {
   const uid = useId();
   const [picked, setPicked] = useState<string[]>(initialCountries);
   const [budget, setBudget] = useState("");
@@ -26,16 +27,16 @@ export function OutletPlanner({ countries, fetchPlan, initialCountries = [], ind
   const [error, setError] = useState("");
   const [applied, setApplied] = useState("");
   const ran = useRef(false);
-  const run = async (next?: Partial<PlanAsk>) => {
+  const run = async (next?: Partial<PlanAsk>, auto = false) => {
     setBusy(true); setError(""); setApplied("");
     try {
-      const r = await fetchPlan({ budget, countries: picked, goal, industry, ...next });
+      const r = await fetchPlan({ budget, countries: picked, goal, industry, source, auto, ...next });
       setResult(r); onResult?.(r);
       if (!picked.length && r.countries.length) setPicked(r.countries); // started from the business's own country
     } catch (e) { setError(e instanceof Error ? e.message : "We could not make a plan just now. Please try again."); }
     finally { setBusy(false); }
   };
-  useEffect(() => { if (autoRun && !ran.current) { ran.current = true; void run(); } }, []);
+  useEffect(() => { if (autoRun && !ran.current) { ran.current = true; void run(undefined, true); } }, []);
   const toggle = (c: string) => setPicked((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));
   const t = dark
     ? { box: "border-white/20 bg-white/5 text-white", muted: "text-white/70", chip: (on: boolean) => (on ? "border-brand-green bg-brand-green text-ink" : "border-white/40 text-white hover:border-brand-green"), field: "border-white/40 bg-ink text-white placeholder:text-white/50", card: "border-white/25 bg-ink", head: "text-white", accent: "text-brand-green", btn: "border-brand-green bg-brand-green text-ink hover:bg-white", ghost: "border-white/60 text-white hover:bg-white/10", warn: "text-amber-300" }

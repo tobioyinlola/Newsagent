@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { distributionApi, distributionStatus, type Distribution, type Outlet, type Placement } from "../../lib/distribution";
 import { getToken } from "../lib/auth";
 import { useCan } from "../lib/can";
+import { PlannerStats } from "../components/PlannerStats";
 
 const request = <T,>(path: string, method = "GET", body?: unknown) => distributionApi<T>(path, getToken(), method, body);
 const input = "mt-1 block min-h-11 w-full min-w-0 rounded border border-line bg-white p-2";
@@ -94,7 +95,7 @@ export function DistributionAdmin() {
   const [tab, setTab] = useState("requests");
   const q = useQuery({ queryKey: ["admin-distribution"], queryFn: () => request<Distribution[]>("admin/distribution"), refetchInterval: 15000 });
   const rows = (q.data ?? []).filter(r => filter === "all" || (filter === "draft" ? !r.paid : r.paid));
-  return <div className="space-y-5"><h1 className="text-2xl font-bold">Distribution requests</h1><p>Review drafts, payments, per-outlet progress and publisher communications.</p><nav className="flex gap-3" aria-label="Distribution admin sections"><button className={button} aria-pressed={tab === "requests"} onClick={() => setTab("requests")}>Requests</button><button className={button} aria-pressed={tab === "settings"} onClick={() => setTab("settings")}>Notification and outlet settings</button></nav>
-    {tab === "settings" ? <DistributionSettings /> : <><label>Show <select className="rounded border p-2" value={filter} onChange={e => setFilter(e.target.value)}><option value="all">All requests</option><option value="draft">Unpaid drafts</option><option value="paid">Paid submissions</option></select></label>{q.error && <p role="alert">{String(q.error)}</p>}{!rows.length && <p>No matching requests.</p>}{rows.map(r => <DistributionRecord key={r.id} summary={r} />)}</>}
+  return <div className="space-y-5"><h1 className="text-2xl font-bold">Distribution requests</h1><p>Review drafts, payments, per-outlet progress and publisher communications.</p><nav className="flex gap-3" aria-label="Distribution admin sections"><button className={button} aria-pressed={tab === "requests"} onClick={() => setTab("requests")}>Requests</button><button className={button} aria-pressed={tab === "settings"} onClick={() => setTab("settings")}>Notification and outlet settings</button><button className={button} aria-pressed={tab === "plans"} onClick={() => setTab("plans")}>Suggested plans</button></nav>
+    {tab === "plans" ? <PlannerStats /> : tab === "settings" ? <DistributionSettings /> : <><label>Show <select className="rounded border p-2" value={filter} onChange={e => setFilter(e.target.value)}><option value="all">All requests</option><option value="draft">Unpaid drafts</option><option value="paid">Paid submissions</option></select></label>{q.error && <p role="alert">{String(q.error)}</p>}{!rows.length && <p>No matching requests.</p>}{rows.map(r => <DistributionRecord key={r.id} summary={r} />)}</>}
   </div>;
 }

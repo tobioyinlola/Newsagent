@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { DistributionReadyPrompt } from "./DistributionReadyPrompt";
 import { distributionApi } from "../lib/distribution";
-import { readPick } from "../lib/distributionFilters";
+import { readPick, readPickPlan } from "../lib/distributionFilters";
 import { featuredPlan, outletSummary, type Plan, type PlanResult } from "../lib/outletPlanner";
 
 vi.mock("../lib/distribution", async (orig) => ({ ...(await orig<typeof import("../lib/distribution")>()), distributionApi: vi.fn() }));
@@ -50,6 +50,19 @@ describe("the recommendation on the video-ready prompt", () => {
     expect(screen.getByTestId("path").textContent).toBe("/distribution/request?project=vid%201&pick=1");
     expect(readPick()).toEqual(["1", "2", "3", "4"]);
     expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("tells the server the plan was chosen, from this screen, and remembers which plan it was", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}"));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.mocked(distributionApi).mockResolvedValue(result("100"));
+    render(<MemoryRouter><DistributionReadyPrompt projectId="p" workspaceId="w" /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole("button", { name: "Start with this plan" }));
+    expect(vi.mocked(distributionApi).mock.calls[0][3]).toMatchObject({ source: "ready_prompt", auto: true });
+    const sent = JSON.parse(fetchMock.mock.calls.find((c) => String(c[0]).includes("plan/event"))![1].body);
+    expect(sent).toEqual({ kind: "used", source: "ready_prompt", plan_key: "balanced", outlets: 4, credits: "80" });
+    expect(readPickPlan()).toEqual({ key: "balanced", ids: ["1", "2", "3", "4"] });
+    vi.unstubAllGlobals();
   });
 
   it("says plainly how many credits are missing", async () => {

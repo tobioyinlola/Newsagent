@@ -2,11 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getToken } from "../lib/auth";
-import { ALL, groupOutlets, matches, outletTitle, readPick, savePick, setAfterAuth, type Facets, type OutletFilters as FilterList } from "../lib/distributionFilters";
+import { ALL, groupOutlets, matches, outletTitle, readPick, readPickPlan, savePick, setAfterAuth, type Facets, type OutletFilters as FilterList } from "../lib/distributionFilters";
 import { DistributionOutletLogo } from "./DistributionOutletLogo";
 import { OutletFilters } from "./OutletFilters";
 import { OutletPlanner } from "./OutletPlanner";
-import { fetchPublicPlan, planIds } from "../lib/outletPlanner";
+import { fetchPublicPlan, planIds, planRef, trackPlan, type PlanRef } from "../lib/outletPlanner";
 
 type PublicOutlet = { id: string; name: string; topic: string; category: string; region: string; country: string | null; credits: string };
 type Catalogue = { outlets: PublicOutlet[]; filters: FilterList; coming_soon: string[] };
@@ -28,6 +28,8 @@ export function OutletBrowser() {
   const [picked, setPicked] = useState<string[]>(() => readPick());
   const [suggested, setSuggested] = useState<Record<string, string[]>>({}); // outlet id -> why the planner suggested it
   const [suggestedOnly, setSuggestedOnly] = useState(false);
+  const [used, setUsed] = useState<{ ref: PlanRef; ids: string[] } | null>(null); // the plan chosen on this visit
+  const planOf = () => (used ? { key: used.ref.key, ids: used.ids } : readPickPlan()); // what the choice came from, so it can be measured later
   const all = data.data?.outlets ?? [];
   const known = useMemo(() => new Set(all.map((o) => o.id)), [all]);
   const chosen = all.filter((o) => picked.includes(o.id));
@@ -36,11 +38,12 @@ export function OutletBrowser() {
   const visible = all.filter((o) => matches(o, facets) && (!q || o.name.toLowerCase().includes(q)) && (!suggestedOnly || suggested[o.id]));
   const planCountries = useMemo(() => [...new Set(all.map((o) => o.country).filter((c): c is string => Boolean(c)))].sort(), [all]);
   const hasSuggestions = Object.keys(suggested).length > 0;
-  const toggle = (id: string) => { const next = picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]; setPicked(next); savePick(next); };
+  const toggle = (id: string) => { const next = picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]; setPicked(next); savePick(next, planOf()); };
   const signedIn = Boolean(getToken());
   const go = () => {
     const ids = picked.filter((id) => known.has(id));
-    savePick(ids);
+    savePick(ids, planOf());
+    if (used) trackPlan("continued", "public", used.ref, null); // took a suggested plan on to create an account
     if (signedIn) { nav("/distribution/request?pick=1"); return; }
     setAfterAuth("/distribution/request?pick=1"); // after sign-up the person lands back in the request, outlets already chosen
     nav("/signup");
@@ -58,12 +61,13 @@ export function OutletBrowser() {
         {data.data && (
           <div className="mt-10 space-y-6">
             <OutletPlanner
+              source="public"
               dark
               countries={planCountries}
               fetchPlan={fetchPublicPlan}
               appliedIds={picked}
               onResult={(r) => { setSuggested(r?.suggested ?? {}); if (!r?.plans.length) setSuggestedOnly(false); }}
-              onApply={(plan) => { const ids = planIds(plan).filter((id) => known.has(id)); setPicked(ids); savePick(ids); document.getElementById("all-outlets")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }}
+              onApply={(plan) => { const ids = planIds(plan).filter((id) => known.has(id)); setPicked(ids); setUsed({ ref: planRef(plan), ids: planIds(plan) }); savePick(ids, { key: plan.key, ids: planIds(plan) }); trackPlan("used", "public", planRef(plan), null); document.getElementById("all-outlets")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }}
               applyLabel="Use this plan"
             />
             <h3 id="all-outlets" className="scroll-mt-4 text-xl font-bold text-white">All outlets</h3>
