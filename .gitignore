@@ -14,6 +14,7 @@ backend/renderer/public/bench-anchor.webm
 backend/renderer/src/_floor_entry.tsx
 *.db
 e2e.db
+e2e.db-journal
 test-results/
 playwright-report/
 e2e-real/.media/

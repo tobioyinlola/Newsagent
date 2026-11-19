@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, unwrap } from "../api/client";
 import { getToken } from "../lib/auth";
-import { clearPick, readPick, type OutletFilters as OutletFilterList } from "../lib/distributionFilters";
+import { clearPick, readPick, readPickPlan, type OutletFilters as OutletFilterList } from "../lib/distributionFilters";
 import { distributionApi, distributionStatus, latestStoryStart, priceOutlets, type Distribution, type Draft, type Outlet } from "../lib/distribution";
 import { CountryPhoneInput } from "../components/CountryPhoneInput";
 import { DistributionLogoUpload } from "../components/DistributionLogoUpload";
@@ -15,6 +15,8 @@ import { DistributionFundingDialog } from "../components/DistributionFundingDial
 import { DistributionSteps, DISTRIBUTION_STEPS as steps } from "../components/DistributionSteps";
 import { DistributionMediaOptions } from "../components/DistributionMediaOptions";
 import { Button, Card, ErrorBox, Notice } from "../components/ui";
+import { OutletPlanner } from "../components/OutletPlanner";
+import { planBody, planIds, planRef, trackPlan, type Plan, type PlanResult } from "../lib/outletPlanner";
 
 type Video = { id: string; headline: string; announcement: string; video_url: string | null };
 const request = <T,>(path: string, method = "GET", body?: unknown) => distributionApi<T>(path, getToken(), method, body);
@@ -37,11 +39,12 @@ export function DistributionRequestPage() {
   const [view, setView] = useState(false);
   const [success, setSuccess] = useState(false);
   const [topup, setTopup] = useState(false);
+  const [suggested, setSuggested] = useState<Record<string, string[]>>({}); // what the planner suggested, to mark in the list
   const [funding, setFunding] = useState({ balance: 0, required: 0 });
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const submitting = useRef(false);
   const list = useQuery({ queryKey: ["distributions"], queryFn: () => request<Distribution[]>("distribution"), refetchInterval: 15000 });
-  const outlets = useQuery({ queryKey: ["distribution-outlets"], queryFn: () => request<{ outlets: Outlet[]; coming_soon: string[]; quote_version: string; filters: OutletFilterList }>("distribution/outlets") });
+  const outlets = useQuery({ queryKey: ["distribution-outlets"], queryFn: () => request<{ outlets: Outlet[]; coming_soon: string[]; quote_version: string; filters: OutletFilterList; planner?: boolean }>("distribution/outlets") });
   const videos = useQuery({ queryKey: ["distribution-videos"], queryFn: () => request<Video[]>("distribution/videos") });
   const stories = useQuery({ queryKey: ["distribution-stories"], queryFn: () => request<{ project_id: string; headline: string; announcement: string }[]>("distribution/stories") });
   const images = useQuery({ queryKey: ["distribution-images", draft?.logo_key], queryFn: () => unwrap(api.GET("/v1/brand-kit/assets")), enabled: !!draft?.logo_key });
@@ -82,17 +85,19 @@ export function DistributionRequestPage() {
   const fieldError = (key: keyof Draft) => fieldErrors[key] ? <p id={`distribution-error-${key}`} className="mt-1 text-sm font-semibold text-red-800">{fieldErrors[key]}</p> : null;
   // Outlets chosen on the public page before signing up (only when the person arrives from there). Unknown or hidden ids are dropped.
   const pickIds = params.get("pick") === "1" && outlets.data ? readPick().filter(i => outlets.data.outlets.some(o => o.id === i)) : [];
-  const create = async () => {
+  const create = async (from?: { ids: string[]; plan: { key: string; ids: string[] } }) => {
     setBusy(true); setError(null);
     try {
       const r = await request<Distribution>("distribution", "POST");
-      const chosen = pickIds.length ? { outlet_ids: pickIds } : {};
+      const kept = from ? from.ids.filter(i => outlets.data?.outlets.some(o => o.id === i)) : pickIds;
+      const origin = from ? from.plan : kept.length ? readPickPlan() : null; // the plan the outlets came from, to see later whether they were kept
+      const chosen = kept.length ? { outlet_ids: kept, ...(origin ? { plan_key: origin.key as Draft["plan_key"], plan_ids: origin.ids } : {}) } : {};
       const v = videos.data?.find(v => v.id === project);
       if (v) await request(`distribution/${r.id}`, "PUT", { ...r.data, project_id: v.id, headline: v.headline, announcement: v.announcement, ...chosen });
       else {
         const start = latestStoryStart(stories.data, videos.data); // the most recent story, unless the owner picks their own
         if (start) await request(`distribution/${r.id}`, "PUT", { ...r.data, ...start, ...chosen });
-        else if (pickIds.length) await request(`distribution/${r.id}`, "PUT", { ...r.data, ...chosen });
+        else if (kept.length) await request(`distribution/${r.id}`, "PUT", { ...r.data, ...chosen });
       }
       if (pickIds.length) clearPick();
       await cache.invalidateQueries({ queryKey: ["distributions"] });
@@ -100,6 +105,7 @@ export function DistributionRequestPage() {
     } catch (e) { setError(e); } finally { setBusy(false); }
   };
   const all = outlets.data?.outlets ?? [];
+  const planCountries = [...new Set(all.map(o => o.country).filter((c): c is string => Boolean(c)))].sort();
   // A draft saved before an outlet was hidden may still list it. Drop it quietly so the draft can be saved and submitted.
   useEffect(() => {
     if (!draft || !outlets.data || row?.status !== "draft") return;
@@ -163,6 +169,7 @@ export function DistributionRequestPage() {
     <div><h1 className="text-3xl font-bold">Distribute your story</h1><p className="mt-2">Want to distribute your video and announcement to over 2,500 media outlets?</p><p className="text-sm text-muted">Choose from the available outlets below. Our team coordinates your request; submission is not a guarantee of publication.</p></div>
     <ErrorBox error={error ?? list.error ?? outlets.error ?? videos.error} />
     {!id && pickIds.length > 0 && <Notice tone="ok"><strong>You chose {pickIds.length} {pickIds.length === 1 ? "outlet" : "outlets"}</strong> ({Number(pickIds.reduce((n, i) => n + Number(all.find(o => o.id === i)?.credits ?? 0), 0).toFixed(2))} credits): {pickIds.map(i => all.find(o => o.id === i)?.name).filter(Boolean).join(", ")}. They are added to your request once you start it below. <button type="button" className="underline" onClick={() => { clearPick(); nav("/distribution/request", { replace: true }); }}>Remove my choice</button></Notice>}
+    {!id && params.get("plan") === "1" && outlets.data?.planner && <OutletPlanner source="email" autoRun applyLabel="Start with this plan" countries={planCountries} fetchPlan={ask => request<PlanResult>("distribution/plan", "POST", planBody(ask))} onApply={(plan: Plan) => { trackPlan("used", "email", planRef(plan), getToken()); void create({ ids: planIds(plan), plan: { key: plan.key, ids: planIds(plan) } }); }} />}
     {!id && <><DistributionStart outletIds={pickIds} videoPath={<Button onClick={() => void create()} disabled={busy || !videos.data || !outlets.data || stories.isLoading}>Start a distribution request</Button>} onCreated={did => { if (pickIds.length) clearPick(); void cache.invalidateQueries({ queryKey: ["distributions"] }); nav(`/distribution/request?draft=${did}`); }} /><Card title="Your distribution requests"><ul className="space-y-3">{list.data?.map(r => <li key={r.id}><Link className="underline" to={`/distribution/request?draft=${r.id}`}>{r.data.headline || "Untitled distribution"}</Link> — {distributionStatus(r.status)} · {r.stage} · {r.paid ? `Paid (${r.total_credits} credits)` : "Unpaid draft"}</li>)}</ul>{list.data?.length === 0 && <p>No requests yet. Your drafts will appear here.</p>}</Card></>}
     {id && !draft && !error && <p>Loading your saved request…</p>}
     {draft && row && <>
@@ -171,7 +178,17 @@ export function DistributionRequestPage() {
       {Object.keys(fieldErrors).length > 0 && <div ref={validationSummary} tabIndex={-1} role="alert" className="rounded-lg border-2 border-brand-red bg-red-tint p-4 focus-visible:outline-2 focus-visible:outline-brand-purple"><p className="font-bold">Complete the required details before continuing.</p><ul className="mt-2 list-inside list-disc text-sm">{Object.values(fieldErrors).map(message => <li key={message}>{message}</li>)}</ul></div>}
       <p role="status" className="text-sm">{saved || "Your progress is saved automatically."}</p>
       {draft.stage === "outlets" && fieldError("outlet_ids")}
-      {draft.stage === "outlets" && <DistributionOutlets outlets={all.map(o => selected.find(s => s.id === o.id) ?? o)} selectedIds={draft.outlet_ids} onChange={outlet_ids => patch({ outlet_ids })} comingSoon={outlets.data?.coming_soon ?? []} filters={outlets.data?.filters} />}
+      {draft.stage === "outlets" && row?.status === "draft" && outlets.data?.planner && <OutletPlanner
+        source="request"
+        countries={planCountries}
+        fetchPlan={ask => request<PlanResult>("distribution/plan", "POST", planBody(ask))}
+        autoRun
+        appliedIds={draft.outlet_ids}
+        onResult={r => setSuggested(r?.suggested ?? {})}
+        onApply={plan => { trackPlan("used", "request", planRef(plan), getToken()); patch({ outlet_ids: planIds(plan).filter(id => all.some(o => o.id === id)), plan_key: plan.key, plan_ids: planIds(plan) }); }}
+        onTopUp={plan => { setFunding({ balance: Number(plan.total_credits) - Number(plan.shortfall_credits ?? 0), required: Number(plan.total_credits) }); setTopup(true); }}
+      />}
+      {draft.stage === "outlets" && <DistributionOutlets suggested={suggested} outlets={all.map(o => selected.find(s => s.id === o.id) ?? o)} selectedIds={draft.outlet_ids} onChange={outlet_ids => patch({ outlet_ids })} comingSoon={outlets.data?.coming_soon ?? []} filters={outlets.data?.filters} />}
       {draft.stage === "content" && <Card title="Choose your video and announcement">
         <label className="block font-semibold">Video (optional)<select aria-label="Video (optional)" aria-invalid={!!fieldErrors.project_id} aria-describedby={fieldErrors.project_id ? "distribution-error-project_id" : undefined} className="mt-2 block min-h-12 w-full rounded-lg border border-ink p-3 font-normal" value={draft.project_id ?? ""} onChange={e => patch({ project_id: e.target.value || null })}><option value="">No video: send the story only</option>{videos.data?.map(v => <option key={v.id} value={v.id}>{v.headline || `Video ${v.id.slice(0, 8)}`}</option>)}</select></label>{fieldError("project_id")}
         {videos.data?.length === 0 && <p className="mt-2 text-sm text-muted">You don't have a finished video yet, so your story will be sent on its own. <Link className="underline" to="/ai-newsroom/new">Create a video</Link></p>}

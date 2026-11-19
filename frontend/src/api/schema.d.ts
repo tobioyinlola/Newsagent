@@ -1660,6 +1660,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/planner-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Planner Settings
+         * @description Whether suggested plans are on, and whether that is the default or someone's choice.
+         */
+        get: operations["planner_settings_v1_admin_planner_settings_get"];
+        /**
+         * Set Planner Settings
+         * @description Turn suggested plans on or off for everyone, straight away. Recorded in the audit log.
+         */
+        put: operations["set_planner_settings_v1_admin_planner_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/planner-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Planner Stats Summary
+         * @description How the suggested plans are doing: made, chosen, carried on to sign-up, paid for, and kept as suggested.
+         */
+        get: operations["planner_stats_summary_v1_admin_planner_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/presenter-clips": {
         parameters: {
             query?: never;
@@ -2890,6 +2934,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/distribution/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Outlet Plan
+         * @description Suggested plans for a signed-in customer. With no countries given it starts from the business's own country, and with no
+         *     industry from the one chosen at sign-up; it also says how far each plan is from the credits in the wallet.
+         */
+        post: operations["outlet_plan_v1_distribution_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/distribution/plan/event": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Outlet Plan Event */
+        post: operations["outlet_plan_event_v1_distribution_plan_event_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/distribution/press-release": {
         parameters: {
             query?: never;
@@ -4036,6 +4118,46 @@ export interface paths {
         get: operations["public_outlets_v1_public_distribution_outlets_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/distribution/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Public Outlet Plan
+         * @description The same plans for a visitor who is not signed in. Only the answers given are used, and nothing is kept.
+         */
+        post: operations["public_outlet_plan_v1_public_distribution_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/distribution/plan/event": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Public Outlet Plan Event
+         * @description The same for a visitor who is not signed in. Nothing is kept that says who they are.
+         */
+        post: operations["public_outlet_plan_event_v1_public_distribution_plan_event_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6172,6 +6294,66 @@ export interface components {
              */
             trim_start_s: number;
         };
+        /**
+         * PlanEventIn
+         * @description Something a person did with a plan. No identity is sent: a signed-in event is tied to its workspace by the server.
+         */
+        PlanEventIn: {
+            /** Credits */
+            credits: number | string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "used" | "continued";
+            /** Outlets */
+            outlets: number;
+            /**
+             * Plan Key
+             * @enum {string}
+             */
+            plan_key: "essential" | "balanced" | "max";
+            /**
+             * Source
+             * @default public
+             * @enum {string}
+             */
+            source: "public" | "request" | "ready_prompt" | "email";
+        };
+        /**
+         * PlanIn
+         * @description What someone tells the planner. Nothing here is stored.
+         */
+        PlanIn: {
+            /**
+             * Auto
+             * @default false
+             */
+            auto: boolean;
+            /** Budget */
+            budget?: number | string | null;
+            /** Countries */
+            countries?: string[];
+            /**
+             * Goal
+             * @default credibility
+             * @enum {string}
+             */
+            goal: "credibility" | "investors" | "customers" | "hiring";
+            /** Industry */
+            industry?: string | null;
+            /**
+             * Source
+             * @default public
+             * @enum {string}
+             */
+            source: "public" | "request" | "ready_prompt" | "email";
+        };
+        /** PlannerSwitchIn */
+        PlannerSwitchIn: {
+            /** Enabled */
+            enabled: boolean;
+        };
         /** PresenterClipOut */
         PresenterClipOut: {
             /** Active */
@@ -7624,6 +7806,14 @@ export interface components {
             phone_country: string;
             /** Picture Keys */
             picture_keys?: string[];
+            /** Plan Ids */
+            plan_ids?: string[];
+            /**
+             * Plan Key
+             * @default
+             * @enum {string}
+             */
+            plan_key: "" | "essential" | "balanced" | "max";
             /** Project Id */
             project_id?: string | null;
             /**
@@ -11655,6 +11845,111 @@ export interface operations {
             };
         };
     };
+    planner_settings_v1_admin_planner_settings_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_planner_settings_v1_admin_planner_settings_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlannerSwitchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    planner_stats_summary_v1_admin_planner_stats_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_clips_v1_admin_presenter_clips_get: {
         parameters: {
             query?: never;
@@ -14353,6 +14648,80 @@ export interface operations {
             };
         };
     };
+    outlet_plan_v1_distribution_plan_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    outlet_plan_event_v1_distribution_plan_event_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanEventIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     write_press_release_v1_distribution_press_release_post: {
         parameters: {
             query?: never;
@@ -16788,6 +17157,76 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    public_outlet_plan_v1_public_distribution_plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_outlet_plan_event_v1_public_distribution_plan_event_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanEventIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

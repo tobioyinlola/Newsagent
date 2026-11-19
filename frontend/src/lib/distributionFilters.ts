@@ -114,7 +114,15 @@ const ALLOWED_AFTER = "/distribution/request";
 function read(key: string): string | null { try { return localStorage.getItem(key); } catch { return null; } }
 function write(key: string, value: string | null) { try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch { /* storage may be unavailable; the page still works */ } }
 
-export function savePick(ids: string[]) { write(PICK, JSON.stringify({ ids, at: Date.now() })); }
+export type PickedPlan = { key: string; ids: string[] }; // the plan the outlets came from, and exactly what it suggested
+export function savePick(ids: string[], plan?: PickedPlan | null) { write(PICK, JSON.stringify({ ids, at: Date.now(), ...(plan ? { plan } : {}) })); }
+export function readPickPlan(now = Date.now()): PickedPlan | null {
+  try {
+    const v = JSON.parse(read(PICK) ?? "null") as { plan?: { key?: unknown; ids?: unknown }; at?: number } | null;
+    if (!v?.plan || typeof v.at !== "number" || now - v.at > WEEK || typeof v.plan.key !== "string" || !Array.isArray(v.plan.ids)) return null;
+    return { key: v.plan.key, ids: v.plan.ids.filter((x): x is string => typeof x === "string") };
+  } catch { return null; }
+}
 export function readPick(now = Date.now()): string[] {
   try {
     const v = JSON.parse(read(PICK) ?? "null") as { ids?: unknown; at?: number } | null;
