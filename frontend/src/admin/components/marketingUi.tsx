@@ -1,24 +1,17 @@
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, type ReactNode, useContext } from "react";
 import { Link } from "react-router-dom";
-import { Toast } from "./ui";
+import { notify } from "../lib/notify";
+import { Toaster } from "./Toaster";
 
 // The marketing section's shared pieces, so every screen explains itself and behaves the same way.
 
 export const MARKETING = "/marketing";
 
 // ---- saved / done messages: a short pop-up so nobody wonders whether something worked ----
-const ToastCtx = createContext<(message: string) => void>(() => {});
+const ToastCtx = createContext<(message: string) => void>(notify);
 export const useToast = () => useContext(ToastCtx);
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [message, setMessage] = useState<string | null>(null);
-  const timer = useRef<number | undefined>(undefined);
-  const show = useCallback((m: string) => {
-    setMessage(m);
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setMessage(null), 4000);
-  }, []);
-  useEffect(() => () => window.clearTimeout(timer.current), []);
-  return <ToastCtx.Provider value={show}>{children}{message && <Toast>{message}</Toast>}</ToastCtx.Provider>;
+  return <ToastCtx.Provider value={notify}>{children}<Toaster /></ToastCtx.Provider>; // the same pop-up the rest of the back office uses
 }
 
 // ---- where am I: "Campaigns › Morning send" ----
