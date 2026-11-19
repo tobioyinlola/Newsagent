@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { credits, GOALS, planIds, type Goal, type Plan, type PlanAsk, type PlanResult, type PlanSource } from "../lib/outletPlanner";
+import { credits, GOALS, isPlanResult, planIds, type Goal, type Plan, type PlanAsk, type PlanResult, type PlanSource } from "../lib/outletPlanner";
 
 type Props = {
   source: PlanSource; // which screen this is, for measuring
@@ -31,6 +31,7 @@ export function OutletPlanner({ source, countries, fetchPlan, initialCountries =
     setBusy(true); setError(""); setApplied("");
     try {
       const r = await fetchPlan({ budget, countries: picked, goal, industry, source, auto, ...next });
+      if (!isPlanResult(r)) throw new Error("We could not make a plan just now. Please try again.");
       setResult(r); onResult?.(r);
       if (!picked.length && r.countries.length) setPicked(r.countries); // started from the business's own country
     } catch (e) { setError(e instanceof Error ? e.message : "We could not make a plan just now. Please try again."); }

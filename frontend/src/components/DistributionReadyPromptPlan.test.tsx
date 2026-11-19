@@ -80,6 +80,17 @@ describe("the recommendation on the video-ready prompt", () => {
     expect(screen.getByTestId("path").textContent).toBe("/distribution/request?project=p");
   });
 
+  it("is not broken by a reply that is not a plan (the pop-up must always open)", async () => {
+    for (const odd of [[], {}, null, "oops", { plans: "none" }]) {
+      vi.mocked(distributionApi).mockReset().mockResolvedValue(odd as never);
+      const { unmount } = render(<MemoryRouter><DistributionReadyPrompt projectId="p" workspaceId="w" /></MemoryRouter>);
+      await waitFor(() => expect(distributionApi).toHaveBeenCalled());
+      expect(screen.getByRole("button", { name: "Yes, choose outlets" })).toBeTruthy();
+      expect(screen.queryByText("Recommended for you")).toBeNull();
+      unmount();
+    }
+  });
+
   it("stays as it was when the plan cannot be fetched, and while the video is still being made", async () => {
     vi.mocked(distributionApi).mockRejectedValue(new Error("offline"));
     const { unmount } = render(<MemoryRouter><DistributionReadyPrompt projectId="p" workspaceId="w" /></MemoryRouter>);

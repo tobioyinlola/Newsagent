@@ -82,6 +82,12 @@ describe("OutletPlanner", () => {
     expect((await screen.findByRole("button", { name: /Nigeria/ })).getAttribute("aria-pressed")).toBe("true"); // the country the server started from is shown as picked
   });
 
+  it("says so, and does not crash, when the reply is not a plan", async () => {
+    render(<OutletPlanner source="public" {...props({ fetchPlan: vi.fn().mockResolvedValue([]) })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Suggest outlets" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("could not make a plan");
+  });
+
   it("never promises publication", async () => {
     render(<OutletPlanner source="public" {...props()} />);
     fireEvent.click(screen.getByRole("button", { name: "Suggest outlets" }));

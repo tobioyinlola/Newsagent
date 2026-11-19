@@ -11,7 +11,7 @@ test("the suggested-plans numbers show in the admin area and add up with what vi
   await page.addInitScript(() => sessionStorage.setItem("newsagent.admin.token", "dev:ops@example.com"));
   await page.goto("/admin/distribution");
   await page.getByRole("button", { name: "Suggested plans" }).click();
-  await expect(page.getByRole("heading", { name: "Suggested plans" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Suggested plans", exact: true })).toBeVisible();
   await expect(page.getByText("Plans viewed", { exact: true })).toBeVisible();
   await expect(page.getByRole("table", { name: "Suggested plans by screen" })).toBeVisible();
   await expect(page.getByRole("row", { name: /Website distribution page/ })).toBeVisible();

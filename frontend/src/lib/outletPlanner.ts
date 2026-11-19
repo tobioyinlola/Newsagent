@@ -42,10 +42,16 @@ export const credits = (v: string | number) => { const n = Number(v); return `${
 /** Ids of every outlet in a plan, in order. */
 export const planIds = (p: Plan) => p.outlets.map((o) => o.id);
 
+/** Whether a reply is really a plan result. A suggestion is never worth breaking a page over: anything else is ignored. */
+export function isPlanResult(x: unknown): x is PlanResult {
+  const r = x as Partial<PlanResult> | null;
+  return !!r && typeof r === "object" && Array.isArray(r.plans) && Array.isArray(r.countries) && Array.isArray(r.notes) && Array.isArray(r.budget_presets) && !!r.suggested && typeof r.suggested === "object";
+}
+
 /** The plan to feature on the "video is ready" prompt: the biggest that fits the wallet, else the smallest with what is missing.
  *  None when there is nothing personal to say (no country we recognise, or no plans), so the prompt stays as it was. */
 export function featuredPlan(r: PlanResult): { plan: Plan; fits: boolean; balance: number; missing: number } | null {
-  if (!r.plans.length || !r.countries.length) return null;
+  if (!isPlanResult(r) || !r.plans.length || !r.countries.length) return null;
   const balance = Number(r.balance_credits ?? 0);
   const fitting = r.plans.filter((p) => Number(p.total_credits) <= balance);
   const plan = fitting.length ? fitting[fitting.length - 1] : r.plans[0];

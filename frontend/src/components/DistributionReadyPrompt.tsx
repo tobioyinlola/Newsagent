@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getToken } from "../lib/auth";
 import { distributionApi } from "../lib/distribution";
 import { savePick } from "../lib/distributionFilters";
-import { credits, featuredPlan, outletSummary, planBody, planIds, planRef, trackPlan, type PlanResult } from "../lib/outletPlanner";
+import { credits, featuredPlan, isPlanResult, outletSummary, planBody, planIds, planRef, trackPlan, type PlanResult } from "../lib/outletPlanner";
 
 // Shown twice per video, each dismissed on its own: once while the video is being made ("making"), and again when it is finished ("ready").
 export function DistributionReadyPrompt({ projectId, workspaceId, stage = "ready" }: { projectId: string; workspaceId: string; stage?: "making" | "ready" }) {
@@ -16,7 +16,7 @@ export function DistributionReadyPrompt({ projectId, workspaceId, stage = "ready
   useEffect(() => {
     if (making || dismissed) return;
     let live = true;
-    distributionApi<PlanResult>("distribution/plan", getToken(), "POST", planBody({ budget: "", countries: [], goal: "credibility", source: "ready_prompt", auto: true })).then((r) => { if (live) setRec(r); }).catch(() => undefined); // no plan is not an error: the prompt simply stays as it was
+    distributionApi<PlanResult>("distribution/plan", getToken(), "POST", planBody({ budget: "", countries: [], goal: "credibility", source: "ready_prompt", auto: true })).then((r) => { if (live && isPlanResult(r)) setRec(r); }).catch(() => undefined); // no plan is not an error: the prompt simply stays as it was
     return () => { live = false; };
   }, [making, dismissed]);
   const featured = rec ? featuredPlan(rec) : null;
