@@ -82,6 +82,21 @@ async def test_everyone_is_on_one_email_and_the_others_are_copied_on_it_and_on_e
     assert _sent(EMPIRE)[-1]["cc"] == ["news@empire.example.com"]
 
 
+async def test_the_first_email_carries_the_whole_story_to_publish_not_just_links(client, distribution_data, engine, maker):
+    await _import(client, f"outlet,contact_name,contact_email\nEmpire Magazine Africa,Ada,{EMPIRE}\n")
+    await _submit(client, distribution_data)
+    text = _sent(EMPIRE)[0]["text"]
+    assert "ready to publish" in text and "Our edited announcement." in text  # the full announcement, in the email itself
+    assert "{story}" not in text and "{assets}" not in text
+
+
+async def test_story_is_a_placeholder_templates_can_use_and_the_preview_shows_it(client, workspace):
+    cfg = (await client.get("/v1/admin/outreach/config", headers=OPS)).json()
+    assert "story" in cfg["variables"]
+    r = await client.post("/v1/admin/outreach/preview", json={"subject": "Hi", "body": "Please publish:\n{story}"}, headers=OPS)
+    assert r.status_code == 200 and "Acme opens its first store in Lagos" in r.json()["body"] and "{story}" not in r.json()["body"]
+
+
 # ---------- the default: every outlet, unless it opted out ----------
 async def test_automatic_outreach_is_on_for_every_outlet_that_has_a_contact(client, distribution_data, engine, maker):
     await _import(client, "outlet,contact_name,contact_email\nEmpire Magazine Africa,Ada,ada@empire.example.com\n", automatic=False)

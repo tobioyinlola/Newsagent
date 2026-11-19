@@ -92,6 +92,7 @@ async def preview(
         "headline": "Acme opens its first store in Lagos",
         "summary": "Acme has opened its first store in Lagos, serving customers across the city.",
         "announcement": "Acme has opened its first store in Lagos, serving customers across the city.\n\nThe store opens daily from 9am.",
+        "story": "Acme opens its first store in Lagos\n\nAcme has opened its first store in Lagos, serving customers across the city.\n\nThe store opens daily from 9am.",
         "assets": "Video: https://example.com/video\nCompany logo: https://example.com/logo.png",
         "reference": "CF-DIST-SAMPLE",
         "payment_summary": "Our client has paid Cover Founder to arrange this distribution request.",
