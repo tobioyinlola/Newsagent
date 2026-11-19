@@ -74,9 +74,11 @@ test("configured team and publisher emails, media charges, receipt and multi-out
     await expect.poll(async () => (await request.get(`${API}/v1/dev/last-email`, { params: { to: "distribution-sales@example.com" } })).status(), { timeout: 20_000 }).toBe(200);
     const sale = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: "distribution-sales@example.com" } })).json();
     expect(sale.text).toContain("Total: 7"); expect(sale.text).toContain(contact);
+    await expect.poll(async () => (await request.get(`${API}/v1/dev/last-email`, { params: { to: "distribution-editor@example.com" } })).status(), { timeout: 20_000 }).toBe(200); // emails go out one after another
     const sent = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: "distribution-editor@example.com" } })).json();
     expect(sent.text).toContain("sponsorship request"); expect(sent.text).toContain("bank/payment details");
     const submitted = await (await request.get(`${API}/v1/distribution/${id}`, { headers })).json();
+    await expect.poll(async () => (await request.get(`${API}/v1/dev/last-email`, { params: { to: "distribution-editor2@example.com" } })).status(), { timeout: 20_000 }).toBe(200);
     const restricted = await (await request.get(`${API}/v1/dev/last-email`, { params: { to: "distribution-editor2@example.com" } })).json();
     expect(restricted.text).not.toContain(submitted.data.logo_key);
     expect(restricted.text).not.toContain(submitted.data.picture_keys[0]);

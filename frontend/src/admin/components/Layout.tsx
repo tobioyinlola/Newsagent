@@ -6,6 +6,7 @@ import { api } from "../api/client";
 import { signOut } from "../lib/auth";
 import { CFSymbol, SecondaryLogo } from "./Logo";
 import { ConfirmDialog } from "./ui";
+import { Toaster } from "./Toaster";
 import { useCan } from "../lib/can";
 import { useMe } from "./RequireOperator";
 import { SHOW_OUTREACH } from "../lib/features";
@@ -138,6 +139,7 @@ export function Layout() {
         <div className="workspace-content admin-workspace-content space-y-5">
           <BackButton fallback="/" />
           <Outlet />
+          <Toaster />
         </div>
       </main>
     </div>
