@@ -119,6 +119,7 @@ class Settings(BaseSettings):
     signup_per_ip_per_hour: int = (
         20  # sign-up codes one address may ask for in an hour (the automated browser tests raise it)
     )
+    signup_verify_per_ip: int = 30  # sign-up codes one address may try to confirm in 10 minutes (the automated browser tests raise it)
     invite_ttl_hours: int = 336  # how long an emailed invitation to join stays valid (never less than 48 hours)
     otp_ttl_minutes: int = 10
     session_idle_minutes: int = 60
