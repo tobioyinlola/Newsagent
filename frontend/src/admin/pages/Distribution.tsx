@@ -21,14 +21,15 @@ function DistributionSettings() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  useEffect(() => { if (q.data) setEmails(q.data.team_emails.join("\n")); }, [q.data]);
+  const typedEmails = useRef(false); // once someone is typing, a late reply from the server must not wipe what they typed
+  useEffect(() => { if (q.data && !typedEmails.current) setEmails(q.data.team_emails.join("\n")); }, [q.data]);
   useEffect(() => { const o = q.data?.outlets.find(x => x.id === outletId) ?? null; setOutlet(o); setOthers((o?.cc_emails ?? []).join(", ")); }, [outletId, q.data]);
-  const run = async (fn: () => Promise<unknown>) => { setBusy(true); setError(""); setMessage(""); try { await fn(); await q.refetch(); setMessage("Distribution settings saved."); } catch (e) { setError(String(e)); } finally { setBusy(false); } };
+  const run = async (fn: () => Promise<unknown>) => { setBusy(true); setError(""); setMessage(""); try { await fn(); typedEmails.current = false; await q.refetch(); setMessage("Distribution settings saved."); } catch (e) { setError(String(e)); } finally { setBusy(false); } };
   return <div className="space-y-5 rounded-lg border bg-white p-4 sm:p-6">
     <h2 className="text-xl font-bold">Distribution settings</h2><p className="text-sm text-muted">Recipients, publisher contacts and email templates apply to new submissions. Existing payment breakdowns and sent emails are kept unchanged.</p>
     {(error || q.error) && <p role="alert">{error || String(q.error)}</p>}{message && <p role="status">{message}</p>}
     <form className="space-y-3 border-b pb-5" onSubmit={e => { e.preventDefault(); void run(() => request("admin/distribution/config", "PUT", { team_emails: emails.split(/[\n,;]+/).map(x => x.trim()).filter(Boolean) })); }}>
-      <label className="block font-semibold">Team sale notification emails<textarea className={input} rows={3} placeholder="sales@example.com&#10;operations@example.com" value={emails} disabled={!canManage || busy} onChange={e => setEmails(e.target.value)} /></label><p className="text-sm text-muted">One address per line, or separated by commas. Each recipient receives the payment breakdown, customer contact details and announcement. Leave empty to disable team alerts.</p><button className={button} disabled={!canManage || busy}>Save team recipients</button>
+      <label className="block font-semibold">Team sale notification emails<textarea className={input} rows={3} placeholder="sales@example.com&#10;operations@example.com" value={emails} disabled={!canManage || busy} onChange={e => { typedEmails.current = true; setEmails(e.target.value); }} /></label><p className="text-sm text-muted">One address per line, or separated by commas. Each recipient receives the payment breakdown, customer contact details and announcement. Leave empty to disable team alerts.</p><button className={button} disabled={!canManage || busy}>Save team recipients</button>
     </form>
     <label className="block font-semibold">Configure outlet<select className={input} value={outletId} onChange={e => { setOutletId(e.target.value); setMessage(""); }}>{q.data?.outlets.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}</select></label>
     {outlet && <form className="space-y-4" onSubmit={e => { e.preventDefault(); void run(() => request(`admin/distribution/outlets/${outlet.id}`, "PUT", { ...outlet, contact_email: outlet.contact_email || null, cc_emails: outlet.contact_email ? [...new Set(others.toLowerCase().split(/[\s,;]+/).filter(Boolean))] : [] })); }}>
