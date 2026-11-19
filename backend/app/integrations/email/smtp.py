@@ -36,9 +36,15 @@ class SmtpEmail(EmailProvider):
         *,
         reply_to: str | None = None,
         headers: dict[str, str] | None = None,
+        cc: list[str] | None = None,
+        bcc: list[str] | None = None,
     ) -> None:
         msg = EmailMessage()
         msg["From"], msg["To"], msg["Subject"] = self.sender or get_settings().email_from, to, subject
+        if cc:
+            msg["Cc"] = ", ".join(cc)
+        if bcc:
+            msg["Bcc"] = ", ".join(bcc)  # send_message() delivers to it and strips the header
         if reply_to:
             msg["Reply-To"] = reply_to
         for name, value in (headers or {}).items():

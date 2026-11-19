@@ -1342,6 +1342,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/outreach/mailbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mailbox Status
+         * @description Which mailbox outreach uses, how it sends, and how the last look at the inbox went. Never includes the password.
+         */
+        get: operations["mailbox_status_v1_admin_outreach_mailbox_get"];
+        /**
+         * Mailbox Connect
+         * @description Connect the Gmail address (tested first, then saved encrypted). Conversations that were waiting for a mailbox start.
+         */
+        put: operations["mailbox_connect_v1_admin_outreach_mailbox_put"];
+        post?: never;
+        /** Mailbox Disconnect */
+        delete: operations["mailbox_disconnect_v1_admin_outreach_mailbox_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/outreach/mailbox/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mailbox Test
+         * @description Try an address and app password without saving anything.
+         */
+        post: operations["mailbox_test_v1_admin_outreach_mailbox_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/outreach/needs-contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Needs Contact
+         * @description Paid requests where an outlet has no contact email yet (nobody has been written to), and those waiting only for a mailbox.
+         */
+        get: operations["needs_contact_v1_admin_outreach_needs_contact_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/outreach/needs-contact/{placement_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Add Contact
+         * @description Give an outlet its contact (one email or several). It is saved on the outlet, so every later request uses it too, and the
+         *     conversation for this paid request starts straight away.
+         */
+        put: operations["add_contact_v1_admin_outreach_needs_contact__placement_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/outreach/preview": {
         parameters: {
             query?: never;
@@ -5033,6 +5119,16 @@ export interface components {
             /** Image Id */
             image_id: string;
         };
+        /** ContactIn */
+        ContactIn: {
+            /**
+             * Contact Name
+             * @default
+             */
+            contact_name: string;
+            /** Emails */
+            emails: string[];
+        };
         /** ContactsIn */
         ContactsIn: {
             /**
@@ -5852,6 +5948,13 @@ export interface components {
              */
             portal: "customer" | "admin";
         };
+        /** MailboxIn */
+        MailboxIn: {
+            /** Address */
+            address: string;
+            /** App Password */
+            app_password: string;
+        };
         /** ManualCreditsIn */
         ManualCreditsIn: {
             /** Credits */
@@ -6022,6 +6125,8 @@ export interface components {
              * @default true
              */
             accepts_logo: boolean;
+            /** Cc Emails */
+            cc_emails?: string[];
             /** Contact Email */
             contact_email?: string | null;
             /**
@@ -6082,6 +6187,11 @@ export interface components {
              * @default 0
              */
             picture_credits: number | string;
+            /**
+             * Skip Outreach
+             * @default false
+             */
+            skip_outreach: boolean;
             /** Topic */
             topic?: string | null;
         };
@@ -6092,6 +6202,11 @@ export interface components {
              * @default 6
              */
             ai_turn_limit: number;
+            /**
+             * Auto Outreach
+             * @default true
+             */
+            auto_outreach: boolean;
             /**
              * Daily Cap
              * @default 200
@@ -11186,6 +11301,218 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ContactsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mailbox_status_v1_admin_outreach_mailbox_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mailbox_connect_v1_admin_outreach_mailbox_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailboxIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mailbox_disconnect_v1_admin_outreach_mailbox_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mailbox_test_v1_admin_outreach_mailbox_test_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailboxIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    needs_contact_v1_admin_outreach_needs_contact_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_contact_v1_admin_outreach_needs_contact__placement_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                placement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactIn"];
             };
         };
         responses: {

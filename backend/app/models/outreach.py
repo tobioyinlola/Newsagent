@@ -17,6 +17,7 @@ class OutreachThread(Base, TimestampMixin):
     outlet_name: Mapped[str] = mapped_column(String(200), default="")
     contact_name: Mapped[str] = mapped_column(String(200), default="")
     contact_email: Mapped[str] = mapped_column(String(320), index=True)
+    cc_emails: Mapped[list] = mapped_column(JSON, default=list)  # the outlet's other contacts, copied on every email in the conversation
     template_id: Mapped[str] = mapped_column(String(40), default="")
     reply_token: Mapped[str] = mapped_column(String(40), unique=True)  # the secret in outreach+<token>@domain
     # awaiting_reply | replied | needs_approval | agreed | closed | do_not_contact

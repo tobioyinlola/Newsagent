@@ -29,6 +29,7 @@ from app.models import (
 )
 from app.models.base import new_id, utcnow
 from app.services import distribution as dist
+from app.services import outreach_gmail
 from app.services.audit import audit
 from app.services.distribution_catalog import VARIABLES
 
@@ -157,6 +158,9 @@ class OutreachConfig(BaseModel):
     )  # every outreach email a day (a mailbox that sends too much gets blocked)
     ai_turn_limit: int = Field(default=6, ge=1, le=30)
     paused: bool = False
+    # Reach out to every outlet automatically when a request is paid. An outlet with no contact yet is flagged for the team to fill in,
+    # and one marked "never contact" is left alone.
+    auto_outreach: bool = True
     policy: dict[str, str] = Field(
         default_factory=dict
     )  # step type -> auto | approve (filled in by the agent's defaults)
@@ -190,11 +194,11 @@ async def save_config(db: AsyncSession, actor: str, cfg: OutreachConfig) -> None
     await db.commit()
 
 
-def reply_address(token: str) -> str | None:
+def reply_address(token: str, mailbox: str | None = None) -> str | None:
     """Where this conversation's replies should come back to. With a mailbox set (Gmail or Workspace), plus-addressing on it
     (name+<code>@domain); otherwise outreach+<code>@<the reply domain>."""
     s = get_settings()
-    box = s.outreach_mailbox.strip()
+    box = (mailbox or s.outreach_mailbox).strip()
     if "@" in box:
         local, domain = box.rsplit("@", 1)
         return f"{local.split('+')[0]}+{token}@{domain}"
@@ -202,13 +206,10 @@ def reply_address(token: str) -> str | None:
     return f"outreach+{token}@{domain}" if domain else None
 
 
-def new_message_id() -> str:
+def new_message_id(mailbox: str | None = None) -> str:
     s = get_settings()
-    domain = (
-        s.outreach_reply_domain.strip()
-        or (s.outreach_mailbox.rsplit("@", 1)[-1] if "@" in s.outreach_mailbox else "")
-        or "outreach.local"
-    )
+    box = (mailbox or s.outreach_mailbox).strip()
+    domain = s.outreach_reply_domain.strip() or (box.rsplit("@", 1)[-1] if "@" in box else "") or "outreach.local"
     return f"<{secrets.token_hex(12)}@{domain}>"
 
 
@@ -315,11 +316,70 @@ async def send_room(db: AsyncSession) -> int:
     return max(0, cfg.send_cap_per_day - int(sent))
 
 
+async def catch_up(limit: int = 50) -> int:
+    """Start the conversations that were waiting for a contact to be added or for a mailbox to be connected. Returns how many started.
+    Safe to run as often as you like: a placement that already has a conversation is left alone."""
+    if not enabled():
+        return 0
+    from app.db import session_maker
+    from app.services import distribution_catalog as catalog_service
+
+    started = 0
+    began: set[str] = set()
+    async with session_maker()() as db:
+        waiting = (
+            (
+                await db.execute(
+                    select(DistributionPlacement)
+                    .where(DistributionPlacement.outreach_state.in_(("needs_contact", "waiting_mailbox")))
+                    .order_by(DistributionPlacement.created_at)
+                    .limit(limit)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if not waiting:
+            return 0
+        outlets = {o["id"]: o for o in await catalog_service.catalog(db, admin=True)}
+        cfg = await get_config(db)
+        ready = await outreach_gmail.ready(db)
+        for pl in waiting:
+            row = await db.get(DistributionRequest, pl.request_id)
+            outlet = outlets.get(pl.outlet_id)
+            if row is None or outlet is None:
+                continue
+            wanted = bool(outlet.get("direct_access")) or cfg.auto_outreach
+            if outlet.get("skip_outreach") or not wanted:
+                pl.outreach_state = "skipped"  # switched off since the request was paid
+                continue
+            contact = (pl.contact_email or outlet.get("contact_email") or "").strip().lower()
+            if not contact:
+                continue  # still nobody to write to
+            if not pl.contact_email:
+                pl.contact_email = contact
+                pl.cc_emails = [e for e in (outlet.get("cc_emails") or []) if e.lower() != contact]
+            if not ready:
+                pl.outreach_state = "waiting_mailbox"
+                continue
+            thread = await start_thread(db, row, pl, outlet)
+            pl.outreach_state = "started" if thread else "skipped"  # skipped: they asked us to stop
+            if thread:
+                started += 1
+                began.add(row.id)
+        await db.commit()
+    for rid in began:  # send the first emails now, not at the next minute's tick (they still keep to the spacing and daily limits)
+        await dist.deliver_request(rid)
+    return started
+
+
 async def deliver_due() -> int:
     """Send the held conversation emails whose time has come (run every minute). Returns how many requests were looked at."""
     if not enabled():
         return 0
     from app.db import session_maker
+
+    await catch_up()
 
     async with session_maker()() as db:
         ids = (
@@ -370,6 +430,7 @@ async def start_thread(
         outlet_name=placement.data.get("name", ""),
         contact_name=outlet_cfg.get("contact_name") or "",
         contact_email=email,
+        cc_emails=list(placement.cc_emails or []),
         template_id=template_id,
         reply_token=token,
         status="awaiting_reply",
@@ -410,7 +471,8 @@ async def _queue(
     ai: dict | None = None,
     send_after: datetime | None = None,
 ) -> OutreachMessage:
-    message_id = new_message_id()
+    box = await outreach_gmail.address(db)
+    message_id = new_message_id(box)
     mail = await dist.queue_mail(
         db,
         row,
@@ -421,10 +483,11 @@ async def _queue(
         key=key,
         placement=placement,
         thread_id=thread.id,
-        reply_to=reply_address(thread.reply_token),
+        reply_to=reply_address(thread.reply_token, box),
         message_id=message_id,
         in_reply_to=in_reply_to,
         send_after=send_after,
+        cc=list(thread.cc_emails or []),
     )
     msg = OutreachMessage(
         thread_id=thread.id,
@@ -436,7 +499,7 @@ async def _queue(
         message_id=message_id,
         in_reply_to=in_reply_to,
         mail_id=mail.id if mail else None,
-        sender=get_settings().email_from,
+        sender=box or get_settings().email_from,
         ai=ai or {},
         actor=actor,
     )
