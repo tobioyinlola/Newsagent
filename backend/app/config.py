@@ -119,6 +119,7 @@ class Settings(BaseSettings):
     signup_per_ip_per_hour: int = (
         20  # sign-up codes one address may ask for in an hour (the automated browser tests raise it)
     )
+    signup_verify_per_ip: int = 30  # sign-up codes one address may try to confirm in 10 minutes (the automated browser tests raise it)
     invite_ttl_hours: int = 336  # how long an emailed invitation to join stays valid (never less than 48 hours)
     otp_ttl_minutes: int = 10
     session_idle_minutes: int = 60
@@ -155,6 +156,7 @@ class Settings(BaseSettings):
     # AI outreach to distribution outlets (templates, a reply inbox, an agent that answers within approval rules). off = the original one-way email.
     resend_events_secret: str = ""  # Resend webhook signing secret (whsec_...) for bounces and spam complaints; without it the endpoint is closed
     marketing_default_timezone: str = "Africa/Lagos"  # for sending hours, when a customer's country is not one we know
+    outlet_planner: str = "off"  # on | off: suggested outlet plans for customers and visitors. An operator can override this in the back office
     marketing_campaign_channel: str = "direct"  # direct (one email each through the sender) | broadcast (Resend Contacts + Broadcasts)
     resend_contact_limit: int = 1000  # contacts the Resend plan allows (Free = 1,000); a campaign bigger than this is stopped before anything is sent
     resend_segment_id: str = ""  # the one Resend segment campaigns are sent through; made on first use when empty

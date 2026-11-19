@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { ALL, counts, emptyReason, groupOutlets, isAllowedAfter, matches, outletTitle, peekAfterAuth, readPick, savePick, setAfterAuth, takeAfterAuth, clearPick } from "./distributionFilters";
+import { readPickPlan, ALL, counts, emptyReason, groupOutlets, isAllowedAfter, matches, outletTitle, peekAfterAuth, readPick, savePick, setAfterAuth, takeAfterAuth, clearPick } from "./distributionFilters";
 
 const outlets = [
   { id: "1", topic: "Technology", region: "Africa", country: "Nigeria" },
@@ -104,5 +104,23 @@ describe("outlet names", () => {
     expect(eu("Portugal News", "Portugal")).toBe("Portugal News (Portugal)");
     expect(outletTitle({ name: "The Sun (UK)", region: "Europe", country: "United Kingdom" })).toBe("The Sun (UK)");
     expect(outletTitle({ name: "Reuters", region: "North America", country: "United States" })).toBe("Reuters");
+  });
+});
+
+describe("the plan a saved choice came from", () => {
+  beforeEach(() => localStorage.clear());
+  it("is kept with the choice, and expires with it", () => {
+    savePick(["1", "2"], { key: "balanced", ids: ["1", "2", "3"] });
+    expect(readPick()).toEqual(["1", "2"]);
+    expect(readPickPlan()).toEqual({ key: "balanced", ids: ["1", "2", "3"] });
+    expect(readPickPlan(Date.now() + 8 * 24 * 3600 * 1000)).toBeNull();
+  });
+  it("is absent when the outlets were picked by hand, and ignores a damaged value", () => {
+    savePick(["1"]);
+    expect(readPickPlan()).toBeNull();
+    localStorage.setItem("newsagent.distribution.pick", JSON.stringify({ ids: ["1"], at: Date.now(), plan: { key: 5, ids: "x" } }));
+    expect(readPickPlan()).toBeNull();
+    localStorage.setItem("newsagent.distribution.pick", "not json");
+    expect(readPickPlan()).toBeNull();
   });
 });

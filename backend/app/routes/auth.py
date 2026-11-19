@@ -139,14 +139,14 @@ async def signup_start(
 async def signup_verify(body: SignupVerifyIn, request: Request, db: AsyncSession = Depends(get_session)) -> SessionOut:
     inv: Invite | None = None
     if body.invite_code:
-        await _throttle(request, "signup-verify", body.invite_code, (10, 600), (30, 600))
+        await _throttle(request, "signup-verify", body.invite_code, (10, 600), (get_settings().signup_verify_per_ip, 600))
         inv = await _invite(db, body.invite_code)
         email = inv.email.lower()
     else:
         if not get_settings().open_signup_enabled or not body.email:
             raise BAD_CODE
         email = str(body.email).lower()
-        await _throttle(request, "signup-verify", email, (10, 600), (30, 600))
+        await _throttle(request, "signup-verify", email, (10, 600), (get_settings().signup_verify_per_ip, 600))
     if email in await rbac.team_emails(db):
         raise HTTPException(403, "Team emails cannot create customer accounts.")
     row = await sess.check_code(db, email, "signup", body.code, invite_id=inv.id if inv else None)
