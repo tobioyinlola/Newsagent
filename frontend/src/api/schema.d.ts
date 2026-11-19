@@ -1660,6 +1660,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/planner-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Planner Settings
+         * @description Whether suggested plans are on, and whether that is the default or someone's choice.
+         */
+        get: operations["planner_settings_v1_admin_planner_settings_get"];
+        /**
+         * Set Planner Settings
+         * @description Turn suggested plans on or off for everyone, straight away. Recorded in the audit log.
+         */
+        put: operations["set_planner_settings_v1_admin_planner_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/planner-stats": {
         parameters: {
             query?: never;
@@ -6324,6 +6348,11 @@ export interface components {
              * @enum {string}
              */
             source: "public" | "request" | "ready_prompt" | "email";
+        };
+        /** PlannerSwitchIn */
+        PlannerSwitchIn: {
+            /** Enabled */
+            enabled: boolean;
         };
         /** PresenterClipOut */
         PresenterClipOut: {
@@ -11793,6 +11822,76 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    planner_settings_v1_admin_planner_settings_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_planner_settings_v1_admin_planner_settings_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlannerSwitchIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

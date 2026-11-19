@@ -9,7 +9,7 @@ import { OutletPlanner } from "./OutletPlanner";
 import { fetchPublicPlan, planIds, planRef, trackPlan, type PlanRef } from "../lib/outletPlanner";
 
 type PublicOutlet = { id: string; name: string; topic: string; category: string; region: string; country: string | null; credits: string };
-type Catalogue = { outlets: PublicOutlet[]; filters: FilterList; coming_soon: string[] };
+type Catalogue = { outlets: PublicOutlet[]; filters: FilterList; coming_soon: string[]; planner?: boolean }; // planner: suggested plans are switched on
 
 async function loadOutlets(): Promise<Catalogue> {
   const r = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/v1/public/distribution/outlets`);
@@ -60,17 +60,19 @@ export function OutletBrowser() {
         {data.isError && <p role="alert" className="mt-10 text-center text-red-300">We could not load the outlets right now. Please refresh and try again.</p>}
         {data.data && (
           <div className="mt-10 space-y-6">
-            <OutletPlanner
-              source="public"
-              dark
-              countries={planCountries}
-              fetchPlan={fetchPublicPlan}
-              appliedIds={picked}
-              onResult={(r) => { setSuggested(r?.suggested ?? {}); if (!r?.plans.length) setSuggestedOnly(false); }}
-              onApply={(plan) => { const ids = planIds(plan).filter((id) => known.has(id)); setPicked(ids); setUsed({ ref: planRef(plan), ids: planIds(plan) }); savePick(ids, { key: plan.key, ids: planIds(plan) }); trackPlan("used", "public", planRef(plan), null); document.getElementById("all-outlets")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }}
-              applyLabel="Use this plan"
-            />
-            <h3 id="all-outlets" className="scroll-mt-4 text-xl font-bold text-white">All outlets</h3>
+            {data.data.planner && (
+              <OutletPlanner
+                source="public"
+                dark
+                countries={planCountries}
+                fetchPlan={fetchPublicPlan}
+                appliedIds={picked}
+                onResult={(r) => { setSuggested(r?.suggested ?? {}); if (!r?.plans.length) setSuggestedOnly(false); }}
+                onApply={(plan) => { const ids = planIds(plan).filter((id) => known.has(id)); setPicked(ids); setUsed({ ref: planRef(plan), ids: planIds(plan) }); savePick(ids, { key: plan.key, ids: planIds(plan) }); trackPlan("used", "public", planRef(plan), null); document.getElementById("all-outlets")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }}
+                applyLabel="Use this plan"
+              />
+            )}
+            {data.data.planner && <h3 id="all-outlets" className="scroll-mt-4 text-xl font-bold text-white">All outlets</h3>}
             {hasSuggestions && (
               <button type="button" aria-pressed={suggestedOnly} onClick={() => setSuggestedOnly(!suggestedOnly)} className={`min-h-11 rounded-full border-2 px-4 py-2 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple ${suggestedOnly ? "border-brand-green bg-brand-green text-ink" : "border-white/40 text-white"}`}>Suggested for you only ({Object.keys(suggested).filter((id) => known.has(id)).length})</button>
             )}

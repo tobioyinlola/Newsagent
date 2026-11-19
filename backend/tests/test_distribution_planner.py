@@ -2,8 +2,16 @@
 
 from decimal import Decimal
 
+import pytest
+
+from app.config import get_settings
 from app.services import distribution_planner as planner
 from app.services.distribution_planner import Ask, recommend
+
+@pytest.fixture(autouse=True)
+def planner_on(monkeypatch):
+    monkeypatch.setattr(get_settings(), "outlet_planner", "on")
+
 
 KNOWN = {"Nigeria": "Africa", "Kenya": "Africa", "Ghana": "Africa", "United States": "North America", "Canada": "North America"}
 

@@ -198,3 +198,43 @@ def recommend(outlets: list[dict], ask: Ask, *, balance: Decimal | None = None, 
         elif cheapest is not None and ask.budget is not None:
             result["empty"] = f"That budget is below our lowest price. The cheapest outlet starts at {_money(cheapest)} credits."
     return result
+
+
+# ---------- the on/off switch ----------
+SWITCH_KEY = "outlet_planner"
+
+
+async def enabled(db) -> bool:
+    """Whether customers and visitors are offered suggested plans. The operator's choice in the back office wins; until one is made,
+    OUTLET_PLANNER decides (off unless set to "on")."""
+    from app.config import get_settings
+    from app.models import SystemSetting
+
+    row = await db.get(SystemSetting, SWITCH_KEY)
+    if row is not None and isinstance((row.value or {}).get("enabled"), bool):
+        return bool(row.value["enabled"])
+    return get_settings().outlet_planner.strip().lower() == "on"
+
+
+async def switch_state(db) -> dict:
+    from app.models import SystemSetting
+
+    row = await db.get(SystemSetting, SWITCH_KEY)
+    chosen = row is not None and isinstance((row.value or {}).get("enabled"), bool)
+    return {
+        "enabled": await enabled(db),
+        "source": "back office" if chosen else "default",
+        "changed_by": row.updated_by if chosen else None,
+        "changed_at": row.updated_at.isoformat() if chosen and row.updated_at else None,
+    }
+
+
+async def set_enabled(db, actor: str, value: bool) -> None:
+    from app.models import SystemSetting
+    from app.models.base import utcnow
+
+    row = await db.get(SystemSetting, SWITCH_KEY)
+    if row is None:
+        row = SystemSetting(key=SWITCH_KEY, value={})
+        db.add(row)
+    row.value, row.updated_by, row.updated_at = {"enabled": value}, actor, utcnow()

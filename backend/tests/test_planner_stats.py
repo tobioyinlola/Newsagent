@@ -12,6 +12,11 @@ from app.services import planner_stats
 from tests.conftest import OPS, OWNER
 
 
+@pytest.fixture(autouse=True)
+def planner_on(monkeypatch):
+    monkeypatch.setattr(get_settings(), "outlet_planner", "on")
+
+
 async def events(maker):
     async with maker() as db:
         return (await db.execute(select(PlannerEvent).order_by(PlannerEvent.created_at, PlannerEvent.id))).scalars().all()

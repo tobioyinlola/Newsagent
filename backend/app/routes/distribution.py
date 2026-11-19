@@ -506,6 +506,7 @@ async def outlets(p: Principal = Depends(current_principal), db: AsyncSession = 
         ),  # always over the full list, so a submit's price check still matches
         "coming_soon": _coming_soon(shown),
         "filters": _filters(),
+        "planner": await planner.enabled(db),  # whether to offer suggested plans
     }
 
 
@@ -529,6 +530,7 @@ async def public_outlets(response: Response, db: AsyncSession = Depends(get_sess
         "outlets": [{k: o[k] for k in keep} for o in shown],
         "coming_soon": _coming_soon(shown),
         "filters": _filters(),
+        "planner": await planner.enabled(db),
     }
 
 
@@ -553,6 +555,12 @@ class PlanEventIn(BaseModel):
     credits: Decimal = Field(ge=0, le=Decimal("10000000"))
 
 
+async def _planner_on(db: AsyncSession) -> None:
+    """Suggested plans can be switched off in the back office. When they are, the endpoints behave as if they did not exist."""
+    if not await planner.enabled(db):
+        raise HTTPException(404, "Suggested plans are not available right now.")
+
+
 def _plan_countries(asked: list[str]) -> list[str]:
     """Match what was typed or picked to the countries we list, ignoring case and anything we do not know."""
     by_lower = {c.lower(): c for c in REGION_OF}
@@ -565,6 +573,7 @@ async def outlet_plan(
 ) -> dict:
     """Suggested plans for a signed-in customer. With no countries given it starts from the business's own country, and with no
     industry from the one chosen at sign-up; it also says how far each plan is from the credits in the wallet."""
+    await _planner_on(db)
     ws = p.workspace
     countries = _plan_countries(body.countries) or _plan_countries([ws.country or ""])
     shown = [o for o in await catalog_service.catalog(db) if not catalog_service.is_hidden(o)]
@@ -578,6 +587,7 @@ async def outlet_plan(
 @router.post("/v1/public/distribution/plan", dependencies=[Depends(limit("public-outlet-plan", 60, 60))])
 async def public_outlet_plan(body: PlanIn, response: Response, db: AsyncSession = Depends(get_session)) -> dict:
     """The same plans for a visitor who is not signed in. Only the answers given are used, and nothing is kept."""
+    await _planner_on(db)
     response.headers["Cache-Control"] = "no-store"
     shown = [o for o in await catalog_service.catalog(db) if not catalog_service.is_hidden(o)]
     ask = planner.Ask(body.budget, _plan_countries(body.countries), body.goal, body.industry)
@@ -591,6 +601,7 @@ async def public_outlet_plan(body: PlanIn, response: Response, db: AsyncSession 
 async def outlet_plan_event(
     body: PlanEventIn, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)
 ) -> dict:
+    await _planner_on(db)
     planner_stats.record(
         db, body.kind, body.source, workspace_id=p.workspace.id, plan_key=body.plan_key, outlets=body.outlets, credits=body.credits
     )
@@ -601,6 +612,7 @@ async def outlet_plan_event(
 @router.post("/v1/public/distribution/plan/event", dependencies=[Depends(limit("public-outlet-plan-event", 60, 60))])
 async def public_outlet_plan_event(body: PlanEventIn, db: AsyncSession = Depends(get_session)) -> dict:
     """The same for a visitor who is not signed in. Nothing is kept that says who they are."""
+    await _planner_on(db)
     planner_stats.record(
         db,
         body.kind,
@@ -611,6 +623,37 @@ async def public_outlet_plan_event(body: PlanEventIn, db: AsyncSession = Depends
     )
     await db.commit()
     return {"ok": True}
+
+
+class PlannerSwitchIn(BaseModel):
+    enabled: bool
+
+
+@router.get("/v1/admin/planner-settings")
+async def planner_settings(
+    p: Principal = Depends(require("operations.view")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Whether suggested plans are on, and whether that is the default or someone's choice."""
+    return await planner.switch_state(db)
+
+
+@router.put("/v1/admin/planner-settings")
+async def set_planner_settings(
+    body: PlannerSwitchIn, p: Principal = Depends(require("operations.manage")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Turn suggested plans on or off for everyone, straight away. Recorded in the audit log."""
+    before = await planner.enabled(db)
+    await planner.set_enabled(db, p.user.email, body.enabled)
+    audit(
+        db,
+        p.user.email,
+        "distribution.planner_switch",
+        target_type="setting",
+        target_id=planner.SWITCH_KEY,
+        detail={"from": before, "to": body.enabled},
+    )
+    await db.commit()
+    return await planner.switch_state(db)
 
 
 @router.get("/v1/admin/planner-stats")

@@ -44,7 +44,7 @@ export function DistributionRequestPage() {
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const submitting = useRef(false);
   const list = useQuery({ queryKey: ["distributions"], queryFn: () => request<Distribution[]>("distribution"), refetchInterval: 15000 });
-  const outlets = useQuery({ queryKey: ["distribution-outlets"], queryFn: () => request<{ outlets: Outlet[]; coming_soon: string[]; quote_version: string; filters: OutletFilterList }>("distribution/outlets") });
+  const outlets = useQuery({ queryKey: ["distribution-outlets"], queryFn: () => request<{ outlets: Outlet[]; coming_soon: string[]; quote_version: string; filters: OutletFilterList; planner?: boolean }>("distribution/outlets") });
   const videos = useQuery({ queryKey: ["distribution-videos"], queryFn: () => request<Video[]>("distribution/videos") });
   const stories = useQuery({ queryKey: ["distribution-stories"], queryFn: () => request<{ project_id: string; headline: string; announcement: string }[]>("distribution/stories") });
   const images = useQuery({ queryKey: ["distribution-images", draft?.logo_key], queryFn: () => unwrap(api.GET("/v1/brand-kit/assets")), enabled: !!draft?.logo_key });
@@ -169,7 +169,7 @@ export function DistributionRequestPage() {
     <div><h1 className="text-3xl font-bold">Distribute your story</h1><p className="mt-2">Want to distribute your video and announcement to over 2,500 media outlets?</p><p className="text-sm text-muted">Choose from the available outlets below. Our team coordinates your request; submission is not a guarantee of publication.</p></div>
     <ErrorBox error={error ?? list.error ?? outlets.error ?? videos.error} />
     {!id && pickIds.length > 0 && <Notice tone="ok"><strong>You chose {pickIds.length} {pickIds.length === 1 ? "outlet" : "outlets"}</strong> ({Number(pickIds.reduce((n, i) => n + Number(all.find(o => o.id === i)?.credits ?? 0), 0).toFixed(2))} credits): {pickIds.map(i => all.find(o => o.id === i)?.name).filter(Boolean).join(", ")}. They are added to your request once you start it below. <button type="button" className="underline" onClick={() => { clearPick(); nav("/distribution/request", { replace: true }); }}>Remove my choice</button></Notice>}
-    {!id && params.get("plan") === "1" && <OutletPlanner source="email" autoRun applyLabel="Start with this plan" countries={planCountries} fetchPlan={ask => request<PlanResult>("distribution/plan", "POST", planBody(ask))} onApply={(plan: Plan) => { trackPlan("used", "email", planRef(plan), getToken()); void create({ ids: planIds(plan), plan: { key: plan.key, ids: planIds(plan) } }); }} />}
+    {!id && params.get("plan") === "1" && outlets.data?.planner && <OutletPlanner source="email" autoRun applyLabel="Start with this plan" countries={planCountries} fetchPlan={ask => request<PlanResult>("distribution/plan", "POST", planBody(ask))} onApply={(plan: Plan) => { trackPlan("used", "email", planRef(plan), getToken()); void create({ ids: planIds(plan), plan: { key: plan.key, ids: planIds(plan) } }); }} />}
     {!id && <><DistributionStart outletIds={pickIds} videoPath={<Button onClick={() => void create()} disabled={busy || !videos.data || !outlets.data || stories.isLoading}>Start a distribution request</Button>} onCreated={did => { if (pickIds.length) clearPick(); void cache.invalidateQueries({ queryKey: ["distributions"] }); nav(`/distribution/request?draft=${did}`); }} /><Card title="Your distribution requests"><ul className="space-y-3">{list.data?.map(r => <li key={r.id}><Link className="underline" to={`/distribution/request?draft=${r.id}`}>{r.data.headline || "Untitled distribution"}</Link> — {distributionStatus(r.status)} · {r.stage} · {r.paid ? `Paid (${r.total_credits} credits)` : "Unpaid draft"}</li>)}</ul>{list.data?.length === 0 && <p>No requests yet. Your drafts will appear here.</p>}</Card></>}
     {id && !draft && !error && <p>Loading your saved request…</p>}
     {draft && row && <>
@@ -178,7 +178,7 @@ export function DistributionRequestPage() {
       {Object.keys(fieldErrors).length > 0 && <div ref={validationSummary} tabIndex={-1} role="alert" className="rounded-lg border-2 border-brand-red bg-red-tint p-4 focus-visible:outline-2 focus-visible:outline-brand-purple"><p className="font-bold">Complete the required details before continuing.</p><ul className="mt-2 list-inside list-disc text-sm">{Object.values(fieldErrors).map(message => <li key={message}>{message}</li>)}</ul></div>}
       <p role="status" className="text-sm">{saved || "Your progress is saved automatically."}</p>
       {draft.stage === "outlets" && fieldError("outlet_ids")}
-      {draft.stage === "outlets" && row?.status === "draft" && <OutletPlanner
+      {draft.stage === "outlets" && row?.status === "draft" && outlets.data?.planner && <OutletPlanner
         source="request"
         countries={planCountries}
         fetchPlan={ask => request<PlanResult>("distribution/plan", "POST", planBody(ask))}

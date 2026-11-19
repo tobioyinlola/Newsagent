@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useCan } from "../lib/can";
 import { distributionApi } from "../../lib/distribution";
 import { getToken } from "../lib/auth";
 
@@ -13,7 +14,34 @@ const SOURCES: { key: keyof Stats["by_source"]; label: string; hint: string }[] 
   { key: "request", label: "Distribution request", hint: "The outlets step" },
   { key: "email", label: "Email link", hint: "People who clicked through from an email" },
 ];
+type Switch = { enabled: boolean; source: "default" | "back office"; changed_by: string | null; changed_at: string | null };
 const pct = (v: number | null) => (v === null ? "–" : `${Math.round(v * 100)}%`);
+
+// The one switch for suggested plans: off, nobody is offered them and nothing is recorded; on, everyone is, straight away.
+function PlannerSwitch() {
+  const canManage = useCan()("operations.manage");
+  const q = useQuery({ queryKey: ["planner-switch"], queryFn: () => distributionApi<Switch>("admin/planner-settings", getToken()), refetchOnWindowFocus: false });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const flip = async (enabled: boolean) => {
+    setBusy(true); setError("");
+    try { await distributionApi<Switch>("admin/planner-settings", getToken(), "PUT", { enabled }); await q.refetch(); } catch { setError("We could not change that. Please try again."); } finally { setBusy(false); }
+  };
+  const on = q.data?.enabled ?? false;
+  return (
+    <div className="rounded-lg border-2 border-line p-4" role="group" aria-labelledby="planner-switch-h">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h3 id="planner-switch-h" className="font-bold">Show suggested plans to customers and visitors</h3>
+          <p className="text-sm text-muted" role="status">{q.isLoading ? "Checking…" : on ? "On: plans are offered on the website, in the request and when a video is ready." : "Off: nobody is offered plans, and the screens look as they did before."}{q.data && ` ${q.data.source === "default" ? "This is the default setting." : `Changed by ${q.data.changed_by ?? "someone"}.`}`}</p>
+        </div>
+        <button type="button" role="switch" aria-checked={on} disabled={!canManage || busy || q.isLoading} onClick={() => void flip(!on)} className={`min-h-11 min-w-24 rounded-full border-2 px-4 py-2 text-sm font-bold disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple ${on ? "border-ink bg-brand-green" : "border-line bg-white"}`}>{busy ? "Saving…" : on ? "On" : "Off"}</button>
+      </div>
+      {!canManage && <p className="mt-2 text-xs text-muted">You can see this setting but not change it.</p>}
+      {(error || q.error) && <p role="alert" className="mt-2 text-sm font-bold">{error || "We could not load this setting."}</p>}
+    </div>
+  );
+}
 
 // How the suggested plans are doing. Counts only: nothing here says who a visitor was.
 export function PlannerStats() {
@@ -34,6 +62,7 @@ export function PlannerStats() {
           </select>
         </label>
       </div>
+      <PlannerSwitch />
       {q.isLoading && <p aria-busy="true">Loading…</p>}
       {q.error && <p role="alert">We could not load the numbers. Please try again.</p>}
       {data && t && (

@@ -4569,6 +4569,19 @@
         "title": "PlanIn",
         "type": "object"
       },
+      "PlannerSwitchIn": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "PlannerSwitchIn",
+        "type": "object"
+      },
       "PresenterClipOut": {
         "properties": {
           "active": {
@@ -15780,6 +15793,118 @@
         "summary": "Pipeline Metrics",
         "tags": [
           "system"
+        ]
+      }
+    },
+    "/v1/admin/planner-settings": {
+      "get": {
+        "description": "Whether suggested plans are on, and whether that is the default or someone's choice.",
+        "operationId": "planner_settings_v1_admin_planner_settings_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Planner Settings V1 Admin Planner Settings Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Planner Settings",
+        "tags": [
+          "distribution"
+        ]
+      },
+      "put": {
+        "description": "Turn suggested plans on or off for everyone, straight away. Recorded in the audit log.",
+        "operationId": "set_planner_settings_v1_admin_planner_settings_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlannerSwitchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Set Planner Settings V1 Admin Planner Settings Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Planner Settings",
+        "tags": [
+          "distribution"
         ]
       }
     },
