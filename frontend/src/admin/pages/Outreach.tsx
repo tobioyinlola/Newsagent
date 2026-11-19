@@ -1,22 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { distributionApi } from "../../lib/distribution";
 import { Button, Card, ErrorBox, Notice, inputCls } from "../components/ui";
 import { getToken } from "../lib/auth";
 import { useCan } from "../lib/can";
+import { OutreachMailbox, type MailboxStatus } from "../components/OutreachMailbox";
+import { OutreachNeedsContact } from "../components/OutreachNeedsContact";
+import { TestSend } from "../components/OutreachTestSend";
 
 const request = <T,>(path: string, method = "GET", body?: unknown) => distributionApi<T>(path, getToken(), method, body);
 
 type Template = { id: string; name: string; subject: string; body: string };
 type Step = { id: string; label: string; never_auto: boolean; default: string };
-type Config = { templates: Template[]; default_template: string; sender_name: string; sender_title: string; footer_address: string; mode: string; daily_cap: number; ai_turn_limit: number; paused: boolean; reply_delay_minutes: number; new_gap_minutes: number; new_daily_cap: number; send_cap_per_day: number; policy: Record<string, string> };
+type Config = { templates: Template[]; default_template: string; sender_name: string; sender_title: string; footer_address: string; mode: string; daily_cap: number; ai_turn_limit: number; paused: boolean; auto_outreach: boolean; reply_delay_minutes: number; new_gap_minutes: number; new_daily_cap: number; send_cap_per_day: number; policy: Record<string, string> };
 type Sending = { via_mailbox: boolean; mailbox: string; reads_replies: boolean; reply_address_example: string | null };
-type ConfigOut = { config: Config; variables: string[]; steps: Step[]; engine_on: boolean; reply_domain: string; sending: Sending };
+type ConfigOut = { config: Config; variables: string[]; steps: Step[]; engine_on: boolean; reply_domain: string; sending: Sending; mailbox: MailboxStatus; needs_contact: number };
 type Thread = { id: string; request_id: string; outlet_name: string; contact_name: string; contact_email: string; status: string; ai_paused: boolean; updated_at: string | null; last: { direction: string; status: string; snippet: string } | null };
 type Message = { id: string; direction: "in" | "out"; kind: string; status: string; subject: string; body: string; sender: string; actor: string; created_at: string | null; sent_at: string | null; ai: { step?: string; intent?: string; reasons?: string[]; summary?: string; suspicious?: boolean; has_account_details?: boolean; sender_mismatch?: boolean; error?: string; approved_by?: string; edited?: boolean } };
 type Facts = { quoted_price?: number; currency?: string | null; deadline?: string; last_intent?: string; has_account_details?: boolean; account_masked?: string; account_verified?: boolean; account_verified_by?: string | null };
 type Detail = { thread: Thread; messages: Message[]; facts: Facts; request: { id: string; headline: string; status: string } | null; placement: { id: string; internal_status: string; status: string } | null };
-type ContactRow = { row: number; outlet: string; outlet_name: string | null; contact_name: string; contact_email: string; template: string | null; status: string };
+type ContactRow = { row: number; outlet: string; outlet_name: string | null; contact_name: string; contact_email: string; cc_emails: string[]; template: string | null; status: string };
 
 const STATUS: Record<string, string> = { awaiting_reply: "Waiting for the outlet", replied: "Outlet replied", needs_approval: "Needs your approval", agreed: "Agreed", closed: "Closed", do_not_contact: "Do not contact" };
 const tone = (s: string) => (s === "needs_approval" ? "border-brand-red bg-red-tint" : s === "replied" ? "border-brand-purple bg-lilac" : s === "agreed" ? "border-ink bg-lime-tint" : "border-line bg-paper");
@@ -144,21 +147,6 @@ function Conversations() {
   );
 }
 
-function TestSend({ canManage }: { canManage: boolean }) {
-  const [to, setTo] = useState("");
-  const send = useMutation({ mutationFn: () => request("admin/outreach/test-send", "POST", { to: to.trim() }) });
-  if (!canManage) return null;
-  return (
-    <div className="mt-4 rounded-lg border border-line p-3">
-      <label className="block text-sm font-semibold">Send a test email to yourself<input className={inputCls} type="email" value={to} onChange={(e) => { setTo(e.target.value); send.reset(); }} placeholder="you@example.com" /></label>
-      <p className="mt-1 text-xs text-muted">It goes out exactly like a real one. Check that it lands in your inbox (not spam) before the first real send.</p>
-      <div className="mt-2"><Button type="button" variant="secondary" disabled={!to.trim() || send.isPending} onClick={() => send.mutate()}>{send.isPending ? "Sending…" : "Send test email"}</Button></div>
-      <ErrorBox error={send.error} />
-      {send.isSuccess && <div className="mt-2"><Notice tone="ok">Sent. Look in your inbox, and in spam too.</Notice></div>}
-    </div>
-  );
-}
-
 function Settings({ data }: { data: ConfigOut }) {
   const qc = useQueryClient();
   const canManage = useCan()("operations.manage");
@@ -178,8 +166,13 @@ function Settings({ data }: { data: ConfigOut }) {
         </fieldset>
         <p className="mt-2 text-sm text-muted">Every email also says the contact can reply STOP to be left alone, and we honour it.</p>
       </Card>
+      <Card title="Who gets contacted">
+        <fieldset disabled={!canManage || save.isPending}>
+          <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={cfg.auto_outreach} onChange={(e) => setCfg({ ...cfg, auto_outreach: e.target.checked })} /><span><strong>Reach out to every outlet automatically when a request is paid.</strong> The outlets on the request get the email, with the headline, announcement and materials. An outlet with no contact yet is listed under Contacts for you to fill in. You can leave one outlet out in Distribution, under that outlet's settings.</span></label>
+        </fieldset>
+      </Card>
       <Card title="Sending and pacing">
-        <p className="text-sm">{data.sending.via_mailbox ? <>Emails go out from the mailbox <strong>{data.sending.mailbox}</strong>.</> : <>Emails go out from the app's usual sender (no outreach mailbox is connected yet).</>} {data.sending.reads_replies ? "Replies are read from that mailbox." : data.reply_domain ? `Replies come back to ${data.reply_domain}.` : "Replies are not being read yet."}</p>
+        <p className="text-sm">{data.mailbox.connected ? <>Emails go out through the Gmail <strong>{data.mailbox.address}</strong> ({data.mailbox.sends_via}). Change it in the Mailbox tab.</> : data.sending.via_mailbox ? <>Emails go out from the mailbox <strong>{data.sending.mailbox}</strong>.</> : <>No mailbox is connected yet: nothing is sent until you connect a Gmail in the Mailbox tab.</>} {data.sending.reads_replies || data.mailbox.connected ? "Replies are read from that mailbox." : data.reply_domain ? `Replies come back to ${data.reply_domain}.` : "Replies are not being read yet."}</p>
         {data.sending.reply_address_example && <p className="mt-1 text-xs text-muted">Each conversation has its own reply address, like {data.sending.reply_address_example.replace("0123456789abcdef0123", "…")}.</p>}
         <fieldset disabled={!canManage || save.isPending} className="mt-3 grid gap-4 sm:grid-cols-2">
           <label className="block text-sm font-semibold">Wait before replying (minutes)<input className={inputCls} type="number" min={0} max={1440} value={cfg.reply_delay_minutes} onChange={(e) => setCfg({ ...cfg, reply_delay_minutes: Number(e.target.value) })} /></label>
@@ -252,8 +245,8 @@ function Contacts() {
   const check = useMutation({ mutationFn: () => request<{ rows: ContactRow[]; will_change: number }>("admin/outreach/contacts/preview", "POST", { text }) });
   const apply = useMutation({ mutationFn: () => request<{ applied: number }>("admin/outreach/contacts/apply", "POST", { text, enable_automatic: auto }), onSuccess: () => check.reset() });
   return (
-    <Card title="Import outlet contacts">
-      <p className="mb-3 text-sm text-muted">Paste one outlet per line as <code>outlet, contact name, contact email, template</code> (the template is optional: intro, rates or formal), with or without a header row. CSV, tab-separated or JSON all work. Nothing is saved until you check the list and confirm.</p>
+    <Card title="Import many outlet contacts at once">
+      <p className="mb-3 text-sm text-muted">Paste one outlet per line as <code>outlet, contact name, contact email, template</code> (the template is optional: intro, rates or formal), with or without a header row. CSV, tab-separated or JSON all work. An outlet can have several emails: put them in the email cell separated by semicolons, like <code>ada@outlet.com; news@outlet.com</code>. The first is the main contact and the others are copied on every email. Nothing is saved until you check the list and confirm.</p>
       <label className="block text-sm font-semibold">Contacts<textarea className={inputCls} rows={8} value={text} onChange={(e) => { setText(e.target.value); check.reset(); }} placeholder={"Techpoint Africa, Bayo Ade, bayo@example.com, rates\nPunch, Ada Obi, ada@example.com"} /></label>
       <label className="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} /> Switch on automatic outreach for these outlets, so a request for one contacts it by itself</label>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -269,7 +262,7 @@ function Contacts() {
             <tbody>
               {check.data.rows.map((r) => (
                 <tr key={r.row} className="border-t border-line">
-                  <td className="py-1.5 pr-3">{r.outlet_name ?? r.outlet}</td><td className="pr-3">{r.contact_name}</td><td className="pr-3">{r.contact_email}</td><td className="pr-3">{r.template ?? "default"}</td>
+                  <td className="py-1.5 pr-3">{r.outlet_name ?? r.outlet}</td><td className="pr-3">{r.contact_name}</td><td className="pr-3">{r.contact_email}{r.cc_emails?.length > 0 && <span className="block text-xs text-muted">copied: {r.cc_emails.join(", ")}</span>}</td><td className="pr-3">{r.template ?? "default"}</td>
                   <td className={r.status === "ok" ? "font-semibold" : "text-muted"}>{ROW_STATUS[r.status] ?? r.status}</td>
                 </tr>
               ))}
@@ -282,19 +275,31 @@ function Contacts() {
 }
 
 export function OutreachAdmin() {
-  const [tab, setTab] = useState<"inbox" | "settings" | "contacts">("inbox");
+  const [tab, setTab] = useState<"inbox" | "mailbox" | "settings" | "contacts">("inbox");
+  const qc = useQueryClient();
+  const canManage = useCan()("operations.manage");
   const cfg = useQuery({ queryKey: ["outreach-config"], queryFn: () => request<ConfigOut>("admin/outreach/config"), refetchOnWindowFocus: false });
+  const opened = useRef(false);
+  useEffect(() => { // open on whatever needs doing first
+    if (opened.current || !cfg.data) return;
+    opened.current = true;
+    if (!cfg.data.mailbox.ready) setTab("mailbox");
+    else if (cfg.data.needs_contact > 0) setTab("contacts");
+  }, [cfg.data]);
+  const changed = () => { void qc.invalidateQueries({ queryKey: ["outreach-config"] }); void qc.invalidateQueries({ queryKey: ["outreach-needs-contact"] }); };
   const tabBtn = (k: typeof tab, label: string) => <button type="button" aria-pressed={tab === k} className={`min-h-11 rounded border px-4 py-2 text-sm font-semibold ${tab === k ? "border-ink bg-ink text-white" : "border-ink"}`} onClick={() => setTab(k)}>{label}</button>;
   return (
     <div className="space-y-4">
       <div><h1 className="text-2xl font-bold">Outreach to outlets</h1><p className="mt-1 text-sm text-muted">Contact the outlets a paid request names, read their replies and answer them, all in one place.</p></div>
       {cfg.data && !cfg.data.engine_on && <Notice tone="warn">Outreach conversations are switched off (<code>OUTREACH_AI=off</code>), so paid requests still send the original one-way email. You can set up templates and contacts now.</Notice>}
-      {cfg.data?.engine_on && !cfg.data.reply_domain && !cfg.data.sending.mailbox && !cfg.data.sending.reads_replies && <Notice tone="warn">No mailbox or reply domain is set (<code>OUTREACH_MAILBOX</code> or <code>OUTREACH_REPLY_DOMAIN</code>), so replies cannot come back into this inbox yet.</Notice>}
+      {cfg.data && !cfg.data.mailbox.ready && tab !== "mailbox" && <Notice tone="warn">No Gmail is connected, so nothing can be sent yet and replies have nowhere to land. <button type="button" className="font-semibold underline" onClick={() => setTab("mailbox")}>Connect Gmail</button></Notice>}
+      {cfg.data && cfg.data.needs_contact > 0 && tab !== "contacts" && <Notice tone="warn">{cfg.data.needs_contact} {cfg.data.needs_contact === 1 ? "outlet on a paid request has" : "outlets on paid requests have"} no contact email yet, so nobody has been written to. <button type="button" className="font-semibold underline" onClick={() => setTab("contacts")}>Add contacts</button></Notice>}
       <ErrorBox error={cfg.error} />
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Outreach sections">{tabBtn("inbox", "Conversations")}{tabBtn("settings", "Templates and settings")}{tabBtn("contacts", "Contacts")}</div>
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Outreach sections">{tabBtn("inbox", "Conversations")}{tabBtn("mailbox", "Mailbox")}{tabBtn("settings", "Templates and settings")}{tabBtn("contacts", "Contacts")}</div>
       {tab === "inbox" && <Conversations />}
+      {tab === "mailbox" && cfg.data && <OutreachMailbox status={cfg.data.mailbox} canManage={canManage} onChanged={changed} />}
       {tab === "settings" && cfg.data && <Settings data={cfg.data} />}
-      {tab === "contacts" && <Contacts />}
+      {tab === "contacts" && <div className="space-y-4"><OutreachNeedsContact canManage={canManage} onGoMailbox={() => setTab("mailbox")} /><Contacts /></div>}
     </div>
   );
 }

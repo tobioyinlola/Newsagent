@@ -30,8 +30,14 @@ class ResendEmail(EmailProvider):
         *,
         reply_to: str | None = None,
         headers: dict[str, str] | None = None,
+        cc: list[str] | None = None,
+        bcc: list[str] | None = None,
     ) -> None:
         body: dict = {"from": self._from, "to": [to], "subject": subject, "text": text}
+        if cc:
+            body["cc"] = list(cc)
+        if bcc:
+            body["bcc"] = list(bcc)
         if html:
             body["html"] = html
         if reply_to or get_settings().email_reply_to:

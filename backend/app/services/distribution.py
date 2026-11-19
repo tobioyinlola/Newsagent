@@ -14,7 +14,7 @@ from app.db import session_maker
 from app.integrations import registry
 from app.models import Asset, DistributionActivity, DistributionMail, DistributionPlacement, DistributionRequest
 from app.models.base import new_id, utcnow
-from app.services import email_templates, outreach
+from app.services import email_templates, outreach, outreach_gmail
 from app.services.distribution_catalog import BODY, SUBJECT, settings
 from app.services.notifications import send_email
 
@@ -73,6 +73,7 @@ async def queue_mail(
     message_id=None,
     in_reply_to=None,
     send_after=None,
+    cc=None,
 ):
     recipient = recipient.strip().lower()
     dedupe = f"{row.id}:{kind}:" + hashlib.sha256((key + ":" + recipient).encode()).hexdigest()
@@ -94,6 +95,7 @@ async def queue_mail(
         message_id=message_id,
         in_reply_to=in_reply_to,
         send_after=send_after,
+        cc=[e.strip().lower() for e in (cc or []) if e and e.strip().lower() != recipient],
     )
     db.add(mail)
     activity(db, row, "email_queued", {"kind": kind, "recipient": recipient}, placement=placement)
@@ -188,29 +190,65 @@ async def plan_submission(db, row, catalog):
             key="sale",
         )
     by_id = {o["id"]: o for o in catalog}
+    engine = outreach.enabled()
+    outreach_cfg = await outreach.get_config(db)
+    mailbox_ready = await outreach_gmail.ready(db) if engine else False
+    missing: list[str] = []
     for line in row.data["outlets"]:
         config = by_id[line["id"]]
+        contact = (config.get("contact_email") or "").strip().lower()
+        cc = [e for e in (config.get("cc_emails") or []) if e.lower() != contact]
         placement = DistributionPlacement(
-            request_id=row.id, outlet_id=line["id"], data=line, contact_email=config.get("contact_email") or ""
+            request_id=row.id, outlet_id=line["id"], data=line, contact_email=contact, cc_emails=cc
         )
         db.add(placement)
         await db.flush()
         placement.outreach_subject, placement.outreach_body = await outreach_copy(db, row, placement, config)
-        if config.get("direct_access") and placement.contact_email and outreach.enabled():
-            await outreach.start_thread(
+        never = bool(config.get("skip_outreach"))
+        explicit = bool(config.get("direct_access")) and not never  # switched on for this outlet by hand
+        by_default = engine and outreach_cfg.auto_outreach and not never  # on for every outlet unless it opted out
+        if not (explicit or by_default):
+            continue
+        if not contact:
+            placement.outreach_state = "needs_contact"  # nobody to write to yet: the team is told, and it starts when a contact is added
+            missing.append(placement.data.get("name") or line["id"])
+        elif engine and mailbox_ready:
+            thread = await outreach.start_thread(
                 db, row, placement, config
             )  # a conversation, with a reply address that finds its way back
-        elif config.get("direct_access") and placement.contact_email:
+            placement.outreach_state = "started" if thread else "skipped"  # skipped: they asked us to stop
+        elif engine:
+            placement.outreach_state = "waiting_mailbox"  # starts as soon as a mailbox is connected
+        else:  # outreach switched off: the original one-way email
             await queue_mail(
                 db,
                 row,
                 "outreach",
-                placement.contact_email,
+                contact,
                 placement.outreach_subject,
                 placement.outreach_body,
                 key=placement.id + ":initial",
                 placement=placement,
+                cc=cc,
             )
+            placement.outreach_state = "started"
+    if missing:
+        listed = "\n".join(f"- {n}" for n in missing)
+        for recipient in team:
+            await queue_mail(
+                db,
+                row,
+                "team_needs_contact",
+                recipient,
+                "Contact details needed for a paid distribution",
+                (
+                    f"A distribution request has been paid, but these outlets have no contact email yet, so nobody has been written to:\n\n{listed}\n\n"
+                    f"Add a contact (one or several emails) for each, and we will email them automatically straight away: {get_settings().admin_base_url}/outreach\n\n"
+                    f"Request: {invoice(row)['number']}\nHeadline: {row.data['headline']}"
+                ),
+                key="needs-contact",
+            )
+        activity(db, row, "outreach_needs_contact", {"outlets": missing})
     activity(
         db,
         row,
@@ -282,6 +320,8 @@ async def send_confirmation(db: AsyncSession, row: DistributionRequest, *, deadl
     ids = [r[0] for r in rows]
     has_thread = {r[0] for r in rows if r[1]}
     room = await outreach.send_room(db) if has_thread else 0  # how many more conversation emails today's limit allows
+    mailbox_ready = await outreach_gmail.ready(db) if has_thread else True  # nowhere to send from, or read replies at: they wait
+    outreach_provider = None
     await db.commit()
     for ident in ids:
         if deadline is not None and time.monotonic() >= deadline:
@@ -289,6 +329,8 @@ async def send_confirmation(db: AsyncSession, row: DistributionRequest, *, deadl
         if ident in has_thread:
             if room <= 0:
                 continue  # over the daily limit: it waits for tomorrow (a mailbox that sends too much gets blocked)
+            if not mailbox_ready:
+                continue  # no mailbox connected yet: it waits, so a reply can never come back to nowhere
             room -= 1
         token = new_id()
         claimed = (
@@ -330,18 +372,23 @@ async def send_confirmation(db: AsyncSession, row: DistributionRequest, *, deadl
                     if mail.in_reply_to:
                         headers["In-Reply-To"] = mail.in_reply_to
                         headers["References"] = mail.in_reply_to
+                    if outreach_provider is None:
+                        outreach_provider = await outreach_gmail.provider(db)  # the connected Gmail, else the OUTREACH_SMTP_* settings
                     success = await send_email(
                         mail.recipient,
                         mail.subject,
                         mail.body,
                         reply_to=mail.reply_to,
                         headers=headers,
-                        provider=registry.get_outreach_email(),
+                        provider=outreach_provider,
                         plain=True,
+                        cc=list(mail.cc or []) or None,
                     )
                 else:
                     html, text = email_templates.render(mail.subject, mail.body, footer=footer)
-                    success = await send_email(mail.recipient, mail.subject, text, html=html)
+                    success = await send_email(
+                        mail.recipient, mail.subject, text, html=html, cc=list(mail.cc or []) or None
+                    )
             else:
                 success = await send_email(mail.recipient, mail.subject, mail.body)
         except Exception:  # An adapter or test double must not bypass persisted retry handling.

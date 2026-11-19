@@ -95,6 +95,8 @@ class OutletConfig(BaseModel):
     country: str | None = None  # unset = the built-in tag; "" = no single country (the whole of Africa)
     contact_name: str = Field(default="", max_length=200)
     contact_email: EmailStr | None = None
+    cc_emails: list[EmailStr] = Field(default_factory=list, max_length=5)  # the outlet's other contacts, copied on every email
+    skip_outreach: bool = False  # never contact this outlet automatically, even though automatic outreach is on for the rest
     outreach_template: str | None = Field(default=None, max_length=40)  # which outreach template this outlet gets (blank = the default one)
     email_subject: str = Field(default=SUBJECT, min_length=1, max_length=250)
     email_body: str = Field(default=BODY, min_length=1, max_length=12000)
@@ -117,6 +119,14 @@ class OutletConfig(BaseModel):
     def recipient(self):
         if self.direct_access and not self.contact_email:
             raise ValueError("Add a contact email before enabling automatic outreach.")
+        if self.cc_emails and not self.contact_email:
+            raise ValueError("Add the main contact email before adding other contacts.")
+        main = str(self.contact_email or "").lower()
+        seen: list = []
+        for e in self.cc_emails:  # no repeats, and the main contact is never copied on their own email
+            if str(e).lower() != main and str(e).lower() not in {str(x).lower() for x in seen}:
+                seen.append(e)
+        self.cc_emails = seen
         return self
 
 

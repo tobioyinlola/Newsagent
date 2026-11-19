@@ -298,8 +298,8 @@ async def test_the_mailbox_is_read_and_messages_are_marked_read_only_once_stored
         f"From: Ada <ada@empire.example.com>\r\nTo: outreach+{t.reply_token}@mail.test.example\r\nSubject: Re: hi\r\nMessage-ID: <imap1@e.example.com>\r\n\r\nWe can do it for $300.\r\n"
     ).encode()
     marked: list[bytes] = []
-    monkeypatch.setattr(box, "_fetch_unseen", lambda: [(b"7", raw), (b"8", b"not an email at all")])
-    monkeypatch.setattr(box, "_mark_seen", lambda nums: marked.extend(nums))
+    monkeypatch.setattr(box, "_fetch_unseen", lambda creds: [(b"7", raw), (b"8", b"not an email at all")])
+    monkeypatch.setattr(box, "_mark_seen", lambda creds, nums: marked.extend(nums))
     assert await box.poll_once() == 1
     assert b"7" in marked
     async with maker() as db:

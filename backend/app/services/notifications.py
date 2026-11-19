@@ -54,6 +54,8 @@ async def send_email(
     headers: dict[str, str] | None = None,
     provider=None,
     plain: bool = False,
+    cc: list[str] | None = None,
+    bcc: list[str] | None = None,
 ) -> bool:
     """Send one email; never raises (a failed email must not break a pipeline or request).
     Without `html`, the text is wrapped in the branded template (`heading` defaults to the subject, `link` becomes the button)."""
@@ -61,7 +63,9 @@ async def send_email(
         if html is None and not plain:  # plain: a person-to-person text email, with no branded wrapper
             html, text = templates.notice(heading or subject, text, link)
         mailer = provider or registry.get_email()
-        if reply_to or headers:
+        if cc or bcc:
+            await mailer.send(to, subject, text, html, reply_to=reply_to, headers=headers, cc=cc or None, bcc=bcc or None)
+        elif reply_to or headers:
             await mailer.send(to, subject, text, html, reply_to=reply_to, headers=headers)
         else:  # the common case keeps the original call shape
             await mailer.send(to, subject, text, html)
