@@ -64,10 +64,16 @@ VARIABLES = {
     "headline",
     "summary",
     "announcement",
+    "story",
     "assets",
     "reference",
     "payment_summary",
 }
+
+
+def story_text(data: dict) -> str:
+    """The story itself, ready to publish: the headline, then the full announcement."""
+    return f"{data['headline']}\n\n{data['announcement']}".strip()
 
 
 def check_template(value: str) -> str:

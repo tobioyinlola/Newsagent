@@ -15,7 +15,7 @@ from app.integrations import registry
 from app.models import Asset, DistributionActivity, DistributionMail, DistributionPlacement, DistributionRequest
 from app.models.base import new_id, utcnow
 from app.services import email_templates, outreach, outreach_gmail
-from app.services.distribution_catalog import BODY, SUBJECT, settings
+from app.services.distribution_catalog import BODY, SUBJECT, settings, story_text
 from app.services.notifications import send_email
 
 
@@ -149,6 +149,7 @@ async def outreach_copy(db, row, placement, config):
         "headline": row.data["headline"],
         "summary": row.data["announcement"][:1000],
         "announcement": row.data["announcement"],
+        "story": story_text(row.data),
         "assets": await materials(db, row, placement.data),
         "reference": "CF-DIST-" + row.id.upper(),
         "payment_summary": (
