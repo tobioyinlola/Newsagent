@@ -31,7 +31,7 @@ from app.models.base import new_id, utcnow
 from app.services import distribution as dist
 from app.services import outreach_gmail
 from app.services.audit import audit
-from app.services.distribution_catalog import VARIABLES
+from app.services.distribution_catalog import VARIABLES, story_text
 
 log = logging.getLogger("outreach")
 
@@ -51,7 +51,11 @@ Could you please let us know:
 2. Your rate, and what it includes.
 3. Your usual turnaround time.
 
-The full announcement and materials:
+The full story, ready to publish:
+
+{story}
+
+Pictures, logo and video (links):
 {assets}
 
 Thank you,
@@ -234,6 +238,7 @@ async def build_values(
         "headline": row.data["headline"],
         "summary": row.data["announcement"][:1000],
         "announcement": row.data["announcement"],
+        "story": story_text(row.data),
         "assets": await dist.materials(db, row, placement.data),
         "reference": "CF-DIST-" + row.id.upper(),
         "payment_summary": (
