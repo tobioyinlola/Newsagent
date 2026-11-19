@@ -147,6 +147,23 @@ function Conversations() {
   );
 }
 
+// The sample email in a pop-up over the page. Esc, the Close button or a click outside closes it.
+function PreviewPopup({ name, subject, body, onClose }: { name: string; subject: string; body: string; onClose: () => void }) {
+  const close = useRef<HTMLButtonElement>(null);
+  useEffect(() => { close.current?.focus(); }, []);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4" onClick={onClose} onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}>
+      <div role="dialog" aria-modal="true" aria-label={`Preview of ${name}`} className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-sm border-2 border-ink bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3 border-b border-line p-4">
+          <div><p className="text-xs font-bold uppercase tracking-wide text-muted">Preview with sample details (nothing is sent)</p><p className="mt-1 text-sm text-muted">{name}</p></div>
+          <button ref={close} type="button" className="min-h-11 rounded-sm border-2 border-ink px-4 py-2 text-sm font-bold hover:bg-paper" onClick={onClose}>Close</button>
+        </div>
+        <div className="overflow-y-auto p-4 text-sm"><p className="text-xs font-bold uppercase tracking-wide text-muted">Subject</p><p className="font-semibold">{subject}</p><p className="mt-4 text-xs font-bold uppercase tracking-wide text-muted">Message</p><p className="mt-1 whitespace-pre-wrap">{body}</p></div>
+      </div>
+    </div>
+  );
+}
+
 function Settings({ data }: { data: ConfigOut }) {
   const qc = useQueryClient();
   const canManage = useCan()("operations.manage");
@@ -229,7 +246,7 @@ function Settings({ data }: { data: ConfigOut }) {
               </fieldset>
               <Button type="button" variant="secondary" disabled={show.isPending} onClick={() => show.mutate(t)}>{show.isPending && show.variables?.id === t.id ? "Preparing the preview…" : "Preview with sample details"}</Button>
               {show.isError && show.variables?.id === t.id && <Notice tone="warn">{show.error instanceof Error ? show.error.message : "We could not make the preview."} Check the placeholders in the subject and message.</Notice>}
-              {preview?.id === t.id && <div ref={(el) => el?.scrollIntoView?.({ block: "nearest", behavior: "smooth" })} role="region" aria-label={`Preview of ${t.name}`} className="rounded-lg border-2 border-ink bg-paper p-4 text-sm"><p className="text-xs font-bold uppercase tracking-wide text-muted">Preview with sample details (nothing is sent)</p><p className="mt-2 font-semibold">{preview.subject}</p><p className="mt-2 whitespace-pre-wrap">{preview.body}</p><button type="button" className="mt-3 text-sm font-semibold underline" onClick={() => setPreview(null)}>Close preview</button></div>}
+              {preview?.id === t.id && <PreviewPopup name={t.name} subject={preview.subject} body={preview.body} onClose={() => setPreview(null)} />}
             </div>
           ))}
         </div>
