@@ -1,5 +1,6 @@
 """Back office: outreach templates and settings, contacts import, and the conversation inbox with outlets."""
 
+import re
 from typing import Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
@@ -15,8 +16,9 @@ from app.routes.distribution import OUTLETS
 from app.routes.distribution_operations import save_setting
 from app.services import distribution as dist
 from app.services import distribution_catalog as catalog_service
-from app.services import outreach, outreach_agent
+from app.services import outreach, outreach_agent, outreach_gmail
 from app.services.audit import audit
+from app.services.ratelimit import limit
 
 router = APIRouter(tags=["outreach"])
 
@@ -37,12 +39,16 @@ async def get_config(
             for k, v in outreach_agent.STEPS.items()
         ],
         "engine_on": outreach.enabled(),
+        "mailbox": await outreach_gmail.status(db),
+        "needs_contact": (
+            await db.execute(select(func.count()).select_from(DistributionPlacement).where(DistributionPlacement.outreach_state == "needs_contact"))
+        ).scalar_one(),
         "reply_domain": get_settings().outreach_reply_domain,
         "sending": {
             "via_mailbox": bool(get_settings().outreach_smtp_host),
             "mailbox": get_settings().outreach_mailbox or get_settings().outreach_smtp_user,
             "reads_replies": bool(get_settings().outreach_imap_host),
-            "reply_address_example": outreach.reply_address("0123456789abcdef0123"),
+            "reply_address_example": outreach.reply_address("0123456789abcdef0123", await outreach_gmail.address(db)),
         },
     }
 
@@ -132,7 +138,9 @@ def _check_contacts(text: str, current: dict[str, dict]) -> list[dict]:
     out = []
     for n, r in enumerate(raw, 1):
         name = str(r.get("outlet") or r.get("outlet_name") or r.get("name") or "").strip()
-        email = str(r.get("contact_email") or r.get("email") or "").strip().lower()
+        emails = [x for x in re.split(r"[;,\s]+", str(r.get("contact_email") or r.get("email") or "").lower()) if x]
+        email = emails[0] if emails else ""
+        others = emails[1:]
         who = str(r.get("contact_name") or r.get("contact") or "").strip()
         template = str(r.get("template") or "").strip() or None
         outlet = keys.get(name.lower()) or keys.get(name)
@@ -143,19 +151,26 @@ def _check_contacts(text: str, current: dict[str, dict]) -> list[dict]:
             "outlet_name": outlet["name"] if outlet else None,
             "contact_name": who,
             "contact_email": email,
+            "cc_emails": others,
             "template": template,
             "status": "ok",
         }
         if outlet is None:
             row["status"] = "unknown_outlet"
         else:
-            try:
-                TypeAdapter(EmailStr).validate_python(email)
-            except ValidationError:
+            bad = len(others) > 5  # a main contact and up to five more
+            if not bad:
+                try:
+                    for addr in emails or [""]:
+                        TypeAdapter(EmailStr).validate_python(addr)
+                except ValidationError:
+                    bad = True
+            if bad:
                 row["status"] = "bad_email"
             else:
                 cur = current.get(outlet["id"], {})
-                if cur.get("contact_email") == email and (cur.get("contact_name") or "") == who:
+                same_cc = sorted(str(x).lower() for x in cur.get("cc_emails") or []) == sorted(others)
+                if cur.get("contact_email") == email and (cur.get("contact_name") or "") == who and same_cc:
                     row["status"] = "unchanged"
         out.append(row)
     return out
@@ -191,7 +206,7 @@ async def contacts_apply(
         outlets = dict(old.get("outlets", {}))
         for r in rows:
             base = {**outlets.get(r["outlet_id"], {})}
-            base["contact_name"], base["contact_email"] = r["contact_name"], r["contact_email"]
+            base["contact_name"], base["contact_email"], base["cc_emails"] = r["contact_name"], r["contact_email"], r["cc_emails"]
             if r["template"]:
                 base["outreach_template"] = r["template"]
             if body.enable_automatic:
@@ -211,6 +226,7 @@ async def contacts_apply(
             request=request,
         )
         await db.commit()
+        await outreach.catch_up()  # paid requests that were waiting for these contacts are written to now
     return {"applied": len(rows)}
 
 
@@ -226,6 +242,8 @@ def _full_outlet(base: dict, outlet_id: str, current: dict[str, dict]) -> dict:
         "direct_access",
         "contact_name",
         "contact_email",
+        "cc_emails",
+        "skip_outreach",
         "email_subject",
         "email_body",
         "outreach_template",
@@ -576,10 +594,12 @@ async def test_send(
     body: TestSendIn, p: Principal = Depends(require("operations.manage")), db: AsyncSession = Depends(get_session)
 ) -> dict:
     """Send a sample outreach email (the default template, sample details) to an address of yours, exactly the way real ones go out."""
-    from app.integrations import registry
     from app.services.notifications import send_email
 
     cfg = await outreach.get_config(db)
+    box = await outreach_gmail.address(db)
+    if not await outreach_gmail.ready(db):
+        raise HTTPException(409, "Connect a Gmail address first (Mailbox, above), so there is somewhere to send from.")
     _, subject, text = outreach.render_template(
         cfg,
         None,
@@ -603,11 +623,138 @@ async def test_send(
         "[Test] " + subject,
         text,
         plain=True,
-        reply_to=outreach.reply_address("0123456789abcdef0123"),
-        provider=registry.get_outreach_email(),
+        reply_to=outreach.reply_address("0123456789abcdef0123", box),
+        provider=await outreach_gmail.provider(db),
     )
     audit(db, p.user.email, "outreach.test_send", target_type="setting", target_id=outreach.KEY, detail={"ok": ok})
     await db.commit()
     if not ok:
         raise HTTPException(502, "The mail server did not accept the message. Check the sender settings.")
     return {"sent": True}
+
+
+# ---------- outlets still waiting for a contact ----------
+class ContactIn(BaseModel):
+    contact_name: str = Field(default="", max_length=200)
+    emails: list[EmailStr] = Field(min_length=1, max_length=6)  # the first is the main contact; the others are copied on every email
+
+
+@router.get("/v1/admin/outreach/needs-contact")
+async def needs_contact(
+    p: Principal = Depends(require("operations.view")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Paid requests where an outlet has no contact email yet (nobody has been written to), and those waiting only for a mailbox."""
+    rows = (
+        await db.execute(
+            select(DistributionPlacement, DistributionRequest)
+            .join(DistributionRequest, DistributionRequest.id == DistributionPlacement.request_id)
+            .where(DistributionPlacement.outreach_state.in_(("needs_contact", "waiting_mailbox")))
+            .order_by(DistributionRequest.paid_at, DistributionPlacement.created_at)
+            .limit(300)
+        )
+    ).all()
+    items = [
+        {
+            "placement_id": pl.id,
+            "request_id": req.id,
+            "outlet_id": pl.outlet_id,
+            "outlet_name": pl.data.get("name", ""),
+            "headline": (req.data or {}).get("headline", ""),
+            "requester": req.created_by,
+            "paid_at": outreach.when(req.paid_at),
+            "state": pl.outreach_state,
+        }
+        for pl, req in rows
+    ]
+    return {
+        "needs_contact": [i for i in items if i["state"] == "needs_contact"],
+        "waiting_mailbox": sum(1 for i in items if i["state"] == "waiting_mailbox"),
+    }
+
+
+@router.put("/v1/admin/outreach/needs-contact/{placement_id}")
+async def add_contact(
+    placement_id: str,
+    body: ContactIn,
+    request: Request,
+    p: Principal = Depends(require("operations.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Give an outlet its contact (one email or several). It is saved on the outlet, so every later request uses it too, and the
+    conversation for this paid request starts straight away."""
+    pl = await db.get(DistributionPlacement, placement_id)
+    if pl is None or pl.outreach_state not in {"needs_contact", "waiting_mailbox"}:
+        raise HTTPException(404, "That outlet is not waiting for a contact.")
+    current = {o["id"]: o for o in await catalog_service.catalog(db, admin=True)}
+    if pl.outlet_id not in current:
+        raise HTTPException(404, "Unknown outlet.")
+    emails = [str(e).lower() for e in body.emails]
+    main, others = emails[0], [e for e in dict.fromkeys(emails[1:]) if e != emails[0]]
+
+    def change(old: dict) -> dict:
+        outlets = dict(old.get("outlets", {}))
+        base = {**outlets.get(pl.outlet_id, {}), "contact_name": body.contact_name.strip(), "contact_email": main, "cc_emails": others}
+        outlets[pl.outlet_id] = _full_outlet(base, pl.outlet_id, current)
+        return {**old, "outlets": outlets}
+
+    await save_setting(db, p, change)
+    audit(
+        db,
+        p.user.email,
+        "outreach.contact_added",
+        target_type="placement",
+        target_id=placement_id,
+        detail={"outlet_id": pl.outlet_id, "emails": len(emails)},
+        request=request,
+    )
+    await db.commit()
+    started = await outreach.catch_up(limit=300)
+    await db.refresh(pl)
+    return {"state": pl.outreach_state, "started": started}
+
+
+# ---------- the Gmail mailbox ----------
+class MailboxIn(BaseModel):
+    address: str = Field(min_length=3, max_length=320)
+    app_password: str = Field(min_length=1, max_length=200)
+
+
+def _bad_mailbox(e: Exception) -> HTTPException:
+    if isinstance(e, outreach_gmail.ConnectFailed):
+        return HTTPException(422, {"message": e.result["message"], "steps": e.result["steps"], "smtp": e.result["smtp"], "imap": e.result["imap"]})
+    return HTTPException(422, {"message": str(e), "steps": []})
+
+
+@router.get("/v1/admin/outreach/mailbox")
+async def mailbox_status(p: Principal = Depends(require("operations.view")), db: AsyncSession = Depends(get_session)) -> dict:
+    """Which mailbox outreach uses, how it sends, and how the last look at the inbox went. Never includes the password."""
+    return await outreach_gmail.status(db)
+
+
+@router.post("/v1/admin/outreach/mailbox/test", dependencies=[Depends(limit("outreach-mailbox", 10, 60))])
+async def mailbox_test(body: MailboxIn, p: Principal = Depends(require("operations.manage"))) -> dict:
+    """Try an address and app password without saving anything."""
+    try:
+        addr = outreach_gmail.valid_address(body.address)
+    except ValueError as e:
+        raise _bad_mailbox(e) from e
+    return await outreach_gmail.test_connection(addr, outreach_gmail.clean_password(body.app_password))
+
+
+@router.put("/v1/admin/outreach/mailbox", dependencies=[Depends(limit("outreach-mailbox", 10, 60))])
+async def mailbox_connect(
+    body: MailboxIn, p: Principal = Depends(require("operations.manage")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Connect the Gmail address (tested first, then saved encrypted). Conversations that were waiting for a mailbox start."""
+    try:
+        await outreach_gmail.connect(db, p.user.email, body.address, body.app_password)
+    except (outreach_gmail.ConnectFailed, ValueError) as e:
+        raise _bad_mailbox(e) from e
+    await outreach.catch_up(limit=300)
+    return await outreach_gmail.status(db)
+
+
+@router.delete("/v1/admin/outreach/mailbox")
+async def mailbox_disconnect(p: Principal = Depends(require("operations.manage")), db: AsyncSession = Depends(get_session)) -> dict:
+    await outreach_gmail.disconnect(db, p.user.email)
+    return await outreach_gmail.status(db)

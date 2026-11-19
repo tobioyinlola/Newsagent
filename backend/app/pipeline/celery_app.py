@@ -132,10 +132,7 @@ def dispatch() -> int:
 def outreach_poll() -> int:
     from app.services import outreach_mailbox
 
-    if not outreach_mailbox.configured():
-        return 0
-
-    async def go() -> dict:
+    async def go() -> dict:  # it checks for itself whether outreach is on and a mailbox is connected
         return {"kept": await outreach_mailbox.poll_once()}
 
     return int(_run(go)["kept"])

@@ -16,7 +16,18 @@ class MockEmail(EmailProvider):
         *,
         reply_to: str | None = None,
         headers: dict[str, str] | None = None,
+        cc: list[str] | None = None,
+        bcc: list[str] | None = None,
     ) -> None:
         self.sent.append(
-            {"to": to, "subject": subject, "text": text, "html": html, "reply_to": reply_to, "headers": headers or {}}
+            {
+                "to": to,
+                "subject": subject,
+                "text": text,
+                "html": html,
+                "reply_to": reply_to,
+                "headers": headers or {},
+                "cc": list(cc or []),
+                "bcc": list(bcc or []),
+            }
         )

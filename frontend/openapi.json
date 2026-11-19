@@ -1361,6 +1361,31 @@
         "title": "ConfirmIn",
         "type": "object"
       },
+      "ContactIn": {
+        "properties": {
+          "contact_name": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "emails": {
+            "items": {
+              "format": "email",
+              "type": "string"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Emails",
+            "type": "array"
+          }
+        },
+        "required": [
+          "emails"
+        ],
+        "title": "ContactIn",
+        "type": "object"
+      },
       "ContactsIn": {
         "properties": {
           "enable_automatic": {
@@ -3409,6 +3434,28 @@
         "title": "LoginIn",
         "type": "object"
       },
+      "MailboxIn": {
+        "properties": {
+          "address": {
+            "maxLength": 320,
+            "minLength": 3,
+            "title": "Address",
+            "type": "string"
+          },
+          "app_password": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "App Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "address",
+          "app_password"
+        ],
+        "title": "MailboxIn",
+        "type": "object"
+      },
       "ManualCreditsIn": {
         "properties": {
           "credits": {
@@ -3780,6 +3827,15 @@
             "title": "Accepts Logo",
             "type": "boolean"
           },
+          "cc_emails": {
+            "items": {
+              "format": "email",
+              "type": "string"
+            },
+            "maxItems": 5,
+            "title": "Cc Emails",
+            "type": "array"
+          },
           "contact_email": {
             "anyOf": [
               {
@@ -3882,6 +3938,11 @@
             "default": "0",
             "title": "Picture Credits"
           },
+          "skip_outreach": {
+            "default": false,
+            "title": "Skip Outreach",
+            "type": "boolean"
+          },
           "topic": {
             "anyOf": [
               {
@@ -3905,6 +3966,11 @@
             "minimum": 1.0,
             "title": "Ai Turn Limit",
             "type": "integer"
+          },
+          "auto_outreach": {
+            "default": true,
+            "title": "Auto Outreach",
+            "type": "boolean"
           },
           "daily_cap": {
             "default": 200,
@@ -14667,6 +14733,352 @@
           }
         },
         "summary": "Contacts Preview",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/mailbox": {
+      "delete": {
+        "operationId": "mailbox_disconnect_v1_admin_outreach_mailbox_delete",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Mailbox Disconnect V1 Admin Outreach Mailbox Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mailbox Disconnect",
+        "tags": [
+          "outreach"
+        ]
+      },
+      "get": {
+        "description": "Which mailbox outreach uses, how it sends, and how the last look at the inbox went. Never includes the password.",
+        "operationId": "mailbox_status_v1_admin_outreach_mailbox_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Mailbox Status V1 Admin Outreach Mailbox Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mailbox Status",
+        "tags": [
+          "outreach"
+        ]
+      },
+      "put": {
+        "description": "Connect the Gmail address (tested first, then saved encrypted). Conversations that were waiting for a mailbox start.",
+        "operationId": "mailbox_connect_v1_admin_outreach_mailbox_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailboxIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Mailbox Connect V1 Admin Outreach Mailbox Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mailbox Connect",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/mailbox/test": {
+      "post": {
+        "description": "Try an address and app password without saving anything.",
+        "operationId": "mailbox_test_v1_admin_outreach_mailbox_test_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailboxIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Mailbox Test V1 Admin Outreach Mailbox Test Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mailbox Test",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/needs-contact": {
+      "get": {
+        "description": "Paid requests where an outlet has no contact email yet (nobody has been written to), and those waiting only for a mailbox.",
+        "operationId": "needs_contact_v1_admin_outreach_needs_contact_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Needs Contact V1 Admin Outreach Needs Contact Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Needs Contact",
+        "tags": [
+          "outreach"
+        ]
+      }
+    },
+    "/v1/admin/outreach/needs-contact/{placement_id}": {
+      "put": {
+        "description": "Give an outlet its contact (one email or several). It is saved on the outlet, so every later request uses it too, and the\nconversation for this paid request starts straight away.",
+        "operationId": "add_contact_v1_admin_outreach_needs_contact__placement_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "placement_id",
+            "required": true,
+            "schema": {
+              "title": "Placement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Add Contact V1 Admin Outreach Needs Contact  Placement Id  Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Contact",
         "tags": [
           "outreach"
         ]

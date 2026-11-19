@@ -1,2 +1,2 @@
-// Parts of the back office that are built but not ready to be shown yet. Set the variable to "true" on the web app (Vercel) to show one.
-export const SHOW_OUTREACH = import.meta.env.VITE_SHOW_OUTREACH === "true";
+// Parts of the back office that can be hidden. Outreach is shown unless the web app is built with VITE_SHOW_OUTREACH set to "false".
+export const SHOW_OUTREACH = import.meta.env.VITE_SHOW_OUTREACH !== "false";

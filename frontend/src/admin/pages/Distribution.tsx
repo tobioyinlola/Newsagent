@@ -8,7 +8,7 @@ import { PlannerStats } from "../components/PlannerStats";
 const request = <T,>(path: string, method = "GET", body?: unknown) => distributionApi<T>(path, getToken(), method, body);
 const input = "mt-1 block min-h-11 w-full min-w-0 rounded border border-line bg-white p-2";
 const button = "min-h-11 rounded border border-ink px-3 py-2 text-sm font-semibold disabled:opacity-50";
-type ConfigOutlet = Outlet & { direct_access: boolean; contact_name: string; contact_email: string | null; email_subject: string; email_body: string };
+type ConfigOutlet = Outlet & { direct_access: boolean; contact_name: string; contact_email: string | null; cc_emails?: string[]; skip_outreach?: boolean; email_subject: string; email_body: string };
 type Config = { team_emails: string[]; outlets: ConfigOutlet[]; template_variables: string[]; filters: { topics: string[]; locations: { region: string; countries: string[] }[] } };
 
 function DistributionSettings() {
@@ -17,11 +17,12 @@ function DistributionSettings() {
   const [emails, setEmails] = useState("");
   const [outletId, setOutletId] = useState("1");
   const [outlet, setOutlet] = useState<ConfigOutlet | null>(null);
+  const [others, setOthers] = useState(""); // the outlet's other contact emails, as typed
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   useEffect(() => { if (q.data) setEmails(q.data.team_emails.join("\n")); }, [q.data]);
-  useEffect(() => { setOutlet(q.data?.outlets.find(o => o.id === outletId) ?? null); }, [outletId, q.data]);
+  useEffect(() => { const o = q.data?.outlets.find(x => x.id === outletId) ?? null; setOutlet(o); setOthers((o?.cc_emails ?? []).join(", ")); }, [outletId, q.data]);
   const run = async (fn: () => Promise<unknown>) => { setBusy(true); setError(""); setMessage(""); try { await fn(); await q.refetch(); setMessage("Distribution settings saved."); } catch (e) { setError(String(e)); } finally { setBusy(false); } };
   return <div className="space-y-5 rounded-lg border bg-white p-4 sm:p-6">
     <h2 className="text-xl font-bold">Distribution settings</h2><p className="text-sm text-muted">Recipients, publisher contacts and email templates apply to new submissions. Existing payment breakdowns and sent emails are kept unchanged.</p>
@@ -30,7 +31,7 @@ function DistributionSettings() {
       <label className="block font-semibold">Team sale notification emails<textarea className={input} rows={3} placeholder="sales@example.com&#10;operations@example.com" value={emails} disabled={!canManage || busy} onChange={e => setEmails(e.target.value)} /></label><p className="text-sm text-muted">One address per line, or separated by commas. Each recipient receives the payment breakdown, customer contact details and announcement. Leave empty to disable team alerts.</p><button className={button} disabled={!canManage || busy}>Save team recipients</button>
     </form>
     <label className="block font-semibold">Configure outlet<select className={input} value={outletId} onChange={e => { setOutletId(e.target.value); setMessage(""); }}>{q.data?.outlets.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}</select></label>
-    {outlet && <form className="space-y-4" onSubmit={e => { e.preventDefault(); void run(() => request(`admin/distribution/outlets/${outlet.id}`, "PUT", { ...outlet, contact_email: outlet.contact_email || null })); }}>
+    {outlet && <form className="space-y-4" onSubmit={e => { e.preventDefault(); void run(() => request(`admin/distribution/outlets/${outlet.id}`, "PUT", { ...outlet, contact_email: outlet.contact_email || null, cc_emails: outlet.contact_email ? [...new Set(others.toLowerCase().split(/[\s,;]+/).filter(Boolean))] : [] })); }}>
       <fieldset disabled={!canManage || busy} className="space-y-4"><legend className="mb-3 font-bold">{outlet.name}: pricing and image policy</legend>
         <div className="grid gap-4 sm:grid-cols-3">{([['credits', 'Placement credits'], ['logo_credits', 'Logo add-on credits'], ['picture_credits', 'Credits per additional picture']] as const).map(([key, label]) => <label key={key} className="block text-sm font-semibold">{label}<input className={input} type="number" min="0" max="1000000" step="0.0001" value={outlet[key] ?? "0"} onChange={e => setOutlet({ ...outlet, [key]: e.target.value })} /></label>)}</div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -39,7 +40,10 @@ function DistributionSettings() {
         </div>
         <div className="flex flex-wrap gap-5"><label><input type="checkbox" checked={outlet.accepts_logo !== false} onChange={e => setOutlet({ ...outlet, accepts_logo: e.target.checked })} /> Accepts logos</label><label><input type="checkbox" checked={outlet.accepts_images !== false} onChange={e => setOutlet({ ...outlet, accepts_images: e.target.checked })} /> Accepts additional pictures</label></div>
         <h3 className="font-bold">Publisher contact and automatic outreach</h3><div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm font-semibold">Publisher contact name<input className={input} value={outlet.contact_name} onChange={e => setOutlet({ ...outlet, contact_name: e.target.value })} /></label><label className="block text-sm font-semibold">Publisher contact email<input className={input} type="email" required={outlet.direct_access} value={outlet.contact_email ?? ""} onChange={e => setOutlet({ ...outlet, contact_email: e.target.value })} /></label></div>
+        <label className="block text-sm font-semibold">Other contact emails (optional)<input className={input} value={others} onChange={e => setOthers(e.target.value)} placeholder="news@outlet.com, editor@outlet.com" aria-describedby="others-help" /></label>
+        <p id="others-help" className="text-xs text-muted">The main contact above gets the email; these are copied on it and on every reply. Separate them with commas. You need a main contact first.</p>
         <label className="block"><input type="checkbox" checked={outlet.direct_access} onChange={e => setOutlet({ ...outlet, direct_access: e.target.checked })} /> Automatically email this publisher after a paid submission</label>
+        <label className="block"><input type="checkbox" checked={!!outlet.skip_outreach} onChange={e => setOutlet({ ...outlet, skip_outreach: e.target.checked })} /> Never contact this outlet automatically (even though automatic outreach is on for the others)</label>
         <label className="block text-sm font-semibold">Outreach email subject<input className={input} required maxLength={250} value={outlet.email_subject} onChange={e => setOutlet({ ...outlet, email_subject: e.target.value })} /></label>
         <label className="block text-sm font-semibold">Outreach email body<textarea className={input} required rows={14} value={outlet.email_body} onChange={e => setOutlet({ ...outlet, email_body: e.target.value })} /></label>
         <p className="break-words text-xs text-muted">Supported placeholders: {q.data?.template_variables.map(v => `{${v}}`).join(", ")}. Publisher replies and bank details are handled manually by email. No publisher payment is initiated by this system.</p>
