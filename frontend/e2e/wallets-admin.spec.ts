@@ -10,7 +10,6 @@ test("the team sees every wallet and a customer's payment and usage history", as
   await expect(page.getByText("Credits left (all wallets)")).toBeVisible();
   const rows = page.getByRole("table", { name: "Customer wallets" }).locator("tbody tr");
   await expect(rows.first()).toBeVisible();
-  const first = await rows.first().getByRole("link").innerText();
 
   // search and order
   await page.getByLabel("Search wallets").fill("zzz-no-such-company");
@@ -20,6 +19,8 @@ test("the team sees every wallet and a customer's payment and usage history", as
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await page.getByLabel("Order by").selectOption("balance_low");
   await expect(rows.first()).toBeVisible();
+  await page.waitForLoadState("networkidle"); // the page of wallets in this order has arrived
+  const first = await rows.first().getByRole("link").innerText(); // a wallet that is on this page (the list is paged)
 
   // a CSV of all wallets
   const download = page.waitForEvent("download");

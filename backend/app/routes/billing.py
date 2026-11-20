@@ -29,7 +29,7 @@ from app.schemas.api import (
     UsageLine,
     UsageStatement,
 )
-from app.services import credits, ledger, transfer_reviews
+from app.services import credits, ledger, paging, transfer_reviews
 from app.services.audit import audit
 from app.services.ratelimit import limit
 
@@ -361,13 +361,15 @@ async def dev_pay(
 
 @router.get("/v1/billing/ledger", response_model=list[LedgerEntry])
 async def ledger_entries(
-    limit_: int = 100, p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+    response: Response,
+    pg: paging.Page = Depends(paging.page(100, 200)),
+    p: Principal = Depends(current_principal),
+    session: AsyncSession = Depends(get_session),
 ) -> list[CreditTransaction]:
+    q = select(CreditTransaction).where(CreditTransaction.workspace_id == p.workspace.id)
+    paging.send_total(response, await paging.count(session, q))
     rows = await session.execute(
-        select(CreditTransaction)
-        .where(CreditTransaction.workspace_id == p.workspace.id)
-        .order_by(CreditTransaction.created_at.desc(), CreditTransaction.id)
-        .limit(min(max(limit_, 1), 500))
+        paging.window(q.order_by(CreditTransaction.created_at.desc(), CreditTransaction.id), pg)
     )
     return list(rows.scalars().all())
 

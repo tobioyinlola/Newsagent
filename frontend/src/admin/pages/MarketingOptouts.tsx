@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, unwrap } from "../api/client";
+import { Pager } from "../../components/Pager";
 import { Button, Card, ConfirmDialog, ErrorBox, inputCls } from "../components/ui";
 import { EmptyState, PageIntro, useToast } from "../components/marketingUi";
-import { ago, num } from "../lib/format";
+import { ago } from "../lib/format";
 import { useCan } from "../lib/can";
 
 type Row = { email: string; reason: string; at: string };
@@ -29,7 +30,6 @@ export function OptoutsTab() {
     onSuccess: async () => { setLifting(null); await qc.invalidateQueries({ queryKey: ["marketing-optouts"] }); await qc.invalidateQueries({ queryKey: ["marketing-status"] }); toast("Block lifted."); },
   });
   const d = list.data;
-  const pages = Math.max(1, Math.ceil((d?.total ?? 0) / PAGE));
   return (
     <div className="space-y-5">
       <PageIntro title="Unsubscribed and blocked">The people we never send marketing email to, and why. This keeps you on the right side of people’s wishes and protects your sender reputation. Account emails like sign-in codes and receipts are never affected.</PageIntro>
@@ -56,7 +56,7 @@ export function OptoutsTab() {
                 </li>
               ))}
             </ul>
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm"><span className="text-muted">{num(d?.total ?? 0)} in all</span><div className="flex items-center gap-2"><Button variant="secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>Newer</Button><span>Page {page + 1} of {pages}</span><Button variant="secondary" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Older</Button></div></div>
+            <Pager total={d?.total ?? 0} page={page} size={PAGE} onPage={setPage} noun="addresses" />
           </>
         )}
       </Card>

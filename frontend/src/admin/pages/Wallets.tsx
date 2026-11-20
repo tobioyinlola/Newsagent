@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api, unwrap } from "../api/client";
@@ -6,8 +5,9 @@ import { Stat } from "../components/Charts";
 import { Button, Card, ErrorBox, inputCls } from "../components/ui";
 import { ago, num } from "../lib/format";
 import { downloadAuthed } from "../lib/download";
+import { Pager } from "../../components/Pager";
+import { usePaged } from "../../lib/usePaged";
 
-const PAGE = 50;
 type Sort = "balance_low" | "balance_high" | "used_high" | "recent" | "company";
 const SORTS: [Sort, string][] = [["balance_high", "Most credits left"], ["balance_low", "Fewest credits left"], ["used_high", "Most used"], ["recent", "Most recent activity"], ["company", "Company name"]];
 
@@ -16,11 +16,10 @@ export function Wallets() {
   const [q, setQ] = useState("");
   const [term, setTerm] = useState("");
   const [sort, setSort] = useState<Sort>("balance_high");
-  const [page, setPage] = useState(0);
   const [err, setErr] = useState<string | null>(null);
-  const list = useQuery({ queryKey: ["wallets", term, sort, page], queryFn: () => unwrap(api.GET("/v1/admin/wallets", { params: { query: { q: term, sort, limit: PAGE, offset: page * PAGE } } })) });
+  const paged = usePaged(["wallets", term, sort], (limit, offset) => unwrap(api.GET("/v1/admin/wallets", { params: { query: { q: term, sort, limit, offset } } })), { size: 50 });
+  const list = paged.query;
   const d = list.data;
-  const pages = Math.max(1, Math.ceil((d?.total ?? 0) / PAGE));
   const csv = () => downloadAuthed(`/v1/admin/wallets.csv?${new URLSearchParams({ q: term, sort })}`, "wallets.csv").catch((e) => setErr(e.message));
   return (
     <>
@@ -31,9 +30,9 @@ export function Wallets() {
         <Stat label="Credits bought" value={d ? num(d.totals.bought) : "…"} />
         <Stat label="Credits used" value={d ? num(d.totals.used) : "…"} />
       </dl>
-      <form className="flex flex-wrap items-end gap-2" role="search" onSubmit={(e) => { e.preventDefault(); setPage(0); setTerm(q.trim()); }}>
+      <form className="flex flex-wrap items-end gap-2" role="search" onSubmit={(e) => { e.preventDefault(); setTerm(q.trim()); }}>
         <label className="block min-w-60 flex-1 text-sm font-semibold">Search<input aria-label="Search wallets" placeholder="Company or email" className={inputCls} value={q} onChange={(e) => setQ(e.target.value)} /></label>
-        <label className="block text-sm font-semibold">Order by<select className={inputCls} value={sort} onChange={(e) => { setSort(e.target.value as Sort); setPage(0); }}>{SORTS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}</select></label>
+        <label className="block text-sm font-semibold">Order by<select className={inputCls} value={sort} onChange={(e) => { setSort(e.target.value as Sort); }}>{SORTS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}</select></label>
         <Button type="submit">Search</Button>
         <Button type="button" variant="secondary" onClick={() => void csv()}>Download CSV</Button>
       </form>
@@ -72,12 +71,7 @@ export function Wallets() {
           </div>
           </>
         )}
-        {d && d.total > PAGE && (
-          <div className="mt-3 flex items-center justify-between text-sm">
-            <span className="text-muted">{d.total} wallets · page {page + 1} of {pages}</span>
-            <span className="flex gap-2"><Button variant="secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</Button><Button variant="secondary" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Next</Button></span>
-          </div>
-        )}
+        <Pager total={paged.total} page={paged.page} size={paged.size} onPage={paged.setPage} onSize={paged.setSize} noun="wallets" busy={list.isFetching} />
       </Card>
     </>
   );

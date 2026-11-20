@@ -1,13 +1,15 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, unwrap } from "../../api/client";
+import { api, unwrap, unwrapPage } from "../../api/client";
+import { Pager } from "../../../components/Pager";
+import { usePaged } from "../../../lib/usePaged";
 import { Button, Card, ErrorBox, inputCls } from "../ui";
 
 export function Review() {
   const qc = useQueryClient();
   const [status, setStatus] = useState("pending");
   const [notes, setNotes] = useState<Record<string, string>>({});
-  const list = useQuery({ queryKey: ["admin-moderation", status], queryFn: () => unwrap(api.GET("/v1/admin/moderation", { params: { query: { status } } })), refetchInterval: 15000 });
+  const list = usePaged(["admin-moderation", status], (limit, offset) => unwrapPage(api.GET("/v1/admin/moderation", { params: { query: { status, limit, offset } } }), undefined, offset), { size: 25, refetchInterval: 15000 });
   const decide = useMutation({
     mutationFn: ({ id, decision }: { id: string; decision: "approve" | "reject" }) => unwrap(api.POST("/v1/admin/moderation/{case_id}/decision", { params: { path: { case_id: id } }, body: { decision, note: notes[id] ?? "" } })),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-moderation"] }); qc.invalidateQueries({ queryKey: ["admin-queue"] }); },
@@ -17,10 +19,10 @@ export function Review() {
       <label className="flex items-center gap-2 text-sm">Show
         <select aria-label="Status filter" className={inputCls + " w-auto"} value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="pending">waiting</option><option value="blocked">blocked</option><option value="approved">approved</option><option value="rejected">rejected</option><option value="all">all</option></select></label>}>
-      <ErrorBox error={list.error ?? decide.error} />
-      {list.data?.length === 0 && <p className="text-muted">{status === "pending" ? "Nothing waiting." : `Nothing ${status === "all" ? "yet" : status}.`}</p>}
+      <ErrorBox error={list.query.error ?? decide.error} />
+      {list.total === 0 && !list.query.isLoading && <p className="text-muted">{status === "pending" ? "Nothing waiting." : `Nothing ${status === "all" ? "yet" : status}.`}</p>}
       <ul className="space-y-4">
-        {list.data?.map((c) => (
+        {list.items.map((c) => (
           <li key={c.id} className="space-y-2 rounded-md border border-line p-3">
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="rounded bg-paper px-2 py-0.5 font-medium">{c.stage}</span>
@@ -41,6 +43,7 @@ export function Review() {
           </li>
         ))}
       </ul>
+      <Pager total={list.total} page={list.page} size={list.size} onPage={list.setPage} onSize={list.setSize} noun="cases" busy={list.query.isFetching} />
     </Card>
   );
 }

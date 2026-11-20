@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { api, unwrap } from "../api/client";
+import { api, unwrap, unwrapPage } from "../api/client";
+import { Pager } from "../../components/Pager";
+import { usePaged } from "../../lib/usePaged";
 import { Button, Card, ConfirmDialog, ErrorBox, inputCls } from "../components/ui";
 import { Check, Crumbs, EmptyState, MARKETING, PageIntro, Step, useToast } from "../components/marketingUi";
 import { useUrlState } from "../lib/urlState";
@@ -266,9 +268,10 @@ export function CampaignsTab({ engine }: { engine: string }) {
   const url = useUrlState();
   const open = url.get("open");
   const creating = url.get("new") === "1";
-  const list = useQuery({ queryKey: ["campaigns"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/campaigns")).then((r) => (r as unknown as { items: Campaign[] }).items), refetchInterval: 10000 });
-  const segments = useQuery({ queryKey: ["segments"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/segments")).then((r) => (r as unknown as { items: SegmentPick[] }).items) });
-  const copies = useQuery({ queryKey: ["copies"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/copies")).then((r) => (r as unknown as { items: Pick[] }).items) });
+  const paged = usePaged(["campaigns", "list"], (limit, offset) => unwrapPage<Campaign>(api.GET("/v1/admin/marketing/campaigns", { params: { query: { limit, offset } } }), (b) => b.items, offset), { size: 10, refetchInterval: 10000 });
+  const list = { data: paged.items, isLoading: paged.query.isLoading, error: paged.query.error };
+  const segments = useQuery({ queryKey: ["segments", "options"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/segments", { params: { query: { limit: 200, offset: 0 } } })).then((r) => (r as unknown as { items: SegmentPick[] }).items) });
+  const copies = useQuery({ queryKey: ["copies", "options"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/copies", { params: { query: { limit: 200, offset: 0 } } })).then((r) => (r as unknown as { items: Pick[] }).items) });
   const fields = useQuery({ queryKey: ["segment-fields"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/segment-fields")).then((r) => (r as unknown as { fields: FieldDef[] }).fields) });
   if (open) return <Detail id={open} manage={manage} engine={engine} />;
   if (creating && segments.data && copies.data) return <NewCampaign segments={segments.data} copies={copies.data} fields={fields.data} />;
@@ -287,7 +290,7 @@ export function CampaignsTab({ engine }: { engine: string }) {
         <Card><EmptyState title="First, you need two things" actions={<>{noSegments && <Link className="rounded-lg border border-ink bg-brand-green px-4 py-2.5 text-sm font-semibold" to={`${MARKETING}/segments?edit=new`}>Make a segment</Link>}{noCopies && <Link className="rounded-lg border border-ink bg-brand-green px-4 py-2.5 text-sm font-semibold" to={`${MARKETING}/copies?edit=new`}>Write an email</Link>}</>}>
           A campaign needs {noSegments && noCopies ? "a segment (who gets it) and an email (what they get)" : noSegments ? "a segment: the group of people who get it" : "an email to send"}. {noSegments && !noCopies ? "You have an email already." : !noSegments && noCopies ? "You have a segment already." : ""}
         </EmptyState></Card>
-      ) : list.data && list.data.length === 0 ? (
+      ) : paged.total === 0 ? (
         <Card><EmptyState title="You haven’t made a campaign yet" actions={manage && <Button onClick={() => url.set({ new: "1" })}>Make your first campaign</Button>}>It takes a minute: choose who, choose the email, then review and send.</EmptyState></Card>
       ) : (
         <ul className="space-y-3">{list.data?.map((c) => (
@@ -299,6 +302,7 @@ export function CampaignsTab({ engine }: { engine: string }) {
           </li>))}
         </ul>
       )}
+      <Pager total={paged.total} page={paged.page} size={paged.size} onPage={paged.setPage} noun="campaigns" busy={paged.query.isFetching} />
     </div>
   );
 }

@@ -37,7 +37,7 @@ test("customer bank claim, finance matching and customer payment confirmation", 
   const admin = await browser.newContext(); const ap = await admin.newPage();
   await ap.addInitScript(() => sessionStorage.setItem("newsagent.admin.token", "dev:ops@example.com"));
   const report = () => ({ receipts: [{ id: "receipt", transfer_id: "transfer", amount_ngn: "1400", reference, narration: "Bank changed narration", status: matched ? "matched" : "unmatched", checkout_id: matched ? id : null, matched_by: matched ? "ops@example.com" : null }], checkouts: [{ id, company: "Receipt Test", provider: "nuvion_bank", status: matched ? "paid" : "pending", currency: "NGN", amount: "1400", credits: "0.37", claim: { transfer_id: "transfer", status: matched ? "matched" : "pending_review" } }] });
-  await ap.route("**/v1/admin/payment-reconciliation", route => route.fulfill({ json: report() }));
+  await ap.route(/\/v1\/admin\/payment-reconciliation(\?.*)?$/, route => route.fulfill({ json: report() }));
   await ap.route("**/v1/admin/payment-reconciliation/receipts/receipt/match", async route => { const body = route.request().postDataJSON(); expect(body.checkout_id).toBe(id); expect(body.ownership_confirmed).toBe(true); expect(body.reason.length).toBeGreaterThan(10); matched = true; matches++; await route.fulfill({ json: { result: "granted", status: "paid" } }); });
   await ap.goto("/admin/revenue"); const receipt = ap.locator("details").filter({ hasText: reference }); await receipt.locator("summary").click();
   await expect(receipt.getByRole("button", { name: "Match transfer and apply credits" })).toBeDisabled();

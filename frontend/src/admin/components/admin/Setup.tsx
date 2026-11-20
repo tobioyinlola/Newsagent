@@ -1,13 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, unwrap } from "../../api/client";
+import { api, unwrap, unwrapPage } from "../../api/client";
+import { Pager } from "../../../components/Pager";
+import { usePaged } from "../../../lib/usePaged";
 import { useCan } from "../../lib/can";
 import { Button, Card, ErrorBox, Field, inputCls, Notice } from "../ui";
 
 export function Setup() {
   const qc = useQueryClient();
   const can = useCan();
-  const ws = useQuery({ queryKey: ["admin-ws"], queryFn: () => unwrap(api.GET("/v1/admin/workspaces")), enabled: can("customers.view") });
+  const ws = usePaged(["admin-ws"], (limit, offset) => unwrapPage(api.GET("/v1/admin/workspaces", { params: { query: { limit, offset } } }), undefined, offset), { size: 25, enabled: can("customers.view") });
   const budgets = useQuery({ queryKey: ["admin-budgets"], queryFn: () => unwrap(api.GET("/v1/admin/vendor-budgets")), enabled: can("finance.view") });
   const [inv, setInv] = useState({ email: "", workspace_name: "", credits: "20", spend_cap: "50" });
   const [vb, setVb] = useState({ vendor: "heygen", limit: "100" });
@@ -49,9 +51,9 @@ export function Setup() {
       </Card>}
 
       {can("customers.view") && <Card title="Workspaces">
-        <ErrorBox error={ws.error ?? patch.error} />
+        <ErrorBox error={ws.query.error ?? patch.error} />
         <ul className="divide-y divide-line">
-          {ws.data?.map((w) => (
+          {ws.items.map((w) => (
             <li key={w.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
               <span><strong>{w.name}</strong> · {Number(w.credit_balance).toFixed(2)} credits · spent {Number(w.spent_total).toFixed(2)} / cap {Number(w.spend_cap).toFixed(2)}{w.suspended && " · suspended"}{w.share_disabled && " · sharing off"}</span>
               {can("customers.manage") && <span className="flex gap-2">
@@ -62,6 +64,7 @@ export function Setup() {
             </li>
           ))}
         </ul>
+        <Pager total={ws.total} page={ws.page} size={ws.size} onPage={ws.setPage} onSize={ws.setSize} noun="workspaces" busy={ws.query.isFetching} />
       </Card>}
     </>
   );

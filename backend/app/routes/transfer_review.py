@@ -5,7 +5,7 @@ import re
 from pathlib import PurePath
 from typing import Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import case, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
@@ -18,8 +18,8 @@ from app.integrations.billing.base import PaymentEvent
 from app.integrations.storage.base import ObjectTooLarge
 from app.models import BankReceipt, Checkout, PaymentProof, SystemSetting, TransferMail, TransferReview, Workspace
 from app.models.base import new_id, utcnow
+from app.services import paging, uploads
 from app.services import transfer_reviews as svc
-from app.services import uploads
 from app.services.audit import audit
 from app.services.ratelimit import limit
 
@@ -267,27 +267,22 @@ async def submit(
 
 
 @router.get("/v1/admin/bank-transfers")
-async def overview(_: Principal = Depends(require("finance.view")), db: AsyncSession = Depends(get_session)):
+async def overview(
+    response: Response,
+    pg: paging.Page = Depends(paging.page(25, 100)),
+    _: Principal = Depends(require("finance.view")),
+    db: AsyncSession = Depends(get_session),
+):
+    # Receipts waiting for review always come first, so the action queue is never pushed off the first page by newer purchases.
+    q = select(Checkout).join(Workspace).where(Checkout.provider == svc.PROVIDER, Workspace.deleted_at.is_(None))
+    paging.send_total(response, await paging.count(db, q))
     rows = (
         (
             await db.execute(
-                select(Checkout)
-                .join(Workspace)
-                .where(Checkout.provider == svc.PROVIDER, Workspace.deleted_at.is_(None))
-                # Always include the complete action queue, even if newer unsubmitted
-                # purchases have pushed a receipt outside the recent-history window.
-                .where(
-                    or_(
-                        Checkout.status == "pending_review",
-                        Checkout.id.in_(
-                            select(Checkout.id)
-                            .where(Checkout.provider == svc.PROVIDER)
-                            .order_by(Checkout.created_at.desc())
-                            .limit(100)
-                        ),
-                    )
+                paging.window(
+                    q.order_by(case((Checkout.status == "pending_review", 0), else_=1), Checkout.created_at.desc(), Checkout.id),
+                    pg,
                 )
-                .order_by(case((Checkout.status == "pending_review", 0), else_=1), Checkout.created_at.desc())
             )
         )
         .scalars()

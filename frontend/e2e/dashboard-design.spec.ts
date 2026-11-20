@@ -2,7 +2,11 @@ import { expect, test } from "@playwright/test";
 
 test("dashboard live activity, search, settings, top sidebar toggle and responsive layout", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("newsagent.token", "dev:customer@example.com"));
-  await page.route("**/v1/projects", route => route.fulfill({ json: [{ id: "ready-video", state: "final_ready", created_at: "2026-10-30T10:00:00Z", founder_name: "Ada Obi" }, { id: "draft-video", state: "draft", created_at: "2026-10-29T10:00:00Z", founder_name: "Ada Obi" }] }));
+  const videos = [{ id: "ready-video", state: "final_ready", created_at: "2026-10-30T10:00:00Z", founder_name: "Ada Obi" }, { id: "draft-video", state: "draft", created_at: "2026-10-29T10:00:00Z", founder_name: "Ada Obi" }];
+  await page.route(/\/v1\/projects(\?.*)?$/, route => { // the list is paged: a page of rows, and the total in a header
+    const q = new URL(route.request().url()).searchParams; const rows = videos.filter(v => !q.get("state") || v.state === q.get("state")).slice(0, Number(q.get("limit") ?? 100));
+    return route.fulfill({ json: rows, headers: { "X-Total-Count": String(videos.filter(v => !q.get("state") || v.state === q.get("state")).length), "Access-Control-Expose-Headers": "X-Total-Count" } });
+  });
   await page.setViewportSize({ width: 1440, height: 1080 });
   await page.goto("/dashboard");
   await expect(page.getByRole("heading", { name: "Welcome, Ada" })).toBeVisible();

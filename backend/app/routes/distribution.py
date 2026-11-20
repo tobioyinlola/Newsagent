@@ -18,7 +18,7 @@ from app.models.base import utcnow
 from app.services import distribution as fulfillment
 from app.services import distribution_catalog as catalog_service
 from app.services import distribution_planner as planner
-from app.services import ledger, planner_stats
+from app.services import ledger, paging, planner_stats
 from app.services.audit import audit
 from app.services.ratelimit import limit
 
@@ -667,7 +667,12 @@ async def planner_stats_summary(
 
 
 @router.get("/v1/distribution/stories")
-async def stories(p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> list[dict]:
+async def stories(
+    response: Response,
+    pg: paging.Page = Depends(paging.page(100, 200)),
+    p: Principal = Depends(current_principal),
+    db: AsyncSession = Depends(get_session),
+) -> list[dict]:
     scripts = (
         (
             await db.execute(
@@ -685,7 +690,11 @@ async def stories(p: Principal = Depends(current_principal), db: AsyncSession = 
         if script.project_id in seen or not script.story:
             continue
         seen.add(script.project_id)
-        story = script.story
+        result.append(script)
+    paging.send_total(response, len(result))
+    out = []
+    for script in result[pg.offset : pg.offset + pg.limit]:
+        story = script.story or {}
         parts = [story.get("dek", "")]
         for section in story.get("sections", []):
             if section.get("heading"):
@@ -693,28 +702,27 @@ async def stories(p: Principal = Depends(current_principal), db: AsyncSession = 
             parts.extend(section.get("paragraphs", []))
         if story.get("about"):
             parts.append(story["about"])
-        result.append(
+        out.append(
             {
                 "project_id": script.project_id,
                 "headline": story.get("headline", ""),
                 "announcement": "\n\n".join(x for x in parts if x.strip()),
             }
         )
-    return result
+    return out
 
 
 @router.get("/v1/distribution/videos")
-async def videos(p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> list[dict]:
+async def videos(
+    response: Response,
+    pg: paging.Page = Depends(paging.page(100, 200)),
+    p: Principal = Depends(current_principal),
+    db: AsyncSession = Depends(get_session),
+) -> list[dict]:
+    base = select(Project).where(Project.workspace_id == p.workspace.id, Project.state == "final_ready")
+    paging.send_total(response, await paging.count(db, base))
     projects = (
-        (
-            await db.execute(
-                select(Project)
-                .where(Project.workspace_id == p.workspace.id, Project.state == "final_ready")
-                .order_by(Project.created_at.desc())
-            )
-        )
-        .scalars()
-        .all()
+        (await db.execute(paging.window(base.order_by(Project.created_at.desc(), Project.id), pg))).scalars().all()
     )
     result = []
     for project in projects:
@@ -752,13 +760,16 @@ async def videos(p: Principal = Depends(current_principal), db: AsyncSession = D
 
 
 @router.get("/v1/distribution")
-async def listing(p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> list[dict]:
+async def listing(
+    response: Response,
+    pg: paging.Page = Depends(paging.page(100, 200)),
+    p: Principal = Depends(current_principal),
+    db: AsyncSession = Depends(get_session),
+) -> list[dict]:
+    q = select(DistributionRequest).where(DistributionRequest.workspace_id == p.workspace.id)
+    paging.send_total(response, await paging.count(db, q))
     rows = (
-        await db.execute(
-            select(DistributionRequest)
-            .where(DistributionRequest.workspace_id == p.workspace.id)
-            .order_by(DistributionRequest.updated_at.desc())
-        )
+        await db.execute(paging.window(q.order_by(DistributionRequest.updated_at.desc(), DistributionRequest.id), pg))
     ).scalars()
     return [await result(db, r) for r in rows]
 
@@ -921,9 +932,19 @@ async def submit(
 
 @router.get("/v1/admin/distribution")
 async def admin_list(
-    p: Principal = Depends(require("operations.view")), db: AsyncSession = Depends(get_session)
+    response: Response,
+    paid: bool | None = None,
+    pg: paging.Page = Depends(paging.page(100, 200)),
+    p: Principal = Depends(require("operations.view")),
+    db: AsyncSession = Depends(get_session),
 ) -> list[dict]:
-    rows = (await db.execute(select(DistributionRequest).order_by(DistributionRequest.updated_at.desc()))).scalars()
+    q = select(DistributionRequest)
+    if paid is not None:  # paid submissions, or unpaid drafts
+        q = q.where(DistributionRequest.paid_at.is_not(None) if paid else DistributionRequest.paid_at.is_(None))
+    paging.send_total(response, await paging.count(db, q))
+    rows = (
+        await db.execute(paging.window(q.order_by(DistributionRequest.updated_at.desc(), DistributionRequest.id), pg))
+    ).scalars()
     return [await result(db, r) for r in rows]
 
 

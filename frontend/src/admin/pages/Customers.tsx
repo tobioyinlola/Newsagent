@@ -1,7 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
+import { Pager } from "../../components/Pager";
+import { usePaged } from "../../lib/usePaged";
 import { Stat } from "../components/Charts";
 import { WordingFix } from "../components/WordingFix";
 import { type CustomerProfile, profileRows, STATUS } from "../lib/profileLabels";
@@ -10,21 +12,15 @@ import { Button, Card, ErrorBox, inputCls } from "../components/ui";
 import { ago, date, num, usd } from "../lib/format";
 import { downloadAuthed } from "../lib/download";
 
-const PAGE = 25;
-
 export function Customers() {
   const [q, setQ] = useState("");
   const [term, setTerm] = useState("");
-  const [page, setPage] = useState(0);
-  const list = useQuery({
-    queryKey: ["customers", term, page],
-    queryFn: () => unwrap(api.GET("/v1/admin/customers", { params: { query: { q: term, limit: PAGE, offset: page * PAGE } } })),
-  });
-  const pages = Math.max(1, Math.ceil((list.data?.total ?? 0) / PAGE));
+  const paged = usePaged(["customers", term], (limit, offset) => unwrap(api.GET("/v1/admin/customers", { params: { query: { q: term, limit, offset } } })));
+  const list = { data: { items: paged.items, total: paged.total }, isLoading: paged.query.isLoading, error: paged.query.error };
   return (
     <>
       <h1 className="text-2xl font-bold">Customers</h1>
-      <form className="flex gap-2" role="search" onSubmit={(e) => { e.preventDefault(); setPage(0); setTerm(q.trim()); }}>
+      <form className="flex gap-2" role="search" onSubmit={(e) => { e.preventDefault(); setTerm(q.trim()); }}>
         <input data-tour="customers-search" aria-label="Search customers" placeholder="Search by company or email" className={inputCls} value={q} onChange={(e) => setQ(e.target.value)} />
         <Button type="submit">Search</Button>
       </form>
@@ -53,12 +49,7 @@ export function Customers() {
           </div>
           </>
         )}
-        {list.data && list.data.total > PAGE && (
-          <div className="mt-3 flex items-center justify-between text-sm">
-            <span className="text-muted">{list.data.total} customers · page {page + 1} of {pages}</span>
-            <span className="flex gap-2"><Button variant="secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</Button><Button variant="secondary" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Next</Button></span>
-          </div>
-        )}
+        <Pager total={paged.total} page={paged.page} size={paged.size} onPage={paged.setPage} onSize={paged.setSize} noun="customers" busy={paged.query.isFetching} />
       </Card>
     </>
   );
@@ -66,7 +57,9 @@ export function Customers() {
 
 export function CustomerDetail() {
   const { id = "" } = useParams();
-  const q = useQuery({ queryKey: ["customer", id], queryFn: () => unwrap(api.GET("/v1/admin/customers/{workspace_id}", { params: { path: { workspace_id: id } } })) });
+  const SIZE = 10; // rows per list: videos and payments page separately
+  const [vPage, setVPage] = useState(0); const [pPage, setPPage] = useState(0);
+  const q = useQuery({ queryKey: ["customer", id, vPage, pPage], queryFn: () => unwrap(api.GET("/v1/admin/customers/{workspace_id}", { params: { path: { workspace_id: id }, query: { limit: SIZE, offset: vPage * SIZE, payments_offset: pPage * SIZE } } })), placeholderData: keepPreviousData });
   const qc = useQueryClient();
   const can = useCan();
   const refresh = () => qc.invalidateQueries({ queryKey: ["customer", id] });
@@ -78,7 +71,8 @@ export function CustomerDetail() {
   if (q.isLoading) return <p aria-busy="true">Loading…</p>;
   if (q.error || !q.data) return <><Link className="underline" to="/customers">← Customers</Link><ErrorBox error={q.error ?? new Error("Not found")} /></>;
   const c = q.data;
-  const paid = c.payments.reduce((n, p) => n + Number(p.usd ?? 0), 0);
+  const projectsTotal = Math.max(c.projects_total ?? 0, c.projects.length); const paymentsTotal = Math.max(c.payments_total ?? 0, c.payments.length); // never fewer than the rows on screen (and older replies carry no totals)
+  const paid = c.paid_usd !== undefined ? Number(c.paid_usd) : c.payments.reduce((n, p) => n + Number(p.usd ?? 0), 0);
   return (
     <>
       <Link className="text-sm font-bold underline" to="/customers">← Customers</Link>
@@ -89,7 +83,7 @@ export function CustomerDetail() {
       </div>
       <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Signed up" value={date(c.signed_up_at)} sub={`plan: ${c.plan}`} />
-        <Stat label="Paid" value={usd(paid)} sub={`${c.payments.length} payment${c.payments.length === 1 ? "" : "s"}`} />
+        <Stat label="Paid" value={usd(paid)} sub={`${paymentsTotal} payment${paymentsTotal === 1 ? "" : "s"}`} />
         <Stat label="Credits left" value={num(c.credits)} sub={`${num(c.spent_credits)} spent in total`} />
         <Stat label="Spend cap" value={Number(c.spend_cap) ? num(c.spend_cap) : "none"} />
       </dl>
@@ -115,7 +109,7 @@ export function CustomerDetail() {
         </table>
       </Card>
       <Card title="Videos">
-        {c.projects.length === 0 ? <p className="text-sm text-muted">No videos yet.</p> : (
+        {projectsTotal === 0 ? <p className="text-sm text-muted">No videos yet.</p> : (
           <table className="w-full text-sm"><caption className="sr-only">Videos</caption>
             <thead><tr className="text-left text-muted"><th className="py-1">Video</th><th>Stage</th><th>Interview</th><th>Started</th><th>Finished</th><th className="text-right">Vendor cost</th>{can("content.manage") && <th className="text-right">Actions</th>}</tr></thead>
             <tbody>{c.projects.map((p) => <tr key={p.id} className="border-t border-line"><td className="py-1.5 font-mono">{p.id.slice(0, 6)}</td><td className="capitalize">{p.state.replace(/_/g, " ")}</td><td>{p.interview === "none" ? "—" : p.interview === "live" ? "AI interview" : "link"}</td><td>{ago(p.created_at)}</td><td>{p.completed_at ? date(p.completed_at) : "—"}</td><td className="text-right tabular-nums">{usd(p.cost_usd)}</td>{can("content.manage") && (
@@ -130,15 +124,17 @@ export function CustomerDetail() {
           </table>
         )}
         <ErrorBox error={del.error ?? takeDown.error ?? putBack.error ?? remake.error} />
+        <Pager total={projectsTotal} page={vPage} size={SIZE} onPage={setVPage} noun="videos" busy={q.isFetching} />
       </Card>
       <WalletHistory id={id} balance={c.credits} />
       <Card title="Payments">
-        {c.payments.length === 0 ? <p className="text-sm text-muted">No payments yet.</p> : (
+        {paymentsTotal === 0 ? <p className="text-sm text-muted">No payments yet.</p> : (
           <table className="w-full text-sm"><caption className="sr-only">Payments</caption>
             <thead><tr className="text-left text-muted"><th className="py-1">When</th><th>Type</th><th className="text-right">Amount</th><th className="text-right">Credits</th></tr></thead>
             <tbody>{c.payments.map((p, i) => <tr key={i} className="border-t border-line"><td className="py-1.5">{date(p.when)}</td><td>{p.kind === "bank_transfer" ? "Bank transfer" : p.kind === "card" ? "Card" : "Offline"}</td><td className="text-right tabular-nums">{p.usd == null ? "not recorded" : usd(p.usd)}</td><td className="text-right tabular-nums">{num(p.credits)}</td></tr>)}</tbody>
           </table>
         )}
+        <Pager total={paymentsTotal} page={pPage} size={SIZE} onPage={setPPage} noun="payments" busy={q.isFetching} />
       </Card>
     </>
   );
@@ -151,21 +147,19 @@ const stamp = (v: string) => new Date(v).toLocaleString(undefined, { day: "numer
 // Everything that ever moved this customer's wallet: credits bought, free credits, refunds, and credits used for videos and distribution.
 function WalletHistory({ id, balance }: { id: string; balance: string }) {
   const [group, setGroup] = useState<Group>("all");
-  const [page, setPage] = useState(0);
   const [err, setErr] = useState<string | null>(null);
-  const size = 25;
-  const q = useQuery({ queryKey: ["ledger", id, group, page], queryFn: () => unwrap(api.GET("/v1/admin/customers/{workspace_id}/ledger", { params: { path: { workspace_id: id }, query: { group, limit: size, offset: page * size } } })) });
+  const paged = usePaged(["ledger", id, group], (limit, offset) => unwrap(api.GET("/v1/admin/customers/{workspace_id}/ledger", { params: { path: { workspace_id: id }, query: { group, limit, offset } } })));
+  const q = paged.query;
   const d = q.data;
   useEffect(() => { // arriving from the Wallets list (#wallet): the page loads before this part exists
     if (d && window.location.hash === "#wallet") document.getElementById("wallet")?.scrollIntoView({ block: "center" });
   }, [d]);
-  const pages = Math.max(1, Math.ceil((d?.total ?? 0) / size));
   const csv = () => downloadAuthed(`/v1/admin/customers/${id}/ledger.csv?group=${group}`, `wallet-${group}.csv`).catch((e) => setErr(e.message));
   return (
     <Card title="Wallet history" actions={<Button variant="secondary" onClick={() => void csv()}>Download CSV</Button>}>
       <div id="wallet" className="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label="Show">
         <span className="mr-2 text-sm">Balance now: <strong className="tabular-nums">{num(balance)} credits</strong></span>
-        {GROUPS.map(([k, label]) => <button key={k} type="button" aria-pressed={group === k} onClick={() => { setGroup(k); setPage(0); }} className={`min-h-9 rounded-full border px-3 text-sm font-semibold ${group === k ? "border-ink bg-ink text-white" : "border-line"}`}>{label}</button>)}
+        {GROUPS.map(([k, label]) => <button key={k} type="button" aria-pressed={group === k} onClick={() => setGroup(k)} className={`min-h-9 rounded-full border px-3 text-sm font-semibold ${group === k ? "border-ink bg-ink text-white" : "border-line"}`}>{label}</button>)}
       </div>
       <ErrorBox error={q.error ?? (err ? new Error(err) : null)} />
       {q.isLoading ? <p aria-busy="true">Loading…</p> : d && d.items.length === 0 ? <p className="text-sm text-muted">Nothing here yet.</p> : (
@@ -194,12 +188,7 @@ function WalletHistory({ id, balance }: { id: string; balance: string }) {
         </div>
         </>
       )}
-      {d && d.total > size && (
-        <div className="mt-3 flex items-center justify-between text-sm">
-          <span className="text-muted">{d.total} entries · page {page + 1} of {pages}</span>
-          <span className="flex gap-2"><Button variant="secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>Newer</Button><Button variant="secondary" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Older</Button></span>
-        </div>
-      )}
+      <Pager total={paged.total} page={paged.page} size={paged.size} onPage={paged.setPage} onSize={paged.setSize} noun="entries" busy={q.isFetching} />
     </Card>
   );
 }

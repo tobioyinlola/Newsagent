@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { Pager } from "../../components/Pager";
 import { Card, ErrorBox } from "../../components/ui";
 import { getToken } from "../lib/auth";
 import { useCan } from "../lib/can";
 
 type Receipt = { id: string; transfer_id: string; amount_ngn: string; reference: string; narration: string; status: string; checkout_id: string | null; matched_by: string | null };
 type Purchase = { id: string; company: string; provider: string; status: string; currency: string; amount: string; credits: string; claim?: { transfer_id: string; status: string } | null; error?: { message: string; code: string; http_status?: number; request_id?: string } | null };
-type Report = { receipts: Receipt[]; checkouts: Purchase[] };
+type Report = { receipts: Receipt[]; checkouts: Purchase[]; receipts_total: number; checkouts_total: number };
+const SIZE = 10; // rows per list: receipts and purchases page separately
 const button = "min-h-11 rounded border-2 border-ink bg-brand-green px-3 py-2 text-sm font-bold text-ink disabled:opacity-50";
 const input = "mt-2 min-h-12 w-full rounded border border-ink bg-white p-3";
 async function request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
@@ -18,7 +20,8 @@ async function request<T>(path: string, method = "GET", body?: unknown): Promise
 
 export function PaymentReconciliation() {
   const canManage = useCan()("finance.manage");
-  const q = useQuery({ queryKey: ["payment-reconciliation", getToken()], queryFn: () => request<Report>("admin/payment-reconciliation"), refetchInterval: 15000 });
+  const [rPage, setRPage] = useState(0); const [cPage, setCPage] = useState(0);
+  const q = useQuery({ queryKey: ["payment-reconciliation", getToken(), rPage, cPage], queryFn: () => request<Report>(`admin/payment-reconciliation?limit=${SIZE}&offset=${cPage * SIZE}&receipts_offset=${rPage * SIZE}`), placeholderData: keepPreviousData, refetchInterval: 15000 });
   const [busy, setBusy] = useState(false); const [error, setError] = useState<unknown>(null); const [message, setMessage] = useState("");
   const run = async (fn: () => Promise<unknown>, success: string) => { setBusy(true); setError(null); setMessage(""); try { await fn(); await q.refetch(); setMessage(success); } catch (e) { setError(e); } finally { setBusy(false); } };
   return <Card title="Payment reconciliation">
@@ -27,7 +30,9 @@ export function PaymentReconciliation() {
     <ErrorBox error={error ?? q.error} />{message && <p role="status" className="mt-3 text-sm">{message}</p>}
     <h3 className="mt-5 font-bold">Bank receipts</h3>
     <div className="mt-3 max-h-[38rem] space-y-3 overflow-y-auto">{q.data?.receipts.map(receipt => <details key={receipt.id} className="rounded border border-line p-4"><summary className="cursor-pointer break-words font-semibold">NGN {Number(receipt.amount_ngn).toLocaleString()} · {receipt.status === "matched" ? "Matched" : "Needs matching"} · {receipt.reference || receipt.transfer_id}</summary><p className="mt-3 break-words text-sm">Bank narration: {receipt.narration || "Not supplied"}</p><p className="mt-1 break-all text-xs text-muted">Provider transfer: {receipt.transfer_id}</p>{receipt.status === "matched" ? <p className="mt-3 text-sm">Purchase {receipt.checkout_id} · Matched by {receipt.matched_by}</p> : <MatchReceipt receipt={receipt} purchases={q.data?.checkouts ?? []} disabled={busy || !canManage} submit={(body) => run(() => request(`admin/payment-reconciliation/receipts/${receipt.id}/match`, "POST", body), "Transfer matched. Purchase marked paid and wallet credits applied once.")} />}</details>)}{!q.data?.receipts.length && <p className="text-sm text-muted">No verified receipts recorded yet. Refresh from Nuvion to recover earlier bank transfers.</p>}</div>
+    <Pager total={q.data?.receipts_total ?? 0} page={rPage} size={SIZE} onPage={setRPage} noun="receipts" busy={q.isFetching} />
     <h3 className="mt-6 font-bold">Recent payment attempts</h3><div className="mt-3 max-h-96 overflow-auto"><table className="w-full text-left text-sm"><thead><tr><th className="p-2">Customer / purchase</th><th className="p-2">Amount</th><th className="p-2">Status / issue</th><th className="p-2">Action</th></tr></thead><tbody>{q.data?.checkouts.map(p => <tr key={p.id} className="border-t border-line"><td className="p-2"><strong>{p.company}</strong><p className="break-all text-xs text-muted">{p.id}</p><p className="text-xs">{p.provider === "nuvion_bank" ? "Bank transfer" : "Card"}</p></td><td className="whitespace-nowrap p-2">{p.currency} {p.amount}<p className="text-xs">{p.credits} credits</p></td><td className="min-w-48 p-2">{p.status}{p.claim && <p>Receipt claim: {p.claim.status}</p>}{p.error && <><p>{p.error.message}</p><p className="mt-1 break-all text-xs text-muted">{p.error.code}{p.error.request_id ? ` · Support request: ${p.error.request_id}` : ""}</p></>}</td><td className="p-2">{p.status === "pending" && <button className={button} disabled={busy || !canManage} onClick={() => void run(() => request(`admin/payment-reconciliation/checkouts/${p.id}/recheck`, "POST"), "Payment status checked with Nuvion.")}>Recheck payment</button>}</td></tr>)}</tbody></table></div>
+  <Pager total={q.data?.checkouts_total ?? 0} page={cPage} size={SIZE} onPage={setCPage} noun="payment attempts" busy={q.isFetching} />
   </Card>;
 }
 

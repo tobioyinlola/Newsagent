@@ -3,7 +3,7 @@ import hashlib
 import json
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,7 +24,7 @@ from app.schemas.api import (
     ShareCreated,
     SharePublic,
 )
-from app.services import user_events
+from app.services import paging, user_events
 from app.services.captions import suggested_captions
 from app.services.ratelimit import limit
 
@@ -81,11 +81,18 @@ async def _hook(session: AsyncSession, project_id: str) -> tuple[str, str]:
 
 @router.get("/v1/projects", response_model=list[ProjectOut])
 async def list_projects(
-    p: Principal = Depends(current_principal), session: AsyncSession = Depends(get_session)
+    response: Response,
+    state: str | None = None,
+    pg: paging.Page = Depends(paging.page(100, 200)),
+    p: Principal = Depends(current_principal),
+    session: AsyncSession = Depends(get_session),
 ) -> list[Project]:
-    rows = await session.execute(
-        select(Project).where(Project.workspace_id == p.workspace.id).order_by(Project.created_at.desc()).limit(100)
-    )
+    """The workspace's videos, newest first. `state` narrows to one stage (for example final_ready)."""
+    q = select(Project).where(Project.workspace_id == p.workspace.id)
+    if state:
+        q = q.where(Project.state == state)
+    paging.send_total(response, await paging.count(session, q))
+    rows = await session.execute(paging.window(q.order_by(Project.created_at.desc(), Project.id), pg))
     return list(rows.scalars().all())
 
 
