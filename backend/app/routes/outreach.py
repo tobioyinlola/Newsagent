@@ -610,6 +610,7 @@ async def test_send(
             "headline": "Acme opens its first store in Lagos",
             "summary": "Acme has opened its first store in Lagos.",
             "announcement": "Acme has opened its first store in Lagos.",
+            "story": "Acme opens its first store in Lagos\n\nAcme has opened its first store in Lagos.",
             "assets": "(story materials would be listed here)",
             "reference": "CF-DIST-TEST",
             "payment_summary": "This is a test.",
