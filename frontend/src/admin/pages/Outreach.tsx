@@ -307,7 +307,7 @@ export function OutreachAdmin() {
     else if (cfg.data.needs_contact > 0) setTab("contacts");
   }, [cfg.data]);
   const changed = () => { void qc.invalidateQueries({ queryKey: ["outreach-config"] }); void qc.invalidateQueries({ queryKey: ["outreach-needs-contact"] }); };
-  const tabBtn = (k: typeof tab, label: string) => <button type="button" aria-pressed={tab === k} className={`min-h-11 rounded border px-4 py-2 text-sm font-semibold ${tab === k ? "border-ink bg-ink text-white" : "border-ink"}`} onClick={() => setTab(k)}>{label}</button>;
+  const tabBtn = (k: typeof tab, label: string) => <button type="button" data-tour={`outreach-tab-${k}`} aria-pressed={tab === k} className={`min-h-11 rounded border px-4 py-2 text-sm font-semibold ${tab === k ? "border-ink bg-ink text-white" : "border-ink"}`} onClick={() => setTab(k)}>{label}</button>;
   return (
     <div className="space-y-4">
       <div><h1 className="text-2xl font-bold">Outreach to outlets</h1><p className="mt-1 text-sm text-muted">Contact the outlets a paid request names, read their replies and answer them, all in one place.</p></div>

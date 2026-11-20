@@ -26,6 +26,7 @@ const Billing = named(() => import("./pages/Billing"), "Billing");
 const Layout = named(() => import("./components/Layout"), "Layout");
 const DistributionRequestPage = named(() => import("./pages/DistributionRequest"), "DistributionRequestPage");
 const Dashboard = named(() => import("./pages/Dashboard"), "Dashboard");
+const Welcome = named(() => import("./pages/Welcome"), "Welcome");
 const Projects = named(() => import("./pages/Projects"), "Projects");
 const NewProject = named(() => import("./pages/NewProject"), "NewProject");
 const NewProjectClassic = named(() => import("./pages/NewProjectClassic"), "NewProjectClassic");
@@ -92,6 +93,7 @@ export function App() {
       <Route path="/i/:token" element={<><div className="bg-ink px-4 pt-2 text-white"><BackButton fallback="/" /></div>{plain(<Founder />)}</>} />
       <Route path="/billing/pay/:checkoutId" element={<><div className="px-4 pt-4"><BackButton fallback="/settings/billing" /></div>{plain(<MockPay />)}</>} />
       <Route element={<RequireAuth />}>
+        <Route path="/welcome" element={plain(<Welcome />)} />
         <Route element={plain(<Layout />)}>
           <Route path="/distribution/request" element={plain(<DistributionRequestPage />)} />
           <Route path="/referrals" element={plain(<Referrals />)} />

@@ -15,6 +15,8 @@ export default defineConfig({
   },
   webServer: [
     { command: "./e2e/start-api.sh", url: "http://localhost:8000/health", reuseExistingServer: false, timeout: 120_000 },
-    { command: `VITE_INTERVIEW_FAST=1 VITE_SHOW_OUTREACH=${process.env.E2E_SHOW_OUTREACH ?? "true"} pnpm dev --port 5173`, url: "http://localhost:5173", reuseExistingServer: false },
+    { command: `VITE_ONBOARDING=off VITE_INTERVIEW_FAST=1 VITE_SHOW_OUTREACH=${process.env.E2E_SHOW_OUTREACH ?? "true"} pnpm dev --port 5173`, url: "http://localhost:5173", reuseExistingServer: false },
+  // a second copy of the app with the first-run questions and automatic tours switched on, for the onboarding tests (which use it as their baseURL)
+    { command: "VITE_INTERVIEW_FAST=1 pnpm dev --port 5174", url: "http://localhost:5174", reuseExistingServer: false },
   ],
 });

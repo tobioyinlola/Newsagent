@@ -129,6 +129,11 @@ class CustomerDetail(BaseModel):
     users: list[CustomerUser]
     projects: list[CustomerProject]
     payments: list[PaymentRow]
+    country: str | None = None
+    city: str | None = None
+    industry: str | None = None
+    profile: dict = {}  # what they told us in the first-run questions (role, size, goals, how they heard of us...)
+    profile_status: str = "not_started"  # not_started | pending | in_progress | done | skipped
 
 
 class PayingCompany(BaseModel):

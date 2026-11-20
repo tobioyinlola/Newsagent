@@ -35,7 +35,7 @@ from app.schemas.api import (
     SignupVerifyIn,
 )
 from app.services import email_templates as templates
-from app.services import ledger, passwords, ratelimit, rbac, referrals
+from app.services import ledger, onboarding, passwords, ratelimit, rbac, referrals
 from app.services import sessions as sess
 from app.services.audit import audit
 from app.services.legal import TERMS_VERSION
@@ -181,6 +181,7 @@ async def signup_verify(body: SignupVerifyIn, request: Request, db: AsyncSession
         password_hash=row.password_hash,
         terms_version=row.terms_version or TERMS_VERSION,  # agreed on the sign-up form before the code was sent
         terms_accepted_at=row.created_at,
+        onboarding=onboarding.start_for_new_account(),  # the first-run questions are waiting for them
     )
     db.add(user)
     kit = BrandKit(workspace_id=ws.id)  # neutral fallback kit (spec section 10)

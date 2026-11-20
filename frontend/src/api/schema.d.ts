@@ -3534,6 +3534,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Onboarding */
+        get: operations["get_onboarding_v1_me_onboarding_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/onboarding/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save Profile
+         * @description Save one card's answers, move on, or skip. Nothing here is required.
+         */
+        put: operations["save_profile_v1_me_onboarding_profile_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/tours/{tour_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save Tour
+         * @description Remember how far this person got in a guided tour.
+         */
+        put: operations["save_tour_v1_me_tours__tour_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/presenters": {
         parameters: {
             query?: never;
@@ -5279,14 +5336,32 @@ export interface components {
         };
         /** CustomerDetail */
         CustomerDetail: {
+            /** City */
+            city?: string | null;
             /** Company */
             company: string;
+            /** Country */
+            country?: string | null;
             /** Credits */
             credits: string;
+            /** Industry */
+            industry?: string | null;
             /** Payments */
             payments: components["schemas"]["PaymentRow"][];
             /** Plan */
             plan: string;
+            /**
+             * Profile
+             * @default {}
+             */
+            profile: {
+                [key: string]: unknown;
+            };
+            /**
+             * Profile Status
+             * @default not_started
+             */
+            profile_status: string;
             /** Projects */
             projects: components["schemas"]["CustomerProject"][];
             /**
@@ -6649,6 +6724,17 @@ export interface components {
             /** Template Id */
             template_id?: string | null;
         };
+        /** ProfileIn */
+        ProfileIn: {
+            /** Answers */
+            answers?: {
+                [key: string]: unknown;
+            };
+            /** Status */
+            status?: string | null;
+            /** Step */
+            step?: number | null;
+        };
         /** ProgressOut */
         ProgressOut: {
             /** Cancellable */
@@ -7619,6 +7705,29 @@ export interface components {
             videos: number;
             /** Workspace Id */
             workspace_id: string;
+        };
+        /** TourIn */
+        TourIn: {
+            /**
+             * Dismissed
+             * @default false
+             */
+            dismissed: boolean;
+            /**
+             * Done
+             * @default false
+             */
+            done: boolean;
+            /**
+             * Reset
+             * @default false
+             */
+            reset: boolean;
+            /**
+             * Step
+             * @default 0
+             */
+            step: number;
         };
         /** UploadConfirmIn */
         UploadConfirmIn: {
@@ -16006,6 +16115,115 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["MarketingPrefIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_onboarding_v1_me_onboarding_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_profile_v1_me_onboarding_profile_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_tour_v1_me_tours__tour_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tour_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TourIn"];
             };
         };
         responses: {

@@ -26,16 +26,16 @@ describe("the pop-up", () => {
   it("shows a message, then goes away", () => {
     vi.useFakeTimers();
     render(<Toaster />);
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByText("✓ Saved")).toBeNull();
     act(() => notify("Saved"));
-    expect(screen.getByRole("status").textContent).toContain("Saved");
+    expect(screen.getByText("✓ Saved")).toBeTruthy();
     act(() => { vi.advanceTimersByTime(4000); });
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByText("✓ Saved")).toBeNull();
   });
   it("draws only one pop-up even when two are mounted", () => {
     render(<><Toaster /><Toaster /></>);
     act(() => notify("Saved"));
-    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getAllByText("✓ Saved")).toHaveLength(1);
   });
   it("pops up after a successful save request, and not after a failed one", async () => {
     const calls = [new Response("{}", { status: 200 }), new Response("{}", { status: 500 })];
@@ -44,7 +44,7 @@ describe("the pop-up", () => {
     announceSaves();
     render(<Toaster />);
     await act(async () => { await window.fetch("/v1/admin/outreach/config", { method: "PUT" }); });
-    expect(screen.getByRole("status").textContent).toContain("Saved");
+    expect(screen.getByText("✓ Saved")).toBeTruthy();
     act(() => notify(""));
     await act(async () => { await window.fetch("/v1/admin/outreach/config", { method: "PUT" }); });
     expect(screen.queryByText("Saved")).toBeNull();

@@ -33,6 +33,8 @@ class Workspace(Base, TimestampMixin):
     industry_other: Mapped[str | None] = mapped_column(
         String(100), nullable=True
     )  # the business's own words for "other"
+    # what the business told us in the first-run questions (who they are, what they want, how they heard of us); see services/onboarding.py
+    profile: Mapped[dict] = mapped_column(JSON, default=dict)
     plan: Mapped[str] = mapped_column(String(50), default="pilot")
     brand_kit_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     credit_balance: Mapped[Decimal] = mapped_column(Money, default=Decimal("0"))
@@ -68,6 +70,8 @@ class User(Base, TimestampMixin):
     # the Terms of Use and Privacy Policy the person agreed to when they signed up (version = the policy date), and when
     terms_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
     terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # where this person is in the first-run questions and each guided tour (customer and back office alike); see services/onboarding.py
+    onboarding: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
 class BrandKit(Base, TimestampMixin):
