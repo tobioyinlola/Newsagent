@@ -334,6 +334,11 @@ async def customer(
             for p in projects[:25]
         ],
         payments=_payment_rows(d, {workspace_id}),
+        country=ws.country,
+        city=ws.city,
+        industry=ws.industry_other or ws.industry,
+        profile=ws.profile or {},
+        profile_status=((d.owner(workspace_id).onboarding or {}).get("profile") or {}).get("status", "not_started"),
     )
 
 

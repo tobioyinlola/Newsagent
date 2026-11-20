@@ -8,6 +8,10 @@ import { CFSymbol, SecondaryLogo } from "./Logo";
 import { BackButton, workspaceBackFallback } from "./BackButton";
 import { WorkspaceToolbar } from "./WorkspaceToolbar";
 import { ConfirmDialog } from "./ui";
+import { TourProvider } from "./tour/TourProvider";
+import { ONBOARDING_ON } from "../lib/onboardingFlag";
+import { CUSTOMER_TOURS } from "../lib/customerTours";
+import { customerTourBackend, loadOnboarding, ONBOARDING_KEY } from "../lib/onboarding";
 
 export function useMe() {
   return useQuery({ queryKey: ["me"], queryFn: () => unwrap(api.GET("/v1/me")), retry: false });
@@ -42,7 +46,7 @@ function DemoBanner() {
 
 // Collapsible sidebar: full width with labels, or a narrow icon rail (remembered between visits).
 // On phones it becomes a slide-over opened from a top bar.
-export function Layout() {
+function LayoutInner() {
   const me = useMe();
   const nav = useNavigate();
   const [collapsed, setCollapsed] = useState(readCollapsed);
@@ -63,9 +67,10 @@ export function Layout() {
   };
   const rail = collapsed && !open; // the phone slide-over is always full width
 
-  const item = (to: string, label: string, icon: ReactNode, show = true) => (
+  const item = (to: string, label: string, icon: ReactNode, show = true, tour?: string) => (
     <NavLink
       to={to}
+      data-tour={tour}
       title={rail ? label : undefined}
       className={({ isActive }) =>
         `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold ${rail ? "justify-center" : ""} ${isActive && show ? "bg-brand-green text-ink" : "text-white hover:bg-stripe"}`
@@ -120,13 +125,13 @@ export function Layout() {
               <Icon>{collapsed ? <path d="M9 5l7 7-7 7" /> : <path d="M15 5l-7 7 7 7" />}</Icon>
               <span className="sr-only">{collapsed ? "Expand sidebar" : "Collapse sidebar"}</span>
             </button>
-          {item("/dashboard", "Dashboard", ICONS.home)}
-          {item("/ai-newsroom/videos", "Videos", ICONS.videos)}
-          {item("/referrals", "Referral", ICONS.referral)}
-          {item("/distribution/request", "Distribution", ICONS.videos)}
-          {item("/analytics", "Analytics", ICONS.videos)}
-          {item("/settings/billing", "Buy credits", ICONS.credits)}
-          {item("/settings", "Settings", <Icon><circle cx="12" cy="12" r="3" /><path d="m9 3 6 0 1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1Z" /></Icon>, !loc.pathname.startsWith("/settings/billing"))}
+          {item("/dashboard", "Dashboard", ICONS.home, true, "nav-dashboard")}
+          {item("/ai-newsroom/videos", "Videos", ICONS.videos, true, "nav-videos")}
+          {item("/referrals", "Referral", ICONS.referral, true, "nav-referral")}
+          {item("/distribution/request", "Distribution", ICONS.videos, true, "nav-distribution")}
+          {item("/analytics", "Analytics", ICONS.videos, true, "nav-analytics")}
+          {item("/settings/billing", "Buy credits", ICONS.credits, true, "nav-credits")}
+          {item("/settings", "Settings", <Icon><circle cx="12" cy="12" r="3" /><path d="m9 3 6 0 1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1Z" /></Icon>, !loc.pathname.startsWith("/settings/billing"), "nav-settings")}
 
           <div className="mt-auto space-y-2 border-t-2 border-stripe pt-3">
             {me.data && !rail && (
@@ -161,4 +166,12 @@ export function Layout() {
       </main>
     </div>
   );
+}
+
+// Guided tours wrap the whole workspace. The welcome tour opens by itself once, on the dashboard, after the first-run questions are done or skipped.
+export function Layout() {
+  const ob = useQuery({ queryKey: ONBOARDING_KEY, queryFn: loadOnboarding, retry: false, staleTime: 60_000 });
+  const loc = useLocation();
+  const ready = !!ob.data && ob.data.profile_status !== "pending" && loc.pathname === "/dashboard";
+  return <TourProvider backend={customerTourBackend} tours={CUSTOMER_TOURS} autoStart={ONBOARDING_ON ? "welcome" : undefined} autoReady={ready}><LayoutInner /></TourProvider>;
 }

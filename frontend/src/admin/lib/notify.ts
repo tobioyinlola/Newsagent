@@ -6,7 +6,7 @@ export const subscribe = (fn: Listener) => { listeners.add(fn); return () => { l
 export const notify = (message: string) => listeners.forEach((fn) => fn(message));
 
 // Requests that change nothing worth announcing: signing in, previews, test sends, drafts, looking at details, usage measuring.
-const QUIET = /\/v1\/(auth\/|dev\/)|\/(preview|test|test-send|draft|reveal|account-details|search|export|event|logout|otp|resend)(\/|\?|$)|\/mailbox\/test/;
+const QUIET = /\/v1\/(auth\/|dev\/|me\/(tours|onboarding))|\/(preview|test|test-send|draft|reveal|account-details|search|export|event|logout|otp|resend)(\/|\?|$)|\/mailbox\/test/;
 const WRITES: Record<string, string> = { PUT: "Saved", PATCH: "Saved", POST: "Saved", DELETE: "Removed" };
 
 /** The message for a finished request, or null when nothing should be announced. */

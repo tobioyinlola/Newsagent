@@ -45,7 +45,7 @@ export function OutletPlanner({ source, countries, fetchPlan, initialCountries =
   const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple";
   const inUse = (p: Plan) => appliedIds.length > 0 && appliedIds.length === p.outlets.length && planIds(p).every((id) => appliedIds.includes(id));
   return (
-    <section aria-labelledby={`${uid}-h`} className={`rounded-xl border-2 p-4 sm:p-6 ${t.box}`}>
+    <section data-tour="outlet-planner" aria-labelledby={`${uid}-h`} className={`rounded-xl border-2 p-4 sm:p-6 ${t.box}`}>
       <p className={`text-xs font-bold uppercase tracking-widest ${t.muted}`}>Not sure where to start?</p>
       <h2 id={`${uid}-h`} className={`mt-1 text-xl font-bold sm:text-2xl ${t.head}`}>Get a suggested plan</h2>
       <p className={`mt-2 max-w-2xl text-sm ${t.muted}`}>Answer three quick questions and we will suggest outlets that fit. You can still choose anything from the full list below.</p>

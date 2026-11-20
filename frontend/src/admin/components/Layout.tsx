@@ -1,6 +1,6 @@
 import { AdminToolbar } from "./AdminToolbar";
 import { BackButton } from "../../components/BackButton";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { signOut } from "../lib/auth";
@@ -10,6 +10,10 @@ import { Toaster } from "./Toaster";
 import { useCan } from "../lib/can";
 import { useMe } from "./RequireOperator";
 import { SHOW_OUTREACH } from "../lib/features";
+import { TourProvider } from "../../components/tour/TourProvider";
+import { ONBOARDING_ON } from "../../lib/onboardingFlag";
+import { adminTourBackend } from "../lib/tourBackend";
+import { toursFor } from "../lib/adminTours";
 
 const KEY = "newsagent.admin.sidebar";
 const readCollapsed = () => {
@@ -46,7 +50,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
 ];
 
 // The back office's own shell: a collapsible sidebar (a slide-over from the right on phones).
-export function Layout() {
+function LayoutInner() {
   const me = useMe();
   const can = useCan();
   const nav = useNavigate();
@@ -115,6 +119,7 @@ export function Layout() {
                 <NavLink
                   key={to}
                   to={to}
+                  data-tour={`nav-${to === "/" ? "overview" : to.slice(1)}`}
                   end={to === "/"}
                   title={rail ? label : undefined}
                   className={({ isActive }) => `flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-bold ${rail ? "justify-center" : ""} ${isActive ? "bg-brand-green text-ink shadow-sm" : "text-white/85 hover:bg-white/10 hover:text-white"}`}
@@ -138,10 +143,17 @@ export function Layout() {
         <AdminToolbar destinations={GROUPS.flatMap(group => group.items).filter(([, , , needs]) => !needs.length || can(...needs)).map(([to, title]) => ({ to, title }))} />
         <div className="workspace-content admin-workspace-content space-y-5">
           <BackButton fallback="/" />
-          <Outlet />
+          <div data-tour="page"><Outlet /></div>
           <Toaster />
         </div>
       </main>
     </div>
   );
+}
+
+// Guided tours for everyone in the back office, new and existing. The platform overview opens by itself once, for anyone who has not seen or skipped it.
+export function Layout() {
+  const can = useCan();
+  const tours = useMemo(() => toursFor(can, SHOW_OUTREACH), [can]);
+  return <TourProvider backend={adminTourBackend} tours={tours} autoStart={ONBOARDING_ON ? "admin-platform" : undefined}><LayoutInner /></TourProvider>;
 }

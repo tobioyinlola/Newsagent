@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { Stat } from "../components/Charts";
 import { WordingFix } from "../components/WordingFix";
+import { type CustomerProfile, profileRows, STATUS } from "../lib/profileLabels";
 import { useCan } from "../lib/can";
 import { Button, Card, ErrorBox, inputCls } from "../components/ui";
 import { ago, date, num, usd } from "../lib/format";
@@ -24,7 +25,7 @@ export function Customers() {
     <>
       <h1 className="text-2xl font-bold">Customers</h1>
       <form className="flex gap-2" role="search" onSubmit={(e) => { e.preventDefault(); setPage(0); setTerm(q.trim()); }}>
-        <input aria-label="Search customers" placeholder="Search by company or email" className={inputCls} value={q} onChange={(e) => setQ(e.target.value)} />
+        <input data-tour="customers-search" aria-label="Search customers" placeholder="Search by company or email" className={inputCls} value={q} onChange={(e) => setQ(e.target.value)} />
         <Button type="submit">Search</Button>
       </form>
       <ErrorBox error={list.error} />
@@ -92,6 +93,21 @@ export function CustomerDetail() {
         <Stat label="Credits left" value={num(c.credits)} sub={`${num(c.spent_credits)} spent in total`} />
         <Stat label="Spend cap" value={Number(c.spend_cap) ? num(c.spend_cap) : "none"} />
       </dl>
+      <Card title="What they told us">
+        {(() => {
+          const rows = profileRows((c.profile ?? {}) as CustomerProfile);
+          const where = [c.city, c.country].filter(Boolean).join(", ");
+          return <>
+            <p className="mb-3 text-sm text-muted">{STATUS[c.profile_status ?? "not_started"] ?? c.profile_status}. From sign-up and the first-run questions.</p>
+            <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+              {where && <div><dt className="text-muted">Based in</dt><dd className="font-semibold">{where}</dd></div>}
+              {c.industry && <div><dt className="text-muted">Industry</dt><dd className="font-semibold capitalize">{c.industry.replace(/_/g, " ")}</dd></div>}
+              {rows.map(([k, v]) => <div key={k}><dt className="text-muted">{k}</dt><dd className="font-semibold break-words">{v}</dd></div>)}
+            </dl>
+            {rows.length === 0 && <p className="mt-2 text-sm text-muted">They have not answered any of the questions.</p>}
+          </>;
+        })()}
+      </Card>
       <Card title="People">
         <table className="w-full text-sm"><caption className="sr-only">People</caption>
           <thead><tr className="text-left text-muted"><th className="py-1">Email</th><th>Role</th><th>Joined</th><th>Last seen</th></tr></thead>

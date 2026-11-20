@@ -29,6 +29,7 @@ from app.routes import (
     interview,
     marketing,
     news_desk,
+    onboarding,
     ops,
     outreach,
     outreach_inbound,
@@ -211,6 +212,7 @@ def create_app() -> FastAPI:
         ops.router,
         marketing.router,
         outreach.router,
+        onboarding.router,
         outreach_inbound.router,
         wallets.router,
     ):
