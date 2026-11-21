@@ -21,8 +21,8 @@ type Payment = { checkout_id: string; amount_usd: string; credits: string; statu
 /** The pop-up shown the moment a payment is confirmed. */
 function PaymentSuccessModal({ payment, onClose }: { payment: Payment; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4" onKeyDown={(e) => e.key === "Escape" && onClose()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="pay-ok-title" className="w-full max-w-md rounded-md border-2 border-ink bg-white p-6 text-center shadow-xl">
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-ink/70 p-4" onKeyDown={(e) => e.key === "Escape" && onClose()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="pay-ok-title" className="m-auto w-full max-w-md rounded-md border-2 border-ink bg-white p-6 text-center shadow-xl">
         <div aria-hidden="true" className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border-2 border-ink bg-brand-green text-3xl font-bold">✓</div>
         <h2 id="pay-ok-title" className="mt-4 text-2xl font-bold">Your payment was successful</h2>
         <p className="mt-3 text-lg">You paid <strong>{money(payment.amount_usd)}</strong> for <strong>{credits(payment.credits)} credits</strong>.</p>

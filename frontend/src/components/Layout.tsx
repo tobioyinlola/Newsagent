@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { OutOfCredits } from "./OutOfCredits";
+import { AnnouncementPopup } from "./AnnouncementPopup";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { signOut } from "../lib/auth";
@@ -53,6 +54,11 @@ function LayoutInner() {
   const [open, setOpen] = useState(false); // phone slide-over
   const loc = useLocation();
   useEffect(() => setOpen(false), [loc.pathname]);
+  useEffect(() => { // a guided tour opens and closes the phone menu while it points at a menu item
+    const h = (e: Event) => setOpen(!!(e as CustomEvent<boolean>).detail);
+    window.addEventListener("cf:menu", h);
+    return () => window.removeEventListener("cf:menu", h);
+  }, []);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
@@ -84,18 +90,8 @@ function LayoutInner() {
   const signOutNow = async () => { await api.POST("/v1/auth/logout").catch(() => undefined); signOut(); nav("/login"); };
 
   return (
-    <div className="min-h-screen bg-paper text-ink md:flex">
+    <div className="min-h-screen bg-paper text-ink max-md:flow-root md:flex">
       {confirmOut && <ConfirmDialog title="Sign out?" confirmLabel="Sign out" cancelLabel="Stay signed in" onConfirm={() => { setConfirmOut(false); void signOutNow(); }} onCancel={() => setConfirmOut(false)}>You will need to sign in again to get back to your work.</ConfirmDialog>}
-      {/* phone top bar */}
-      <div className="flex items-center justify-between bg-ink px-4 py-2 md:hidden">
-        <Link to="/dashboard" className="flex items-center gap-2 text-brand-green" aria-label="Cover Founder home">
-          <SecondaryLogo className="h-8 w-auto" />
-        </Link>
-        <button type="button" className="rounded-sm border-2 border-brand-green px-3 py-1.5 text-sm font-bold text-brand-green" aria-expanded={open} aria-controls="sidebar" onClick={() => setOpen(true)}>
-          Menu
-        </button>
-      </div>
-
       {/* phone scrim: tap outside the menu to close it */}
       {open && <div className="fixed inset-0 z-20 bg-ink/60 md:hidden" aria-hidden onClick={() => setOpen(false)} />}
 
@@ -109,7 +105,7 @@ function LayoutInner() {
             <span className="font-mono text-lg font-bold text-white">Menu</span>
             <button type="button" className="rounded-sm border-2 border-brand-green px-3 py-1.5 text-sm font-bold text-brand-green" onClick={() => setOpen(false)}>Close</button>
           </div>
-          <Link to="/dashboard" className={`mb-4 hidden items-center gap-2 px-1 py-1 text-brand-green md:flex ${rail ? "justify-center" : ""}`} aria-label="Cover Founder home">
+          <Link to="/dashboard" className={`mb-4 flex items-center gap-2 px-1 py-1 text-brand-green ${rail ? "justify-center" : ""}`} aria-label="Cover Founder home">
             {rail ? <CFSymbol className="h-8 w-auto" /> : <SecondaryLogo className="h-9 w-auto" />}
           </Link>
 
@@ -156,12 +152,13 @@ function LayoutInner() {
       </aside>
 
       <main className="min-w-0 flex-1">
-        <WorkspaceToolbar />
+        <WorkspaceToolbar onMenu={() => setOpen(true)} menuOpen={open} />
         <div className="workspace-content space-y-6">
-          <BackButton fallback={workspaceBackFallback(loc.pathname)} />
+          <BackButton fallback={workspaceBackFallback(loc.pathname)} className={loc.pathname === "/dashboard" ? "max-md:hidden" : ""} /> {/* no Back on the dashboard on a phone: it is the home screen */}
           <DemoBanner />
           <Outlet />
           <OutOfCredits />
+          <AnnouncementPopup />
         </div>
       </main>
     </div>

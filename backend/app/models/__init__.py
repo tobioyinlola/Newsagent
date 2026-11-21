@@ -39,6 +39,7 @@ from app.models.entities import (
     Workspace,
 )
 from app.models.marketing import (
+    Announcement,
     MarketingCampaign,
     MarketingCopy,
     MarketingCopyVersion,
@@ -60,6 +61,7 @@ from app.models.work_queue import WorkItem
 
 __all__ = [
     "OutreachMessage",
+    "Announcement",
     "MarketingCampaign",
     "MarketingCopy",
     "MarketingRecipient",

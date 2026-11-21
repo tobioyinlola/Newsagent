@@ -63,8 +63,8 @@ export function Toast({ children }: { children: ReactNode }) {
 // Asks before something the person can't easily undo. Esc and "Stay signed in"-style cancel both close it without acting.
 export function ConfirmDialog({ title, children, confirmLabel, cancelLabel = "Cancel", onConfirm, onCancel }: { title: string; children?: ReactNode; confirmLabel: string; cancelLabel?: string; onConfirm: () => void; onCancel: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4" onKeyDown={(e) => { if (e.key === "Escape") onCancel(); }}>
-      <div role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" className="w-full max-w-sm rounded-sm border-2 border-ink bg-white p-5 shadow-xl">
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-ink/60 p-4" onKeyDown={(e) => { if (e.key === "Escape") onCancel(); }}>
+      <div role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" className="m-auto w-full max-w-sm rounded-sm border-2 border-ink bg-white p-5 shadow-xl">
         <h2 id="confirm-title" className="text-lg font-bold text-ink">{title}</h2>
         {children && <div className="mt-2 text-sm text-ink">{children}</div>}
         <div className="mt-5 flex justify-end gap-3">

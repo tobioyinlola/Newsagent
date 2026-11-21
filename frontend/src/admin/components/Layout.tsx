@@ -62,6 +62,11 @@ function LayoutInner() {
     return () => document.documentElement.classList.remove("admin-backoffice-page");
   }, []);
   useEffect(() => setOpen(false), [loc.pathname]);
+  useEffect(() => { // a guided tour opens and closes the phone menu while it points at a menu item
+    const h = (e: Event) => setOpen(!!(e as CustomEvent<boolean>).detail);
+    window.addEventListener("cf:menu", h);
+    return () => window.removeEventListener("cf:menu", h);
+  }, []);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
@@ -77,15 +82,8 @@ function LayoutInner() {
   const signOutNow = async () => { await api.POST("/v1/auth/logout").catch(() => undefined); signOut(); nav("/login"); };
 
   return (
-    <div className="min-h-screen bg-paper text-ink md:flex">
+    <div className="min-h-screen bg-paper text-ink max-md:flow-root md:flex">
       {confirmOut && <ConfirmDialog title="Sign out?" confirmLabel="Sign out" cancelLabel="Stay signed in" onConfirm={() => { setConfirmOut(false); void signOutNow(); }} onCancel={() => setConfirmOut(false)}>You will need to sign in again to get back to the back office.</ConfirmDialog>}
-      <div className="flex items-center justify-between bg-ink px-4 py-2 md:hidden">
-        <Link to="/" className="flex items-center gap-2 text-brand-green" aria-label="Back office home">
-          <SecondaryLogo className="h-8 w-auto" />
-          <span className="rounded-sm bg-brand-purple px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest text-white">Back office</span>
-        </Link>
-        <button type="button" className="rounded-sm border-2 border-brand-green px-3 py-1.5 text-sm font-bold text-brand-green" aria-expanded={open} aria-controls="sidebar" onClick={() => setOpen(true)}>Menu</button>
-      </div>
       {open && <div className="fixed inset-0 z-20 bg-ink/60 md:hidden" aria-hidden onClick={() => setOpen(false)} />}
       <aside
         id="sidebar"
@@ -96,7 +94,7 @@ function LayoutInner() {
             <span className="font-mono text-lg font-bold text-white">Menu</span>
             <button type="button" className="rounded-sm border-2 border-brand-green px-3 py-1.5 text-sm font-bold text-brand-green" onClick={() => setOpen(false)}>Close</button>
           </div>
-          <Link to="/" className={`mb-3 hidden items-center gap-2 px-1 py-1 text-brand-green md:flex ${rail ? "justify-center" : ""}`} aria-label="Back office home">
+          <Link to="/" className={`mb-3 flex items-center gap-2 px-1 py-1 text-brand-green ${rail ? "justify-center" : ""}`} aria-label="Back office home">
             {rail ? <CFSymbol className="h-8 w-auto" /> : <span className="flex flex-col items-start gap-1.5"><SecondaryLogo className="h-9 w-auto" /><span className="rounded-sm bg-brand-purple px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest text-white">Back office</span></span>}
           </Link>
             <button
@@ -140,9 +138,9 @@ function LayoutInner() {
         </nav>
       </aside>
       <main className="admin-layout min-w-0 flex-1">
-        <AdminToolbar destinations={GROUPS.flatMap(group => group.items).filter(([, , , needs]) => !needs.length || can(...needs)).map(([to, title]) => ({ to, title }))} />
+        <AdminToolbar onMenu={() => setOpen(true)} menuOpen={open} destinations={GROUPS.flatMap(group => group.items).filter(([, , , needs]) => !needs.length || can(...needs)).map(([to, title]) => ({ to, title }))} />
         <div className="workspace-content admin-workspace-content space-y-5">
-          <BackButton fallback="/" />
+          <BackButton fallback="/" className={loc.pathname === "/" ? "max-md:hidden" : ""} />
           <div data-tour="page"><Outlet /></div>
           <Toaster />
         </div>

@@ -159,8 +159,8 @@ function PreviewPopup({ name, subject, body, onClose }: { name: string; subject:
   const close = useRef<HTMLButtonElement>(null);
   useEffect(() => { close.current?.focus(); }, []);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4" onClick={onClose} onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}>
-      <div role="dialog" aria-modal="true" aria-label={`Preview of ${name}`} className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-sm border-2 border-ink bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-ink/60 p-4" onClick={onClose} onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}>
+      <div role="dialog" aria-modal="true" aria-label={`Preview of ${name}`} className="m-auto flex max-h-[90dvh] w-full max-w-2xl flex-col rounded-sm border-2 border-ink bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3 border-b border-line p-4">
           <div><p className="text-xs font-bold uppercase tracking-wide text-muted">Preview with sample details (nothing is sent)</p><p className="mt-1 text-sm text-muted">{name}</p></div>
           <button ref={close} type="button" className="min-h-11 rounded-sm border-2 border-ink px-4 py-2 text-sm font-bold hover:bg-paper" onClick={onClose}>Close</button>
