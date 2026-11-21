@@ -1,3 +1,4 @@
+import { CountUp, DrawLine, MotionRoot, Reveal, Rise } from "../components/Motion";
 import { BackButton } from "../components/BackButton";
 import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -96,9 +97,9 @@ export function Panel({ title, right, children, className = "" }: { title: strin
 export const Live = ({ children = "LIVE" }: { children?: ReactNode }) => <span className="text-brand-green"><span aria-hidden="true">● </span>{children}</span>;
 
 export function Cta({ to, href, children, primary = false }: { to?: string; href?: string; children: ReactNode; primary?: boolean }) {
-  const cls = primary
+  const cls = "cf-cta " + (primary
     ? "inline-flex items-center gap-2 rounded-sm border-2 border-brand-green bg-brand-green px-5 py-3 text-sm font-bold text-ink hover:bg-transparent hover:text-brand-green"
-    : "inline-flex items-center gap-2 rounded-sm border-2 border-white/60 px-5 py-3 text-sm font-bold text-white hover:border-brand-green hover:text-brand-green";
+    : "inline-flex items-center gap-2 rounded-sm border-2 border-white/60 px-5 py-3 text-sm font-bold text-white hover:border-brand-green hover:text-brand-green");
   return to ? <Link to={to} className={cls}>{children}</Link> : <a href={href} className={cls}>{children}</a>;
 }
 
@@ -155,11 +156,11 @@ function UseCases() {
   return (
     <section id="use-cases" className="border-t border-white/10 bg-ink px-4 py-20 md:px-8">
       <div className="mx-auto max-w-6xl">
-        <div className="text-center">
+        <Reveal><div className="text-center">
           <Eyebrow>Built for</Eyebrow>
           <h2 className="mt-3 text-3xl text-white md:text-5xl">Every announcement worth telling.</h2>
           <p className="mt-3 text-white/70">Whatever you're announcing, we handle the newsroom part.</p>
-        </div>
+        </div></Reveal>
         <div role="tablist" aria-label="Announcement types" className="mt-10 grid grid-cols-2 border border-white/10 sm:grid-cols-3 md:grid-cols-5">
           {USE_CASES.map((x) => (
             <button key={x.key} role="tab" aria-selected={tab === x.key} onClick={() => setTab(x.key)}
@@ -203,7 +204,7 @@ function TwoWays() {
   return (
     <section id="features" className="border-t border-white/10 bg-ink px-4 py-20 md:px-8">
       <div className="mx-auto max-w-6xl">
-        <div className="text-center"><Eyebrow>What you get</Eyebrow><h2 className="mt-3 text-3xl text-white md:text-5xl">Two ways to tell it.</h2><p className="mt-3 text-white/70">One for watching. One for reading. Both from a single interview.</p></div>
+        <Reveal className="text-center"><Eyebrow>What you get</Eyebrow><h2 className="mt-3 text-3xl text-white md:text-5xl">Two ways to tell it.</h2><p className="mt-3 text-white/70">One for watching. One for reading. Both from a single interview.</p></Reveal>
         <div className="mt-10 grid border border-white/10 md:grid-cols-2">
           {cards.map((c, i) => (
             <div key={c.title} className={`p-6 md:p-8 ${i === 0 ? "md:border-r md:border-white/10" : ""}`}>
@@ -256,13 +257,14 @@ function HowItWorks() {
   return (
     <section id="how" className="border-t border-white/10 bg-ink px-4 py-20 md:px-8">
       <div className="mx-auto max-w-6xl">
-        <div className="text-center"><Eyebrow>How it works</Eyebrow><h2 className="mt-3 text-3xl text-white md:text-5xl">From details to on-air<br />in four steps.</h2><p className="mx-auto mt-3 max-w-2xl text-white/70">One founder presses go. The platform writes the questions, runs the interview, writes the story, records the presenter and edits the segment.</p></div>
+        <Reveal className="text-center"><Eyebrow>How it works</Eyebrow><h2 className="mt-3 text-3xl text-white md:text-5xl">From details to on-air<br />in four steps.</h2><p className="mx-auto mt-3 max-w-2xl text-white/70">One founder presses go. The platform writes the questions, runs the interview, writes the story, records the presenter and edits the segment.</p></Reveal>
         <div className="mt-10 border border-white/10">
-          <div className="grid md:grid-cols-4">
+          <div className="relative grid md:grid-cols-4">
+            <DrawLine className="absolute left-0 right-0 top-0 hidden h-0.5 bg-brand-green md:block" />
             {steps.map(([n, t, d], i) => (
-              <div key={n} className={`p-6 ${i < 3 ? "border-b border-white/10 md:border-b-0 md:border-r" : ""}`}>
+              <Reveal key={n} delay={i * 0.12} className={`cf-lift p-6 ${i < 3 ? "border-b border-white/10 md:border-b-0 md:border-r" : ""}`}>
                 <p className="font-mono text-xs text-brand-aqua">{n}</p><h3 className="mt-6 text-lg text-white">{t}</h3><p className="mt-2 text-sm text-white/70">{d}</p>
-              </div>
+              </Reveal>
             ))}
           </div>
           <div className="cf-grid-lines hidden items-center justify-between gap-4 border-t border-white/10 bg-[#1b1c22] px-8 py-10 md:flex">
@@ -433,11 +435,11 @@ export function StatsStrip() {
       <div className="mx-auto max-w-6xl">
         <div className="grid grid-cols-1 border border-white/10 md:grid-cols-3">
           {tiles.map(([v, label, sub], i) => (
-            <div key={label} className={`p-6 ${i < tiles.length - 1 ? "border-b border-white/10 md:border-b-0 md:border-r" : ""}`}>
-              <p className="font-mono text-4xl font-bold text-white md:text-5xl">{v}</p>
+            <Reveal key={label} delay={i * 0.1} className={`cf-lift p-6 ${i < tiles.length - 1 ? "border-b border-white/10 md:border-b-0 md:border-r" : ""}`}>
+              <p className="font-mono text-4xl font-bold text-white md:text-5xl"><CountUp value={v} /></p>
               <p className="mt-2 font-mono text-xs font-bold uppercase tracking-wider text-brand-green">{label}</p>
               <p className="mt-1 text-xs text-white/60">{sub}</p>
-            </div>
+            </Reveal>
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-2 border border-t-0 border-white/10 p-4">
@@ -501,19 +503,19 @@ export function Landing() {
   }, []);
   const ticker = "FEATURED: Your launch, told like news  •  AI interview in your browser  •  Press release and social post included  •  Credits, no subscription  •  ";
   return (
-    <SiteShell>
+    <SiteShell><MotionRoot>
       <main>
         <section className="cf-grain relative overflow-hidden px-4 pb-16 pt-16 md:px-8 md:pt-24">
           <HeroPhoto />
-          <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(25,26,48,0.72)_0%,rgba(25,26,48,0.4)_45%,transparent_72%)]" />
+          <div aria-hidden="true" className="cf-hero-glow absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(25,26,48,0.72)_0%,rgba(25,26,48,0.4)_45%,transparent_72%)]" />
           <div className="relative z-10 mx-auto max-w-4xl text-center">
-            <p className="inline-block rounded-sm border border-white/20 bg-ink/70 px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest text-white"><span className="text-brand-green" aria-hidden="true">● </span>AI newsroom for businesses</p>
-            <h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">AI newsroom for businesses.<br /><span className="text-brand-green">Press Creation &amp; Distribution</span></h1>
-            <p className="mx-auto mt-5 max-w-2xl text-lg text-white/85">In 10 minutes, we interview you on video, produce your news coverage, write your press release, and give you access to 2,500+ media channels for distribution, all in one place.</p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Rise order={0}><p className="inline-block rounded-sm border border-white/20 bg-ink/70 px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest text-white"><span className="cf-live-dot text-brand-green" aria-hidden="true">● </span>AI newsroom for businesses</p></Rise>
+            <Rise order={1}><h1 className="mt-6 text-4xl leading-tight text-white md:text-6xl">AI newsroom for businesses.<br /><span className="text-brand-green">Press Creation &amp; Distribution</span></h1></Rise>
+            <Rise order={2}><p className="mx-auto mt-5 max-w-2xl text-lg text-white/85">In 10 minutes, we interview you on video, produce your news coverage, write your press release, and give you access to 2,500+ media channels for distribution, all in one place.</p></Rise>
+            <Rise order={3}><div className="mt-8 flex flex-wrap justify-center gap-3">
               {signedIn ? <Cta to="/ai-newsroom/new" primary>Make a video</Cta> : <Cta to="/signup" primary>Sign up here</Cta>}
               <Cta to="/press-distribution">Get media attention</Cta>
-            </div>
+            </div></Rise>
           </div>
         </section>
         <div className="overflow-hidden border-y border-brand-green/40 bg-ink py-3" aria-hidden="true">
@@ -534,7 +536,6 @@ export function Landing() {
           <div className="mt-8 flex justify-center gap-3">{signedIn ? <Cta to="/ai-newsroom/new" primary>Make a video</Cta> : <Cta to="/signup" primary>Sign up here</Cta>}<Cta to="/login">Sign in</Cta></div>
         </section>
       </main>
-
-    </SiteShell>
+    </MotionRoot></SiteShell>
   );
 }

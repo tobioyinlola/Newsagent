@@ -274,3 +274,16 @@ html.admin-backoffice-page #root {
   min-height: 100vh;
   background: var(--color-paper);
 }
+
+/* Landing page life: soft glow, live dot, lift on hover, button sheen. Calm, and off for reduced motion. */
+@keyframes cf-glow { 0%, 100% { opacity: 1; } 50% { opacity: .82; } }
+@keyframes cf-pulse { 0% { box-shadow: 0 0 0 0 rgba(120, 255, 120, .0); text-shadow: 0 0 0 transparent; } 50% { text-shadow: 0 0 10px currentColor; } 100% { text-shadow: 0 0 0 transparent; } }
+.cf-hero-glow { animation: cf-glow 6s ease-in-out infinite; }
+.cf-live-dot { animation: cf-pulse 1.8s ease-in-out infinite; }
+.cf-lift { transition: transform .25s ease, background-color .25s ease; }
+.cf-lift:hover { transform: translateY(-4px); background-color: rgba(255, 255, 255, .03); }
+a.cf-cta { position: relative; overflow: hidden; transition: transform .15s ease, background-color .2s ease, color .2s ease, border-color .2s ease; }
+a.cf-cta:active { transform: scale(.97); }
+a.cf-cta::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.35) 50%, transparent 65%); transform: translateX(-120%); }
+a.cf-cta:hover::after { transform: translateX(120%); transition: transform .7s ease; }
+@media (prefers-reduced-motion: reduce) { .cf-hero-glow, .cf-live-dot { animation: none; } .cf-lift:hover { transform: none; } a.cf-cta::after { display: none; } }

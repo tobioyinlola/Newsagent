@@ -21,6 +21,7 @@
     "@tanstack/react-query": "^5.51.0",
     "libphonenumber-js": "^1.13.15",
     "livekit-client": "2.15.4",
+    "motion": "11.18.2",
     "openapi-fetch": "^0.10.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
