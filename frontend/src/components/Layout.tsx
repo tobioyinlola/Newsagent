@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { OutOfCredits } from "./OutOfCredits";
+import { AnnouncementPopup } from "./AnnouncementPopup";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { signOut } from "../lib/auth";
@@ -53,6 +54,11 @@ function LayoutInner() {
   const [open, setOpen] = useState(false); // phone slide-over
   const loc = useLocation();
   useEffect(() => setOpen(false), [loc.pathname]);
+  useEffect(() => { // a guided tour opens and closes the phone menu while it points at a menu item
+    const h = (e: Event) => setOpen(!!(e as CustomEvent<boolean>).detail);
+    window.addEventListener("cf:menu", h);
+    return () => window.removeEventListener("cf:menu", h);
+  }, []);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
@@ -152,6 +158,7 @@ function LayoutInner() {
           <DemoBanner />
           <Outlet />
           <OutOfCredits />
+          <AnnouncementPopup />
         </div>
       </main>
     </div>

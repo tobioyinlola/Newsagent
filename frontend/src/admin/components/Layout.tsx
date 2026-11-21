@@ -62,6 +62,11 @@ function LayoutInner() {
     return () => document.documentElement.classList.remove("admin-backoffice-page");
   }, []);
   useEffect(() => setOpen(false), [loc.pathname]);
+  useEffect(() => { // a guided tour opens and closes the phone menu while it points at a menu item
+    const h = (e: Event) => setOpen(!!(e as CustomEvent<boolean>).detail);
+    window.addEventListener("cf:menu", h);
+    return () => window.removeEventListener("cf:menu", h);
+  }, []);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };

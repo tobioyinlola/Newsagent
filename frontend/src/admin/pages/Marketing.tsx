@@ -12,6 +12,7 @@ import { OptoutsTab } from "./MarketingOptouts";
 import { OverviewTab } from "./MarketingOverview";
 import { SegmentsTab } from "./MarketingSegments";
 import { WorkflowsTab } from "./MarketingWorkflows";
+import { AnnouncementsTab } from "./MarketingAnnouncements";
 
 export type Status = { engine: "off" | "on" | "dry_run"; config: { paused: boolean; min_gap_days: number; daily_cap: number; per_minute: number; track: boolean }; sent_today: number; opted_out: number; suppressed: number; bounce_events: boolean };
 
@@ -19,7 +20,7 @@ export type Status = { engine: "off" | "on" | "dry_run"; config: { paused: boole
 const NAV: { group: string | null; items: { to: string; label: string; hint: string }[] }[] = [
   { group: null, items: [{ to: "", label: "Start here", hint: "Where to begin, and what to do next" }] },
   { group: "Build", items: [{ to: "segments", label: "Segments", hint: "Saved groups of people to email" }, { to: "copies", label: "Email copy", hint: "The emails you write" }] },
-  { group: "Send", items: [{ to: "campaigns", label: "Campaigns", hint: "Send one email to a segment, once" }, { to: "workflows", label: "Workflows", hint: "Emails sent over time, automatically" }] },
+  { group: "Send", items: [{ to: "campaigns", label: "Campaigns", hint: "Send one email to a segment, once" }, { to: "workflows", label: "Workflows", hint: "Emails sent over time, automatically" }, { to: "announcements", label: "Announcements", hint: "A pop-up for customers after sign-in, and an email to everyone" }] },
   { group: "Review", items: [{ to: "activity", label: "Activity", hint: "Every email sent or held back, and why" }, { to: "optouts", label: "Unsubscribed", hint: "People and addresses we never email" }] },
 ];
 const TABS = new Set(NAV.flatMap((g) => g.items.map((i) => i.to)));
@@ -97,6 +98,7 @@ export function MarketingAdmin() {
           {tab === "copies" && <CopiesTab />}
           {tab === "campaigns" && <CampaignsTab engine={engine} />}
           {tab === "workflows" && <WorkflowsTab engine={engine} />}
+          {tab === "announcements" && <AnnouncementsTab engine={engine} />}
           {tab === "activity" && <ActivityTab />}
           {tab === "optouts" && <OptoutsTab />}
         </main>

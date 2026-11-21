@@ -92,6 +92,12 @@ function TourStepView({ def, index, onBack, onNext, onPause, onSkip, navigate }:
   const card = useRef<HTMLDivElement>(null);
   const next = useRef<HTMLButtonElement>(null);
 
+  // On a phone the menu is a drawer that is closed. A step that points at a menu item opens it, and any other step closes it again.
+  useEffect(() => {
+    const inMenu = !!step.target?.startsWith("nav-") && window.innerWidth < 768;
+    window.dispatchEvent(new CustomEvent("cf:menu", { detail: inMenu }));
+    return () => { window.dispatchEvent(new CustomEvent("cf:menu", { detail: false })); };
+  }, [step.target]);
   useEffect(() => { if (step.route && !window.location.pathname.replace(/^\/admin/, "").startsWith(step.route)) navigate(step.route); }, [step.route, navigate]);
 
   // find the thing to point at (it may take a moment to appear after a page change), and follow it as the page moves
@@ -135,7 +141,7 @@ function TourStepView({ def, index, onBack, onNext, onPause, onSkip, navigate }:
   return (
     <div className="fixed inset-0 z-[60]" onKeyDown={(e) => { if (e.key === "Escape") onPause(); }}>
       {box ? <div aria-hidden="true" className="pointer-events-none fixed rounded-md border-2 border-brand-green" style={{ top: box.top - PAD, left: box.left - PAD, width: box.width + PAD * 2, height: box.height + PAD * 2, boxShadow: "0 0 0 9999px rgba(10,10,10,0.62)" }} /> : <div aria-hidden="true" className="fixed inset-0 bg-ink/60" />}
-      <div ref={card} role="dialog" aria-modal="true" aria-label={`${def.title}: step ${index + 1} of ${def.steps.length}`} className="fixed rounded-sm border-2 border-ink bg-white p-4 text-ink shadow-xl" style={style}>
+      <div ref={card} role="dialog" aria-modal="true" aria-label={`${def.title}: step ${index + 1} of ${def.steps.length}`} className="fixed max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-sm border-2 border-ink bg-white p-4 text-ink shadow-xl" style={style}>
         <div className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-wide text-muted"><span>{def.title}</span><span>Step {index + 1} of {def.steps.length}</span></div>
         <div className="mt-2 h-1.5 w-full rounded bg-line" role="progressbar" aria-valuemin={0} aria-valuemax={def.steps.length} aria-valuenow={index + 1} aria-label="Tour progress"><div className="h-full rounded bg-brand-green" style={{ width: `${((index + 1) / def.steps.length) * 100}%` }} /></div>
         <h2 className="mt-3 text-lg font-bold">{step.title}</h2>

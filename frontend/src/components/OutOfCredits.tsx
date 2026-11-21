@@ -15,8 +15,8 @@ export function OutOfCredits({ forced = false }: { forced?: boolean }) {
   if (!open) return null;
   const close = () => { setOpen(false); if (forced) nav("/dashboard"); };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4" onKeyDown={(e) => e.key === "Escape" && close()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="ooc-title" className="w-full max-w-md rounded-md border-2 border-ink bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-ink/70 p-4" onKeyDown={(e) => e.key === "Escape" && close()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="ooc-title" className="m-auto w-full max-w-md rounded-md border-2 border-ink bg-white p-6 shadow-xl">
         <h2 id="ooc-title" className="text-xl font-bold">You're out of credits</h2>
         <p className="mt-2 text-muted">Your free video has been used. Buy credits to create more videos. One video costs 1 credit.</p>
         <div className="mt-5 flex flex-wrap gap-3">
