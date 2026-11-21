@@ -2285,6 +2285,40 @@
         "title": "DraftBody",
         "type": "object"
       },
+      "EditBody": {
+        "properties": {
+          "button_label": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Button Label",
+            "type": "string"
+          },
+          "button_url": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Button Url",
+            "type": "string"
+          },
+          "message": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "message"
+        ],
+        "title": "EditBody",
+        "type": "object"
+      },
       "EmailBody": {
         "properties": {
           "confirm_count": {
@@ -12144,6 +12178,77 @@
           }
         },
         "summary": "Audience",
+        "tags": [
+          "announcements"
+        ]
+      }
+    },
+    "/v1/admin/marketing/announcements/{announcement_id}": {
+      "put": {
+        "description": "Change the words. The pop-up changes at once, for everyone who has not closed it, whether it is live, waiting or over.\nThe email changes too if it has not started going out; an email that has been sent cannot be taken back.",
+        "operationId": "edit_announcement_v1_admin_marketing_announcements__announcement_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "announcement_id",
+            "required": true,
+            "schema": {
+              "title": "Announcement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Edit Announcement V1 Admin Marketing Announcements  Announcement Id  Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Edit Announcement",
         "tags": [
           "announcements"
         ]
@@ -23803,6 +23908,67 @@
         ]
       }
     },
+    "/v1/me/announcements/{announcement_id}/click": {
+      "post": {
+        "description": "This person pressed the pop-up's button.",
+        "operationId": "announcement_clicked_v1_me_announcements__announcement_id__click_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "announcement_id",
+            "required": true,
+            "schema": {
+              "title": "Announcement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Announcement Clicked V1 Me Announcements  Announcement Id  Click Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Announcement Clicked",
+        "tags": [
+          "announcements"
+        ]
+      }
+    },
     "/v1/me/announcements/{announcement_id}/dismiss": {
       "post": {
         "description": "Close it for good: it will not appear again for this person.",
@@ -23859,6 +24025,67 @@
           }
         },
         "summary": "Dismiss Announcement",
+        "tags": [
+          "announcements"
+        ]
+      }
+    },
+    "/v1/me/announcements/{announcement_id}/seen": {
+      "post": {
+        "description": "The pop-up was shown to this person.",
+        "operationId": "announcement_seen_v1_me_announcements__announcement_id__seen_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "announcement_id",
+            "required": true,
+            "schema": {
+              "title": "Announcement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Announcement Seen V1 Me Announcements  Announcement Id  Seen Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Announcement Seen",
         "tags": [
           "announcements"
         ]

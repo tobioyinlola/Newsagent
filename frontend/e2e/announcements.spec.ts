@@ -68,6 +68,19 @@ test("an announcement written in the back office pops up for customers, and clos
     await expect(c.page.getByRole("heading", { level: 1 }).first()).toBeVisible();
     await expect(c.page.getByRole("dialog", { name: TITLE })).toHaveCount(0);
     await c.ctx.close();
+
+    // the team sees how it did: one person saw it (however many times it appeared), pressed the button, and closed it for good
+    const again = await browser.newContext({ viewport: { width: 1280, height: 1000 }, deviceScaleFactor: 2 });
+    const rp = await again.newPage();
+    await rp.addInitScript(() => sessionStorage.setItem("newsagent.admin.token", "dev:ops@example.com"));
+    await rp.goto("/admin/marketing/announcements");
+    const results = rp.getByRole("list").getByRole("term").first().locator("xpath=ancestor::dl");
+    await expect(results).toContainText("Saw the pop-up");
+    await expect(results.locator("div").nth(0).getByRole("definition").first()).toHaveText("1");
+    await expect(results.locator("div").nth(1).getByRole("definition").first()).toHaveText("1");
+    await expect(results.locator("div").nth(2).getByRole("definition").first()).toHaveText("1");
+    await shot(rp, "7-announcement-results");
+    await again.close();
   } finally { await endAll(request); }
 });
 
@@ -89,4 +102,38 @@ test("on a phone the pop-up fits the screen and every button can be reached", as
     await expect(popup).toHaveCount(0);
     await ctx.close();
   } finally { await endAll(request); }
+});
+
+test("the wording of an announcement can be corrected after it has gone out, and the pop-up changes at once", async ({ browser, request }) => {
+  await endAll(request);
+  const created = await request.post(`${API}/v1/admin/marketing/announcements`, { headers: OPS, data: { title: "We launch on Dec 1st", message: "Cover Founder opens to everyone on Dec 1.", show_for: 2, unit: "days", send_email: false } });
+  expect(created.status()).toBe(201);
+  const id = (await created.json()).id as string;
+  const admin = await browser.newContext({ viewport: { width: 1280, height: 1000 }, deviceScaleFactor: 2 });
+  const ap = await admin.newPage();
+  await ap.addInitScript(() => sessionStorage.setItem("newsagent.admin.token", "dev:ops@example.com"));
+  try {
+    await ap.goto("/admin/marketing/announcements");
+    await ap.getByRole("button", { name: "Edit the wording" }).first().click();
+    await expect(ap.getByRole("heading", { name: "Edit announcement" })).toBeVisible();
+    await expect(ap.getByText(/It wasn’t emailed, so there is no email to change/)).toBeVisible(); // it says what will and won't change
+    await expect(ap.getByText("How long the pop-up shows")).toHaveCount(0); // only the wording is edited here
+    await ap.getByLabel("Headline").fill("We launch publicly on December 1");
+    await ap.getByRole("textbox", { name: /^Message/ }).fill("Cover Founder opens to everyone on December 1. Thank you for being here early.");
+    await expect(ap.getByRole("complementary", { name: "Preview" })).toContainText("We launch publicly on December 1");
+    await shot(ap, "8-edit-announcement");
+    await ap.getByRole("button", { name: "Save changes" }).click();
+    await expect(ap.getByText("We launch publicly on December 1")).toBeVisible();
+
+    const c = await customer(browser);
+    await c.page.goto("/dashboard");
+    const popup = c.page.getByRole("dialog", { name: "We launch publicly on December 1" }); // customers see the corrected words straight away
+    await expect(popup).toBeVisible();
+    await expect(popup).toContainText("Thank you for being here early");
+    await c.ctx.close();
+
+    await request.post(`${API}/v1/admin/marketing/announcements/${id}/end`, { headers: OPS });
+    await ap.reload();
+    await expect(ap.getByRole("button", { name: "Edit the wording" }).first()).toBeVisible(); // and an ended one can still be corrected
+  } finally { await admin.close(); await endAll(request); }
 });

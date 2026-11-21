@@ -54,7 +54,7 @@ def _clean(body: AnnouncementBody) -> AnnouncementBody:
     return body
 
 
-async def _out(db: AsyncSession, a: Announcement) -> dict:
+async def _out(db: AsyncSession, a: Announcement, eligible: int | None = None) -> dict:
     out = {
         "id": a.id,
         "title": a.title,
@@ -68,11 +68,19 @@ async def _out(db: AsyncSession, a: Announcement) -> dict:
         "created_by": a.created_by,
         "created_at": a.created_at,
         "email": None,
+        "stats": await svc.stats(db, a.id, eligible if eligible is not None else await svc.eligible(db)),
     }
     if a.email_campaign_id:
         c = await db.get(MarketingCampaign, a.email_campaign_id)
         if c is not None:
-            out["email"] = {"campaign_id": c.id, "status": c.status, "send_at": c.send_at, "audience": c.audience, **await campaigns.counts(db, c.id)}
+            out["email"] = {
+                "campaign_id": c.id,
+                "status": c.status,
+                "send_at": c.send_at,
+                "audience": c.audience,
+                "editable": c.status == "scheduled",  # until it starts going out, the email's words can still change
+                **await campaigns.counts(db, c.id),
+            }
     return out
 
 
@@ -85,7 +93,8 @@ async def list_announcements(
     base = select(Announcement)
     total = await paging.count(db, base)
     rows = (await db.execute(paging.window(base.order_by(Announcement.created_at.desc(), Announcement.id), pg))).scalars().all()
-    return {"items": [await _out(db, a) for a in rows], **paging.meta(pg, total)}
+    eligible = await svc.eligible(db)
+    return {"items": [await _out(db, a, eligible) for a in rows], **paging.meta(pg, total)}
 
 
 @router.get("/v1/admin/marketing/announcements/audience")
@@ -179,6 +188,43 @@ async def email_announcement(
     return await _out(db, a)
 
 
+class EditBody(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    message: str = Field(min_length=1, max_length=2000)
+    button_label: str = Field("", max_length=60)
+    button_url: str = Field("", max_length=500)
+
+
+@router.put("/v1/admin/marketing/announcements/{announcement_id}")
+async def edit_announcement(
+    announcement_id: str,
+    body: EditBody,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Change the words. The pop-up changes at once, for everyone who has not closed it, whether it is live, waiting or over.
+    The email changes too if it has not started going out; an email that has been sent cannot be taken back."""
+    a = await db.get(Announcement, announcement_id)
+    if a is None:
+        raise HTTPException(404, "Announcement not found")
+    checked = _clean(AnnouncementBody(**body.model_dump(), show_for=1, unit="hours", send_email=False))
+    a.title, a.message = checked.title.strip(), checked.message.strip()
+    a.button_label, a.button_url = checked.button_label.strip(), checked.button_url.strip()
+    email_changed = False
+    if a.email_campaign_id:
+        c = await db.get(MarketingCampaign, a.email_campaign_id)
+        if c is not None and c.status == "scheduled":
+            await svc.revise_email(db, a, c, p.user.email)
+            email_changed = True
+    audit(
+        db, p.user.email, "marketing.announcement_edited", target_type="announcement", target_id=a.id,
+        detail={"email_changed": email_changed}, request=request,
+    )
+    await db.commit()
+    return await _out(db, a)
+
+
 @router.post("/v1/admin/marketing/announcements/{announcement_id}/end")
 async def end_announcement(
     announcement_id: str,
@@ -222,5 +268,29 @@ async def dismiss_announcement(announcement_id: str, p: Principal = Depends(curr
     user = await db.get(User, p.user.id)
     assert user is not None
     svc.mark_seen(user, announcement_id)
+    if await db.get(Announcement, announcement_id) is not None:
+        await svc.record(db, user, announcement_id, "dismissed")
     await db.commit()
     return {"ok": True}
+
+
+async def _note(announcement_id: str, kind: str, p: Principal, db: AsyncSession) -> dict:
+    if await db.get(Announcement, announcement_id) is None:
+        raise HTTPException(404, "Announcement not found")
+    user = await db.get(User, p.user.id)
+    assert user is not None
+    await svc.record(db, user, announcement_id, kind)
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post("/v1/me/announcements/{announcement_id}/seen")
+async def announcement_seen(announcement_id: str, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> dict:
+    """The pop-up was shown to this person."""
+    return await _note(announcement_id, "seen", p, db)
+
+
+@router.post("/v1/me/announcements/{announcement_id}/click")
+async def announcement_clicked(announcement_id: str, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> dict:
+    """This person pressed the pop-up's button."""
+    return await _note(announcement_id, "clicked", p, db)

@@ -154,3 +154,87 @@ async def test_an_ended_announcement_cannot_be_emailed_and_neither_can_one_while
     monkeypatch.setattr(get_settings(), "marketing_email", "on")
     late = await client.post(f"/v1/admin/marketing/announcements/{a['id']}/email", json={"confirm_count": 1}, headers=OPS)
     assert late.status_code == 409 and "ended" in late.text
+
+
+async def _stats(client, announcement_id):
+    items = (await client.get("/v1/admin/marketing/announcements", headers=OPS)).json()["items"]
+    return next(i for i in items if i["id"] == announcement_id)["stats"]
+
+
+async def test_the_team_sees_how_many_people_saw_it_clicked_it_and_closed_it(client, workspace, maker):
+    a = await _make(client, button_label="See Kenya", button_url="https://www.coverfounder.com/press-distribution")
+    assert (await _stats(client, a["id"]))["seen"] == 0
+    for _ in range(3):  # the same person seeing it again and again is still one person
+        assert (await client.post(f"/v1/me/announcements/{a['id']}/seen", headers=OWNER)).status_code == 200
+    assert (await client.post(f"/v1/me/announcements/{a['id']}/click", headers=OWNER)).status_code == 200
+    await client.post(f"/v1/me/announcements/{a['id']}/click", headers=OWNER)
+    await client.post(f"/v1/me/announcements/{a['id']}/seen", headers=OPS)  # a second person
+    s = await _stats(client, a["id"])
+    assert (s["seen"], s["clicked"], s["dismissed"]) == (2, 1, 0)
+    await client.post(f"/v1/me/announcements/{a['id']}/dismiss", headers=OWNER)
+    await client.post(f"/v1/me/announcements/{a['id']}/dismiss", headers=OWNER)
+    assert (await _stats(client, a["id"]))["dismissed"] == 1
+
+
+async def test_the_share_of_customers_reached_has_a_real_denominator(client, workspace, maker):
+    for i in range(4):
+        await _person(maker, f"cust{i}@x.test", joined=2)
+    a = await _make(client)
+    s = await _stats(client, a["id"])
+    assert s["eligible"] >= 4 and s["seen"] == 0  # everyone with an account who is not on the team
+
+
+async def test_counting_an_unknown_announcement_is_refused_not_invented(client, workspace):
+    assert (await client.post("/v1/me/announcements/nope/seen", headers=OWNER)).status_code == 404
+    assert (await client.post("/v1/me/announcements/nope/click", headers=OWNER)).status_code == 404
+
+
+async def _edit(client, announcement_id, **over):
+    body = {"title": "New title", "message": "New words.", "button_label": "", "button_url": "", **over}
+    return await client.put(f"/v1/admin/marketing/announcements/{announcement_id}", json=body, headers=OPS)
+
+
+async def test_the_popups_words_can_be_changed_while_it_is_live_and_customers_see_the_new_ones(client, workspace):
+    a = await _make(client)
+    r = await _edit(client, a["id"], title="We launch on December 1", message="Corrected message.", button_label="Send your story", button_url="/distribution/request")
+    assert r.status_code == 200 and r.json()["title"] == "We launch on December 1"
+    mine = (await _mine(client))[0]
+    assert (mine["title"], mine["message"], mine["button_label"], mine["button_url"]) == ("We launch on December 1", "Corrected message.", "Send your story", "/distribution/request")
+
+
+async def test_an_ended_announcement_can_still_be_corrected_and_the_check_on_the_button_still_applies(client, workspace):
+    a = await _make(client)
+    await client.post(f"/v1/admin/marketing/announcements/{a['id']}/end", headers=OPS)
+    assert (await _edit(client, a["id"], title="Fixed typo")).status_code == 200
+    assert (await _edit(client, a["id"], button_label="Only words")).status_code == 422
+    assert (await client.put("/v1/admin/marketing/announcements/nope", json={"title": "x", "message": "y"}, headers=OPS)).status_code == 404
+
+
+async def test_the_email_changes_too_until_it_starts_going_out_and_never_after(client, workspace, maker, mail_on):
+    from app.models import MarketingCampaign, MarketingCopyVersion
+
+    await _person(maker, "edit@x.test", joined=2)
+    aud = (await client.get("/v1/admin/marketing/announcements/audience", headers=OPS)).json()["reachable"]
+    a = await _make(client, send_email=True, confirm_count=aud)
+    assert a["email"]["editable"] is True
+    r = await _edit(client, a["id"], title="Updated subject", message="Updated body.")
+    assert r.json()["email"]["editable"] is True
+    async with maker() as db:
+        c = await db.get(MarketingCampaign, a["email"]["campaign_id"])
+        v = (await db.execute(select(MarketingCopyVersion).where(MarketingCopyVersion.copy_id == c.copy_id, MarketingCopyVersion.version == c.copy_version))).scalar_one()
+        assert c.copy_version == 2 and v.subject == "Updated subject" and v.body == "Updated body."
+    for _ in range(3):
+        await mcamp.deliver_due()  # it goes out
+    got = next(i for i in (await client.get("/v1/admin/marketing/announcements", headers=OPS)).json()["items"] if i["id"] == a["id"])
+    assert got["email"]["editable"] is False
+    late = await _edit(client, a["id"], title="Too late for the email", message="The pop-up only.")
+    assert late.status_code == 200 and late.json()["title"] == "Too late for the email"  # the pop-up still changes
+    async with maker() as db:
+        c = await db.get(MarketingCampaign, a["email"]["campaign_id"])
+        assert c.copy_version == 2  # what was emailed is untouched
+
+
+async def test_only_people_who_manage_marketing_can_edit(client, workspace):
+    a = await _make(client)
+    r = await client.put(f"/v1/admin/marketing/announcements/{a['id']}", json={"title": "x", "message": "y"}, headers=OWNER)
+    assert r.status_code in {401, 403}
