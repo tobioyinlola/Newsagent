@@ -73,7 +73,14 @@ async def _out(db: AsyncSession, a: Announcement, eligible: int | None = None) -
     if a.email_campaign_id:
         c = await db.get(MarketingCampaign, a.email_campaign_id)
         if c is not None:
-            out["email"] = {"campaign_id": c.id, "status": c.status, "send_at": c.send_at, "audience": c.audience, **await campaigns.counts(db, c.id)}
+            out["email"] = {
+                "campaign_id": c.id,
+                "status": c.status,
+                "send_at": c.send_at,
+                "audience": c.audience,
+                "editable": c.status == "scheduled",  # until it starts going out, the email's words can still change
+                **await campaigns.counts(db, c.id),
+            }
     return out
 
 
@@ -176,6 +183,43 @@ async def email_announcement(
     audit(
         db, p.user.email, "marketing.announcement_emailed", target_type="announcement", target_id=a.id,
         detail={"audience": reachable}, request=request,
+    )
+    await db.commit()
+    return await _out(db, a)
+
+
+class EditBody(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    message: str = Field(min_length=1, max_length=2000)
+    button_label: str = Field("", max_length=60)
+    button_url: str = Field("", max_length=500)
+
+
+@router.put("/v1/admin/marketing/announcements/{announcement_id}")
+async def edit_announcement(
+    announcement_id: str,
+    body: EditBody,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Change the words. The pop-up changes at once, for everyone who has not closed it, whether it is live, waiting or over.
+    The email changes too if it has not started going out; an email that has been sent cannot be taken back."""
+    a = await db.get(Announcement, announcement_id)
+    if a is None:
+        raise HTTPException(404, "Announcement not found")
+    checked = _clean(AnnouncementBody(**body.model_dump(), show_for=1, unit="hours", send_email=False))
+    a.title, a.message = checked.title.strip(), checked.message.strip()
+    a.button_label, a.button_url = checked.button_label.strip(), checked.button_url.strip()
+    email_changed = False
+    if a.email_campaign_id:
+        c = await db.get(MarketingCampaign, a.email_campaign_id)
+        if c is not None and c.status == "scheduled":
+            await svc.revise_email(db, a, c, p.user.email)
+            email_changed = True
+    audit(
+        db, p.user.email, "marketing.announcement_edited", target_type="announcement", target_id=a.id,
+        detail={"email_changed": email_changed}, request=request,
     )
     await db.commit()
     return await _out(db, a)

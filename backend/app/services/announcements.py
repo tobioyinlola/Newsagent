@@ -169,3 +169,30 @@ async def stats(db: AsyncSession, announcement_id: str, eligible_count: int) -> 
         ).all()
     )
     return {"seen": rows.get("seen", 0), "clicked": rows.get("clicked", 0), "dismissed": rows.get("dismissed", 0), "eligible": eligible_count}
+
+
+async def revise_email(db: AsyncSession, a: Announcement, c: MarketingCampaign, actor: str) -> None:
+    """Put the announcement's new words into its email, as a new version of the copy, while the email has not started going out."""
+    copy = await db.get(MarketingCopy, c.copy_id)
+    assert copy is not None
+    v = copies.validate(
+        copies.CopyIn(
+            name=copy.name, category=copy.category, subject=a.title, body=a.message, button_label=a.button_label, button_url=a.button_url
+        )
+    )
+    copy.current_version += 1
+    copy.name = f"Announcement: {a.title}"[:120]
+    db.add(
+        MarketingCopyVersion(
+            copy_id=copy.id,
+            version=copy.current_version,
+            subject=v.subject,
+            preheader=v.preheader,
+            body=v.body,
+            button_label=v.button_label,
+            button_url=v.button_url,
+            created_by=actor,
+        )
+    )
+    c.copy_version = copy.current_version
+    c.name = f"Announcement: {a.title}"[:120]

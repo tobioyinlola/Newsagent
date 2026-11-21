@@ -713,6 +713,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/marketing/announcements/{announcement_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Edit Announcement
+         * @description Change the words. The pop-up changes at once, for everyone who has not closed it, whether it is live, waiting or over.
+         *     The email changes too if it has not started going out; an email that has been sent cannot be taken back.
+         */
+        put: operations["edit_announcement_v1_admin_marketing_announcements__announcement_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/marketing/announcements/{announcement_id}/email": {
         parameters: {
             query?: never;
@@ -5719,6 +5740,23 @@ export interface components {
              */
             category: string;
         };
+        /** EditBody */
+        EditBody: {
+            /**
+             * Button Label
+             * @default
+             */
+            button_label: string;
+            /**
+             * Button Url
+             * @default
+             */
+            button_url: string;
+            /** Message */
+            message: string;
+            /** Title */
+            title: string;
+        };
         /** EmailBody */
         EmailBody: {
             /** Confirm Count */
@@ -9913,6 +9951,45 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_announcement_v1_admin_marketing_announcements__announcement_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                announcement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditBody"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
