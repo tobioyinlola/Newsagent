@@ -154,3 +154,29 @@ async def test_an_ended_announcement_cannot_be_emailed_and_neither_can_one_while
     monkeypatch.setattr(get_settings(), "marketing_email", "on")
     late = await client.post(f"/v1/admin/marketing/announcements/{a['id']}/email", json={"confirm_count": 1}, headers=OPS)
     assert late.status_code == 409 and "ended" in late.text
+
+
+async def test_a_share_button_needs_no_address_and_defaults_its_words(client, workspace):
+    a = await _make(client, button_action="share_referral")
+    assert a["button_action"] == "share_referral" and a["button_label"] == "Share with a friend" and a["button_url"] == ""
+    mine = (await _mine(client))[0]
+    assert mine["button_action"] == "share_referral" and mine["button_label"] == "Share with a friend"
+    custom = await _make(client, title="Tell a friend", button_action="share_referral", button_label="Invite a business", button_url="https://ignored.example")
+    assert custom["button_label"] == "Invite a business" and custom["button_url"] == ""  # an address is not kept for a share button
+
+
+async def test_a_link_button_still_needs_both_words_and_address(client, workspace):
+    r = await client.post("/v1/admin/marketing/announcements", json={**BODY, "button_action": "link", "button_url": "https://x.example"}, headers=OPS)
+    assert r.status_code == 422
+
+
+async def test_in_the_email_a_share_button_opens_the_referral_page(client, workspace, maker, mail_on):
+    from app.models import MarketingCopyVersion
+
+    await _person(maker, "share@x.test", joined=2)
+    aud = (await client.get("/v1/admin/marketing/announcements/audience", headers=OPS)).json()["reachable"]
+    a = await _make(client, button_action="share_referral", send_email=True, confirm_count=aud)
+    async with maker() as db:
+        v = (await db.execute(select(MarketingCopyVersion).order_by(MarketingCopyVersion.created_at.desc()))).scalars().first()
+        assert v.button_label == "Share with a friend" and v.button_url == "/referrals"
+    assert a["email"]["status"] == "scheduled"

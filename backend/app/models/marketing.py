@@ -213,6 +213,7 @@ class Announcement(Base, TimestampMixin):
     message: Mapped[str] = mapped_column(Text)
     button_label: Mapped[str] = mapped_column(String(60), default="")
     button_url: Mapped[str] = mapped_column(String(500), default="")
+    button_action: Mapped[str] = mapped_column(String(20), default="link", server_default="link")  # link | share_referral
     shows_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     shows_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)  # the pop-up stops appearing at this time
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # ended early by the team

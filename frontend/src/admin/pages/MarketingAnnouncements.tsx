@@ -78,14 +78,15 @@ export function AnnouncementsTab({ engine }: { engine: string }) {
 function NewAnnouncement({ engine, onDone }: { engine: string; onDone: () => void }) {
   const qc = useQueryClient();
   const toast = useToast();
-  const [f, setF] = useState({ title: "", message: "", button_label: "", button_url: "", show_for: "3", unit: "days" as "hours" | "days", later: false, starts_at: "", send_email: false });
+  const [f, setF] = useState({ title: "", message: "", button_kind: "none" as "none" | "link" | "share", button_label: "", button_url: "", show_for: "3", unit: "days" as "hours" | "days", later: false, starts_at: "", send_email: false });
   const [confirm, setConfirm] = useState(false);
   const audience = useQuery({ queryKey: ["announcement-audience"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/announcements/audience")) as unknown as Promise<{ reachable: number; email_engine: string }> });
   const reachable = audience.data?.reachable ?? 0;
   const emailOff = engine === "off";
   const publish = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/admin/marketing/announcements", { body: {
-      title: f.title.trim(), message: f.message.trim(), button_label: f.button_label.trim(), button_url: f.button_url.trim(),
+      title: f.title.trim(), message: f.message.trim(),
+      button_label: f.button_kind === "none" ? "" : f.button_label.trim(), button_url: f.button_kind === "link" ? f.button_url.trim() : "", button_action: f.button_kind === "share" ? "share_referral" : "link",
       show_for: Number(f.show_for), unit: f.unit, starts_at: f.later && f.starts_at ? new Date(f.starts_at).toISOString() : null,
       send_email: f.send_email && !emailOff, confirm_count: f.send_email && !emailOff ? reachable : null,
     } as never })),
@@ -93,7 +94,7 @@ function NewAnnouncement({ engine, onDone }: { engine: string; onDone: () => voi
     onError: () => setConfirm(false),
   });
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
-  const ok = f.title.trim() && f.message.trim() && Number(f.show_for) >= 1 && (!f.later || f.starts_at) && !!f.button_label.trim() === !!f.button_url.trim();
+  const ok = f.title.trim() && f.message.trim() && Number(f.show_for) >= 1 && (!f.later || f.starts_at) && (f.button_kind !== "link" || (!!f.button_label.trim() && !!f.button_url.trim()));
   const emailing = f.send_email && !emailOff;
   return (
     <div className="space-y-5">
@@ -104,10 +105,18 @@ function NewAnnouncement({ engine, onDone }: { engine: string; onDone: () => voi
             <div className="space-y-4">
               <label className="block text-sm font-semibold">Headline<input className={inputCls} maxLength={120} required value={f.title} onChange={(e) => set("title", e.target.value)} /></label>
               <label className="block text-sm font-semibold">Message<textarea className={inputCls} rows={5} maxLength={2000} required value={f.message} onChange={(e) => set("message", e.target.value)} /><span className="mt-1 block text-right text-xs font-normal text-muted">{f.message.length} / 2000</span></label>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block text-sm font-semibold">Button text (optional)<input className={inputCls} maxLength={60} value={f.button_label} onChange={(e) => set("button_label", e.target.value)} placeholder="See what’s new" /></label>
-                <label className="block text-sm font-semibold">Where the button goes<input className={inputCls} maxLength={500} value={f.button_url} onChange={(e) => set("button_url", e.target.value)} placeholder="https://… or /distribution/request" /></label>
-              </div>
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-semibold">Button</legend>
+                {([["none", "No button", "Just the message, with a “Got it”."], ["share", "Let them share their referral link", "Opens a panel with their own link: their phone’s share sheet, WhatsApp, X, LinkedIn, Facebook, email, or copy."], ["link", "Open a link", "Takes them to a page in the app or on the web."]] as const).map(([k, label, hint]) => (
+                  <label key={k} className="flex items-start gap-2 text-sm"><input type="radio" name="button-kind" className="mt-1" checked={f.button_kind === k} onChange={() => setF((x) => ({ ...x, button_kind: k, button_label: k === "share" && !x.button_label ? "Share with a friend" : x.button_label }))} /><span><b>{label}</b><span className="block text-muted">{hint}</span></span></label>
+                ))}
+              </fieldset>
+              {f.button_kind !== "none" && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm font-semibold">Button text<input className={inputCls} maxLength={60} value={f.button_label} onChange={(e) => set("button_label", e.target.value)} placeholder={f.button_kind === "share" ? "Share with a friend" : "See what’s new"} /></label>
+                  {f.button_kind === "link" && <label className="block text-sm font-semibold">Where the button goes<input className={inputCls} maxLength={500} value={f.button_url} onChange={(e) => set("button_url", e.target.value)} placeholder="https://… or /distribution/request" /></label>}
+                </div>
+              )}
             </div>
           </Card>
           <Card title="How long the pop-up shows">
@@ -131,7 +140,7 @@ function NewAnnouncement({ engine, onDone }: { engine: string; onDone: () => voi
         </form>
         <aside aria-label="Preview" className="space-y-2">
           <p className="text-sm font-semibold">What customers will see</p>
-          <div className="flex justify-center rounded-xl bg-ink/80 p-4"><AnnouncementCard a={{ title: f.title || "Your headline", message: f.message || "Your message appears here." }}>{f.button_label && <span className="inline-block rounded-sm border-2 border-ink bg-brand-green px-5 py-2 text-sm font-bold">{f.button_label}</span>}</AnnouncementCard></div>
+          <div className="flex justify-center rounded-xl bg-ink/80 p-4"><AnnouncementCard a={{ title: f.title || "Your headline", message: f.message || "Your message appears here." }}>{f.button_kind !== "none" && f.button_label && <span className="inline-block rounded-sm border-2 border-ink bg-brand-green px-5 py-2 text-sm font-bold">{f.button_label}</span>}</AnnouncementCard></div>
         </aside>
       </div>
       {confirm && <ConfirmDialog title="Publish this announcement?" confirmLabel={publish.isPending ? "Publishing…" : "Publish"} onConfirm={() => publish.mutate()} onCancel={() => setConfirm(false)}>

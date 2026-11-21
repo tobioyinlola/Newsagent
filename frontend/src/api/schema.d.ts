@@ -4748,6 +4748,12 @@ export interface components {
         /** AnnouncementBody */
         AnnouncementBody: {
             /**
+             * Button Action
+             * @default link
+             * @enum {string}
+             */
+            button_action: "link" | "share_referral";
+            /**
              * Button Label
              * @default
              */
