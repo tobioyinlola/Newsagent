@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, unwrap } from "../api/client";
+import { api, unwrap, unwrapPage } from "../api/client";
+import { Pager } from "../../components/Pager";
+import { usePaged } from "../../lib/usePaged";
 import { Button, Card, ConfirmDialog, ErrorBox, inputCls, Notice } from "../components/ui";
 import { Crumbs, EmptyState, MARKETING, PageIntro, Step, useToast } from "../components/marketingUi";
 import { useUrlState } from "../lib/urlState";
@@ -117,7 +119,7 @@ function Editor({ fields, seg, example, onDone }: { fields: FieldDef[]; seg: Seg
       const body = { name, description, rules: cleanRules(rules) };
       return seg ? unwrap(api.PUT("/v1/admin/marketing/segments/{segment_id}", { params: { path: { segment_id: seg.id } }, body })) : unwrap(api.POST("/v1/admin/marketing/segments", { body }));
     },
-    onSuccess: async () => { await qc.invalidateQueries({ queryKey: ["segments"] }); toast(seg ? "Segment saved." : "Segment created. You can now send an email to it."); onDone(); },
+    onSuccess: async () => { await qc.invalidateQueries({ queryKey: ["segments"] }); await qc.invalidateQueries({ queryKey: ["segment-edit"] }); toast(seg ? "Segment saved." : "Segment created. You can now send an email to it."); onDone(); },
   });
 
   return (
@@ -162,17 +164,19 @@ export function SegmentsTab() {
   const [viewing, setViewing] = useState<string | null>(null);
   const [removing, setRemoving] = useState<Segment | null>(null);
   const fields = useQuery({ queryKey: ["segment-fields"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/segment-fields")).then((r) => (r as unknown as { fields: FieldDef[] }).fields) });
-  const list = useQuery({ queryKey: ["segments"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/segments")).then((r) => (r as unknown as { items: Segment[] }).items) });
+  const paged = usePaged(["segments", "list"], (limit, offset) => unwrapPage<Segment>(api.GET("/v1/admin/marketing/segments", { params: { query: { limit, offset } } }), (b) => b.items, offset), { size: 10 });
+  const list = { data: paged.items, isLoading: paged.query.isLoading, error: paged.query.error };
+  const editQ = useQuery({ queryKey: ["segment-edit", edit], enabled: !!edit && edit !== "new", queryFn: () => unwrap(api.GET("/v1/admin/marketing/segments/{segment_id}", { params: { path: { segment_id: edit! } } })) as unknown as Segment }); // the one being edited, whichever page it is on
   const detail = useQuery({ queryKey: ["segment", viewing], enabled: !!viewing, queryFn: () => unwrap(api.GET("/v1/admin/marketing/segments/{segment_id}", { params: { path: { segment_id: viewing! } } })) as unknown as Promise<Segment> });
   const remove = useMutation({
     mutationFn: (id: string) => unwrap(api.DELETE("/v1/admin/marketing/segments/{segment_id}", { params: { path: { segment_id: id } } })),
-    onSuccess: async () => { setRemoving(null); await qc.invalidateQueries({ queryKey: ["segments"] }); toast("Segment deleted."); },
+    onSuccess: async () => { setRemoving(null); await qc.invalidateQueries({ queryKey: ["segments"] }); await qc.invalidateQueries({ queryKey: ["segment-edit"] }); toast("Segment deleted."); },
   });
   const done = () => url.set({ edit: null, example: null });
-  const editing = edit && edit !== "new" ? list.data?.find((g) => g.id === edit) : null;
+  const editing = edit && edit !== "new" ? editQ.data ?? null : null;
 
   if (edit && fields.data && (edit === "new" || editing)) return <Editor key={edit + String(exampleIdx)} fields={fields.data} seg={editing ?? null} example={edit === "new" ? exampleIdx : null} onDone={done} />;
-  if (edit && edit !== "new" && list.isLoading) return <p aria-busy="true">Loading…</p>;
+  if (edit && edit !== "new" && editQ.isLoading) return <p aria-busy="true">Loading…</p>;
 
   return (
     <div className="space-y-5">
@@ -182,7 +186,7 @@ export function SegmentsTab() {
         actions={manage && <Button onClick={() => url.set({ edit: "new", example: null })}>New segment</Button>}
       >A segment is a saved group of people you want to email, picked by rules. Make the group first, then choose what to send to it.</PageIntro>
       <ErrorBox error={fields.error ?? list.error ?? remove.error} />
-      {list.isLoading ? <p aria-busy="true">Loading…</p> : list.data && list.data.length === 0 ? (
+      {list.isLoading ? <p aria-busy="true">Loading…</p> : paged.total === 0 && !paged.query.isLoading ? (
         <Card>
           <EmptyState title="You haven’t made a segment yet" actions={manage && <Button onClick={() => url.set({ edit: "new", example: null })}>Make your own</Button>}>
             Start from an example below, or make your own from scratch.
@@ -207,6 +211,7 @@ export function SegmentsTab() {
               </li>
             ))}
           </ul>
+          <Pager total={paged.total} page={paged.page} size={paged.size} onPage={paged.setPage} noun="segments" busy={paged.query.isFetching} />
           {manage && <details className="text-sm"><summary className="cursor-pointer font-semibold underline underline-offset-2">Start a new one from an example</summary><Examples onPick={(i) => url.set({ edit: "new", example: String(i) })} /></details>}
         </>
       )}

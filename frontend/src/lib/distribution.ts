@@ -1,13 +1,23 @@
 import { ApiError } from "../api/client";
+import { type Paged, totalOf } from "./paging";
 
 export type Outlet = { id: string; name: string; credits: string; region: string; country?: string | null; topic?: string; category?: string; media_policy_configured?: boolean; accepts_logo?: boolean; accepts_images?: boolean; logo_credits?: string; picture_credits?: string; base_credits?: string; logo_fee?: string; picture_fee?: string };
 export type Draft = { stage: string; outlet_ids: string[]; project_id: string | null; story_project_id?: string | null; announcement_source?: "platform" | "custom"; headline: string; announcement: string; contact_name: string; contact_email: string; phone: string; whatsapp?: string; phone_country?: string; whatsapp_country?: string; logo_key: string; picture_keys: string[]; media_options?: Record<string, { include_logo: boolean; include_pictures: boolean }>; plan_key?: "" | "essential" | "balanced" | "max"; plan_ids?: string[] };
 export type Distribution = { id: string; workspace_id: string; created_by: string; status: string; stage: string; data: Draft & { outlets?: Outlet[] }; total_credits: string; paid: boolean; email_sent: boolean; created_at: string; updated_at: string; submitted_at: string | null; invoice?: Invoice | null; placements?: Placement[]; emails?: DistributionEmail[]; activity?: { id: string; kind: string; actor: string; detail: Record<string, unknown>; created_at: string }[] };
-export async function distributionApi<T>(path: string, token: string | null, method = "GET", body?: unknown): Promise<T> {
+async function distributionRaw(path: string, token: string | null, method = "GET", body?: unknown): Promise<{ data: unknown; headers: Headers }> {
   const r = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/v1/${path}`, { method, headers: { Authorization: `Bearer ${token ?? ""}`, "Content-Type": "application/json" }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
   const data = await r.json();
   if (!r.ok) throw new ApiError(r.status, typeof data.detail === "string" ? data.detail : Array.isArray(data.detail) ? data.detail.map((e: { msg?: string }) => e.msg ?? "Invalid field").join("; ") : data.detail?.message ?? "Unable to save distribution request. Please try again.", data.detail);
-  return data as T;
+  return { data, headers: r.headers };
+}
+export async function distributionApi<T>(path: string, token: string | null, method = "GET", body?: unknown): Promise<T> {
+  return (await distributionRaw(path, token, method, body)).data as T;
+}
+/** One page of a list, with the total. `pick` finds the rows when the reply is an object rather than an array. */
+export async function distributionPage<T>(path: string, token: string | null, limit: number, offset: number, pick?: (body: any) => T[]): Promise<Paged<T>> { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const { data, headers } = await distributionRaw(`${path}${path.includes("?") ? "&" : "?"}limit=${limit}&offset=${offset}`, token);
+  const items = ((pick ? pick(data) : data) as T[] | undefined) ?? [];
+  return { items, total: totalOf(headers, data, items.length, offset) };
 }
 
 export type Invoice = { number: string; issued_at: string; payment_method: string; status: string; reference: string; total_credits: string; items: Outlet[] };

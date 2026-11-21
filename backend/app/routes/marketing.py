@@ -26,7 +26,7 @@ from app.models import (
     User,
 )
 from app.models.base import utcnow
-from app.services import marketing, marketing_starter, ratelimit
+from app.services import marketing, marketing_starter, paging, ratelimit
 from app.services import marketing_campaigns as campaigns
 from app.services import marketing_copy as copies
 from app.services import marketing_segments as segs
@@ -129,16 +129,16 @@ async def segment_fields(p: Principal = Depends(require("marketing.view"))) -> d
 
 @router.get("/v1/admin/marketing/segments")
 async def list_segments(
-    p: Principal = Depends(require("marketing.view")), db: AsyncSession = Depends(get_session)
+    pg: paging.Page = Depends(paging.page(25, 200)),
+    p: Principal = Depends(require("marketing.view")),
+    db: AsyncSession = Depends(get_session),
 ) -> dict:
+    base = select(MarketingSegment).where(MarketingSegment.archived_at.is_(None))
+    total = await paging.count(db, base)
     rows = (
-        await db.execute(
-            select(MarketingSegment)
-            .where(MarketingSegment.archived_at.is_(None))
-            .order_by(MarketingSegment.created_at.desc())
-        )
+        await db.execute(paging.window(base.order_by(MarketingSegment.created_at.desc(), MarketingSegment.id), pg))
     ).scalars()
-    return {"items": [_seg(s) for s in rows]}
+    return {"items": [_seg(s) for s in rows], **paging.meta(pg, total)}
 
 
 @router.post("/v1/admin/marketing/segments/preview")
@@ -271,16 +271,14 @@ async def copy_options(p: Principal = Depends(require("marketing.view"))) -> dic
 
 @router.get("/v1/admin/marketing/copies")
 async def list_copies(
-    p: Principal = Depends(require("marketing.view")), db: AsyncSession = Depends(get_session)
+    pg: paging.Page = Depends(paging.page(25, 200)),
+    p: Principal = Depends(require("marketing.view")),
+    db: AsyncSession = Depends(get_session),
 ) -> dict:
+    base = select(MarketingCopy).where(MarketingCopy.archived_at.is_(None))
+    total = await paging.count(db, base)
     rows = (
-        (
-            await db.execute(
-                select(MarketingCopy)
-                .where(MarketingCopy.archived_at.is_(None))
-                .order_by(MarketingCopy.created_at.desc())
-            )
-        )
+        (await db.execute(paging.window(base.order_by(MarketingCopy.created_at.desc(), MarketingCopy.id), pg)))
         .scalars()
         .all()
     )
@@ -294,7 +292,7 @@ async def list_copies(
             )
         ).scalar_one_or_none()
         out.append(_copy_out(c, cur))
-    return {"items": out}
+    return {"items": out, **paging.meta(pg, total)}
 
 
 @router.post("/v1/admin/marketing/copies/preview")
@@ -496,14 +494,18 @@ async def _pick(db: AsyncSession, body: CampaignBody) -> tuple[MarketingSegment,
 
 @router.get("/v1/admin/marketing/campaigns")
 async def list_campaigns(
-    p: Principal = Depends(require("marketing.view")), db: AsyncSession = Depends(get_session)
+    pg: paging.Page = Depends(paging.page(25, 100)),
+    p: Principal = Depends(require("marketing.view")),
+    db: AsyncSession = Depends(get_session),
 ) -> dict:
+    base = select(MarketingCampaign)
+    total = await paging.count(db, base)
     rows = (
-        (await db.execute(select(MarketingCampaign).order_by(MarketingCampaign.created_at.desc()).limit(100)))
+        (await db.execute(paging.window(base.order_by(MarketingCampaign.created_at.desc(), MarketingCampaign.id), pg)))
         .scalars()
         .all()
     )
-    return {"items": [await _campaign_out(db, c) for c in rows]}
+    return {"items": [await _campaign_out(db, c) for c in rows], **paging.meta(pg, total)}
 
 
 @router.post("/v1/admin/marketing/campaigns", status_code=201)
@@ -754,17 +756,15 @@ def _apply(w: MarketingWorkflow, body: workflows.WorkflowIn) -> None:
 
 @router.get("/v1/admin/marketing/workflows")
 async def list_workflows(
-    p: Principal = Depends(require("marketing.view")), db: AsyncSession = Depends(get_session)
+    pg: paging.Page = Depends(paging.page(25, 100)),
+    p: Principal = Depends(require("marketing.view")),
+    db: AsyncSession = Depends(get_session),
 ) -> dict:
     names = await _seg_names(db)
+    base = select(MarketingWorkflow).where(MarketingWorkflow.archived_at.is_(None))
+    total = await paging.count(db, base)
     rows = (
-        (
-            await db.execute(
-                select(MarketingWorkflow)
-                .where(MarketingWorkflow.archived_at.is_(None))
-                .order_by(MarketingWorkflow.created_at.desc())
-            )
-        )
+        (await db.execute(paging.window(base.order_by(MarketingWorkflow.created_at.desc(), MarketingWorkflow.id), pg)))
         .scalars()
         .all()
     )
@@ -774,7 +774,7 @@ async def list_workflows(
         if w.status != "draft":
             item["stats"] = await workflows.stats(db, w)
         out.append(item)
-    return {"items": out}
+    return {"items": out, **paging.meta(pg, total)}
 
 
 @router.post("/v1/admin/marketing/workflows/starter", status_code=201)

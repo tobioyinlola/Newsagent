@@ -10,13 +10,18 @@ from app.auth import Principal, current_principal
 from app.config import get_settings
 from app.db import get_session
 from app.models import ReferralReward, Workspace
+from app.services import paging
 from app.services.referrals import ensure_link
 
 router = APIRouter(prefix="/v1/referrals", tags=["referrals"])
 
 
 @router.get("")
-async def overview(p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)):
+async def overview(
+    pg: paging.Page = Depends(paging.page(25, 100)),
+    p: Principal = Depends(current_principal),
+    db: AsyncSession = Depends(get_session),
+):
     if p.workspace.suspended or p.workspace.deleted_at:
         raise HTTPException(403, "Referrals are unavailable for this workspace")
     code = await ensure_link(db, p.user)
@@ -29,11 +34,13 @@ async def overview(p: Principal = Depends(current_principal), db: AsyncSession =
     ).one()
     rows = (
         await db.execute(
-            select(ReferralReward, Workspace.name, Workspace.deleted_at)
-            .join(Workspace, Workspace.id == ReferralReward.referred_workspace_id)
-            .where(ReferralReward.referrer_user_id == p.user.id)
-            .order_by(ReferralReward.created_at.desc())
-            .limit(100)
+            paging.window(
+                select(ReferralReward, Workspace.name, Workspace.deleted_at)
+                .join(Workspace, Workspace.id == ReferralReward.referred_workspace_id)
+                .where(ReferralReward.referrer_user_id == p.user.id)
+                .order_by(ReferralReward.created_at.desc(), ReferralReward.id),
+                pg,
+            )
         )
     ).all()
     await db.commit()
@@ -42,6 +49,7 @@ async def overview(p: Principal = Depends(current_principal), db: AsyncSession =
         "url": f"{get_settings().app_base_url.rstrip('/')}/signup?ref={code}",
         "percent": str(Decimal(get_settings().referral_purchase_percent).normalize()),
         "completed_referrals": count,
+        **paging.meta(pg, count),
         "earned_credits": str(Decimal(credits)),
         "referrals": [
             {

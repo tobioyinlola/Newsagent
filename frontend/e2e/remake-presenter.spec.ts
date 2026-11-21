@@ -7,7 +7,7 @@ test("the back office offers to remake a finished video with the default present
   const list = await (await request.get(`${API}/v1/admin/workspaces`, { headers: OPS })).json();
   expect(list.length).toBeGreaterThan(0);
   await page.addInitScript(() => sessionStorage.setItem("newsagent.admin.token", "dev:ops@example.com"));
-  await page.route("**/v1/admin/customers/*", async (route) => {
+  await page.route(/\/v1\/admin\/customers\/[^/?]+(\?.*)?$/, async (route) => {
     const r = await route.fetch(); const body = await r.json();
     body.projects = [{ id: "abcdef0123456789", state: "final_ready", interview: "live", created_at: "2026-11-01T10:00:00Z", completed_at: "2026-11-01T10:20:00Z", vendor_cost: "1.00", published: true }, ...(body.projects ?? [])];
     await route.fulfill({ response: r, json: body });

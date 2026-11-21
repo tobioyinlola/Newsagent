@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, unwrap } from "../api/client";
+import { api, unwrap, unwrapPage } from "../api/client";
+import { Pager } from "../../components/Pager";
+import { usePaged } from "../../lib/usePaged";
 import { Button, Card, ConfirmDialog, ErrorBox, inputCls, Notice } from "../components/ui";
 import { Crumbs, EmptyState, MARKETING, PageIntro, Step, useToast } from "../components/marketingUi";
 import { useUrlState } from "../lib/urlState";
@@ -64,7 +66,7 @@ function CopyEditor({ options, copy, onDone }: { options: Options; copy: Copy | 
   });
   const save = useMutation({
     mutationFn: () => (copy ? unwrap(api.PUT("/v1/admin/marketing/copies/{copy_id}", { params: { path: { copy_id: copy.id } }, body: draft })) : unwrap(api.POST("/v1/admin/marketing/copies", { body: draft }))),
-    onSuccess: async (r) => { await qc.invalidateQueries({ queryKey: ["copies"] }); await qc.invalidateQueries({ queryKey: ["copy"] }); toast(copy ? `Saved as version ${(r as unknown as Copy).current_version}.` : "Email saved. You can now use it in a campaign or workflow."); onDone(); },
+    onSuccess: async (r) => { await qc.invalidateQueries({ queryKey: ["copies"] }); await qc.invalidateQueries({ queryKey: ["copy"] }); await qc.invalidateQueries({ queryKey: ["copy-edit"] }); toast(copy ? `Saved as version ${(r as unknown as Copy).current_version}.` : "Email saved. You can now use it in a campaign or workflow."); onDone(); },
   });
   const test = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/admin/marketing/copies/test", { body: draft })),
@@ -169,17 +171,19 @@ export function CopiesTab() {
   const edit = url.get("edit");
   const [removing, setRemoving] = useState<Copy | null>(null);
   const options = useQuery({ queryKey: ["copy-options"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/copy-options")) as unknown as Promise<Options> });
-  const list = useQuery({ queryKey: ["copies"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/copies")).then((r) => (r as unknown as { items: Copy[] }).items) });
+  const paged = usePaged(["copies", "list"], (limit, offset) => unwrapPage<Copy>(api.GET("/v1/admin/marketing/copies", { params: { query: { limit, offset } } }), (b) => b.items, offset), { size: 10 });
+  const list = { data: paged.items, isLoading: paged.query.isLoading, error: paged.query.error };
+  const editQ = useQuery({ queryKey: ["copy-edit", edit], enabled: !!edit && edit !== "new", queryFn: () => unwrap(api.GET("/v1/admin/marketing/copies/{copy_id}", { params: { path: { copy_id: edit! } } })) as unknown as Copy }); // the one being edited, whichever page it is on
   const remove = useMutation({
     mutationFn: (id: string) => unwrap(api.DELETE("/v1/admin/marketing/copies/{copy_id}", { params: { path: { copy_id: id } } })),
-    onSuccess: async () => { setRemoving(null); await qc.invalidateQueries({ queryKey: ["copies"] }); toast("Email deleted."); },
+    onSuccess: async () => { setRemoving(null); await qc.invalidateQueries({ queryKey: ["copies"] }); await qc.invalidateQueries({ queryKey: ["copy-edit"] }); toast("Email deleted."); },
   });
   const label = (k: string) => options.data?.categories.find((c) => c.key === k)?.label ?? k;
-  const editing = edit && edit !== "new" ? list.data?.find((c) => c.id === edit) : null;
+  const editing = edit && edit !== "new" ? editQ.data ?? null : null;
   const done = () => url.set({ edit: null });
 
   if (edit && options.data && (edit === "new" || editing)) return <CopyEditor key={edit} options={options.data} copy={editing ?? null} onDone={done} />;
-  if (edit && edit !== "new" && list.isLoading) return <p aria-busy="true">Loading…</p>;
+  if (edit && edit !== "new" && editQ.isLoading) return <p aria-busy="true">Loading…</p>;
 
   return (
     <div className="space-y-5">
@@ -189,7 +193,7 @@ export function CopiesTab() {
         actions={manage && <Button onClick={() => url.set({ edit: "new" })}>Write a new email</Button>}
       >The emails you write, kept here to use again. Write one, then choose who gets it and when.</PageIntro>
       <ErrorBox error={options.error ?? list.error ?? remove.error} />
-      {list.isLoading ? <p aria-busy="true">Loading…</p> : list.data && list.data.length === 0 ? (
+      {list.isLoading ? <p aria-busy="true">Loading…</p> : paged.total === 0 && !paged.query.isLoading ? (
         <Card><EmptyState title="You haven’t written an email yet" actions={manage && <Button onClick={() => url.set({ edit: "new" })}>Write your first email</Button>}>It only takes a minute, and you can ask the AI for a first draft.</EmptyState></Card>
       ) : (
         <ul className="space-y-3">
@@ -207,6 +211,7 @@ export function CopiesTab() {
           ))}
         </ul>
       )}
+      <Pager total={paged.total} page={paged.page} size={paged.size} onPage={paged.setPage} noun="emails" busy={paged.query.isFetching} />
       {removing && <ConfirmDialog title="Delete this email?" confirmLabel="Delete" onConfirm={() => remove.mutate(removing.id)} onCancel={() => setRemoving(null)}>“{removing.name}” will be removed from your list. Emails already sent are not affected, and campaigns or workflows already set up with it keep working.</ConfirmDialog>}
     </div>
   );

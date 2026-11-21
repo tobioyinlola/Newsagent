@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -15,7 +15,7 @@ from app.integrations.llm.base import NewsDraft
 from app.integrations.storage.base import ObjectTooLarge
 from app.models import NewsImage, NewsStory, NewsVideo
 from app.models.base import new_id, utcnow
-from app.services import news_desk_public, news_video, news_video_rules, stories, uploads
+from app.services import news_desk_public, news_video, news_video_rules, paging, stories, uploads
 from app.services.audit import audit
 from app.services.ratelimit import limit
 
@@ -154,8 +154,15 @@ async def change(db: AsyncSession, id: str, revision: int, **values) -> NewsStor
 
 
 @router.get("")
-async def listing(_: Principal = Depends(operator), db: AsyncSession = Depends(get_session)):
-    rows = (await db.execute(select(NewsStory).order_by(NewsStory.updated_at.desc()))).scalars()
+async def listing(
+    response: Response,
+    pg: paging.Page = Depends(paging.page(25, 100)),
+    _: Principal = Depends(operator),
+    db: AsyncSession = Depends(get_session),
+):
+    q = select(NewsStory)
+    paging.send_total(response, await paging.count(db, q))
+    rows = (await db.execute(paging.window(q.order_by(NewsStory.updated_at.desc(), NewsStory.id), pg))).scalars()
     return [
         {
             "id": r.id,

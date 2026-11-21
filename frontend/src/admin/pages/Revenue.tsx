@@ -1,6 +1,8 @@
 import { TransferApprovals } from "../components/TransferApprovals";
 import { PaymentReconciliation } from "../components/PaymentReconciliation";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { Pager } from "../../components/Pager";
 import { Link } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { Stat } from "../components/Charts";
@@ -9,7 +11,9 @@ import { date, num, usd } from "../lib/format";
 
 // Who is paying, how much, and every payment.
 export function Revenue() {
-  const q = useQuery({ queryKey: ["payments"], queryFn: () => unwrap(api.GET("/v1/admin/payments")) });
+  const SIZE = 25; // rows per list: companies and payments page separately
+  const [cPage, setCPage] = useState(0); const [iPage, setIPage] = useState(0);
+  const q = useQuery({ queryKey: ["payments", cPage, iPage], queryFn: () => unwrap(api.GET("/v1/admin/payments", { params: { query: { companies_limit: SIZE, companies_offset: cPage * SIZE, limit: SIZE, offset: iPage * SIZE } } })), placeholderData: keepPreviousData });
   if (q.isLoading) return <p aria-busy="true">Loading…</p>;
   if (q.error || !q.data) return <ErrorBox error={q.error ?? new Error("No data")} />;
   const p = q.data;
@@ -19,7 +23,7 @@ export function Revenue() {
       <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Revenue, all time" value={usd(p.total_usd)} />
         <Stat label="Revenue, 30 days" value={usd(p.total_usd_30d)} />
-        <Stat label="Paying companies" value={p.paying_companies.length} />
+        <Stat label="Paying companies" value={p.companies_total} />
         <Stat label="Offline credits" value={num(p.offline_credits)} sub="bank transfers and invoices: only credits are recorded" />
       </dl>
       <Card title="Paying companies">
@@ -29,6 +33,7 @@ export function Revenue() {
             <tbody>{p.paying_companies.map((c) => <tr key={c.workspace_id} className="border-t border-line"><td className="py-1.5 font-bold"><Link className="underline" to={`/customers/${c.workspace_id}`}>{c.company}</Link></td><td className="text-right tabular-nums">{c.payments}</td><td className="text-right tabular-nums">{usd(c.usd)}</td><td>{date(c.last_paid_at)}</td></tr>)}</tbody>
           </table>
         )}
+        <Pager total={p.companies_total} page={cPage} size={SIZE} onPage={setCPage} noun="companies" busy={q.isFetching} />
       </Card>
       <TransferApprovals />
       <PaymentReconciliation />
@@ -41,6 +46,7 @@ export function Revenue() {
             </table>
           </div>
         )}
+        <Pager total={p.items_total} page={iPage} size={SIZE} onPage={setIPage} noun="payments" busy={q.isFetching} />
       </Card>
     </>
   );

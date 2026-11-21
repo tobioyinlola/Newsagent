@@ -5,7 +5,7 @@ import json
 from datetime import UTC, datetime
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +16,7 @@ from app.db import get_session
 from app.integrations.billing.base import InvalidSignature
 from app.integrations.billing.nuvion import NuvionBilling, NuvionError, PaymentMismatch
 from app.models import Checkout
-from app.services import payments
+from app.services import paging, payments
 from app.services.ratelimit import client_ip, limit
 
 router = APIRouter(tags=["billing"])
@@ -101,18 +101,18 @@ def output(co: Checkout, intent: dict, provider: NuvionBilling) -> dict:
 
 
 @router.get("/v1/billing/checkouts")
-async def history(p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> list[dict]:
-    rows = (
-        await db.execute(
-            select(Checkout)
-            .where(
-                Checkout.workspace_id == p.workspace.id,
-                Checkout.provider.in_(["nuvion", "nuvion_bank", "manual_bank", "stripe"]),
-            )
-            .order_by(Checkout.created_at.desc())
-            .limit(50)
-        )
-    ).scalars()
+async def history(
+    response: Response,
+    pg: paging.Page = Depends(paging.page(50, 100)),
+    p: Principal = Depends(current_principal),
+    db: AsyncSession = Depends(get_session),
+) -> list[dict]:
+    q = select(Checkout).where(
+        Checkout.workspace_id == p.workspace.id,
+        Checkout.provider.in_(["nuvion", "nuvion_bank", "manual_bank", "stripe"]),
+    )
+    paging.send_total(response, await paging.count(db, q))
+    rows = (await db.execute(paging.window(q.order_by(Checkout.created_at.desc(), Checkout.id), pg))).scalars()
     return [
         {
             "id": co.id,

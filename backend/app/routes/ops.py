@@ -41,7 +41,7 @@ from app.schemas.api import (
     SettingsOut,
     SettingsPatch,
 )
-from app.services import moderation_flow, work_queue
+from app.services import moderation_flow, paging, work_queue
 from app.services import state_machine as sm
 from app.services.audit import audit
 from app.services.spend_guard import is_paused
@@ -67,7 +67,9 @@ async def project_moderation(
 # ---------- review queue ----------
 @router.get("/v1/admin/moderation", response_model=list[ModerationCaseOut])
 async def moderation_queue(
+    response: Response,
     status: str = "pending",
+    pg: paging.Page = Depends(paging.page(50, 200)),
     _: Principal = Depends(require("review.manage")),
     session: AsyncSession = Depends(get_session),
 ) -> list[ModerationCaseOut]:
@@ -76,7 +78,8 @@ async def moderation_queue(
     )
     if status != "all":
         q = q.where(ModerationCase.status == status)
-    rows = (await session.execute(q.order_by(ModerationCase.created_at).limit(200))).all()
+    paging.send_total(response, await paging.count(session, q))
+    rows = (await session.execute(paging.window(q.order_by(ModerationCase.created_at, ModerationCase.id), pg))).all()
     return [
         ModerationCaseOut(**{**{c.name: getattr(case, c.name) for c in case.__table__.columns}, "workspace_name": name})
         for case, name in rows
@@ -167,18 +170,22 @@ async def queue(
 
 @router.get("/v1/admin/line", response_model=list[LineItemOut])
 async def line(
-    limit: int = 100,
+    response: Response,
+    pg: paging.Page = Depends(paging.page(100, 200)),
     _: Principal = Depends(require("operations.view")),
     session: AsyncSession = Depends(get_session),
 ) -> list[LineItemOut]:
     """Videos waiting for or running in the slow lanes (presenter clips, renders), in the order they will be taken."""
     now = datetime.now(UTC)
+    base = select(WorkItem, Workspace.name).join(Workspace, Workspace.id == WorkItem.workspace_id)
+    paging.send_total(response, await paging.count(session, base))
+    # A place in line counts everyone waiting ahead in the same lane, so the rows before this page are read too (and then dropped).
     rows = (
         await session.execute(
-            select(WorkItem, Workspace.name)
-            .join(Workspace, Workspace.id == WorkItem.workspace_id)
-            .order_by(WorkItem.lane, WorkItem.state, WorkItem.priority.desc(), WorkItem.enqueued_at, WorkItem.id)
-            .limit(min(max(limit, 1), 500))
+            paging.window(
+                base.order_by(WorkItem.lane, WorkItem.state, WorkItem.priority.desc(), WorkItem.enqueued_at, WorkItem.id),
+                paging.Page(pg.offset + pg.limit, 0),
+            )
         )
     ).all()
     out, place = [], {"avatar": 0, "render": 0}
@@ -199,7 +206,7 @@ async def line(
                 attempts=it.attempts,
             )
         )
-    return out
+    return out[pg.offset :]
 
 
 @router.post("/v1/admin/line/{project_id}/front")
@@ -269,9 +276,10 @@ async def line_pause(
 
 @router.get("/v1/admin/jobs", response_model=list[JobOut])
 async def jobs(
+    response: Response,
     status: str | None = None,
     stage: str | None = None,
-    limit: int = 100,
+    pg: paging.Page = Depends(paging.page(100, 200)),
     _: Principal = Depends(require("operations.view")),
     session: AsyncSession = Depends(get_session),
 ) -> list[JobOut]:
@@ -284,7 +292,8 @@ async def jobs(
         q = q.where(Job.status == status)
     if stage:
         q = q.where(Job.stage == stage)
-    rows = (await session.execute(q.order_by(Job.created_at.desc()).limit(min(max(limit, 1), 500)))).all()
+    paging.send_total(response, await paging.count(session, q))
+    rows = (await session.execute(paging.window(q.order_by(Job.created_at.desc(), Job.id), pg))).all()
     now = datetime.now(UTC)
     out = []
     for j, ws_name in rows:
@@ -509,7 +518,8 @@ async def patch_system_settings(
 
 @router.get("/v1/admin/audit", response_model=list[AuditOut])
 async def audit_log(
-    limit: int = 100,
+    response: Response,
+    pg: paging.Page = Depends(paging.page(100, 200)),
     action: str | None = None,
     _: Principal = Depends(require("audit.view")),
     session: AsyncSession = Depends(get_session),
@@ -517,9 +527,8 @@ async def audit_log(
     q = select(AuditLog)
     if action:
         q = q.where(AuditLog.action.startswith(action))
-    return list(
-        (await session.execute(q.order_by(AuditLog.created_at.desc()).limit(min(max(limit, 1), 500)))).scalars().all()
-    )
+    paging.send_total(response, await paging.count(session, q))
+    return list((await session.execute(paging.window(q.order_by(AuditLog.created_at.desc(), AuditLog.id), pg))).scalars().all())
 
 
 @router.post("/v1/admin/covers/refresh")

@@ -16,7 +16,7 @@ from app.routes.distribution import OUTLETS
 from app.routes.distribution_operations import save_setting
 from app.services import distribution as dist
 from app.services import distribution_catalog as catalog_service
-from app.services import outreach, outreach_agent, outreach_gmail
+from app.services import outreach, outreach_agent, outreach_gmail, paging
 from app.services.audit import audit
 from app.services.ratelimit import limit
 
@@ -282,7 +282,7 @@ def _thread_row(t: OutreachThread, last: OutreachMessage | None) -> dict:
 async def list_threads(
     status: str | None = None,
     q: str | None = None,
-    limit: int = 100,
+    pg: paging.Page = Depends(paging.page(25, 100)),
     p: Principal = Depends(require("operations.view")),
     db: AsyncSession = Depends(get_session),
 ) -> dict:
@@ -298,8 +298,9 @@ async def list_threads(
                 func.lower(OutreachThread.request_id).like(like),
             )
         )
+    total = await paging.count(db, query)
     threads = (
-        (await db.execute(query.order_by(OutreachThread.updated_at.desc()).limit(min(max(limit, 1), 300))))
+        (await db.execute(paging.window(query.order_by(OutreachThread.updated_at.desc(), OutreachThread.id), pg)))
         .scalars()
         .all()
     )
@@ -320,7 +321,7 @@ async def list_threads(
             )
         ).scalar_one_or_none()
         rows.append(_thread_row(t, last))
-    return {"threads": rows, "counts": counts}
+    return {"threads": rows, "counts": counts, **paging.meta(pg, total)}
 
 
 SAFE_AI = (
@@ -643,16 +644,23 @@ class ContactIn(BaseModel):
 
 @router.get("/v1/admin/outreach/needs-contact")
 async def needs_contact(
-    p: Principal = Depends(require("operations.view")), db: AsyncSession = Depends(get_session)
+    pg: paging.Page = Depends(paging.page(25, 100)),
+    p: Principal = Depends(require("operations.view")),
+    db: AsyncSession = Depends(get_session),
 ) -> dict:
     """Paid requests where an outlet has no contact email yet (nobody has been written to), and those waiting only for a mailbox."""
+    base = (
+        select(DistributionPlacement, DistributionRequest)
+        .join(DistributionRequest, DistributionRequest.id == DistributionPlacement.request_id)
+        .where(DistributionPlacement.outreach_state == "needs_contact")
+    )
+    total = await paging.count(db, base)
+    waiting = await paging.count(
+        db, select(DistributionPlacement.id).where(DistributionPlacement.outreach_state == "waiting_mailbox")
+    )
     rows = (
         await db.execute(
-            select(DistributionPlacement, DistributionRequest)
-            .join(DistributionRequest, DistributionRequest.id == DistributionPlacement.request_id)
-            .where(DistributionPlacement.outreach_state.in_(("needs_contact", "waiting_mailbox")))
-            .order_by(DistributionRequest.paid_at, DistributionPlacement.created_at)
-            .limit(300)
+            paging.window(base.order_by(DistributionRequest.paid_at, DistributionPlacement.created_at, DistributionPlacement.id), pg)
         )
     ).all()
     items = [
@@ -668,10 +676,7 @@ async def needs_contact(
         }
         for pl, req in rows
     ]
-    return {
-        "needs_contact": [i for i in items if i["state"] == "needs_contact"],
-        "waiting_mailbox": sum(1 for i in items if i["state"] == "waiting_mailbox"),
-    }
+    return {"needs_contact": items, "waiting_mailbox": waiting, **paging.meta(pg, total)}
 
 
 @router.put("/v1/admin/outreach/needs-contact/{placement_id}")

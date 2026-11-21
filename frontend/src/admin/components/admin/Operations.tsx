@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, unwrap } from "../../api/client";
+import { api, unwrap, unwrapPage } from "../../api/client";
+import { Pager } from "../../../components/Pager";
+import { usePaged } from "../../../lib/usePaged";
 import { useCan } from "../../lib/can";
 import { Button, Card, ErrorBox, Field, Notice, inputCls } from "../ui";
 
@@ -28,7 +30,7 @@ function span(sec: number | null | undefined): string {
 function Line({ lanes }: { lanes: { lane: string; waiting: number; running: number; slots: number; oldest_wait_s: number; typical_s?: number | null; paused?: boolean }[] }) {
   const qc = useQueryClient();
   const canManage = useCan()("operations.manage");
-  const items = useQuery({ queryKey: ["admin-line"], queryFn: () => unwrap(api.GET("/v1/admin/line", { params: { query: { limit: 100 } } })), refetchInterval: 10000 });
+  const items = usePaged(["admin-line"], (limit, offset) => unwrapPage(api.GET("/v1/admin/line", { params: { query: { limit, offset } } }), undefined, offset), { size: 25, refetchInterval: 10000 });
   const refresh = () => { void qc.invalidateQueries({ queryKey: ["admin-line"] }); void qc.invalidateQueries({ queryKey: ["admin-queue"] }); };
   const front = useMutation({ mutationFn: (id: string) => unwrap(api.POST("/v1/admin/line/{project_id}/front", { params: { path: { project_id: id } } })), onSuccess: refresh });
   const stop = useMutation({ mutationFn: (id: string) => unwrap(api.POST("/v1/admin/line/{project_id}/cancel", { params: { path: { project_id: id } } })), onSuccess: refresh });
@@ -44,12 +46,12 @@ function Line({ lanes }: { lanes: { lane: string; waiting: number; running: numb
           </div>
         ))}
       </div>
-      {!!items.data?.length && (
+      {!!items.total && (
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="text-xs text-muted"><tr><th className="py-1 pr-3">Business</th><th className="pr-3">Step</th><th className="pr-3">Place</th><th className="pr-3">Waited</th>{canManage && <th />}</tr></thead>
             <tbody>
-              {items.data.map((i) => (
+              {items.items.map((i) => (
                 <tr key={i.project_id} className="border-t border-line">
                   <td className="py-1.5 pr-3">{i.workspace_name}</td>
                   <td className="pr-3">{STEP_NAME[i.step] ?? i.step}</td>
@@ -65,6 +67,7 @@ function Line({ lanes }: { lanes: { lane: string; waiting: number; running: numb
               ))}
             </tbody>
           </table>
+          <Pager total={items.total} page={items.page} size={items.size} onPage={items.setPage} noun="videos in line" busy={items.query.isFetching} />
         </div>
       )}
       <ErrorBox error={front.error ?? stop.error ?? pause.error} />

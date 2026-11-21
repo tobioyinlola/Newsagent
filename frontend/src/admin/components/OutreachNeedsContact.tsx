@@ -1,5 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Pager } from "../../components/Pager";
+import { usePaged } from "../../lib/usePaged";
 import { distributionApi } from "../../lib/distribution";
 import { getToken } from "../lib/auth";
 import { Button, Card, ErrorBox, Notice, inputCls } from "./ui";
@@ -39,21 +41,26 @@ function Row({ item, canManage, onSaved }: { item: Item; canManage: boolean; onS
 // Paid requests where an outlet has no contact yet. Adding one saves it on the outlet (so every later request uses it) and starts the email.
 export function OutreachNeedsContact({ canManage, onGoMailbox }: { canManage: boolean; onGoMailbox: () => void }) {
   const qc = useQueryClient();
-  const todo = useQuery({ queryKey: ["outreach-needs-contact"], queryFn: () => request<Todo>("admin/outreach/needs-contact"), refetchInterval: 30000 });
+  const paged = usePaged(["outreach-needs-contact"], async (limit, offset) => {
+    const r = await request<Todo & { total: number }>(`admin/outreach/needs-contact?limit=${limit}&offset=${offset}`);
+    return { items: r.needs_contact, total: r.total ?? r.needs_contact.length, waiting_mailbox: r.waiting_mailbox };
+  }, { size: 10, refetchInterval: 30000 });
+  const todo = { error: paged.query.error };
   const [message, setMessage] = useState("");
-  const items = todo.data?.needs_contact ?? [];
-  const waiting = todo.data?.waiting_mailbox ?? 0;
+  const items = paged.items;
+  const waiting = paged.query.data?.waiting_mailbox ?? 0;
   const refresh = () => { void qc.invalidateQueries({ queryKey: ["outreach-needs-contact"] }); void qc.invalidateQueries({ queryKey: ["outreach-config"] }); void qc.invalidateQueries({ queryKey: ["outreach-threads"] }); };
   return (
     <div className="space-y-3" aria-live="polite">
       {waiting > 0 && <Notice tone="warn">{waiting} {waiting === 1 ? "outlet has" : "outlets have"} a contact but {waiting === 1 ? "is" : "are"} waiting for Gmail to be connected. <button type="button" className="font-semibold underline" onClick={onGoMailbox}>Connect Gmail</button></Notice>}
       {message && <Notice tone="ok">{message}</Notice>}
-      {items.length > 0 && (
-        <Card title={`Waiting for a contact (${items.length})`}>
+      {paged.total > 0 && (
+        <Card title={`Waiting for a contact (${paged.total})`}>
           <p className="mb-3 text-sm text-muted">These outlets are on paid requests, but nobody has been written to because they have no contact email yet. Add one or several. It is saved on the outlet for next time, and the email goes out straight away.</p>
           <ul className="space-y-3">
             {items.map((i) => <Row key={i.placement_id} item={i} canManage={canManage} onSaved={(state) => { setMessage(state === "started" ? `Saved. We have started emailing ${i.outlet_name}.` : `Saved for ${i.outlet_name}. It will be emailed as soon as Gmail is connected.`); refresh(); }} />)}
           </ul>
+          <Pager total={paged.total} page={paged.page} size={paged.size} onPage={paged.setPage} noun="outlets" busy={paged.query.isFetching} />
         </Card>
       )}
       <ErrorBox error={todo.error} />

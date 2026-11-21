@@ -1,18 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, unwrap } from "../../api/client";
+import { api, unwrap, unwrapPage } from "../../api/client";
 import { useCan } from "../../lib/can";
 import { Button, Card, ConfirmDialog, ErrorBox, Field, Notice, inputCls } from "../ui";
 
 export function BillingAdmin() {
   const qc = useQueryClient();
   const can = useCan();
-  const ws = useQuery({ queryKey: ["admin-ws"], queryFn: () => unwrap(api.GET("/v1/admin/workspaces")), enabled: can("customers.view") });
+  // Finding the business to credit: a search over customers (50 at a time), not a list of every workspace
+  const [find, setFind] = useState("");
+  const ws = useQuery({ queryKey: ["admin-ws-find", find.trim()], queryFn: () => unwrapPage(api.GET("/v1/admin/workspaces", { params: { query: { q: find.trim(), limit: 50, offset: 0 } } })), enabled: can("customers.view") });
+  const options = ws.data?.items ?? [];
   const [m, setM] = useState({ workspace: "", credits: "20", ref: "", note: "" });
-  const manual = useMutation({ mutationFn: () => unwrap(api.POST("/v1/admin/workspaces/{workspace_id}/credits", { params: { path: { workspace_id: m.workspace } }, body: { credits: m.credits, ref: m.ref, note: m.note } })), onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-ws"] }) });
+  const manual = useMutation({ mutationFn: () => unwrap(api.POST("/v1/admin/workspaces/{workspace_id}/credits", { params: { path: { workspace_id: m.workspace } }, body: { credits: m.credits, ref: m.ref, note: m.note } })), onSuccess: () => { void qc.invalidateQueries({ queryKey: ["admin-ws"] }); void qc.invalidateQueries({ queryKey: ["admin-ws-find"] }); } });
   // Adding credit to a wallet is real money: nothing is sent until the summary below is confirmed.
   const [confirming, setConfirming] = useState(false);
-  const chosen = ws.data?.find((w) => w.id === m.workspace);
+  const [picked, setPicked] = useState<{ id: string; name: string; credit_balance: string } | null>(null); // kept when a new search no longer lists it
+  const chosen = options.find((w) => w.id === m.workspace) ?? (picked?.id === m.workspace ? picked : undefined);
   const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const adding = Number(m.credits);
   const before = Number(chosen?.credit_balance ?? 0);
@@ -24,7 +28,8 @@ export function BillingAdmin() {
       {can("customers.manage") && <Card title="Record an offline payment">
         <p className="mb-3 text-sm text-muted">For a bank transfer or invoice. The reference makes a double submit harmless.</p>
         <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); manual.reset(); setConfirming(true); }}>
-          <Field label="Workspace">{(id) => <select id={id} required className={inputCls} value={m.workspace} onChange={(e) => setM({ ...m, workspace: e.target.value })}><option value="">Choose…</option>{ws.data?.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select>}</Field>
+          <Field label="Find a business" hint="Type part of the business name to narrow the list below.">{(id) => <input id={id} type="search" className={inputCls} value={find} onChange={(e) => setFind(e.target.value)} />}</Field>
+          <Field label="Workspace">{(id) => <select id={id} required className={inputCls} value={m.workspace} onChange={(e) => { const w = options.find((o) => o.id === e.target.value); if (w) setPicked(w); setM({ ...m, workspace: e.target.value }); }}><option value="">Choose…</option>{picked && !options.some((o) => o.id === picked.id) && <option value={picked.id}>{picked.name}</option>}{options.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select>}</Field>
           <Field label="Credits">{(id) => <input id={id} type="number" min="0.01" step="any" required className={inputCls} value={m.credits} onChange={(e) => setM({ ...m, credits: e.target.value })} />}</Field>
           <Field label="Reference (invoice or transfer id)">{(id) => <input id={id} required className={inputCls} value={m.ref} onChange={(e) => setM({ ...m, ref: e.target.value })} />}</Field>
           <Field label="Note">{(id) => <input id={id} className={inputCls} value={m.note} onChange={(e) => setM({ ...m, note: e.target.value })} />}</Field>

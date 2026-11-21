@@ -2,7 +2,7 @@
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,8 +17,8 @@ from app.schemas.backoffice import (
     PresenterClipUploadIn,
     PresenterClipUploadOut,
 )
+from app.services import paging, uploads
 from app.services import presenter as lib
-from app.services import uploads
 from app.services.audit import audit
 from app.services.ratelimit import limit
 
@@ -44,15 +44,22 @@ def _out(c: PresenterClip, preview: bool = True) -> PresenterClipOut:
 
 
 @router.get("", response_model=list[PresenterClipOut])
-async def list_clips(p: Principal = Depends(require("presenter.manage")), session: AsyncSession = Depends(get_session)):
+async def list_clips(
+    response: Response,
+    role: str | None = None,
+    active: bool | None = None,
+    pg: paging.Page = Depends(paging.page(50, 200)),
+    p: Principal = Depends(require("presenter.manage")),
+    session: AsyncSession = Depends(get_session),
+):
+    q = select(PresenterClip).where(PresenterClip.status == "clean")
+    if role:
+        q = q.where(PresenterClip.role == role)
+    if active is not None:
+        q = q.where(PresenterClip.active == active)
+    paging.send_total(response, await paging.count(session, q))
     rows = (
-        (
-            await session.execute(
-                select(PresenterClip)
-                .where(PresenterClip.status == "clean")
-                .order_by(PresenterClip.role, PresenterClip.created_at)
-            )
-        )
+        (await session.execute(paging.window(q.order_by(PresenterClip.role, PresenterClip.created_at, PresenterClip.id), pg)))
         .scalars()
         .all()
     )
