@@ -130,3 +130,27 @@ async def test_closing_an_announcement_is_remembered_with_the_users_other_data_i
     async with maker() as db:
         u = (await db.execute(select(User).where(User.email == "owner@acme.test"))).scalars().first()
         assert u.onboarding["tours"]["welcome"]["step"] == 2 and a["id"] in u.onboarding["announcements_seen"]
+
+
+async def test_an_app_only_announcement_can_be_emailed_later_once(client, workspace, maker, mail_on):
+    await _person(maker, "later@x.test", joined=2)
+    a = await _make(client)  # in the app only
+    assert a["email"] is None
+    aud = (await client.get("/v1/admin/marketing/announcements/audience", headers=OPS)).json()["reachable"]
+    wrong = await client.post(f"/v1/admin/marketing/announcements/{a['id']}/email", json={"confirm_count": aud + 5}, headers=OPS)
+    assert wrong.status_code == 409
+    ok = await client.post(f"/v1/admin/marketing/announcements/{a['id']}/email", json={"confirm_count": aud}, headers=OPS)
+    assert ok.status_code == 200 and ok.json()["email"]["status"] == "scheduled" and ok.json()["email"]["audience"] == aud
+    again = await client.post(f"/v1/admin/marketing/announcements/{a['id']}/email", json={"confirm_count": aud}, headers=OPS)
+    assert again.status_code == 409 and "already been emailed" in again.text  # never twice
+
+
+async def test_an_ended_announcement_cannot_be_emailed_and_neither_can_one_while_email_is_off(client, workspace, monkeypatch):
+    a = await _make(client)
+    monkeypatch.setattr(get_settings(), "marketing_email", "off")
+    off = await client.post(f"/v1/admin/marketing/announcements/{a['id']}/email", json={"confirm_count": 1}, headers=OPS)
+    assert off.status_code == 409 and "switched off" in off.text
+    await client.post(f"/v1/admin/marketing/announcements/{a['id']}/end", headers=OPS)
+    monkeypatch.setattr(get_settings(), "marketing_email", "on")
+    late = await client.post(f"/v1/admin/marketing/announcements/{a['id']}/email", json={"confirm_count": 1}, headers=OPS)
+    assert late.status_code == 409 and "ended" in late.text

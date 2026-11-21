@@ -33,6 +33,9 @@ test("an announcement written in the back office pops up for customers, and clos
     await ap.getByLabel("Keep showing it for").fill("2");
     await ap.getByLabel("Hours or days").selectOption("days");
     await expect(ap.getByRole("complementary", { name: "Preview" })).toContainText(TITLE); // a live preview of the pop-up
+    await expect(ap.getByRole("radio", { name: /In the app only/ })).toBeChecked(); // the choice is always there: app only, or app and email
+    await expect(ap.getByRole("radio", { name: /In the app and by email/ })).toBeDisabled(); // (email is switched off on this server, and the page says why)
+    await expect(ap.getByText(/Marketing email is switched off on the server/).first()).toBeVisible();
     await shot(ap, "1-admin-new-announcement");
     await ap.getByRole("button", { name: "Review and publish" }).click();
     await expect(ap.getByRole("alertdialog")).toContainText("for 2 days");

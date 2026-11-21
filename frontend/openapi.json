@@ -2285,6 +2285,19 @@
         "title": "DraftBody",
         "type": "object"
       },
+      "EmailBody": {
+        "properties": {
+          "confirm_count": {
+            "title": "Confirm Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "confirm_count"
+        ],
+        "title": "EmailBody",
+        "type": "object"
+      },
       "EmailStep": {
         "properties": {
           "copy_id": {
@@ -12131,6 +12144,77 @@
           }
         },
         "summary": "Audience",
+        "tags": [
+          "announcements"
+        ]
+      }
+    },
+    "/v1/admin/marketing/announcements/{announcement_id}/email": {
+      "post": {
+        "description": "Also email an announcement that was made for the app only. It goes to everyone who can be emailed, now.",
+        "operationId": "email_announcement_v1_admin_marketing_announcements__announcement_id__email_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "announcement_id",
+            "required": true,
+            "schema": {
+              "title": "Announcement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Email Announcement V1 Admin Marketing Announcements  Announcement Id  Email Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Email Announcement",
         "tags": [
           "announcements"
         ]
