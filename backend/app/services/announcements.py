@@ -6,12 +6,22 @@ the person closes it for good."""
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Announcement, MarketingCampaign, MarketingCopy, MarketingCopyVersion, MarketingSegment, User
+from app.models import (
+    Announcement,
+    AnnouncementEvent,
+    MarketingCampaign,
+    MarketingCopy,
+    MarketingCopyVersion,
+    MarketingSegment,
+    User,
+)
 from app.models.base import utcnow
 from app.services import marketing_copy as copies
+from app.services import rbac
 
 EVERYONE = "Everyone"
 EVERYONE_RULES = {"match": "all", "conditions": [{"field": "joined_days_ago", "op": "gte", "value": 0}]}  # anyone who has joined
@@ -114,3 +124,48 @@ def mark_seen(user: User, announcement_id: str) -> None:
     seen = [x for x in (o.get("announcements_seen") or []) if x != announcement_id]
     o["announcements_seen"] = [*seen, announcement_id][-MAX_SEEN:]
     user.onboarding = o
+
+
+KINDS = ("seen", "clicked", "dismissed")
+
+
+async def record(db: AsyncSession, user: User, announcement_id: str, kind: str) -> None:
+    """Note that this person did this, once. Doing it again changes nothing, so the counts are people, not taps."""
+    exists = (
+        await db.execute(
+            select(AnnouncementEvent.id).where(
+                AnnouncementEvent.announcement_id == announcement_id,
+                AnnouncementEvent.user_id == user.id,
+                AnnouncementEvent.kind == kind,
+            )
+        )
+    ).first()
+    if exists:
+        return
+    try:
+        async with db.begin_nested():
+            db.add(AnnouncementEvent(announcement_id=announcement_id, user_id=user.id, kind=kind))
+    except IntegrityError:  # two taps at once: the first one counts
+        return
+
+
+async def eligible(db: AsyncSession) -> int:
+    """How many customers could see an announcement: everyone with an account except the team."""
+    team = await rbac.team_emails(db)
+    q = select(func.count(User.id))
+    if team:
+        q = q.where(User.email.not_in(team))
+    return (await db.execute(q)).scalar_one()
+
+
+async def stats(db: AsyncSession, announcement_id: str, eligible_count: int) -> dict:
+    rows = dict(
+        (
+            await db.execute(
+                select(AnnouncementEvent.kind, func.count())
+                .where(AnnouncementEvent.announcement_id == announcement_id)
+                .group_by(AnnouncementEvent.kind)
+            )
+        ).all()
+    )
+    return {"seen": rows.get("seen", 0), "clicked": rows.get("clicked", 0), "dismissed": rows.get("dismissed", 0), "eligible": eligible_count}

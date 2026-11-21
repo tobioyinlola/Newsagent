@@ -154,3 +154,36 @@ async def test_an_ended_announcement_cannot_be_emailed_and_neither_can_one_while
     monkeypatch.setattr(get_settings(), "marketing_email", "on")
     late = await client.post(f"/v1/admin/marketing/announcements/{a['id']}/email", json={"confirm_count": 1}, headers=OPS)
     assert late.status_code == 409 and "ended" in late.text
+
+
+async def _stats(client, announcement_id):
+    items = (await client.get("/v1/admin/marketing/announcements", headers=OPS)).json()["items"]
+    return next(i for i in items if i["id"] == announcement_id)["stats"]
+
+
+async def test_the_team_sees_how_many_people_saw_it_clicked_it_and_closed_it(client, workspace, maker):
+    a = await _make(client, button_label="See Kenya", button_url="https://www.coverfounder.com/press-distribution")
+    assert (await _stats(client, a["id"]))["seen"] == 0
+    for _ in range(3):  # the same person seeing it again and again is still one person
+        assert (await client.post(f"/v1/me/announcements/{a['id']}/seen", headers=OWNER)).status_code == 200
+    assert (await client.post(f"/v1/me/announcements/{a['id']}/click", headers=OWNER)).status_code == 200
+    await client.post(f"/v1/me/announcements/{a['id']}/click", headers=OWNER)
+    await client.post(f"/v1/me/announcements/{a['id']}/seen", headers=OPS)  # a second person
+    s = await _stats(client, a["id"])
+    assert (s["seen"], s["clicked"], s["dismissed"]) == (2, 1, 0)
+    await client.post(f"/v1/me/announcements/{a['id']}/dismiss", headers=OWNER)
+    await client.post(f"/v1/me/announcements/{a['id']}/dismiss", headers=OWNER)
+    assert (await _stats(client, a["id"]))["dismissed"] == 1
+
+
+async def test_the_share_of_customers_reached_has_a_real_denominator(client, workspace, maker):
+    for i in range(4):
+        await _person(maker, f"cust{i}@x.test", joined=2)
+    a = await _make(client)
+    s = await _stats(client, a["id"])
+    assert s["eligible"] >= 4 and s["seen"] == 0  # everyone with an account who is not on the team
+
+
+async def test_counting_an_unknown_announcement_is_refused_not_invented(client, workspace):
+    assert (await client.post("/v1/me/announcements/nope/seen", headers=OWNER)).status_code == 404
+    assert (await client.post("/v1/me/announcements/nope/click", headers=OWNER)).status_code == 404

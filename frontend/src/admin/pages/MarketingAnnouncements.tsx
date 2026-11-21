@@ -12,8 +12,10 @@ import { num } from "../lib/format";
 type Item = {
   id: string; title: string; message: string; button_label: string; button_url: string; shows_from: string; shows_until: string; ended_at: string | null;
   status: "scheduled" | "live" | "ended"; created_by: string; email: null | { campaign_id: string; status: string; audience: number; sent?: number };
+  stats?: { seen: number; clicked: number; dismissed: number; eligible: number };
 };
 const when = (v: string) => new Date(v).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const pct = (n: number, of: number) => (of > 0 ? `${Math.round((n / of) * 100)}%` : "0%");
 const BADGE: Record<string, string> = { live: "bg-lime-tint", scheduled: "bg-peach-tint", ended: "bg-paper" };
 
 // An announcement: a pop-up customers see after signing in for as long as you choose, and (if you tick it) an email to everyone as well.
@@ -54,6 +56,13 @@ export function AnnouncementsTab({ engine }: { engine: string }) {
                   <p className="text-base font-bold [overflow-wrap:anywhere]">{a.title} <span className={`ml-1 rounded-sm px-1.5 py-0.5 align-middle text-xs font-semibold capitalize ${BADGE[a.status]}`}>{a.status}</span></p>
                   <p className="text-muted [overflow-wrap:anywhere]">{a.message.length > 140 ? `${a.message.slice(0, 140)}…` : a.message}</p>
                   <p className="text-muted">Pop-up: {a.status === "scheduled" ? `starts ${when(a.shows_from)}, ` : ""}{a.status === "ended" ? `ended ${when(a.ended_at ?? a.shows_until)}` : `until ${when(a.shows_until)}`}</p>
+                  {a.stats && (
+                    <dl aria-label={`Results for ${a.title}`} className="mt-2 grid grid-cols-3 gap-2 text-center sm:max-w-md">
+                      <div className="rounded-lg bg-paper p-2"><dt className="text-xs text-muted">Saw the pop-up</dt><dd className="text-lg font-bold tabular-nums">{num(a.stats.seen)}</dd><dd className="text-xs text-muted">{pct(a.stats.seen, a.stats.eligible)} of {num(a.stats.eligible)} customers</dd></div>
+                      <div className="rounded-lg bg-paper p-2"><dt className="text-xs text-muted">Clicked the button</dt><dd className="text-lg font-bold tabular-nums">{a.button_label ? num(a.stats.clicked) : "–"}</dd><dd className="text-xs text-muted">{a.button_label ? `${pct(a.stats.clicked, a.stats.seen)} of those who saw it` : "no button"}</dd></div>
+                      <div className="rounded-lg bg-paper p-2"><dt className="text-xs text-muted">Closed it for good</dt><dd className="text-lg font-bold tabular-nums">{num(a.stats.dismissed)}</dd><dd className="text-xs text-muted">{pct(a.stats.dismissed, a.stats.seen)} of those who saw it</dd></div>
+                    </dl>
+                  )}
                   <p className="text-muted">{a.email ? <>Email: {a.email.status === "sent" ? "sent to" : "to"} {num(a.email.audience)} people{a.email.status !== "sent" ? ` (${a.email.status})` : ""}</> : "No email"} · by {a.created_by}</p>
                 </div>
                 {manage && a.status !== "ended" && (

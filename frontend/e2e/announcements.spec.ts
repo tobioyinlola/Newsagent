@@ -68,6 +68,19 @@ test("an announcement written in the back office pops up for customers, and clos
     await expect(c.page.getByRole("heading", { level: 1 }).first()).toBeVisible();
     await expect(c.page.getByRole("dialog", { name: TITLE })).toHaveCount(0);
     await c.ctx.close();
+
+    // the team sees how it did: one person saw it (however many times it appeared), pressed the button, and closed it for good
+    const again = await browser.newContext({ viewport: { width: 1280, height: 1000 }, deviceScaleFactor: 2 });
+    const rp = await again.newPage();
+    await rp.addInitScript(() => sessionStorage.setItem("newsagent.admin.token", "dev:ops@example.com"));
+    await rp.goto("/admin/marketing/announcements");
+    const results = rp.getByRole("list").getByRole("term").first().locator("xpath=ancestor::dl");
+    await expect(results).toContainText("Saw the pop-up");
+    await expect(results.locator("div").nth(0).getByRole("definition").first()).toHaveText("1");
+    await expect(results.locator("div").nth(1).getByRole("definition").first()).toHaveText("1");
+    await expect(results.locator("div").nth(2).getByRole("definition").first()).toHaveText("1");
+    await shot(rp, "7-announcement-results");
+    await again.close();
   } finally { await endAll(request); }
 });
 

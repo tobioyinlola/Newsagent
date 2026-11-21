@@ -23803,6 +23803,67 @@
         ]
       }
     },
+    "/v1/me/announcements/{announcement_id}/click": {
+      "post": {
+        "description": "This person pressed the pop-up's button.",
+        "operationId": "announcement_clicked_v1_me_announcements__announcement_id__click_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "announcement_id",
+            "required": true,
+            "schema": {
+              "title": "Announcement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Announcement Clicked V1 Me Announcements  Announcement Id  Click Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Announcement Clicked",
+        "tags": [
+          "announcements"
+        ]
+      }
+    },
     "/v1/me/announcements/{announcement_id}/dismiss": {
       "post": {
         "description": "Close it for good: it will not appear again for this person.",
@@ -23859,6 +23920,67 @@
           }
         },
         "summary": "Dismiss Announcement",
+        "tags": [
+          "announcements"
+        ]
+      }
+    },
+    "/v1/me/announcements/{announcement_id}/seen": {
+      "post": {
+        "description": "The pop-up was shown to this person.",
+        "operationId": "announcement_seen_v1_me_announcements__announcement_id__seen_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "announcement_id",
+            "required": true,
+            "schema": {
+              "title": "Announcement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Announcement Seen V1 Me Announcements  Announcement Id  Seen Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Announcement Seen",
         "tags": [
           "announcements"
         ]

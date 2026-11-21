@@ -54,7 +54,7 @@ def _clean(body: AnnouncementBody) -> AnnouncementBody:
     return body
 
 
-async def _out(db: AsyncSession, a: Announcement) -> dict:
+async def _out(db: AsyncSession, a: Announcement, eligible: int | None = None) -> dict:
     out = {
         "id": a.id,
         "title": a.title,
@@ -68,6 +68,7 @@ async def _out(db: AsyncSession, a: Announcement) -> dict:
         "created_by": a.created_by,
         "created_at": a.created_at,
         "email": None,
+        "stats": await svc.stats(db, a.id, eligible if eligible is not None else await svc.eligible(db)),
     }
     if a.email_campaign_id:
         c = await db.get(MarketingCampaign, a.email_campaign_id)
@@ -85,7 +86,8 @@ async def list_announcements(
     base = select(Announcement)
     total = await paging.count(db, base)
     rows = (await db.execute(paging.window(base.order_by(Announcement.created_at.desc(), Announcement.id), pg))).scalars().all()
-    return {"items": [await _out(db, a) for a in rows], **paging.meta(pg, total)}
+    eligible = await svc.eligible(db)
+    return {"items": [await _out(db, a, eligible) for a in rows], **paging.meta(pg, total)}
 
 
 @router.get("/v1/admin/marketing/announcements/audience")
@@ -222,5 +224,29 @@ async def dismiss_announcement(announcement_id: str, p: Principal = Depends(curr
     user = await db.get(User, p.user.id)
     assert user is not None
     svc.mark_seen(user, announcement_id)
+    if await db.get(Announcement, announcement_id) is not None:
+        await svc.record(db, user, announcement_id, "dismissed")
     await db.commit()
     return {"ok": True}
+
+
+async def _note(announcement_id: str, kind: str, p: Principal, db: AsyncSession) -> dict:
+    if await db.get(Announcement, announcement_id) is None:
+        raise HTTPException(404, "Announcement not found")
+    user = await db.get(User, p.user.id)
+    assert user is not None
+    await svc.record(db, user, announcement_id, kind)
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post("/v1/me/announcements/{announcement_id}/seen")
+async def announcement_seen(announcement_id: str, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> dict:
+    """The pop-up was shown to this person."""
+    return await _note(announcement_id, "seen", p, db)
+
+
+@router.post("/v1/me/announcements/{announcement_id}/click")
+async def announcement_clicked(announcement_id: str, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> dict:
+    """This person pressed the pop-up's button."""
+    return await _note(announcement_id, "clicked", p, db)
