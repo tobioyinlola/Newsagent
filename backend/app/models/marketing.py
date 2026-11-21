@@ -218,3 +218,15 @@ class Announcement(Base, TimestampMixin):
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # ended early by the team
     email_campaign_id: Mapped[str | None] = mapped_column(String(32), nullable=True)  # the campaign that emails it, if it is emailed
     created_by: Mapped[str] = mapped_column(String(320), default="")
+
+
+class AnnouncementEvent(Base):
+    """What a person did with an announcement, once each: saw it, clicked its button, or closed it for good."""
+
+    __tablename__ = "announcement_events"
+    __table_args__ = (UniqueConstraint("announcement_id", "user_id", "kind"),)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    announcement_id: Mapped[str] = mapped_column(ForeignKey("announcements.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(10))  # seen | clicked | dismissed
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

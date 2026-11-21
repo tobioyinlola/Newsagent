@@ -21,11 +21,15 @@ export function AnnouncementPopup() {
   const primary = useRef<HTMLButtonElement>(null);
   const waiting = !!tours?.activeId; // a guided tour is on screen: the announcement waits its turn
   const shownId = a?.id;
+  const counted = useRef<string | null>(null);
+  useEffect(() => { // the team sees how many people were shown it: once per person, however often it appears
+    if (shownId && !waiting && counted.current !== shownId) { counted.current = shownId; void api.POST("/v1/me/announcements/{announcement_id}/seen", { params: { path: { announcement_id: shownId } } }).catch(() => undefined); }
+  }, [shownId, waiting]);
   useEffect(() => { if (shownId && !waiting) primary.current?.focus({ preventScroll: true }); }, [shownId, waiting]);
   if (!a || waiting) return null;
   const later = () => { const next = [...snoozed, a.id]; setSnoozed(next); try { sessionStorage.setItem(SNOOZED, JSON.stringify(next)); } catch { /* lasts until reload */ } };
   const close = () => { void api.POST("/v1/me/announcements/{announcement_id}/dismiss", { params: { path: { announcement_id: a.id } } }).finally(() => { void qc.invalidateQueries({ queryKey: ["announcements"] }); }); later(); };
-  const go = () => { const url = a.button_url; close(); if (url.startsWith("/")) nav(url); else window.open(url, "_blank", "noopener,noreferrer"); };
+  const go = () => { void api.POST("/v1/me/announcements/{announcement_id}/click", { params: { path: { announcement_id: a.id } } }).catch(() => undefined); const url = a.button_url; close(); if (url.startsWith("/")) nav(url); else window.open(url, "_blank", "noopener,noreferrer"); };
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/60 sm:items-center sm:p-4" onKeyDown={(e) => { if (e.key === "Escape") later(); }}>
       <div role="dialog" aria-modal="true" aria-labelledby="announcement-title" className="flex max-h-[92dvh] w-full justify-center overflow-y-auto pb-[env(safe-area-inset-bottom)] sm:pb-0">

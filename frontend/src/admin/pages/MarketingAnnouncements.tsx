@@ -11,9 +11,11 @@ import { num } from "../lib/format";
 
 type Item = {
   id: string; title: string; message: string; button_label: string; button_url: string; shows_from: string; shows_until: string; ended_at: string | null;
-  status: "scheduled" | "live" | "ended"; created_by: string; email: null | { campaign_id: string; status: string; audience: number; sent?: number };
+  status: "scheduled" | "live" | "ended"; created_by: string; email: null | { campaign_id: string; status: string; audience: number; sent?: number; editable?: boolean };
+  stats?: { seen: number; clicked: number; dismissed: number; eligible: number };
 };
 const when = (v: string) => new Date(v).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const pct = (n: number, of: number) => (of > 0 ? `${Math.round((n / of) * 100)}%` : "0%");
 const BADGE: Record<string, string> = { live: "bg-lime-tint", scheduled: "bg-peach-tint", ended: "bg-paper" };
 
 // An announcement: a pop-up customers see after signing in for as long as you choose, and (if you tick it) an email to everyone as well.
@@ -22,6 +24,7 @@ export function AnnouncementsTab({ engine }: { engine: string }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<Item | null>(null);
   const list = usePaged(["announcements", "list"], (limit, offset) => unwrapPage<Item>(api.GET("/v1/admin/marketing/announcements", { params: { query: { limit, offset } } }), (b) => b.items, offset), { size: 10, refetchInterval: 20000 });
   const end = useMutation({
     mutationFn: (id: string) => unwrap(api.POST("/v1/admin/marketing/announcements/{announcement_id}/end", { params: { path: { announcement_id: id } } })),
@@ -35,6 +38,7 @@ export function AnnouncementsTab({ engine }: { engine: string }) {
     onError: () => setEmailing(null),
   });
   if (creating) return <NewAnnouncement engine={engine} onDone={() => setCreating(false)} />;
+  if (editing) return <NewAnnouncement engine={engine} item={editing} onDone={() => setEditing(null)} />;
   return (
     <div className="space-y-5">
       <PageIntro
@@ -54,12 +58,20 @@ export function AnnouncementsTab({ engine }: { engine: string }) {
                   <p className="text-base font-bold [overflow-wrap:anywhere]">{a.title} <span className={`ml-1 rounded-sm px-1.5 py-0.5 align-middle text-xs font-semibold capitalize ${BADGE[a.status]}`}>{a.status}</span></p>
                   <p className="text-muted [overflow-wrap:anywhere]">{a.message.length > 140 ? `${a.message.slice(0, 140)}…` : a.message}</p>
                   <p className="text-muted">Pop-up: {a.status === "scheduled" ? `starts ${when(a.shows_from)}, ` : ""}{a.status === "ended" ? `ended ${when(a.ended_at ?? a.shows_until)}` : `until ${when(a.shows_until)}`}</p>
+                  {a.stats && (
+                    <dl aria-label={`Results for ${a.title}`} className="mt-2 grid grid-cols-3 gap-2 text-center sm:max-w-md">
+                      <div className="rounded-lg bg-paper p-2"><dt className="text-xs text-muted">Saw the pop-up</dt><dd className="text-lg font-bold tabular-nums">{num(a.stats.seen)}</dd><dd className="text-xs text-muted">{pct(a.stats.seen, a.stats.eligible)} of {num(a.stats.eligible)} customers</dd></div>
+                      <div className="rounded-lg bg-paper p-2"><dt className="text-xs text-muted">Clicked the button</dt><dd className="text-lg font-bold tabular-nums">{a.button_label ? num(a.stats.clicked) : "–"}</dd><dd className="text-xs text-muted">{a.button_label ? `${pct(a.stats.clicked, a.stats.seen)} of those who saw it` : "no button"}</dd></div>
+                      <div className="rounded-lg bg-paper p-2"><dt className="text-xs text-muted">Closed it for good</dt><dd className="text-lg font-bold tabular-nums">{num(a.stats.dismissed)}</dd><dd className="text-xs text-muted">{pct(a.stats.dismissed, a.stats.seen)} of those who saw it</dd></div>
+                    </dl>
+                  )}
                   <p className="text-muted">{a.email ? <>Email: {a.email.status === "sent" ? "sent to" : "to"} {num(a.email.audience)} people{a.email.status !== "sent" ? ` (${a.email.status})` : ""}</> : "No email"} · by {a.created_by}</p>
                 </div>
-                {manage && a.status !== "ended" && (
+                {manage && (
                   <div className="flex flex-wrap gap-2">
-                    {!a.email && engine !== "off" && <Button variant="secondary" disabled={sendEmail.isPending} onClick={() => { sendEmail.reset(); setEmailing(a); }}>Also email it</Button>}
-                    <Button variant="secondary" disabled={end.isPending} onClick={() => { if (confirm("Stop showing this pop-up now? An email that has already gone out cannot be taken back.")) end.mutate(a.id); }}>Stop the pop-up</Button>
+                    <Button variant="secondary" onClick={() => setEditing(a)}>Edit the wording</Button>
+                    {a.status !== "ended" && !a.email && engine !== "off" && <Button variant="secondary" disabled={sendEmail.isPending} onClick={() => { sendEmail.reset(); setEmailing(a); }}>Also email it</Button>}
+                    {a.status !== "ended" && <Button variant="secondary" disabled={end.isPending} onClick={() => { if (confirm("Stop showing this pop-up now? An email that has already gone out cannot be taken back.")) end.mutate(a.id); }}>Stop the pop-up</Button>}
                   </div>
                 )}
               </div>
@@ -75,10 +87,10 @@ export function AnnouncementsTab({ engine }: { engine: string }) {
   );
 }
 
-function NewAnnouncement({ engine, onDone }: { engine: string; onDone: () => void }) {
+function NewAnnouncement({ engine, onDone, item }: { engine: string; onDone: () => void; item?: Item }) {
   const qc = useQueryClient();
   const toast = useToast();
-  const [f, setF] = useState({ title: "", message: "", button_label: "", button_url: "", show_for: "3", unit: "days" as "hours" | "days", later: false, starts_at: "", send_email: false });
+  const [f, setF] = useState({ title: item?.title ?? "", message: item?.message ?? "", button_label: item?.button_label ?? "", button_url: item?.button_url ?? "", show_for: "3", unit: "days" as "hours" | "days", later: false, starts_at: "", send_email: false });
   const [confirm, setConfirm] = useState(false);
   const audience = useQuery({ queryKey: ["announcement-audience"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/announcements/audience")) as unknown as Promise<{ reachable: number; email_engine: string }> });
   const reachable = audience.data?.reachable ?? 0;
@@ -92,14 +104,18 @@ function NewAnnouncement({ engine, onDone }: { engine: string; onDone: () => voi
     onSuccess: async () => { setConfirm(false); await qc.invalidateQueries({ queryKey: ["announcements"] }); toast("Announcement published."); onDone(); },
     onError: () => setConfirm(false),
   });
+  const save = useMutation({
+    mutationFn: () => unwrap(api.PUT("/v1/admin/marketing/announcements/{announcement_id}", { params: { path: { announcement_id: item!.id } }, body: { title: f.title.trim(), message: f.message.trim(), button_label: f.button_label.trim(), button_url: f.button_url.trim() } })),
+    onSuccess: async () => { await qc.invalidateQueries({ queryKey: ["announcements"] }); toast("Saved. The pop-up now shows the new wording."); onDone(); },
+  });
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
-  const ok = f.title.trim() && f.message.trim() && Number(f.show_for) >= 1 && (!f.later || f.starts_at) && !!f.button_label.trim() === !!f.button_url.trim();
+  const ok = f.title.trim() && f.message.trim() && (item || (Number(f.show_for) >= 1 && (!f.later || f.starts_at))) && !!f.button_label.trim() === !!f.button_url.trim();
   const emailing = f.send_email && !emailOff;
   return (
     <div className="space-y-5">
-      <PageIntro title="New announcement">Write it once. It appears as a pop-up when customers sign in, and can be emailed to everyone too.</PageIntro>
+      <PageIntro title={item ? "Edit announcement" : "New announcement"}>{item ? "Change the wording. The pop-up updates for everyone who hasn’t closed it." : "Write it once. It appears as a pop-up when customers sign in, and can be emailed to everyone too."}</PageIntro>
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
-        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); publish.reset(); setConfirm(true); }}>
+        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (item) { save.reset(); save.mutate(); } else { publish.reset(); setConfirm(true); } }}>
           <Card>
             <div className="space-y-4">
               <label className="block text-sm font-semibold">Headline<input className={inputCls} maxLength={120} required value={f.title} onChange={(e) => set("title", e.target.value)} /></label>
@@ -110,6 +126,10 @@ function NewAnnouncement({ engine, onDone }: { engine: string; onDone: () => voi
               </div>
             </div>
           </Card>
+          {item ? (
+            <Card title="What changes"><ul className="list-disc space-y-1 pl-5 text-sm text-muted"><li>The pop-up changes straight away, whether it is showing, waiting or over.</li><li>People who already closed it for good won’t see it again.</li><li>{!item.email ? "It wasn’t emailed, so there is no email to change." : item.email.editable ? "Its email hasn’t gone out yet, so the email changes too." : "Its email has already gone out and can’t be taken back, so only the pop-up changes."}</li></ul></Card>
+          ) : (
+          <>
           <Card title="How long the pop-up shows">
             <div className="flex flex-wrap items-end gap-3">
               <label className="block text-sm font-semibold">Keep showing it for<input type="number" min={1} max={f.unit === "days" ? 90 : 2160} className={`${inputCls} w-28`} value={f.show_for} onChange={(e) => set("show_for", e.target.value)} /></label>
@@ -126,8 +146,10 @@ function NewAnnouncement({ engine, onDone }: { engine: string; onDone: () => voi
               <label className={`flex items-start gap-2 text-sm ${emailOff ? "opacity-60" : ""}`}><input type="radio" name="where" className="mt-1" checked={emailing} disabled={emailOff} onChange={() => set("send_email", true)} /><span><b>In the app and by email</b><span className="block text-muted">{emailOff ? "Marketing email is switched off on the server, so this isn’t available yet. Ask whoever manages the server to turn it on." : audience.isLoading ? "Counting…" : `The pop-up, plus an email to about ${num(reachable)} people. People who unsubscribed or whose address bounced are left out.`}</span></span></label>
             </fieldset>
           </Card>
-          <ErrorBox error={publish.error} />
-          <div className="flex flex-wrap gap-3"><Button type="submit" disabled={!ok || publish.isPending}>Review and publish</Button><Button type="button" variant="secondary" onClick={onDone}>Cancel</Button></div>
+          </>
+          )}
+          <ErrorBox error={publish.error ?? save.error} />
+          <div className="flex flex-wrap gap-3"><Button type="submit" disabled={!ok || publish.isPending || save.isPending}>{item ? (save.isPending ? "Saving…" : "Save changes") : "Review and publish"}</Button><Button type="button" variant="secondary" onClick={onDone}>Cancel</Button></div>
         </form>
         <aside aria-label="Preview" className="space-y-2">
           <p className="text-sm font-semibold">What customers will see</p>
