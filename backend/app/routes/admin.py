@@ -2,7 +2,7 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +21,7 @@ from app.schemas.api import (
     WorkspacePatch,
 )
 from app.services import email_templates as templates
-from app.services import ledger, privacy, rbac, stories, wording
+from app.services import ledger, paging, privacy, rbac, stories, wording
 from app.services import state_machine as sm
 from app.services.audit import audit
 from app.services.notifications import send_email
@@ -132,9 +132,17 @@ async def set_vendor_budget(
 
 @router.get("/workspaces", response_model=list[WorkspaceAdminOut])
 async def list_workspaces(
-    _: Principal = Depends(require("customers.view")), session: AsyncSession = Depends(get_session)
+    response: Response,
+    q: str = Query("", max_length=100, description="Part of the business name."),
+    pg: paging.Page = Depends(paging.page(100, 200)),
+    _: Principal = Depends(require("customers.view")),
+    session: AsyncSession = Depends(get_session),
 ) -> list[Workspace]:
-    rows = await session.execute(select(Workspace).order_by(Workspace.created_at.desc()).limit(200))
+    query = select(Workspace)
+    if q.strip():
+        query = query.where(Workspace.name.ilike(f"%{q.strip()}%"))
+    paging.send_total(response, await paging.count(session, query))
+    rows = await session.execute(paging.window(query.order_by(Workspace.created_at.desc(), Workspace.id), pg))
     return list(rows.scalars().all())
 
 

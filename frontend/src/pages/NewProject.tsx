@@ -36,10 +36,10 @@ export function NewProject() {
   if (summary.data && summary.data.videos_left < 1) return <OutOfCredits forced />;
   return (
     <Card title="Tell us about your announcement">
-      <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); m.mutate(); }}>
+      <form data-tour="video-form" className="space-y-5" onSubmit={(e) => { e.preventDefault(); m.mutate(); }}>
         <fieldset className="space-y-2">
           <legend className="text-sm font-semibold">What are you announcing?</legend>
-          <div role="radiogroup" aria-label="Announcement type" className="grid gap-2 sm:grid-cols-3">
+          <div data-tour="video-kind" role="radiogroup" aria-label="Announcement type" className="grid gap-2 sm:grid-cols-3">
             {KINDS.map(([id, label, hint]) => (
               <button key={id} type="button" role="radio" aria-checked={kind === id} onClick={() => setKind(id)}
                 className={`rounded-sm border-2 p-3 text-left text-sm ${kind === id ? "border-brand-purple bg-lilac" : "border-ink bg-white"}`}>
@@ -48,14 +48,14 @@ export function NewProject() {
             ))}
           </div>
         </fieldset>
-        <Field label="Tell us the key details" hint="Who you are, what is happening, who it is for, and any facts you want featured (amounts, dates, names). A few sentences is enough, and the most we take is 250 words. At least 20 characters.">
+        <div data-tour="video-details"><Field label="Tell us the key details" hint="Who you are, what is happening, who it is for, and any facts you want featured (amounts, dates, names). A few sentences is enough, and the most we take is 250 words. At least 20 characters.">
           {(id) => <>
             <textarea id={id} required minLength={20} maxLength={4000} rows={6} className={inputCls} value={details} onChange={(e) => setDetails(limitWords(e.target.value, DETAILS_MAX_WORDS))} />
             <p aria-live="polite" className={`mt-1 text-right text-xs ${countWords(details) >= DETAILS_MAX_WORDS ? "font-semibold text-ink" : "text-muted"}`}>
               {countWords(details)} / {DETAILS_MAX_WORDS} words{countWords(details) >= DETAILS_MAX_WORDS ? " (limit reached)" : ""}
             </p>
           </>}
-        </Field>
+        </Field></div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="First name" hint="Our AI interviewer greets you by name.">{(id) => <input id={id} required maxLength={100} autoComplete="given-name" className={inputCls} value={first} onChange={(e) => setFirst(e.target.value)} />}</Field>
           <Field label="Last name">{(id) => <input id={id} required maxLength={100} autoComplete="family-name" className={inputCls} value={last} onChange={(e) => setLast(e.target.value)} />}</Field>

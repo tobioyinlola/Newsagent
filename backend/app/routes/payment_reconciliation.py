@@ -4,7 +4,7 @@ from datetime import timedelta
 from decimal import Decimal
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +14,7 @@ from app.db import get_session
 from app.integrations.billing.nuvion import NuvionError, PaymentMismatch
 from app.models import BankReceipt, Checkout, Workspace
 from app.models.base import utcnow
-from app.services import bank_payments, payments
+from app.services import bank_payments, paging, payments
 from app.services.audit import audit
 from app.services.ratelimit import limit
 
@@ -76,20 +76,39 @@ async def claim(
 
 
 @router.get("/v1/admin/payment-reconciliation")
-async def overview(_: Principal = Depends(require("finance.view")), db: AsyncSession = Depends(get_session)):
+async def overview(
+    pg: paging.Page = Depends(paging.page(25, 100)),
+    receipts_offset: int = Query(0, ge=0),
+    _: Principal = Depends(require("finance.view")),
+    db: AsyncSession = Depends(get_session),
+):
+    """Two lists on one screen: bank receipts (paged with `receipts_offset`) and purchases (paged with `offset`)."""
+    receipts_total = await paging.count(db, select(BankReceipt.id))
     receipts = (
-        (await db.execute(select(BankReceipt).order_by(BankReceipt.created_at.desc()).limit(100))).scalars().all()
-    )
-    rows = (
-        await db.execute(
-            select(Checkout, Workspace.name)
-            .join(Workspace)
-            .where(Checkout.provider.in_(["nuvion", "nuvion_bank"]), Workspace.deleted_at.is_(None))
-            .order_by(Checkout.created_at.desc())
-            .limit(200)
+        (
+            await db.execute(
+                select(BankReceipt)
+                .order_by(BankReceipt.created_at.desc(), BankReceipt.id)
+                .offset(receipts_offset)
+                .limit(pg.limit)
+            )
         )
-    ).all()
+        .scalars()
+        .all()
+    )
+    base = (
+        select(Checkout, Workspace.name)
+        .join(Workspace)
+        .where(Checkout.provider.in_(["nuvion", "nuvion_bank"]), Workspace.deleted_at.is_(None))
+    )
+    checkouts_total = await paging.count(db, base)
+    rows = (await db.execute(paging.window(base.order_by(Checkout.created_at.desc(), Checkout.id), pg))).all()
     return {
+        "receipts_total": receipts_total,
+        "checkouts_total": checkouts_total,
+        "limit": pg.limit,
+        "offset": pg.offset,
+        "receipts_offset": receipts_offset,
         "receipts": [
             {
                 "id": r.id,

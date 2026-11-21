@@ -3,8 +3,10 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, unwrap } from "../api/client";
 import { getToken } from "../lib/auth";
+import { Pager } from "../components/Pager";
+import { usePaged } from "../lib/usePaged";
 import { clearPick, readPick, readPickPlan, type OutletFilters as OutletFilterList } from "../lib/distributionFilters";
-import { distributionApi, distributionStatus, latestStoryStart, priceOutlets, type Distribution, type Draft, type Outlet } from "../lib/distribution";
+import { distributionApi, distributionPage, distributionStatus, latestStoryStart, priceOutlets, type Distribution, type Draft, type Outlet } from "../lib/distribution";
 import { CountryPhoneInput } from "../components/CountryPhoneInput";
 import { DistributionLogoUpload } from "../components/DistributionLogoUpload";
 import { validateDistributionStep, type DistributionErrors } from "../lib/distributionValidation";
@@ -43,7 +45,7 @@ export function DistributionRequestPage() {
   const [funding, setFunding] = useState({ balance: 0, required: 0 });
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const submitting = useRef(false);
-  const list = useQuery({ queryKey: ["distributions"], queryFn: () => request<Distribution[]>("distribution"), refetchInterval: 15000 });
+  const list = usePaged(["distributions"], (limit, offset) => distributionPage<Distribution>("distribution", getToken(), limit, offset), { size: 10, refetchInterval: 15000 });
   const outlets = useQuery({ queryKey: ["distribution-outlets"], queryFn: () => request<{ outlets: Outlet[]; coming_soon: string[]; quote_version: string; filters: OutletFilterList; planner?: boolean }>("distribution/outlets") });
   const videos = useQuery({ queryKey: ["distribution-videos"], queryFn: () => request<Video[]>("distribution/videos") });
   const stories = useQuery({ queryKey: ["distribution-stories"], queryFn: () => request<{ project_id: string; headline: string; announcement: string }[]>("distribution/stories") });
@@ -166,11 +168,11 @@ export function DistributionRequestPage() {
     } finally { submitting.current = false; setBusy(false); }
   };
   return <div className="space-y-6 pb-28">
-    <div><h1 className="text-3xl font-bold">Distribute your story</h1><p className="mt-2">Want to distribute your video and announcement to over 2,500 media outlets?</p><p className="text-sm text-muted">Choose from the available outlets below. Our team coordinates your request; submission is not a guarantee of publication.</p></div>
-    <ErrorBox error={error ?? list.error ?? outlets.error ?? videos.error} />
+    <div data-tour="dist-intro"><h1 className="text-3xl font-bold">Distribute your story</h1><p className="mt-2">Want to distribute your video and announcement to over 2,500 media outlets?</p><p className="text-sm text-muted">Choose from the available outlets below. Our team coordinates your request; submission is not a guarantee of publication.</p></div>
+    <ErrorBox error={error ?? list.query.error ?? outlets.error ?? videos.error} />
     {!id && pickIds.length > 0 && <Notice tone="ok"><strong>You chose {pickIds.length} {pickIds.length === 1 ? "outlet" : "outlets"}</strong> ({Number(pickIds.reduce((n, i) => n + Number(all.find(o => o.id === i)?.credits ?? 0), 0).toFixed(2))} credits): {pickIds.map(i => all.find(o => o.id === i)?.name).filter(Boolean).join(", ")}. They are added to your request once you start it below. <button type="button" className="underline" onClick={() => { clearPick(); nav("/distribution/request", { replace: true }); }}>Remove my choice</button></Notice>}
     {!id && params.get("plan") === "1" && outlets.data?.planner && <OutletPlanner source="email" autoRun applyLabel="Start with this plan" countries={planCountries} fetchPlan={ask => request<PlanResult>("distribution/plan", "POST", planBody(ask))} onApply={(plan: Plan) => { trackPlan("used", "email", planRef(plan), getToken()); void create({ ids: planIds(plan), plan: { key: plan.key, ids: planIds(plan) } }); }} />}
-    {!id && <><DistributionStart outletIds={pickIds} videoPath={<Button onClick={() => void create()} disabled={busy || !videos.data || !outlets.data || stories.isLoading}>Start a distribution request</Button>} onCreated={did => { if (pickIds.length) clearPick(); void cache.invalidateQueries({ queryKey: ["distributions"] }); nav(`/distribution/request?draft=${did}`); }} /><Card title="Your distribution requests"><ul className="space-y-3">{list.data?.map(r => <li key={r.id}><Link className="underline" to={`/distribution/request?draft=${r.id}`}>{r.data.headline || "Untitled distribution"}</Link> — {distributionStatus(r.status)} · {r.stage} · {r.paid ? `Paid (${r.total_credits} credits)` : "Unpaid draft"}</li>)}</ul>{list.data?.length === 0 && <p>No requests yet. Your drafts will appear here.</p>}</Card></>}
+    {!id && <><DistributionStart outletIds={pickIds} videoPath={<Button onClick={() => void create()} disabled={busy || !videos.data || !outlets.data || stories.isLoading}>Start a distribution request</Button>} onCreated={did => { if (pickIds.length) clearPick(); void cache.invalidateQueries({ queryKey: ["distributions"] }); nav(`/distribution/request?draft=${did}`); }} /><Card title="Your distribution requests"><ul className="space-y-3">{list.items.map(r => <li key={r.id}><Link className="underline" to={`/distribution/request?draft=${r.id}`}>{r.data.headline || "Untitled distribution"}</Link> — {distributionStatus(r.status)} · {r.stage} · {r.paid ? `Paid (${r.total_credits} credits)` : "Unpaid draft"}</li>)}</ul>{list.total === 0 && !list.query.isLoading && <p>No requests yet. Your drafts will appear here.</p>}<Pager total={list.total} page={list.page} size={list.size} onPage={list.setPage} noun="requests" busy={list.query.isFetching} /></Card></>}
     {id && !draft && !error && <p>Loading your saved request…</p>}
     {draft && row && <>
       {row.status !== "draft" ? <DistributionProgress request={row} /> : <>

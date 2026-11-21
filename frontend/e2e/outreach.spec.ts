@@ -30,7 +30,8 @@ test("the team imports outlet contacts, edits a template and replies in a conver
   await page.getByRole("button", { name: "Templates and settings" }).click();
   await page.getByLabel("Sender name").fill("Ngozi Eze");
   await page.getByRole("button", { name: "Preview with sample details" }).first().click();
-  await expect(page.getByText(/Hello Ada/)).toBeVisible();
+  await expect(page.getByRole("dialog", { name: /^Preview of / }).getByText(/Hello Ada/)).toBeVisible(); // the preview opens as a pop-up
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Save outreach settings" }).click();
   await expect(page.getByText("Saved.")).toBeVisible();
   await page.getByRole("button", { name: "Conversations" }).click();

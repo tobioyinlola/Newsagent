@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { distributionApi, distributionStatus, type Distribution, type Outlet, type Placement } from "../../lib/distribution";
+import { distributionApi, distributionPage, distributionStatus, type Distribution, type Outlet, type Placement } from "../../lib/distribution";
 import { getToken } from "../lib/auth";
+import { Pager } from "../../components/Pager";
+import { usePaged } from "../../lib/usePaged";
 import { useCan } from "../lib/can";
 import { PlannerStats } from "../components/PlannerStats";
 
@@ -98,9 +100,10 @@ function DistributionRecord({ summary }: { summary: Distribution }) {
 export function DistributionAdmin() {
   const [filter, setFilter] = useState("all");
   const [tab, setTab] = useState("requests");
-  const q = useQuery({ queryKey: ["admin-distribution"], queryFn: () => request<Distribution[]>("admin/distribution"), refetchInterval: 15000 });
-  const rows = (q.data ?? []).filter(r => filter === "all" || (filter === "draft" ? !r.paid : r.paid));
+  const paged = usePaged(["admin-distribution", filter], (limit, offset) => distributionPage<Distribution>(`admin/distribution${filter === "all" ? "" : `?paid=${filter === "paid"}`}`, getToken(), limit, offset), { size: 10, refetchInterval: 15000 });
+  const q = { error: paged.query.error };
+  const rows = paged.items;
   return <div className="space-y-5"><h1 className="text-2xl font-bold">Distribution requests</h1><p>Review drafts, payments, per-outlet progress and publisher communications.</p><nav className="flex gap-3" aria-label="Distribution admin sections"><button className={button} aria-pressed={tab === "requests"} onClick={() => setTab("requests")}>Requests</button><button className={button} aria-pressed={tab === "settings"} onClick={() => setTab("settings")}>Notification and outlet settings</button><button className={button} aria-pressed={tab === "plans"} onClick={() => setTab("plans")}>Suggested plans</button></nav>
-    {tab === "plans" ? <PlannerStats /> : tab === "settings" ? <DistributionSettings /> : <><label>Show <select className="rounded border p-2" value={filter} onChange={e => setFilter(e.target.value)}><option value="all">All requests</option><option value="draft">Unpaid drafts</option><option value="paid">Paid submissions</option></select></label>{q.error && <p role="alert">{String(q.error)}</p>}{!rows.length && <p>No matching requests.</p>}{rows.map(r => <DistributionRecord key={r.id} summary={r} />)}</>}
+    {tab === "plans" ? <PlannerStats /> : tab === "settings" ? <DistributionSettings /> : <><label>Show <select className="rounded border p-2" value={filter} onChange={e => setFilter(e.target.value)}><option value="all">All requests</option><option value="draft">Unpaid drafts</option><option value="paid">Paid submissions</option></select></label>{q.error && <p role="alert">{String(q.error)}</p>}{!rows.length && !paged.query.isLoading && <p>No matching requests.</p>}{rows.map(r => <DistributionRecord key={r.id} summary={r} />)}<Pager total={paged.total} page={paged.page} size={paged.size} onPage={paged.setPage} noun="requests" busy={paged.query.isFetching} /></>}
   </div>;
 }

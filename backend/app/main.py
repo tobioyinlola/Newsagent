@@ -29,6 +29,7 @@ from app.routes import (
     interview,
     marketing,
     news_desk,
+    onboarding,
     ops,
     outreach,
     outreach_inbound,
@@ -146,6 +147,7 @@ def create_app() -> FastAPI:
         allow_origin_regex=s.cors_origin_regex or None,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["X-Total-Count"],  # list pages report their total in this header
     )
     if s.is_local and s.use_mocks:
         from app.routes import devmail, devstorage
@@ -211,6 +213,7 @@ def create_app() -> FastAPI:
         ops.router,
         marketing.router,
         outreach.router,
+        onboarding.router,
         outreach_inbound.router,
         wallets.router,
     ):

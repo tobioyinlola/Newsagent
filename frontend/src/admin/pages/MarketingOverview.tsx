@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
-import { api, unwrap } from "../api/client";
+import { api, unwrap, unwrapPage } from "../api/client";
 import { Button, Card, ErrorBox } from "../components/ui";
 import { Check, GLOSSARY, MARKETING, PageIntro, useToast } from "../components/marketingUi";
 import { num } from "../lib/format";
@@ -18,17 +18,17 @@ export function OverviewTab({ status }: { status: Status | undefined }) {
   const toast = useToast();
   const nav = useNavigate();
   const manage = useCan()("marketing.manage");
-  const segments = useQuery({ queryKey: ["segments"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/segments")).then((r) => (r as unknown as { items: Item[] }).items) });
-  const copies = useQuery({ queryKey: ["copies"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/copies")).then((r) => (r as unknown as { items: Item[] }).items) });
-  const campaigns = useQuery({ queryKey: ["campaigns"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/campaigns")).then((r) => (r as unknown as { items: Campaign[] }).items) });
-  const workflows = useQuery({ queryKey: ["workflows"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/workflows")).then((r) => (r as unknown as { items: Workflow[] }).items) });
+  const segments = useQuery({ queryKey: ["segments", "count"], queryFn: () => unwrapPage<Item>(api.GET("/v1/admin/marketing/segments", { params: { query: { limit: 1, offset: 0 } } }), (b) => b.items) }); // only how many
+  const copies = useQuery({ queryKey: ["copies", "count"], queryFn: () => unwrapPage<Item>(api.GET("/v1/admin/marketing/copies", { params: { query: { limit: 1, offset: 0 } } }), (b) => b.items) });
+  const campaigns = useQuery({ queryKey: ["campaigns", "recent"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/campaigns", { params: { query: { limit: 100, offset: 0 } } })).then((r) => (r as unknown as { items: Campaign[] }).items) });
+  const workflows = useQuery({ queryKey: ["workflows", "recent"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/workflows", { params: { query: { limit: 100, offset: 0 } } })).then((r) => (r as unknown as { items: Workflow[] }).items) });
   const starter = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/admin/marketing/workflows/starter")),
     onSuccess: async (w) => { await Promise.all(["workflows", "segments", "copies"].map((k) => qc.invalidateQueries({ queryKey: [k] }))); toast("Welcome sequence created as a draft. Look it over, then turn it on."); nav(`${MARKETING}/workflows?open=${(w as unknown as Item).id}`); },
   });
   const loading = segments.isLoading || copies.isLoading || campaigns.isLoading || workflows.isLoading;
-  const nSeg = segments.data?.length ?? 0;
-  const nCopy = copies.data?.length ?? 0;
+  const nSeg = segments.data?.total ?? 0;
+  const nCopy = copies.data?.total ?? 0;
   const liveCampaigns = campaigns.data?.filter((c) => ["scheduled", "sending"].includes(c.status)).length ?? 0;
   const sentCampaigns = campaigns.data?.filter((c) => ["scheduled", "sending", "sent"].includes(c.status)).length ?? 0;
   const runningFlows = workflows.data?.filter((w) => w.status === "active").length ?? 0;

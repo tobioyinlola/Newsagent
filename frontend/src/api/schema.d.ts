@@ -342,7 +342,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Customer */
+        /**
+         * Customer
+         * @description One customer. Their videos page with `limit`/`offset` and their payments with `limit`/`payments_offset`.
+         */
         get: operations["customer_v1_admin_customers__workspace_id__get"];
         put?: never;
         post?: never;
@@ -1651,7 +1654,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Overview */
+        /**
+         * Overview
+         * @description Two lists on one screen: bank receipts (paged with `receipts_offset`) and purchases (paged with `offset`).
+         */
         get: operations["overview_v1_admin_payment_reconciliation_get"];
         put?: never;
         post?: never;
@@ -3534,6 +3540,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Onboarding */
+        get: operations["get_onboarding_v1_me_onboarding_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/onboarding/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save Profile
+         * @description Save one card's answers, move on, or skip. Nothing here is required.
+         */
+        put: operations["save_profile_v1_me_onboarding_profile_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/tours/{tour_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save Tour
+         * @description Remember how far this person got in a guided tour.
+         */
+        put: operations["save_tour_v1_me_tours__tour_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/presenters": {
         parameters: {
             query?: never;
@@ -3561,7 +3624,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Projects */
+        /**
+         * List Projects
+         * @description The workspace's videos, newest first. `state` narrows to one stage (for example final_ready).
+         */
         get: operations["list_projects_v1_projects_get"];
         put?: never;
         /** Create Project */
@@ -5279,16 +5345,49 @@ export interface components {
         };
         /** CustomerDetail */
         CustomerDetail: {
+            /** City */
+            city?: string | null;
             /** Company */
             company: string;
+            /** Country */
+            country?: string | null;
             /** Credits */
             credits: string;
+            /** Industry */
+            industry?: string | null;
+            /**
+             * Paid Usd
+             * @default 0
+             */
+            paid_usd: string;
             /** Payments */
             payments: components["schemas"]["PaymentRow"][];
+            /**
+             * Payments Total
+             * @default 0
+             */
+            payments_total: number;
             /** Plan */
             plan: string;
+            /**
+             * Profile
+             * @default {}
+             */
+            profile: {
+                [key: string]: unknown;
+            };
+            /**
+             * Profile Status
+             * @default not_started
+             */
+            profile_status: string;
             /** Projects */
             projects: components["schemas"]["CustomerProject"][];
+            /**
+             * Projects Total
+             * @default 0
+             */
+            projects_total: number;
             /**
              * Signed Up At
              * Format: date-time
@@ -6323,10 +6422,30 @@ export interface components {
         };
         /** Payments */
         Payments: {
+            /**
+             * Companies Total
+             * @default 0
+             */
+            companies_total: number;
             /** Items */
             items: components["schemas"]["PaymentRow"][];
+            /**
+             * Items Total
+             * @default 0
+             */
+            items_total: number;
+            /**
+             * Limit
+             * @default 25
+             */
+            limit: number;
             /** Offline Credits */
             offline_credits: string;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
             /** Paying Companies */
             paying_companies: components["schemas"]["PayingCompany"][];
             /** Total Usd */
@@ -6648,6 +6767,17 @@ export interface components {
             subject?: string | null;
             /** Template Id */
             template_id?: string | null;
+        };
+        /** ProfileIn */
+        ProfileIn: {
+            /** Answers */
+            answers?: {
+                [key: string]: unknown;
+            };
+            /** Status */
+            status?: string | null;
+            /** Step */
+            step?: number | null;
         };
         /** ProgressOut */
         ProgressOut: {
@@ -7620,6 +7750,29 @@ export interface components {
             /** Workspace Id */
             workspace_id: string;
         };
+        /** TourIn */
+        TourIn: {
+            /**
+             * Dismissed
+             * @default false
+             */
+            dismissed: boolean;
+            /**
+             * Done
+             * @default false
+             */
+            done: boolean;
+            /**
+             * Reset
+             * @default false
+             */
+            reset: boolean;
+            /**
+             * Step
+             * @default 0
+             */
+            step: number;
+        };
         /** UploadConfirmIn */
         UploadConfirmIn: {
             /** Key */
@@ -8369,8 +8522,11 @@ export interface operations {
     audit_log_v1_admin_audit_get: {
         parameters: {
             query?: {
-                limit?: number;
                 action?: string | null;
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
             };
             header?: {
                 authorization?: string | null;
@@ -8470,7 +8626,12 @@ export interface operations {
     };
     overview_v1_admin_bank_transfers_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -8709,7 +8870,13 @@ export interface operations {
     };
     customer_v1_admin_customers__workspace_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                payments_offset?: number;
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -8814,7 +8981,13 @@ export interface operations {
     };
     admin_list_v1_admin_distribution_get: {
         parameters: {
-            query?: never;
+            query?: {
+                paid?: boolean | null;
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -9240,7 +9413,10 @@ export interface operations {
             query?: {
                 status?: string | null;
                 stage?: string | null;
+                /** @description How many to return. */
                 limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
             };
             header?: {
                 authorization?: string | null;
@@ -9273,7 +9449,10 @@ export interface operations {
     line_v1_admin_line_get: {
         parameters: {
             query?: {
+                /** @description How many to return. */
                 limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
             };
             header?: {
                 authorization?: string | null;
@@ -9453,7 +9632,12 @@ export interface operations {
     };
     list_campaigns_v1_admin_marketing_campaigns_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -9778,7 +9962,12 @@ export interface operations {
     };
     list_copies_v1_admin_marketing_copies_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -10199,7 +10388,12 @@ export interface operations {
     };
     list_segments_v1_admin_marketing_segments_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -10444,7 +10638,12 @@ export interface operations {
     };
     list_workflows_v1_admin_marketing_workflows_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -10729,6 +10928,10 @@ export interface operations {
         parameters: {
             query?: {
                 status?: string;
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
             };
             header?: {
                 authorization?: string | null;
@@ -10799,7 +11002,12 @@ export interface operations {
     };
     listing_v1_admin_news_desk_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -11468,7 +11676,12 @@ export interface operations {
     };
     needs_contact_v1_admin_outreach_needs_contact_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -11617,7 +11830,10 @@ export interface operations {
             query?: {
                 status?: string | null;
                 q?: string | null;
+                /** @description How many to return. */
                 limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
             };
             header?: {
                 authorization?: string | null;
@@ -11978,7 +12194,13 @@ export interface operations {
     };
     overview_v1_admin_payment_reconciliation_get: {
         parameters: {
-            query?: never;
+            query?: {
+                receipts_offset?: number;
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -12110,7 +12332,14 @@ export interface operations {
     };
     payments_v1_admin_payments_get: {
         parameters: {
-            query?: never;
+            query?: {
+                companies_limit?: number;
+                companies_offset?: number;
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -12279,7 +12508,14 @@ export interface operations {
     };
     list_clips_v1_admin_presenter_clips_get: {
         parameters: {
-            query?: never;
+            query?: {
+                role?: string | null;
+                active?: boolean | null;
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -13106,7 +13342,14 @@ export interface operations {
     };
     list_workspaces_v1_admin_workspaces_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Part of the business name. */
+                q?: string;
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -14035,7 +14278,12 @@ export interface operations {
     };
     history_v1_billing_checkouts_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -14139,7 +14387,10 @@ export interface operations {
     ledger_entries_v1_billing_ledger_get: {
         parameters: {
             query?: {
-                limit_?: number;
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
             };
             header?: {
                 authorization?: string | null;
@@ -14878,7 +15129,12 @@ export interface operations {
     };
     listing_v1_distribution_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -15119,7 +15375,12 @@ export interface operations {
     };
     stories_v1_distribution_stories_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -15152,7 +15413,12 @@ export interface operations {
     };
     videos_v1_distribution_videos_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -16031,6 +16297,115 @@ export interface operations {
             };
         };
     };
+    get_onboarding_v1_me_onboarding_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_profile_v1_me_onboarding_profile_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_tour_v1_me_tours__tour_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tour_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TourIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_presenters_v1_presenters_get: {
         parameters: {
             query?: {
@@ -16068,7 +16443,13 @@ export interface operations {
     };
     list_projects_v1_projects_get: {
         parameters: {
-            query?: never;
+            query?: {
+                state?: string | null;
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -17773,7 +18154,12 @@ export interface operations {
     };
     overview_v1_referrals_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { subscribe } from "../lib/notify";
-import { Toast } from "./ui";
 
 let showing: symbol | null = null; // only one pop-up is ever drawn, even if two Toasters are mounted
 
@@ -19,5 +18,10 @@ export function Toaster() {
     });
     return () => { off(); if (showing === me) showing = null; window.clearTimeout(timer.current); };
   }, []);
-  return message ? <Toast>{message === "Saved" ? "✓ Saved" : message}</Toast> : null;
+  // a quiet live region (not role="status", which pages already use for their own messages) so screen readers hear it without clashing
+  return (
+    <div aria-live="polite" aria-atomic="true" className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4">
+      {message && <div className="max-w-md rounded-sm border-2 border-ink bg-brand-green px-5 py-3 text-sm font-bold text-ink shadow-lg">{message === "Saved" ? "✓ Saved" : message}</div>}
+    </div>
+  );
 }

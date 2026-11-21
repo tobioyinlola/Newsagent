@@ -332,3 +332,17 @@ async def test_the_old_environment_settings_still_work_when_nothing_is_connected
         assert await gmail.address(db) == "outreach@coverfounder.example.com"
         assert (await gmail.status(db))["source"] == "environment"
     assert registry.get_outreach_email() is not None
+
+
+async def test_every_placeholder_a_template_can_use_works_in_the_preview_and_the_test_email(client, workspace, google):
+    """A placeholder offered in the template editor must never crash the preview or the test email (it once did for {story})."""
+    cfg = (await client.get("/v1/admin/outreach/config", headers=OPS)).json()
+    every = "\n".join("{" + v + "}" for v in cfg["variables"])
+    p = await client.post("/v1/admin/outreach/preview", json={"subject": "Hi", "body": every}, headers=OPS)
+    assert p.status_code == 200, p.text
+    assert not any("{" + v + "}" in p.json()["body"] for v in cfg["variables"])
+    saved = {**cfg["config"], "templates": [{"id": "intro", "name": "Everything", "subject": "Hi", "body": every}], "default_template": "intro"}
+    assert (await client.put("/v1/admin/outreach/config", json=saved, headers=OPS)).status_code == 200
+    await client.put("/v1/admin/outreach/mailbox", json={"address": "outreach@gmail.com", "app_password": "abcd efgh ijkl mnop"}, headers=OPS)
+    r = await client.post("/v1/admin/outreach/test-send", json={"to": "me@example.com"}, headers=OPS)
+    assert r.status_code == 200, r.text

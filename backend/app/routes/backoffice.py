@@ -32,7 +32,7 @@ from app.schemas.backoffice import (
     SignupRow,
     TopCustomer,
 )
-from app.services import rbac
+from app.services import paging, rbac
 
 router = APIRouter(prefix="/v1/admin", tags=["backoffice"])
 ZERO = Decimal("0")
@@ -294,8 +294,13 @@ async def customers(
 
 @router.get("/customers/{workspace_id}", response_model=CustomerDetail)
 async def customer(
-    workspace_id: str, _: Principal = Depends(require("customers.view")), session: AsyncSession = Depends(get_session)
+    workspace_id: str,
+    pg: paging.Page = Depends(paging.page(25, 100)),
+    payments_offset: int = Query(0, ge=0),
+    _: Principal = Depends(require("customers.view")),
+    session: AsyncSession = Depends(get_session),
 ) -> CustomerDetail:
+    """One customer. Their videos page with `limit`/`offset` and their payments with `limit`/`payments_offset`."""
     d = await load(session)
     ws = d.workspaces.get(workspace_id)
     if ws is None:
@@ -303,6 +308,7 @@ async def customer(
     projects = sorted(
         d.projects_by_ws.get(workspace_id, []), key=lambda p: _utc(p.created_at) or datetime.min, reverse=True
     )
+    payment_rows = _payment_rows(d, {workspace_id})
     return CustomerDetail(
         workspace_id=workspace_id,
         company=ws.name,
@@ -331,15 +337,27 @@ async def customer(
                 interview=(p.interview_mode if p.interview_enabled else "none"),
                 published=p.published_at is not None and p.story_slug is not None,
             )
-            for p in projects[:25]
+            for p in projects[pg.offset : pg.offset + pg.limit]
         ],
-        payments=_payment_rows(d, {workspace_id}),
+        projects_total=len(projects),
+        payments=payment_rows[payments_offset : payments_offset + pg.limit],
+        payments_total=len(payment_rows),
+        paid_usd=sum((r.usd or ZERO for r in payment_rows), ZERO),
+        country=ws.country,
+        city=ws.city,
+        industry=ws.industry_other or ws.industry,
+        profile=ws.profile or {},
+        profile_status=((d.owner(workspace_id).onboarding or {}).get("profile") or {}).get("status", "not_started"),
     )
 
 
 @router.get("/payments", response_model=Payments)
 async def payments(
-    _: Principal = Depends(require("finance.view")), session: AsyncSession = Depends(get_session)
+    pg: paging.Page = Depends(paging.page(25, 100)),
+    companies_limit: int = Query(25, ge=1, le=100),
+    companies_offset: int = Query(0, ge=0),
+    _: Principal = Depends(require("finance.view")),
+    session: AsyncSession = Depends(get_session),
 ) -> Payments:
     d = await load(session)
     now = datetime.now(UTC)
@@ -357,6 +375,12 @@ async def payments(
         total_usd=sum((_net(c) for c in d.paid), ZERO),
         total_usd_30d=sum((r.usd or ZERO for r in items if r.when >= now - timedelta(days=30)), ZERO),
         offline_credits=sum((t.amount for t in d.offline), ZERO),
-        paying_companies=sorted(by_co.values(), key=lambda c: (c.usd, c.payments), reverse=True),
-        items=items[:200],
+        paying_companies=sorted(by_co.values(), key=lambda c: (c.usd, c.payments, c.workspace_id), reverse=True)[
+            companies_offset : companies_offset + companies_limit
+        ],
+        companies_total=len(by_co),
+        items=items[pg.offset : pg.offset + pg.limit],
+        items_total=len(items),
+        limit=pg.limit,
+        offset=pg.offset,
     )

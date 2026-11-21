@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, unwrap } from "../api/client";
+import { api, unwrap, unwrapPage } from "../api/client";
+import { Pager } from "../../components/Pager";
+import { usePaged } from "../../lib/usePaged";
 import { Button, Card, ErrorBox, Field, inputCls, Notice } from "../components/ui";
 
 const ROLES = [
@@ -58,9 +60,10 @@ function AddClip() {
   );
 }
 
-function Library() {
+function RoleClips({ role, label, empty }: { role: string; label: string; empty: string }) {
   const qc = useQueryClient();
-  const list = useQuery({ queryKey: ["clips"], queryFn: () => unwrap(api.GET("/v1/admin/presenter-clips")) });
+  const list = usePaged(["clips", role], (limit, offset) => unwrapPage(api.GET("/v1/admin/presenter-clips", { params: { query: { role, limit, offset } } }), undefined, offset), { size: 6 });
+  const inUse = useQuery({ queryKey: ["clips", role, "in-use"], queryFn: () => unwrapPage(api.GET("/v1/admin/presenter-clips", { params: { query: { role, active: true, limit: 1, offset: 0 } } })) });
   const refresh = () => qc.invalidateQueries({ queryKey: ["clips"] });
   const toggle = useMutation({
     mutationFn: (v: { id: string; active: boolean }) => unwrap(api.PATCH("/v1/admin/presenter-clips/{clip_id}", { params: { path: { clip_id: v.id } }, body: { active: v.active } })),
@@ -70,34 +73,36 @@ function Library() {
     mutationFn: (id: string) => unwrap(api.DELETE("/v1/admin/presenter-clips/{clip_id}", { params: { path: { clip_id: id } } })),
     onSuccess: refresh,
   });
-  const clips = list.data ?? [];
+  const rows = list.items;
+  return (
+    <Card title={`${label} (${inUse.data?.total ?? 0} in use)`}>
+      <ErrorBox error={list.query.error ?? toggle.error ?? remove.error} />
+      {rows.length === 0 ? (
+        <p className="text-sm text-muted">None yet. {empty}</p>
+      ) : (
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {rows.map((c) => (
+            <li key={c.id} className="space-y-2 rounded-sm border-2 border-ink p-3">
+              {c.url && <video src={c.url} controls preload="metadata" className="aspect-video w-full bg-ink" aria-label={`Preview: ${c.title}`} />}
+              <p className="font-bold">{c.title}</p>
+              <p className="text-xs text-muted">{c.duration_s?.toFixed(1)} s · {c.width}×{c.height} · {c.has_audio ? "with sound" : "no sound"} · added by {c.rights_confirmed_by}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" onClick={() => toggle.mutate({ id: c.id, active: !c.active })} aria-pressed={c.active}>{c.active ? "In use: switch off" : "Off: switch on"}</Button>
+                <Button variant="danger" onClick={() => { if (confirm(`Delete “${c.title}”? Videos already made are not affected.`)) remove.mutate(c.id); }}>Delete</Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Pager total={list.total} page={list.page} size={list.size} onPage={list.setPage} noun="clips" busy={list.query.isFetching} />
+    </Card>
+  );
+}
+
+function Library() {
   return (
     <div className="space-y-4">
-      <ErrorBox error={list.error ?? toggle.error ?? remove.error} />
-      {ROLES.map((r) => {
-        const rows = clips.filter((c) => c.role === r.id);
-        return (
-          <Card key={r.id} title={`${r.label} (${rows.filter((c) => c.active).length} in use)`}>
-            {rows.length === 0 ? (
-              <p className="text-sm text-muted">None yet. {r.id === "cutaway" ? "Without cutaways, answers follow each other directly." : "Videos skip this."}</p>
-            ) : (
-              <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {rows.map((c) => (
-                  <li key={c.id} className="space-y-2 rounded-sm border-2 border-ink p-3">
-                    {c.url && <video src={c.url} controls preload="metadata" className="aspect-video w-full bg-ink" aria-label={`Preview: ${c.title}`} />}
-                    <p className="font-bold">{c.title}</p>
-                    <p className="text-xs text-muted">{c.duration_s?.toFixed(1)} s · {c.width}×{c.height} · {c.has_audio ? "with sound" : "no sound"} · added by {c.rights_confirmed_by}</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="secondary" onClick={() => toggle.mutate({ id: c.id, active: !c.active })} aria-pressed={c.active}>{c.active ? "In use: switch off" : "Off: switch on"}</Button>
-                      <Button variant="danger" onClick={() => { if (confirm(`Delete “${c.title}”? Videos already made are not affected.`)) remove.mutate(c.id); }}>Delete</Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-        );
-      })}
+      {ROLES.map((r) => <RoleClips key={r.id} role={r.id} label={r.label} empty={r.id === "cutaway" ? "Without cutaways, answers follow each other directly." : "Videos skip this."} />)}
     </div>
   );
 }

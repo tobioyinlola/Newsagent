@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
-import { api, unwrap } from "../api/client";
+import { api, unwrap, unwrapPage } from "../api/client";
+import { Pager } from "../../components/Pager";
+import { usePaged } from "../../lib/usePaged";
 import { Button, Card, ConfirmDialog, ErrorBox, inputCls, Notice } from "../components/ui";
 import { Crumbs, EmptyState, MARKETING, PageIntro, Step as FormStep, useToast } from "../components/marketingUi";
 import { useUrlState } from "../lib/urlState";
@@ -275,9 +277,10 @@ export function WorkflowsTab({ engine }: { engine: string }) {
   const url = useUrlState();
   const open = url.get("open");
   const building = url.get("new") === "1";
-  const list = useQuery({ queryKey: ["workflows"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/workflows")).then((r) => (r as unknown as { items: Workflow[] }).items), refetchInterval: 15000 });
-  const segments = useQuery({ queryKey: ["segments"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/segments")).then((r) => (r as unknown as { items: Pick[] }).items) });
-  const copies = useQuery({ queryKey: ["copies"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/copies")).then((r) => (r as unknown as { items: Pick[] }).items) });
+  const paged = usePaged(["workflows", "list"], (limit, offset) => unwrapPage<Workflow>(api.GET("/v1/admin/marketing/workflows", { params: { query: { limit, offset } } }), (b) => b.items, offset), { size: 10, refetchInterval: 15000 });
+  const list = { data: paged.items, isLoading: paged.query.isLoading, error: paged.query.error };
+  const segments = useQuery({ queryKey: ["segments", "options"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/segments", { params: { query: { limit: 200, offset: 0 } } })).then((r) => (r as unknown as { items: Pick[] }).items) });
+  const copies = useQuery({ queryKey: ["copies", "options"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/copies", { params: { query: { limit: 200, offset: 0 } } })).then((r) => (r as unknown as { items: Pick[] }).items) });
   const starter = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/admin/marketing/workflows/starter")),
     onSuccess: async (w) => { await Promise.all(["workflows", "segments", "copies"].map((k) => qc.invalidateQueries({ queryKey: [k] }))); toast("Welcome sequence created as a draft. Look it over, then turn it on."); url.set({ open: (w as unknown as Workflow).id }); },
@@ -295,7 +298,7 @@ export function WorkflowsTab({ engine }: { engine: string }) {
         actions={manage && <Button variant="secondary" disabled={noSetup} onClick={() => url.set({ new: "1" })}>New workflow</Button>}
       >A workflow emails people over time, on its own. For example: a welcome today, a nudge in 3 days if they haven’t made a video, and a reminder after a week.</PageIntro>
       <ErrorBox error={list.error ?? segments.error ?? copies.error ?? starter.error} />
-      {list.isLoading ? <p aria-busy="true">Loading…</p> : list.data && list.data.length === 0 ? (
+      {list.isLoading ? <p aria-busy="true">Loading…</p> : paged.total === 0 && !paged.query.isLoading ? (
         <Card>
           <EmptyState title="Start with a ready-made welcome sequence" actions={manage && <Button disabled={starter.isPending} onClick={() => starter.mutate()}>{starter.isPending ? "Making it…" : "Create the welcome sequence"}</Button>}>
             It welcomes new sign-ups, nudges anyone who hasn’t made a video after 3 days, and reminds people about credits after a week. It stops for anyone who buys credits. You can change every part of it before turning it on.
@@ -312,7 +315,8 @@ export function WorkflowsTab({ engine }: { engine: string }) {
               </div>
             </li>))}
           </ul>
-          {manage && !list.data?.some((w) => w.name === "Welcome sequence") && <p className="text-sm text-muted">Want a head start? <button type="button" className="font-semibold underline" disabled={starter.isPending} onClick={() => starter.mutate()}>Create the welcome sequence</button>.</p>}
+          <Pager total={paged.total} page={paged.page} size={paged.size} onPage={paged.setPage} noun="workflows" busy={paged.query.isFetching} />
+          {manage && paged.total <= paged.items.length && !list.data?.some((w) => w.name === "Welcome sequence") && <p className="text-sm text-muted">Want a head start? <button type="button" className="font-semibold underline" disabled={starter.isPending} onClick={() => starter.mutate()}>Create the welcome sequence</button>.</p>}
         </>
       )}
     </div>

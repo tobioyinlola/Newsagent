@@ -129,6 +129,14 @@ class CustomerDetail(BaseModel):
     users: list[CustomerUser]
     projects: list[CustomerProject]
     payments: list[PaymentRow]
+    projects_total: int = 0
+    payments_total: int = 0
+    paid_usd: Decimal = Decimal(0)  # everything they have paid, not only the payments on this page
+    country: str | None = None
+    city: str | None = None
+    industry: str | None = None
+    profile: dict = {}  # what they told us in the first-run questions (role, size, goals, how they heard of us...)
+    profile_status: str = "not_started"  # not_started | pending | in_progress | done | skipped
 
 
 class PayingCompany(BaseModel):
@@ -145,6 +153,10 @@ class Payments(BaseModel):
     offline_credits: Decimal
     paying_companies: list[PayingCompany]
     items: list[PaymentRow]
+    companies_total: int = 0
+    items_total: int = 0
+    limit: int = 25
+    offset: int = 0
 
 
 class PresenterClipUploadIn(BaseModel):

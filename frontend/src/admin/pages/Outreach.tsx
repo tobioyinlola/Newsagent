@@ -5,6 +5,8 @@ import { Button, Card, ErrorBox, Notice, inputCls } from "../components/ui";
 import { getToken } from "../lib/auth";
 import { useCan } from "../lib/can";
 import { OutreachMailbox, type MailboxStatus } from "../components/OutreachMailbox";
+import { Pager } from "../../components/Pager";
+import { usePaged } from "../../lib/usePaged";
 import { OutreachNeedsContact } from "../components/OutreachNeedsContact";
 import { TestSend } from "../components/OutreachTestSend";
 
@@ -55,7 +57,11 @@ function Conversations() {
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
-  const list = useQuery({ queryKey: ["outreach-threads", status, q], queryFn: () => request<{ threads: Thread[]; counts: Record<string, number> }>(`admin/outreach/threads?${new URLSearchParams({ ...(status ? { status } : {}), ...(q.trim() ? { q: q.trim() } : {}) })}`), refetchInterval: 20000 });
+  const paged = usePaged(["outreach-threads", status, q.trim()], async (limit, offset) => {
+    const r = await request<{ threads: Thread[]; counts: Record<string, number>; total: number }>(`admin/outreach/threads?${new URLSearchParams({ ...(status ? { status } : {}), ...(q.trim() ? { q: q.trim() } : {}), limit: String(limit), offset: String(offset) })}`);
+    return { items: r.threads, total: r.total ?? r.threads.length, counts: r.counts };
+  }, { size: 25, refetchInterval: 20000 });
+  const list = { data: paged.query.data ? { threads: paged.items, counts: paged.query.data.counts } : undefined, error: paged.query.error };
   const detail = useQuery({ queryKey: ["outreach-thread", openId], queryFn: () => request<Detail>(`admin/outreach/threads/${openId}`), enabled: !!openId, refetchInterval: 15000 });
   const [text, setText] = useState("");
   useEffect(() => setText(""), [openId]);
@@ -96,6 +102,7 @@ function Conversations() {
           ))}
           {list.data?.threads.length === 0 && <li className="text-sm text-muted">No conversations yet. They start when a paid request names an outlet that has a contact and automatic outreach.</li>}
         </ul>
+        <Pager total={paged.total} page={paged.page} size={paged.size} onPage={paged.setPage} noun="conversations" busy={paged.query.isFetching} />
       </Card>
       <Card title={d ? `${d.thread.outlet_name}` : "Conversation"}>
         {!d && <p className="text-sm text-muted">{detail.isLoading ? "Loading…" : "Pick a conversation to read it."}</p>}
@@ -307,7 +314,7 @@ export function OutreachAdmin() {
     else if (cfg.data.needs_contact > 0) setTab("contacts");
   }, [cfg.data]);
   const changed = () => { void qc.invalidateQueries({ queryKey: ["outreach-config"] }); void qc.invalidateQueries({ queryKey: ["outreach-needs-contact"] }); };
-  const tabBtn = (k: typeof tab, label: string) => <button type="button" aria-pressed={tab === k} className={`min-h-11 rounded border px-4 py-2 text-sm font-semibold ${tab === k ? "border-ink bg-ink text-white" : "border-ink"}`} onClick={() => setTab(k)}>{label}</button>;
+  const tabBtn = (k: typeof tab, label: string) => <button type="button" data-tour={`outreach-tab-${k}`} aria-pressed={tab === k} className={`min-h-11 rounded border px-4 py-2 text-sm font-semibold ${tab === k ? "border-ink bg-ink text-white" : "border-ink"}`} onClick={() => setTab(k)}>{label}</button>;
   return (
     <div className="space-y-4">
       <div><h1 className="text-2xl font-bold">Outreach to outlets</h1><p className="mt-1 text-sm text-muted">Contact the outlets a paid request names, read their replies and answer them, all in one place.</p></div>
