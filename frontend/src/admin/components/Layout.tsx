@@ -142,7 +142,7 @@ function LayoutInner() {
       <main className="admin-layout min-w-0 flex-1">
         <AdminToolbar destinations={GROUPS.flatMap(group => group.items).filter(([, , , needs]) => !needs.length || can(...needs)).map(([to, title]) => ({ to, title }))} />
         <div className="workspace-content admin-workspace-content space-y-5">
-          <BackButton fallback="/" />
+          <BackButton fallback="/" className={loc.pathname === "/" ? "max-md:hidden" : ""} />
           <div data-tour="page"><Outlet /></div>
           <Toaster />
         </div>

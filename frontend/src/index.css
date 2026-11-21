@@ -139,6 +139,10 @@ html { font-family: var(--font-sans); color: var(--color-navy); background: #fff
   .auth-art > img { height: 220px; }
   .auth-showcase-bottom { margin-top: 14px; flex-wrap: wrap; }
 }
+@media (max-width: 767px) {
+  .auth-showcase { display: none; } /* on a phone, sign-in and sign-up are just the form */
+  .auth-form-panel { padding: 24px 20px 32px; }
+}
 @media (prefers-reduced-motion: reduce) { .auth-slide { animation: none; } }
 
 /* Workspace dashboard */

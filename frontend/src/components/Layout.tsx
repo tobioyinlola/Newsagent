@@ -158,7 +158,7 @@ function LayoutInner() {
       <main className="min-w-0 flex-1">
         <WorkspaceToolbar />
         <div className="workspace-content space-y-6">
-          <BackButton fallback={workspaceBackFallback(loc.pathname)} />
+          <BackButton fallback={workspaceBackFallback(loc.pathname)} className={loc.pathname === "/dashboard" ? "max-md:hidden" : ""} /> {/* no Back on the dashboard on a phone: it is the home screen */}
           <DemoBanner />
           <Outlet />
           <OutOfCredits />
