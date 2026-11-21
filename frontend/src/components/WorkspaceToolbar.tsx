@@ -11,7 +11,7 @@ import { TourMenu } from "./tour/TourProvider";
 const Icon = ({ kind }: { kind: "search" | "bell" | "settings" }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">{kind === "search" ? <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></> : kind === "bell" ? <><path d="M5 17h14l-2-3V9a5 5 0 0 0-10 0v5Z" /><path d="M10 20h4" /></> : <><circle cx="12" cy="12" r="3" /><path d="m9 3 6 0 1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1Z" /></>}</svg>;
 const destinations = [{ title: "Make a video", to: "/ai-newsroom/new" }, { title: "Your videos", to: "/ai-newsroom/videos" }, { title: "Press distribution", to: "/distribution/request" }, { title: "Buy credits and payment history", to: "/settings/billing" }, { title: "Audience analytics", to: "/analytics" }, { title: "Brand kit", to: "/brand" }, { title: "Referrals", to: "/settings/referral" }];
 
-export function WorkspaceToolbar() {
+export function WorkspaceToolbar({ onMenu, menuOpen = false }: { onMenu?: () => void; menuOpen?: boolean }) {
   const me = useMe(); const location = useLocation(); const navigate = useNavigate();
   const searchInput = useRef<HTMLInputElement>(null);
   const [activeResult, setActiveResult] = useState(0);
@@ -41,6 +41,7 @@ export function WorkspaceToolbar() {
   const profileName = me.data?.workspace_name || "Your workspace";
   const initials = profileName.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase();
   return <div className="workspace-toolbar" ref={ref}>
+    <button type="button" aria-label="Menu" aria-expanded={menuOpen} aria-controls="sidebar" className="workspace-menu-button" onClick={onMenu}><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg></button>
     <div className="workspace-search"><Icon kind="search" /><input ref={searchInput} aria-label="Search your workspace" aria-expanded={panel === "search"} aria-controls={panel === "search" ? "workspace-popover" : undefined} placeholder="Search videos, stories, distribution…" value={search} onFocus={() => setPanel("search")} onChange={e => { setSearch(e.target.value); setActiveResult(0); setPanel("search"); }} onKeyDown={e => {
       if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); setPanel("search"); setActiveResult(i => Math.max(0, Math.min(results.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)))); }
       if (e.key === "Enter" && results.length) { e.preventDefault(); navigate(results[Math.min(activeResult, results.length - 1)].to); setPanel(null); searchInput.current?.blur(); }

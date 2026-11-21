@@ -22,6 +22,12 @@ test.describe("on a phone", () => {
     await page.goto("/dashboard");
     await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Go back" })).toHaveCount(0);
+    // no logo bar across the top: the menu button (three lines) sits in the toolbar, and the logo is inside the menu
+    await expect(page.getByRole("link", { name: "Cover Founder home" })).toBeHidden();
+    await page.getByRole("button", { name: "Menu", exact: true }).click();
+    await expect(page.getByRole("link", { name: "Cover Founder home" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Main", exact: true }).getByRole("link", { name: "Settings" })).toBeVisible();
+    await page.getByRole("button", { name: "Close", exact: true }).click();
     await page.getByRole("link", { name: /Make a video/ }).first().click();
     await expect(page).toHaveURL(/ai-newsroom\/new/);
     await expect(page.getByRole("button", { name: "Go back" })).toBeVisible();

@@ -155,14 +155,14 @@ function TourStepView({ def, index, onBack, onNext, onPause, onSkip, navigate }:
 const clamp = (n: number, lo: number, hi: number) => Math.min(Math.max(n, lo), Math.max(lo, hi));
 
 /** The "Guided tours" button and its list: every tour with how far along it is, and a way to start, resume or replay it. */
-export function TourMenu({ className = "", label = "Guided tours" }: { className?: string; label?: string }) {
+export function TourMenu({ className = "", label }: { className?: string; label?: ReactNode }) {
   const t = useTours();
   const [open, setOpen] = useState(false);
   if (!t || t.tours.length === 0) return null;
   const finished = t.tours.filter((d) => t.progress[d.id]?.done).length;
   return (
     <div className="relative">
-      <button type="button" aria-haspopup="dialog" aria-expanded={open} data-tour="tours-menu" className={className || "min-h-11 rounded-sm border-2 border-ink px-3 py-2 text-sm font-bold hover:bg-paper"} onClick={() => setOpen((o) => !o)}>{label} <span className="text-xs font-semibold opacity-80">{finished}/{t.tours.length}</span></button>
+      <button type="button" aria-haspopup="dialog" aria-expanded={open} data-tour="tours-menu" className={className || "min-h-11 rounded-sm border-2 border-ink px-3 py-2 text-sm font-bold hover:bg-paper"} onClick={() => setOpen((o) => !o)}>{label ?? <><span className="sm:hidden">Tours</span><span className="max-sm:hidden">Guided tours</span></>} <span className="text-xs font-semibold opacity-80">{finished}/{t.tours.length}</span></button>
       {open && (
         <div role="dialog" aria-label="Guided tours" className="absolute right-0 z-50 mt-2 w-[min(92vw,26rem)] rounded-sm border-2 border-ink bg-white p-3 text-ink shadow-xl" onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}>
           <div className="flex items-center justify-between"><p className="font-bold">Guided tours</p><button type="button" className="text-sm font-semibold underline" onClick={() => setOpen(false)}>Close</button></div>

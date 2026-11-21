@@ -158,6 +158,9 @@ html { font-family: var(--font-sans); color: var(--color-navy); background: #fff
 .workspace-tools { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .workspace-notifications { position: relative; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--color-line); border-radius: 50%; }
 .workspace-tools > button:hover { background: var(--color-paper); }
+.workspace-menu-button { display: none; flex-shrink: 0; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid var(--color-line); border-radius: 999px; background: white; color: var(--color-ink); }
+.workspace-menu-button:hover { background: var(--color-paper); }
+@media (max-width: 767px) { .workspace-menu-button { display: inline-flex; } }
 .workspace-tour-button { min-height: 40px; border: 1px solid var(--color-line); border-radius: 999px; background: white; padding: 0 14px; font-size: 13px; font-weight: 700; white-space: nowrap; }
 .workspace-tour-button:hover { background: var(--color-paper); }
 @media (max-width: 640px) { .workspace-tour-button { padding: 0 10px; font-size: 12px; } }
