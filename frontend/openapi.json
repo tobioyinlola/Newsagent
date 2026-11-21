@@ -21,15 +21,6 @@
       },
       "AnnouncementBody": {
         "properties": {
-          "button_action": {
-            "default": "link",
-            "enum": [
-              "link",
-              "share_referral"
-            ],
-            "title": "Button Action",
-            "type": "string"
-          },
           "button_label": {
             "default": "",
             "maxLength": 60,

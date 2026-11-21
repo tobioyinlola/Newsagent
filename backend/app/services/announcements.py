@@ -62,7 +62,7 @@ async def make_email(db: AsyncSession, a: Announcement, actor: str) -> Marketing
             subject=a.title,
             body=a.message,
             button_label=a.button_label,
-            button_url="/referrals" if a.button_action == "share_referral" else a.button_url,  # in an email the button opens their referral page
+            button_url=a.button_url,
         )
     )
     copy = MarketingCopy(name=c.name, category=c.category, created_by=actor)

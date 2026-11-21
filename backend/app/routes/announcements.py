@@ -27,7 +27,6 @@ class AnnouncementBody(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
     button_label: str = Field("", max_length=60)
     button_url: str = Field("", max_length=500)
-    button_action: Literal["link", "share_referral"] = "link"  # open a link, or let them share their own referral link
     show_for: int = Field(3, ge=1, le=24 * 90, description="How long the pop-up keeps appearing.")
     unit: Literal["hours", "days"] = "days"
     starts_at: datetime | None = None  # default: now
@@ -35,13 +34,7 @@ class AnnouncementBody(BaseModel):
     confirm_count: int | None = None  # how many people the email would reach, as the team saw it
 
 
-SHARE_LABEL = "Share with a friend"
-
-
 def _clean(body: AnnouncementBody) -> AnnouncementBody:
-    if body.button_action == "share_referral":  # the button needs no address: it shares the customer's own referral link
-        body.button_url = ""
-        body.button_label = body.button_label.strip() or SHARE_LABEL
     try:
         copies.validate(
             copies.CopyIn(
@@ -49,12 +42,12 @@ def _clean(body: AnnouncementBody) -> AnnouncementBody:
                 subject=body.title,
                 body=body.message,
                 button_label=body.button_label,
-                button_url="/referrals" if body.button_action == "share_referral" else body.button_url,  # (checked the way the email will have it)
+                button_url=body.button_url,
             )
         )
     except copies.Invalid as e:
         raise HTTPException(422, str(e)) from None
-    if body.button_action == "link" and bool(body.button_label.strip()) != bool(body.button_url.strip()):
+    if bool(body.button_label.strip()) != bool(body.button_url.strip()):
         raise HTTPException(422, "A button needs both its words and where it goes. Fill in both or neither.")
     if body.unit == "days" and body.show_for > 90:
         raise HTTPException(422, "Show it for up to 90 days.")
@@ -68,7 +61,6 @@ async def _out(db: AsyncSession, a: Announcement) -> dict:
         "message": a.message,
         "button_label": a.button_label,
         "button_url": a.button_url,
-        "button_action": a.button_action,
         "shows_from": a.shows_from,
         "shows_until": a.shows_until,
         "ended_at": a.ended_at,
@@ -137,7 +129,6 @@ async def create_announcement(
         message=body.message.strip(),
         button_label=body.button_label.strip(),
         button_url=body.button_url.strip(),
-        button_action=body.button_action,
         shows_from=starts,
         shows_until=ends,
         created_by=p.user.email,
@@ -214,7 +205,6 @@ def _public(a: Announcement) -> dict:
         "message": a.message,
         "button_label": a.button_label,
         "button_url": a.button_url,
-        "button_action": a.button_action,
         "shows_until": a.shows_until,
     }
 
