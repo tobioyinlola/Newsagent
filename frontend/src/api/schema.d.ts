@@ -713,6 +713,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/marketing/announcements/{announcement_id}/email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email Announcement
+         * @description Also email an announcement that was made for the app only. It goes to everyone who can be emailed, now.
+         */
+        post: operations["email_announcement_v1_admin_marketing_announcements__announcement_id__email_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/marketing/announcements/{announcement_id}/end": {
         parameters: {
             query?: never;
@@ -5659,6 +5679,11 @@ export interface components {
              */
             category: string;
         };
+        /** EmailBody */
+        EmailBody: {
+            /** Confirm Count */
+            confirm_count: number;
+        };
         /** EmailStep */
         EmailStep: {
             /** Copy Id */
@@ -9848,6 +9873,45 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    email_announcement_v1_admin_marketing_announcements__announcement_id__email_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                announcement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailBody"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

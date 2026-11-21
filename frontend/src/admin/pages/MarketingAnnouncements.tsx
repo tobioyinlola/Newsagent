@@ -27,6 +27,13 @@ export function AnnouncementsTab({ engine }: { engine: string }) {
     mutationFn: (id: string) => unwrap(api.POST("/v1/admin/marketing/announcements/{announcement_id}/end", { params: { path: { announcement_id: id } } })),
     onSuccess: async () => { await qc.invalidateQueries({ queryKey: ["announcements"] }); toast("The pop-up has been stopped."); },
   });
+  const [emailing, setEmailing] = useState<Item | null>(null);
+  const audience = useQuery({ queryKey: ["announcement-audience", emailing?.id], queryFn: () => unwrap(api.GET("/v1/admin/marketing/announcements/audience")) as unknown as Promise<{ reachable: number }>, enabled: !!emailing });
+  const sendEmail = useMutation({
+    mutationFn: (v: { id: string; count: number }) => unwrap(api.POST("/v1/admin/marketing/announcements/{announcement_id}/email", { params: { path: { announcement_id: v.id } }, body: { confirm_count: v.count } })),
+    onSuccess: async () => { setEmailing(null); await qc.invalidateQueries({ queryKey: ["announcements"] }); toast("The email is on its way."); },
+    onError: () => setEmailing(null),
+  });
   if (creating) return <NewAnnouncement engine={engine} onDone={() => setCreating(false)} />;
   return (
     <div className="space-y-5">
@@ -35,7 +42,7 @@ export function AnnouncementsTab({ engine }: { engine: string }) {
         how={["Write the message once.", "Choose how long the pop-up keeps appearing when customers sign in. Each person can close it for good.", "Tick the email to also send it to everyone. People who unsubscribed are never emailed."]}
         actions={manage && <Button onClick={() => setCreating(true)}>New announcement</Button>}
       >Tell every customer something important: a pop-up when they sign in, and optionally an email too.</PageIntro>
-      <ErrorBox error={list.query.error ?? end.error} />
+      <ErrorBox error={list.query.error ?? end.error ?? sendEmail.error} />
       {list.query.isLoading ? <p aria-busy="true">Loading…</p> : list.total === 0 ? (
         <Card><EmptyState title="You haven’t sent an announcement yet" actions={manage && <Button onClick={() => setCreating(true)}>Write your first</Button>}>It shows as a pop-up when customers sign in, for as long as you choose.</EmptyState></Card>
       ) : (
@@ -49,13 +56,21 @@ export function AnnouncementsTab({ engine }: { engine: string }) {
                   <p className="text-muted">Pop-up: {a.status === "scheduled" ? `starts ${when(a.shows_from)}, ` : ""}{a.status === "ended" ? `ended ${when(a.ended_at ?? a.shows_until)}` : `until ${when(a.shows_until)}`}</p>
                   <p className="text-muted">{a.email ? <>Email: {a.email.status === "sent" ? "sent to" : "to"} {num(a.email.audience)} people{a.email.status !== "sent" ? ` (${a.email.status})` : ""}</> : "No email"} · by {a.created_by}</p>
                 </div>
-                {manage && a.status !== "ended" && <Button variant="secondary" disabled={end.isPending} onClick={() => { if (confirm("Stop showing this pop-up now? An email that has already gone out cannot be taken back.")) end.mutate(a.id); }}>Stop the pop-up</Button>}
+                {manage && a.status !== "ended" && (
+                  <div className="flex flex-wrap gap-2">
+                    {!a.email && engine !== "off" && <Button variant="secondary" disabled={sendEmail.isPending} onClick={() => { sendEmail.reset(); setEmailing(a); }}>Also email it</Button>}
+                    <Button variant="secondary" disabled={end.isPending} onClick={() => { if (confirm("Stop showing this pop-up now? An email that has already gone out cannot be taken back.")) end.mutate(a.id); }}>Stop the pop-up</Button>
+                  </div>
+                )}
               </div>
             </li>
           ))}
         </ul>
       )}
       <Pager total={list.total} page={list.page} size={list.size} onPage={list.setPage} noun="announcements" busy={list.query.isFetching} />
+      {emailing && <ConfirmDialog title="Email this announcement?" confirmLabel={sendEmail.isPending ? "Sending…" : "Send the email"} onConfirm={() => { if (audience.data) sendEmail.mutate({ id: emailing.id, count: audience.data.reachable }); }} onCancel={() => setEmailing(null)}>
+        “{emailing.title}” will be emailed now to {audience.isLoading ? "…" : `about ${num(audience.data?.reachable ?? 0)}`} people. People who unsubscribed are left out. An email can’t be taken back once it is sent.
+      </ConfirmDialog>}
     </div>
   );
 }
@@ -63,7 +78,7 @@ export function AnnouncementsTab({ engine }: { engine: string }) {
 function NewAnnouncement({ engine, onDone }: { engine: string; onDone: () => void }) {
   const qc = useQueryClient();
   const toast = useToast();
-  const [f, setF] = useState({ title: "", message: "", button_label: "", button_url: "", show_for: "3", unit: "days" as "hours" | "days", later: false, starts_at: "", send_email: engine !== "off" });
+  const [f, setF] = useState({ title: "", message: "", button_label: "", button_url: "", show_for: "3", unit: "days" as "hours" | "days", later: false, starts_at: "", send_email: false });
   const [confirm, setConfirm] = useState(false);
   const audience = useQuery({ queryKey: ["announcement-audience"], queryFn: () => unwrap(api.GET("/v1/admin/marketing/announcements/audience")) as unknown as Promise<{ reachable: number; email_engine: string }> });
   const reachable = audience.data?.reachable ?? 0;
@@ -104,8 +119,12 @@ function NewAnnouncement({ engine, onDone }: { engine: string; onDone: () => voi
             <label className="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={f.later} onChange={(e) => set("later", e.target.checked)} /> Start later (otherwise it starts right away)</label>
             {f.later && <label className="mt-2 block text-sm font-semibold">Start at<input type="datetime-local" className={inputCls} value={f.starts_at} onChange={(e) => set("starts_at", e.target.value)} /></label>}
           </Card>
-          <Card title="Email">
-            <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={emailing} disabled={emailOff} onChange={(e) => set("send_email", e.target.checked)} /><span><b>Also email it to everyone</b><span className="block text-muted">{emailOff ? "Marketing email is switched off on the server, so the email can’t be sent. Ask whoever manages the server to turn it on." : audience.isLoading ? "Counting…" : `About ${num(reachable)} people will be emailed. People who unsubscribed or whose address bounced are left out.`}</span></span></label>
+          <Card title="Where should it go?">
+            <fieldset className="space-y-2">
+              <legend className="sr-only">Where it goes</legend>
+              <label className="flex items-start gap-2 text-sm"><input type="radio" name="where" className="mt-1" checked={!emailing} onChange={() => set("send_email", false)} /><span><b>In the app only</b><span className="block text-muted">A pop-up when customers sign in. No email is sent. You can email it later from the list.</span></span></label>
+              <label className={`flex items-start gap-2 text-sm ${emailOff ? "opacity-60" : ""}`}><input type="radio" name="where" className="mt-1" checked={emailing} disabled={emailOff} onChange={() => set("send_email", true)} /><span><b>In the app and by email</b><span className="block text-muted">{emailOff ? "Marketing email is switched off on the server, so this isn’t available yet. Ask whoever manages the server to turn it on." : audience.isLoading ? "Counting…" : `The pop-up, plus an email to about ${num(reachable)} people. People who unsubscribed or whose address bounced are left out.`}</span></span></label>
+            </fieldset>
           </Card>
           <ErrorBox error={publish.error} />
           <div className="flex flex-wrap gap-3"><Button type="submit" disabled={!ok || publish.isPending}>Review and publish</Button><Button type="button" variant="secondary" onClick={onDone}>Cancel</Button></div>
