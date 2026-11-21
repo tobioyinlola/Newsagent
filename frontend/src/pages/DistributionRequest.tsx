@@ -216,6 +216,6 @@ export function DistributionRequestPage() {
     </>}
     {view && <DistributionSelection selected={selected} onRemove={id => patch({ outlet_ids: draft?.outlet_ids.filter(x => x !== id) ?? [] })} onClose={() => setView(false)} />}
     {topup && row && <DistributionFundingDialog balance={funding.balance} required={funding.required} billingUrl={`/billing?returnTo=${encodeURIComponent(`/distribution/request?draft=${row.id}`)}&credits=${Math.ceil(Math.max(0, funding.required - funding.balance) * 100) / 100}`} onClose={() => setTopup(false)} />}
-    {success && <div role="dialog" aria-modal="true" aria-label="Distribution submitted" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><div className="max-w-lg rounded bg-white p-6"><h2 className="text-2xl font-bold">Your distribution request is confirmed</h2><p className="my-4">Someone from the Cover Founder team will reach out within the next 24 hours.</p><Button onClick={() => setSuccess(false)}>Done</Button></div></div>}
+    {success && <div role="dialog" aria-modal="true" aria-label="Distribution submitted" className="fixed inset-0 z-50 flex overflow-y-auto bg-black/50 p-4"><div className="m-auto w-full max-w-lg rounded bg-white p-6"><h2 className="text-2xl font-bold">Your distribution request is confirmed</h2><p className="my-4">Someone from the Cover Founder team will reach out within the next 24 hours.</p><Button onClick={() => setSuccess(false)}>Done</Button></div></div>}
   </div>;
 }

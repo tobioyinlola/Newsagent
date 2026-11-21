@@ -19,6 +19,85 @@
         "title": "ActivateBody",
         "type": "object"
       },
+      "AnnouncementBody": {
+        "properties": {
+          "button_label": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Button Label",
+            "type": "string"
+          },
+          "button_url": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Button Url",
+            "type": "string"
+          },
+          "confirm_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirm Count"
+          },
+          "message": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "send_email": {
+            "default": true,
+            "title": "Send Email",
+            "type": "boolean"
+          },
+          "show_for": {
+            "default": 3,
+            "description": "How long the pop-up keeps appearing.",
+            "maximum": 2160.0,
+            "minimum": 1.0,
+            "title": "Show For",
+            "type": "integer"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "unit": {
+            "default": "days",
+            "enum": [
+              "hours",
+              "days"
+            ],
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "message"
+        ],
+        "title": "AnnouncementBody",
+        "type": "object"
+      },
       "Approval": {
         "properties": {
           "funds_confirmed": {
@@ -11868,6 +11947,256 @@
         ]
       }
     },
+    "/v1/admin/marketing/announcements": {
+      "get": {
+        "operationId": "list_announcements_v1_admin_marketing_announcements_get",
+        "parameters": [
+          {
+            "description": "How many to return.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "description": "How many to return.",
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "How many to skip.",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "How many to skip.",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Announcements V1 Admin Marketing Announcements Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Announcements",
+        "tags": [
+          "announcements"
+        ]
+      },
+      "post": {
+        "operationId": "create_announcement_v1_admin_marketing_announcements_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnouncementBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Announcement V1 Admin Marketing Announcements Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Announcement",
+        "tags": [
+          "announcements"
+        ]
+      }
+    },
+    "/v1/admin/marketing/announcements/audience": {
+      "get": {
+        "description": "How many people an announcement email would reach right now (everyone except those who opted out, bounced or complained).",
+        "operationId": "audience_v1_admin_marketing_announcements_audience_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Audience V1 Admin Marketing Announcements Audience Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Audience",
+        "tags": [
+          "announcements"
+        ]
+      }
+    },
+    "/v1/admin/marketing/announcements/{announcement_id}/end": {
+      "post": {
+        "description": "Stop the pop-up now. An email that has already gone out cannot be taken back.",
+        "operationId": "end_announcement_v1_admin_marketing_announcements__announcement_id__end_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "announcement_id",
+            "required": true,
+            "schema": {
+              "title": "Announcement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response End Announcement V1 Admin Marketing Announcements  Announcement Id  End Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "End Announcement",
+        "tags": [
+          "announcements"
+        ]
+      }
+    },
     "/v1/admin/marketing/campaigns": {
       "get": {
         "operationId": "list_campaigns_v1_admin_marketing_campaigns_get",
@@ -23333,6 +23662,121 @@
         "summary": "Me",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/v1/me/announcements": {
+      "get": {
+        "operationId": "my_announcements_v1_me_announcements_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response My Announcements V1 Me Announcements Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "My Announcements",
+        "tags": [
+          "announcements"
+        ]
+      }
+    },
+    "/v1/me/announcements/{announcement_id}/dismiss": {
+      "post": {
+        "description": "Close it for good: it will not appear again for this person.",
+        "operationId": "dismiss_announcement_v1_me_announcements__announcement_id__dismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "announcement_id",
+            "required": true,
+            "schema": {
+              "title": "Announcement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Dismiss Announcement V1 Me Announcements  Announcement Id  Dismiss Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dismiss Announcement",
+        "tags": [
+          "announcements"
         ]
       }
     },

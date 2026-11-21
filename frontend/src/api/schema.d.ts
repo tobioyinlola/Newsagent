@@ -675,6 +675,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/marketing/announcements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Announcements */
+        get: operations["list_announcements_v1_admin_marketing_announcements_get"];
+        put?: never;
+        /** Create Announcement */
+        post: operations["create_announcement_v1_admin_marketing_announcements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/marketing/announcements/audience": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Audience
+         * @description How many people an announcement email would reach right now (everyone except those who opted out, bounced or complained).
+         */
+        get: operations["audience_v1_admin_marketing_announcements_audience_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/marketing/announcements/{announcement_id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End Announcement
+         * @description Stop the pop-up now. An email that has already gone out cannot be taken back.
+         */
+        post: operations["end_announcement_v1_admin_marketing_announcements__announcement_id__end_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/marketing/campaigns": {
         parameters: {
             query?: never;
@@ -3519,6 +3577,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/announcements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My Announcements */
+        get: operations["my_announcements_v1_me_announcements_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/announcements/{announcement_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss Announcement
+         * @description Close it for good: it will not appear again for this person.
+         */
+        post: operations["dismiss_announcement_v1_me_announcements__announcement_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/marketing": {
         parameters: {
             query?: never;
@@ -4629,6 +4724,44 @@ export interface components {
              * @default false
              */
             include_existing: boolean;
+        };
+        /** AnnouncementBody */
+        AnnouncementBody: {
+            /**
+             * Button Label
+             * @default
+             */
+            button_label: string;
+            /**
+             * Button Url
+             * @default
+             */
+            button_url: string;
+            /** Confirm Count */
+            confirm_count?: number | null;
+            /** Message */
+            message: string;
+            /**
+             * Send Email
+             * @default true
+             */
+            send_email: boolean;
+            /**
+             * Show For
+             * @description How long the pop-up keeps appearing.
+             * @default 3
+             */
+            show_for: number;
+            /** Starts At */
+            starts_at?: string | null;
+            /** Title */
+            title: string;
+            /**
+             * Unit
+             * @default days
+             * @enum {string}
+             */
+            unit: "hours" | "days";
         };
         /** Approval */
         Approval: {
@@ -9604,6 +9737,149 @@ export interface operations {
                 authorization?: string | null;
             };
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_announcements_v1_admin_marketing_announcements_get: {
+        parameters: {
+            query?: {
+                /** @description How many to return. */
+                limit?: number;
+                /** @description How many to skip. */
+                offset?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_announcement_v1_admin_marketing_announcements_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnouncementBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    audience_v1_admin_marketing_announcements_audience_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    end_announcement_v1_admin_marketing_announcements__announcement_id__end_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                announcement_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -16214,6 +16490,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_announcements_v1_me_announcements_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_announcement_v1_me_announcements__announcement_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                announcement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

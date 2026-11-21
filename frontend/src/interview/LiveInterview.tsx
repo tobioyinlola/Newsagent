@@ -148,8 +148,8 @@ const PREP_STEPS = ["Turning on your camera…", "Opening your interview…", "G
 function PreparingOverlay({ message }: { message: string }) {
   const at = Math.max(0, PREP_STEPS.indexOf(message));
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/80 p-4 backdrop-blur-sm" role="alertdialog" aria-modal="true" aria-busy="true" aria-labelledby="prep-title">
-      <div className="w-full max-w-sm rounded-sm border-2 border-brand-green bg-ink p-6 text-white shadow-2xl">
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-ink/80 p-4 backdrop-blur-sm" role="alertdialog" aria-modal="true" aria-busy="true" aria-labelledby="prep-title">
+      <div className="m-auto w-full max-w-sm rounded-sm border-2 border-brand-green bg-ink p-6 text-white shadow-2xl">
         <div className="flex items-center gap-3">
           <span className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-brand-green/30 border-t-brand-green motion-reduce:animate-none" aria-hidden="true" />
           <h2 id="prep-title" className="text-lg font-bold text-white">Preparing your interview</h2>

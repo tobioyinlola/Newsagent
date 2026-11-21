@@ -30,6 +30,8 @@ test("account layout: carousel controls, independent form scrolling, mobile and 
   await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: "/tmp/cover-founder-login-mobile.png", fullPage: true, animations: "disabled" });
+  await expect(page.getByRole("region", { name: "Discover Cover Founder" })).toBeHidden(); // on a phone sign-in is just the form
+  await page.setViewportSize({ width: 1280, height: 800 }); // (the carousel is for larger screens)
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(page.getByRole("button", { name: /Play feature carousel|Pause feature carousel/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Next feature", exact: true }).click();

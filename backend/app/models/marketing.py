@@ -202,3 +202,19 @@ class UserEvent(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(40), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+
+class Announcement(Base, TimestampMixin):
+    """A message to every customer: a pop-up they see after signing in for a set time, and optionally an email to all of them too."""
+
+    __tablename__ = "announcements"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    title: Mapped[str] = mapped_column(String(120))
+    message: Mapped[str] = mapped_column(Text)
+    button_label: Mapped[str] = mapped_column(String(60), default="")
+    button_url: Mapped[str] = mapped_column(String(500), default="")
+    shows_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    shows_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)  # the pop-up stops appearing at this time
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # ended early by the team
+    email_campaign_id: Mapped[str | None] = mapped_column(String(32), nullable=True)  # the campaign that emails it, if it is emailed
+    created_by: Mapped[str] = mapped_column(String(320), default="")
