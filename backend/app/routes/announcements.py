@@ -95,6 +95,21 @@ async def audience(p: Principal = Depends(require("marketing.view")), db: AsyncS
     return {"reachable": (await segs.preview(db, seg, sample=0))["reachable"], "email_engine": marketing.engine_mode()}
 
 
+async def _confirmed_audience(db: AsyncSession, confirm_count: int | None) -> int:
+    """The email needs the server switch on, somebody to send to, and the team to have seen how many people that is."""
+    if marketing.engine_mode() == "off":
+        raise HTTPException(
+            409,
+            "Marketing email is switched off on the server (MARKETING_EMAIL), so the email would not be sent. Send it in the app only, or switch it on first.",
+        )
+    reachable = (await segs.preview(db, segs.Rules.model_validate(svc.EVERYONE_RULES), sample=0))["reachable"]
+    if reachable == 0:
+        raise HTTPException(422, "Nobody can be emailed right now.")
+    if confirm_count != reachable:
+        raise HTTPException(409, f"The audience changed: {reachable} people can be emailed now, not {confirm_count}. Please look again.")
+    return reachable
+
+
 @router.post("/v1/admin/marketing/announcements", status_code=201)
 async def create_announcement(
     body: AnnouncementBody,
@@ -107,15 +122,7 @@ async def create_announcement(
     begin = body.starts_at if body.starts_at is None or body.starts_at.tzinfo else body.starts_at.replace(tzinfo=UTC)
     if begin is not None and begin < now - timedelta(minutes=1):
         raise HTTPException(422, "Choose a start time that is not in the past.")
-    reachable = 0
-    if body.send_email:
-        if marketing.engine_mode() == "off":
-            raise HTTPException(409, "Marketing email is switched off on the server (MARKETING_EMAIL), so the email would not be sent. Untick the email, or switch it on first.")
-        reachable = (await segs.preview(db, segs.Rules.model_validate(svc.EVERYONE_RULES), sample=0))["reachable"]
-        if reachable == 0:
-            raise HTTPException(422, "Nobody can be emailed right now.")
-        if body.confirm_count != reachable:
-            raise HTTPException(409, f"The audience changed: {reachable} people can be emailed now, not {body.confirm_count}. Please look again.")
+    reachable = await _confirmed_audience(db, body.confirm_count) if body.send_email else 0
     starts, ends = svc.window(begin, body.show_for, body.unit)
     a = Announcement(
         title=body.title.strip(),
@@ -135,6 +142,38 @@ async def create_announcement(
     audit(
         db, p.user.email, "marketing.announcement_created", target_type="announcement", target_id=a.id,
         detail={"emailed": body.send_email, "audience": reachable, "until": ends.isoformat()}, request=request,
+    )
+    await db.commit()
+    return await _out(db, a)
+
+
+class EmailBody(BaseModel):
+    confirm_count: int
+
+
+@router.post("/v1/admin/marketing/announcements/{announcement_id}/email")
+async def email_announcement(
+    announcement_id: str,
+    body: EmailBody,
+    request: Request,
+    p: Principal = Depends(require("marketing.manage")),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Also email an announcement that was made for the app only. It goes to everyone who can be emailed, now."""
+    a = await db.get(Announcement, announcement_id)
+    if a is None:
+        raise HTTPException(404, "Announcement not found")
+    if a.email_campaign_id:
+        raise HTTPException(409, "This announcement has already been emailed.")
+    if svc.status(a) == "ended":
+        raise HTTPException(409, "This announcement has ended, so it is too late to email it.")
+    reachable = await _confirmed_audience(db, body.confirm_count)
+    c = await svc.make_email(db, a, p.user.email)
+    c.status, c.send_at, c.scheduled_by, c.audience = "scheduled", utcnow(), p.user.email, reachable
+    a.email_campaign_id = c.id
+    audit(
+        db, p.user.email, "marketing.announcement_emailed", target_type="announcement", target_id=a.id,
+        detail={"audience": reachable}, request=request,
     )
     await db.commit()
     return await _out(db, a)
