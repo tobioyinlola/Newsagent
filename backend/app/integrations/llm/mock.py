@@ -164,7 +164,7 @@ class MockScriptLLM(ScriptLLM):
             ),
         )
 
-    async def write_news(self, source_text: str, source_name: str):
+    async def write_news(self, source_text: str, source_name: str, feedback: str = ""):
         from app.integrations.llm.base import NewsDraft, NewsScene
 
         # Deterministic demo copy within the standalone editorial word limits.

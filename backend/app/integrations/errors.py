@@ -90,6 +90,11 @@ def classify(exc: BaseException) -> Classified:
 _last_alert: dict[str, float] = {}
 
 
+def is_vendor_failure(exc: BaseException) -> bool:
+    """A failure of a vendor call (busy, out of credit, unreachable), as opposed to a bug or a bad answer."""
+    return isinstance(exc, (ProviderError, httpx.HTTPError, TimeoutError))
+
+
 def answer_for_vendor_failure(exc: BaseException):
     """What a customer reads when a vendor call failed inside their request: a 503 that says nothing was lost and when to retry. Returns None
     for anything that is not a vendor failure, so real bugs still show as errors. A vendor that is out of credit or refusing our key also
@@ -99,7 +104,7 @@ def answer_for_vendor_failure(exc: BaseException):
 
     from fastapi.responses import JSONResponse
 
-    if not isinstance(exc, (ProviderError, httpx.HTTPError, TimeoutError)):
+    if not is_vendor_failure(exc):
         return None
     c = classify(exc)
     if c.category in ("quota", "auth"):
