@@ -1,6 +1,7 @@
 """Human-fulfilled distribution requests. Payment and submission are one atomic operation."""
 
 import re
+from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
@@ -13,12 +14,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import Principal, current_principal, require
 from app.db import get_session
 from app.integrations import registry
-from app.models import Asset, BrandAsset, Brief, DistributionRequest, Project, ScriptVersion, Workspace
+from app.models import (
+    Asset,
+    BrandAsset,
+    Brief,
+    DistributionPackage,
+    DistributionRequest,
+    Project,
+    ScriptVersion,
+    Workspace,
+)
 from app.models.base import utcnow
 from app.services import distribution as fulfillment
 from app.services import distribution_catalog as catalog_service
 from app.services import distribution_planner as planner
 from app.services import ledger, paging, planner_stats
+from app.services import packages as package_service
 from app.services.audit import audit
 from app.services.ratelimit import limit
 
@@ -406,13 +417,32 @@ class DraftIn(BaseModel):
     # The plan the outlets came from, if any, so we can see whether people keep what is suggested.
     plan_key: Literal["", "essential", "balanced", "max"] = ""
     plan_ids: list[str] = Field(default_factory=list, max_length=100)
+    package_id: str = Field(default="", max_length=32)  # a ready-made media package, instead of picking outlets one by one
 
 
 class StatusIn(BaseModel):
     status: Literal["submitted", "in_progress", "completed"]
 
 
-def quoted_lines(body, catalog):
+async def apply_package(db: AsyncSession, body: DraftIn, *, buying: bool = False) -> tuple[DraftIn, DistributionPackage | None]:
+    """A draft that names a package takes that package's outlets, and the package's price. It must be one we sell, open right now."""
+    if not body.package_id:
+        return body, None
+    pkg = await package_service.by_id(db, body.package_id)
+    if pkg is None or not pkg.active:
+        raise HTTPException(422, "That package is not available")
+    st = package_service.state(pkg)
+    if st == "quote":
+        raise HTTPException(422, "That package is priced on request. Contact us and we will send you a quote.")
+    if st != "open":
+        say = {"sold_out": "That package is sold out.", "ended": "That offer has ended.", "not_started": "That offer has not started yet."}
+        raise HTTPException(409 if buying else 422, say.get(st, "That package is not available"))
+    return body.model_copy(update={"outlet_ids": list(pkg.outlet_ids or []), "media_options": {}, "plan_key": "", "plan_ids": []}), pkg
+
+
+def quoted_lines(body, catalog, pkg=None):
+    if pkg is not None:
+        return package_service.lines(pkg, catalog, package_service.credit_price(pkg))
     try:
         return catalog_service.quote(body.model_dump(), catalog)
     except catalog_service.QuoteTooLarge as error:
@@ -532,6 +562,69 @@ async def public_outlets(response: Response, db: AsyncSession = Depends(get_sess
         "filters": _filters(),
         "planner": await planner.enabled(db),
     }
+
+
+@router.get("/v1/public/distribution/packages", dependencies=[Depends(limit("public-packages", 120, 60))])
+async def public_packages(response: Response, db: AsyncSession = Depends(get_session)) -> dict:
+    """The media packages a visitor can read before signing up. Slots left are live, so the answer is only cached for a few seconds."""
+    response.headers["Cache-Control"] = "public, max-age=15"
+    return {"packages": [package_service.view(x) for x in await package_service.listing(db)]}
+
+
+@router.get("/v1/distribution-packages")
+async def packages(p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> dict:
+    return {"packages": [package_service.view(x) for x in await package_service.listing(db)]}
+
+
+class PackagePatch(BaseModel):
+    usd_price: Decimal | None = Field(default=None, ge=0, le=Decimal("10000000"))
+    clear_price: bool = False  # make it a custom quote again
+    standard_usd: Decimal | None = Field(default=None, ge=0, le=Decimal("10000000"))
+    slots_total: int | None = Field(default=None, ge=0, le=100000)
+    clear_slots: bool = False  # no limit
+    slots_taken: int | None = Field(default=None, ge=0, le=100000)
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
+    clear_dates: bool = False
+    active: bool | None = None
+
+
+@router.get("/v1/admin/distribution-packages")
+async def admin_packages(p: Principal = Depends(require("operations.view")), db: AsyncSession = Depends(get_session)) -> dict:
+    return {"packages": [{**package_service.view(x), "active": x.active, "starts_at": x.starts_at} for x in await package_service.listing(db, everything=True)]}
+
+
+@router.patch("/v1/admin/distribution-packages/{id}")
+async def admin_package_patch(
+    id: str, body: PackagePatch, p: Principal = Depends(require("operations.manage")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    pkg = await package_service.by_id(db, id)
+    if pkg is None:
+        raise HTTPException(404, "Package not found")
+    if body.clear_price:
+        pkg.usd_price = None
+    elif body.usd_price is not None:
+        pkg.usd_price = body.usd_price
+    if body.standard_usd is not None:
+        pkg.standard_usd = body.standard_usd or None
+    if body.clear_slots:
+        pkg.slots_total = None
+    elif body.slots_total is not None:
+        pkg.slots_total = body.slots_total
+    if body.slots_taken is not None:
+        pkg.slots_taken = body.slots_taken
+    if body.clear_dates:
+        pkg.starts_at = pkg.ends_at = None
+    else:
+        if body.starts_at is not None:
+            pkg.starts_at = body.starts_at
+        if body.ends_at is not None:
+            pkg.ends_at = body.ends_at
+    if body.active is not None:
+        pkg.active = body.active
+    audit(db, p.user.email, "distribution.package_edited", target_type="distribution_package", target_id=id, detail=body.model_dump(mode="json", exclude_unset=True))
+    await db.commit()
+    return {**package_service.view(pkg), "active": pkg.active, "starts_at": pkg.starts_at}
 
 
 class PlanIn(BaseModel):
@@ -792,9 +885,10 @@ async def save(
     id: str, body: DraftIn, p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)
 ) -> dict:
     await owned(db, id, p)
+    body, pkg = await apply_package(db, body)
     await validate(db, body, p.workspace.id)
     catalog = await catalog_service.catalog(db, admin=True)
-    lines = quoted_lines(body, catalog)
+    lines = quoted_lines(body, catalog, pkg)
     total = sum((Decimal(o["credits"]) for o in lines), Decimal("0"))
     row = (
         await db.execute(
@@ -834,10 +928,16 @@ async def submit(
         tasks.add_task(fulfillment.deliver_request, row.id)
         return await result(db, row)
     body = DraftIn.model_validate(row.data)
+    try:
+        body, pkg = await apply_package(db, body, buying=True)
+    except HTTPException:
+        row.status, row.stage = "draft", "outlets"  # back to a draft: nothing was charged
+        await db.commit()
+        raise
     if body.announcement_source == "platform" and not body.story_project_id:
         raise HTTPException(422, "Select the platform story you want to use")
     await validate(db, body, p.workspace.id)
-    if not body.outlet_ids or not all(
+    if not (body.outlet_ids or pkg) or not all(
         x.strip()
         for x in [
             body.headline,
@@ -855,7 +955,7 @@ async def submit(
     if not re.fullmatch(r"\+[1-9][0-9]{6,14}", re.sub(r"[() .-]", "", body.phone)):
         raise HTTPException(422, "Enter a valid phone number, including the country code")
     catalog = await catalog_service.catalog(db, admin=True)
-    lines = quoted_lines(body, catalog)
+    lines = quoted_lines(body, catalog, pkg)
     total = sum((Decimal(o["credits"]) for o in lines), Decimal("0"))
     if total != row.total_credits or (
         expected
@@ -893,6 +993,10 @@ async def submit(
                 "shortfall": str(total - ws.credit_balance),
             },
         )
+    if pkg is not None and not await package_service.claim(db, pkg):  # the last slot went to someone else a moment ago
+        row.status, row.stage = "draft", "outlets"
+        await db.commit()
+        raise HTTPException(409, "That package has just sold out. Nothing was charged.")
     if total:
         await ledger.apply(
             db,
@@ -901,9 +1005,11 @@ async def submit(
             "usage",
             ref=f"distribution:{id}",
             stage="distribution",
-            description=f"Distribution to {len(body.outlet_ids)} outlets",
+            description=f"Package: {pkg.name}" if pkg else f"Distribution to {len(body.outlet_ids)} outlets",
         )
     row.data = {**body.model_dump(), "outlets": lines}
+    if pkg is not None:
+        row.data["package"] = {"id": pkg.id, "slug": pkg.slug, "name": pkg.name, "usd_price": str(pkg.usd_price), "outlets": list(pkg.outlet_names or []), "includes": list(pkg.includes or []), "note": pkg.note}
     row.total_credits, row.paid_at, row.submitted_at, row.stage = total, now, now, "submitted"
     audit(
         db,

@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { getToken } from "../lib/auth";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { OutletBrowser } from "../components/OutletBrowser";
+import { PackageCards } from "../components/PackageCards";
+import { Reveal } from "../components/Motion";
+import { setAfterAuth } from "../lib/distributionFilters";
+import type { MediaPackage } from "../lib/packages";
 import { OutletLogoStrip } from "../components/OutletLogoStrip";
 import { CHANNELS, Cta, Eyebrow, SiteShell } from "./Landing";
 
@@ -22,12 +28,6 @@ const CATEGORIES: [string, string][] = [
   ["Regional & local news", "Stories that matter where you operate."],
   ["Trade publications", "Your industry's own press."],
   ["Social & video", `Ready for ${CHANNELS.slice(0, 4).join(", ")} and more.`],
-];
-
-const PACKAGES: { name: string; reach: string; points: string[]; featured?: boolean }[] = [
-  { name: "Local", reach: "1 region", points: ["Your segment and story to one region", "Business and tech outlets", "Placement report"] },
-  { name: "Regional", reach: "Up to 3 regions", points: ["Everything in Local", "Pick any three regions", "Category targeting (e.g. finance, tech)"], featured: true },
-  { name: "Global", reach: "Every region", points: ["All five regions", "Full outlet categories", "Priority placement report"] },
 ];
 
 const QUESTIONS: [string, string][] = [
@@ -68,6 +68,32 @@ function DistributionHeroPhoto() {
   );
 }
 
+// Ready-made packages: a fixed set of outlets for one price. Paying happens in the app, so a visitor is asked to sign up first.
+function MediaPackages() {
+  const nav = useNavigate();
+  const q = useQuery({ queryKey: ["public-packages"], queryFn: async () => { const r = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/v1/public/distribution/packages`); if (!r.ok) throw new Error("packages"); return (await r.json()).packages as MediaPackage[]; }, refetchInterval: 30000 });
+  const choose = (p: MediaPackage) => {
+    const path = `/distribution/request?package=${encodeURIComponent(p.id)}`;
+    if (getToken()) { nav(path); return; }
+    setAfterAuth(path); // after sign-up the person lands in the request with this package already chosen
+    nav("/signup");
+  };
+  if (q.isError || !q.data?.length) return null; // the page still works without them
+  return (
+    <section id="packages" aria-labelledby="packages-h" className="scroll-mt-4 border-b border-white/10 bg-ink px-4 py-16 md:px-8">
+      <div className="mx-auto max-w-6xl">
+        <Reveal className="text-center">
+          <Eyebrow>Media packages</Eyebrow>
+          <h2 id="packages-h" className="mt-3 text-3xl text-white md:text-5xl">Ready-made packages, one price.</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-white/70">A fixed set of outlets for one price, by region. Create your free account and pay from your wallet. Nothing is charged until you confirm.</p>
+        </Reveal>
+        <div className="mt-10"><PackageCards packages={q.data} theme="dark" onChoose={choose} chooseLabel="Choose this package" /></div>
+        <p className="mx-auto mt-8 max-w-3xl text-center text-xs text-white/50">Prices are in US dollars and paid from your wallet in credits; local prices are shown for reference. Publication depends on each outlet. Organisation packages are agreed in a service schedule.</p>
+      </div>
+    </section>
+  );
+}
+
 export function DistributionPage() {
   const signedIn = Boolean(getToken());
   const [open, setOpen] = useState(QUESTIONS[0][0]);
@@ -98,6 +124,8 @@ export function DistributionPage() {
         </section>
 
         <OutletMarquee />
+
+        <MediaPackages />
 
         <OutletBrowser />
 
@@ -132,22 +160,6 @@ export function DistributionPage() {
             <div className="text-center"><Eyebrow>Outlet categories</Eyebrow><h2 className="mt-3 text-3xl text-white md:text-5xl">Reach the right readers.</h2></div>
             <div className="mt-10 grid gap-px border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-3">
               {CATEGORIES.map(([t, d]) => <div key={t} className="bg-ink p-6"><h3 className="text-lg text-white">{t}</h3><p className="mt-2 text-sm text-white/70">{d}</p></div>)}
-            </div>
-          </div>
-        </section>
-
-        <section className="border-t border-white/10 bg-ink px-4 py-20 md:px-8">
-          <div className="mx-auto max-w-6xl">
-            <div className="text-center"><Eyebrow>Packages</Eyebrow><h2 className="mt-3 text-3xl text-white md:text-5xl">Paid in credits. No subscription.</h2><p className="mx-auto mt-3 max-w-2xl text-white/70">Each package shows its credits before you confirm. Nothing is charged until you do.</p></div>
-            <div className="mt-10 grid gap-4 md:grid-cols-3">
-              {PACKAGES.map((p) => (
-                <div key={p.name} className={`flex flex-col rounded-sm border p-6 ${p.featured ? "border-brand-green bg-white/5" : "border-white/10"}`}>
-                  <p className="text-xs font-bold uppercase tracking-wider text-white/60">{p.name}</p>
-                  <p className="mt-3 text-3xl font-bold text-white">{p.reach}</p>
-                  <ul className="mt-5 flex-1 space-y-2 text-sm text-white/85">{p.points.map((x) => <li key={x} className="flex gap-2"><span className="text-brand-green" aria-hidden="true">✓</span>{x}</li>)}</ul>
-                  <div className="mt-6"><Cta href="#choose" primary={p.featured}>Choose outlets</Cta></div>
-                </div>
-              ))}
             </div>
           </div>
         </section>
