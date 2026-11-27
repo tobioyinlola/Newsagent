@@ -180,7 +180,7 @@ class Settings(BaseSettings):
     outreach_imap_password: str = ""
     outreach_imap_folder: str = "INBOX"
     llm_max_concurrency: int = 16  # writing calls in flight at once per process; the rest wait their turn
-    llm_retries: int = 2  # a busy or briefly failing writing provider is asked again this many times
+    llm_retries: int = 4  # a busy or briefly failing writing provider is asked again this many times (waits grow to 20 s)
     queue_mode: str = "legacy"
     render_queue_slots: int = (
         0  # renders running at once under the dispatcher; 0 = one per configured renderer x render_jobs_concurrency

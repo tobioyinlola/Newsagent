@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { track } from "../lib/ga";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { OutOfCredits } from "../components/OutOfCredits";
@@ -22,10 +22,12 @@ export function NewProject() {
   const [company, setCompany] = useState("");
   const [site, setSite] = useState("");
   const [presenter, setPresenter] = useState("");
+  const created = useRef<{ id: string } | null>(null); // the draft made on an earlier try: starting it again must not make a second one
   const m = useMutation({
     mutationFn: async () => {
       const label = KINDS.find((k) => k[0] === kind)?.[1] ?? "Announcement";
-      const p = await unwrap(api.POST("/v1/projects", { body: { brief_text: `${details.trim()}\n\nAnnouncement type: ${label}.`, website_url: site.trim() ? (/^https?:\/\//i.test(site.trim()) ? site.trim() : `https://${site.trim()}`) : null, region: "NG", voice_accent: "british", founder_name: `${first.trim()} ${last.trim()}`, founder_title: `${role.trim()}, ${company.trim()}`, founder_location: `${city.trim()}, ${country.trim()}`, anchor_id: presenter || null, flow: "guided", announcement_type: kind } }));
+      const p = created.current ?? await unwrap(api.POST("/v1/projects", { body: { brief_text: `${details.trim()}\n\nAnnouncement type: ${label}.`, website_url: site.trim() ? (/^https?:\/\//i.test(site.trim()) ? site.trim() : `https://${site.trim()}`) : null, region: "NG", voice_accent: "british", founder_name: `${first.trim()} ${last.trim()}`, founder_title: `${role.trim()}, ${company.trim()}`, founder_location: `${city.trim()}, ${country.trim()}`, anchor_id: presenter || null, flow: "guided", announcement_type: kind } }));
+      created.current = p;
       await unwrap(api.POST("/v1/projects/{project_id}/guided/start", { params: { path: { project_id: p.id } } }));
       return p;
     },
