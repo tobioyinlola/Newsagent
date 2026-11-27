@@ -6,7 +6,11 @@ const OPS = { Authorization: "Bearer dev:ops@example.com" };
 test("the distribution page shows the media packages with their prices, slots and quotes", async ({ page }) => {
   await page.goto("/press-distribution");
   const section = page.locator("#packages");
-  await expect(section.getByRole("heading", { name: "Ready-made packages, one price." })).toBeVisible();
+  const title = section.getByRole("heading", { name: "Ready-made packages, one price." });
+  await title.scrollIntoViewIfNeeded();
+  await expect(title).toBeVisible();
+  // it fades in, and must not be left invisible: no parent may hold it at zero opacity
+  await expect.poll(() => title.evaluate((el) => { let o = 1; for (let n: Element | null = el; n; n = n.parentElement) o = Math.min(o, Number(getComputedStyle(n).opacity)); return o; })).toBe(1);
   await expect(section.getByRole("tab", { name: /Black Friday & Cyber Monday/ })).toBeVisible();
   const deal = section.getByRole("article", { name: "The International Founder Visibility Deal" });
   await expect(deal).toContainText("US$995");
