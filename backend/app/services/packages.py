@@ -107,3 +107,25 @@ def lines(pkg: DistributionPackage, catalog: list[dict], total: Decimal) -> list
                     "base_credits": str(part), "logo_fee": "0", "picture_fee": "0", "include_logo": False, "picture_count": 0,
                     "picture_keys": [], "logo_key": None, "package": True, "credits": str(part)})
     return out
+
+
+def _norm(name: str) -> str:
+    n = name.lower().replace(".com", "")
+    return "".join(ch for ch in n if ch.isalnum())
+
+
+def resolve(names: list[str], catalog: list[dict]) -> list[str]:
+    """The outlets we hold in our catalogue among the names an operator typed. Matching ignores case, spaces and ".com", and knows the
+    spellings the package document used. Names we do not hold are simply not matched: the team arranges those by hand."""
+    from app.services.package_seed import CATALOG as ALIASES
+
+    by = {_norm(o["name"]): o["id"] for o in catalog}
+    out: list[str] = []
+    for raw in names:
+        n = raw.strip()
+        if not n:
+            continue
+        found = by.get(_norm(n)) or ALIASES.get(n) or next((v for k, v in ALIASES.items() if _norm(k) == _norm(n)), None)
+        if found and found not in out:
+            out.append(found)
+    return out

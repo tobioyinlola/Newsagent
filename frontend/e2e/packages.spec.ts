@@ -58,14 +58,39 @@ test("a visitor who chooses a package is sent to sign up, and a customer buys it
   expect((await list()).find((p) => p.slug === "bf-startup-visibility-deal")!.slots_left).toBe(left - 1);
 });
 
-test("an operator can change a package's price and slots", async ({ browser, request }) => {
+test("an operator can add a package and change anything about one", async ({ browser, request }) => {
   const ap = await (await browser.newContext()).newPage();
   await ap.addInitScript(() => sessionStorage.setItem("newsagent.admin.token", "dev:ops@example.com"));
   await ap.goto("/admin/distribution");
   await ap.getByRole("button", { name: "Packages", exact: true }).click();
+  const all = async () => (await (await request.get(`${API}/v1/admin/distribution-packages`, { headers: OPS })).json()).packages as { id: string; slug: string; state: string; slots_left: number; name: string; outlets: string[]; held: string[]; includes: string[]; local_prices: Record<string, string> }[];
+
+  // change the price, slots and wording of one that had no dollar price
+  await ap.getByRole("button", { name: "Edit The Middle East Startup Entry Package" }).click();
   await ap.getByLabel("Price in USD for The Middle East Startup Entry Package").fill("495.70");
   await ap.getByLabel("Slots for The Middle East Startup Entry Package").fill("7");
-  await ap.getByRole("listitem").filter({ hasText: "The Middle East Startup Entry Package" }).getByRole("button", { name: "Save" }).click();
-  await expect.poll(async () => ((await (await request.get(`${API}/v1/public/distribution/packages`)).json()).packages as { slug: string; state: string; slots_left: number }[]).find((p) => p.slug === "middle-east-startup-entry")).toMatchObject({ state: "open", slots_left: 7 });
-  await request.patch(`${API}/v1/admin/distribution-packages/${(await (await request.get(`${API}/v1/admin/distribution-packages`, { headers: OPS })).json()).packages.find((p: { slug: string }) => p.slug === "middle-east-startup-entry").id}`, { headers: OPS, data: { clear_price: true, clear_slots: true } }); // leave it as it was
+  await ap.getByLabel("Note for The Middle East Startup Entry Package").fill("Limited this month.");
+  await ap.getByRole("button", { name: "Save changes" }).click();
+  await expect.poll(async () => (await all()).find((p) => p.slug === "middle-east-startup-entry")).toMatchObject({ state: "open", slots_left: 7 });
+
+  // add a brand new package, with outlets, extras and a local price
+  await ap.getByRole("button", { name: "Add a package" }).click();
+  await ap.getByLabel("Name of new package").fill("Kenya Startup Spotlight");
+  await ap.getByLabel("Price in USD for new package").fill("250");
+  await ap.getByLabel("Outlets of new package").fill("Techbullion.com\nTech Cabal\nA Paper We Do Not Hold");
+  await ap.getByLabel("Includes of new package").fill("A coverage report");
+  await ap.getByLabel("Local prices of new package").fill("KES 32,000");
+  await ap.getByRole("button", { name: "Add package" }).click();
+  await expect(ap.getByText("Kenya Startup Spotlight")).toBeVisible();
+  const made = (await all()).find((p) => p.slug === "kenya-startup-spotlight")!;
+  expect(made).toMatchObject({ state: "open", includes: ["A coverage report"], local_prices: { KES: "32000" } });
+  expect(made.outlets).toHaveLength(3);
+  expect(made.held.sort()).toEqual(["Tech Cabal", "TechBullion"]); // the third is arranged by the team
+  const pub = (await (await request.get(`${API}/v1/public/distribution/packages`)).json()).packages as { slug: string }[];
+  expect(pub.some((p) => p.slug === "kenya-startup-spotlight")).toBe(true);
+
+  // switch it off: customers no longer see it
+  await ap.getByRole("listitem").filter({ hasText: "Kenya Startup Spotlight" }).getByRole("button", { name: "Switch off" }).click();
+  await expect.poll(async () => ((await (await request.get(`${API}/v1/public/distribution/packages`)).json()).packages as { slug: string }[]).some((p) => p.slug === "kenya-startup-spotlight")).toBe(false);
+  await request.patch(`${API}/v1/admin/distribution-packages/${(await all()).find((p) => p.slug === "middle-east-startup-entry")!.id}`, { headers: OPS, data: { clear_price: true, clear_slots: true, note: "" } }); // leave it as it was
 });
