@@ -174,7 +174,8 @@ async def plan_submission(db, row, catalog):
         body = (
             f"A distribution request has been confirmed.\nPayment: {'Paid from credit wallet' if row.total_credits else 'No-charge request'}\n"
             f"Total: {row.total_credits} credits\nReceipt: {invoice(row)['number']}\nRequester: {row.created_by}\n"
-            f"Contact: {data['contact_name']} <{data['contact_email']}>\nPhone: {data['phone']}\n"
+            + (f"Package: {data['package']['name']} (US${data['package']['usd_price']})\nPromised outlets: {', '.join(data['package']['outlets']) or 'see the package'}\nIncludes: {'; '.join(data['package']['includes']) or '-'}\n" if data.get("package") else "")
+            + f"Contact: {data['contact_name']} <{data['contact_email']}>\nPhone: {data['phone']}\n"
             f"Video project: {data.get('project_id') or 'none (the story only)'}\n\nSelected outlets and charges:\n{breakdown(row)}\n\n"
             f"Headline: {data['headline']}\n\nAnnouncement:\n{data['announcement']}\n\n"
             f"Company logo uploaded: {'Yes' if data.get('logo_key') else 'No'}\nAdditional pictures: {len(data.get('picture_keys', []))}\n"
@@ -196,6 +197,8 @@ async def plan_submission(db, row, catalog):
     mailbox_ready = await outreach_gmail.ready(db) if engine else False
     missing: list[str] = []
     for line in row.data["outlets"]:
+        if line["id"] not in by_id:  # a package line with no outlet of ours (a partnership): the team follows it up
+            continue
         config = by_id[line["id"]]
         contact = (config.get("contact_email") or "").strip().lower()
         cc = [e for e in (config.get("cc_emails") or []) if e.lower() != contact]
