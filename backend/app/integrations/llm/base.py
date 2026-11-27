@@ -113,7 +113,8 @@ class ScriptLLM(ABC):
         """Write a first draft of a marketing email from an operator's brief: {"subject", "preheader", "body"}."""
         raise NotImplementedError("Marketing copy drafting is not configured for this provider")
 
-    async def write_news(self, source_text: str, source_name: str) -> NewsDraft:
+    async def write_news(self, source_text: str, source_name: str, feedback: str = "") -> NewsDraft:
+        """`feedback`: why the last attempt was rejected (word counts, say), so the next one can fix exactly that."""
         raise NotImplementedError("News rewriting is not configured for this provider")
 
     @abstractmethod

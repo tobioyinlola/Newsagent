@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import Principal, operator
 from app.db import get_session
 from app.integrations import registry
+from app.integrations.errors import is_vendor_failure
 from app.integrations.llm.base import NewsDraft
 from app.integrations.storage.base import ObjectTooLarge
 from app.models import NewsImage, NewsStory, NewsVideo
@@ -215,6 +216,9 @@ async def save(id: str, body: DraftIn, p: Principal = Depends(operator), db: Asy
     return await out(db, row)
 
 
+REWRITE_TRIES = 3  # the writer is asked again, told what was wrong, before an editor sees a failure
+
+
 @router.post("/{id}/rewrite", dependencies=[Depends(limit("news-rewrite", 20, 3600))])
 async def rewrite(id: str, body: Revision, p: Principal = Depends(operator), db: AsyncSession = Depends(get_session)):
     row = await story(db, id)
@@ -224,15 +228,28 @@ async def rewrite(id: str, body: Revision, p: Principal = Depends(operator), db:
     if len(data.get("source_text", "").strip()) < 80 or not data.get("source_name"):
         raise HTTPException(422, "Add the source publisher and at least 80 characters of source text, then save")
     await db.commit()  # Do not hold a database transaction while waiting for the writer.
-    try:
-        draft = await registry.get_llm().write_news(data["source_text"], data["source_name"])
-        rewritten = draft.model_dump()
-        news_video_rules.validate_copy(rewritten)
-        data.update(rewritten)
-    except Exception:
+    why = ""  # what was wrong with the last attempt, told to the writer so the next one fixes exactly that
+    for _attempt in range(REWRITE_TRIES):
+        try:
+            draft = await registry.get_llm().write_news(data["source_text"], data["source_name"], why)
+            rewritten = draft.model_dump()
+            news_video_rules.validate_copy(rewritten)
+            data.update(rewritten)
+            break
+        except Exception as e:
+            if is_vendor_failure(e):
+                raise  # the writing provider is busy or out of credit: a calm "try again in a minute" (and an alert if it is credit)
+            if not isinstance(e, ValueError):
+                raise HTTPException(
+                    502, "We couldn't rewrite this story right now. Your saved draft is safe; please retry."
+                ) from None
+            why = str(e)[:300]  # the story missed a rule (length, shape): ask again, saying exactly what
+    else:
         raise HTTPException(
-            502, "We couldn't rewrite this story right now. Your saved draft is safe; please retry."
-        ) from None
+            502,
+            f"The rewrite kept missing the News Desk rules ({why}). Your saved draft is safe. Try again, "
+            "or add more detail to the source text.",
+        )
     row = await change(db, id, body.revision, data=data, updated_by=p.user.email)
     audit(db, p.user.email, "news.rewritten", target_type="news_story", target_id=id)
     await db.commit()
