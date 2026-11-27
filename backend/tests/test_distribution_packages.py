@@ -133,3 +133,28 @@ async def test_admin_edits_price_slots_and_dates(client, maker, workspace):
     assert get_settings() is not None
     r = await client.patch(f"/v1/admin/distribution-packages/{pid}", headers=OPS, json={"clear_slots": True, "clear_price": True, "active": True})
     assert r.json()["slots_total"] is None and r.json()["state"] == "quote"
+
+
+async def test_admin_adds_a_package_and_edits_all_of_it(client, maker, workspace):
+    made = await client.post("/v1/admin/distribution-packages", headers=OPS, json={
+        "name": "Ghana Startup Spotlight", "kind": "regional", "region": "africa", "usd_price": "300", "ideal_for": "Ghanaian startups",
+        "outlets": ["Techbullion.com", "tech cabal", "Some Outlet We Do Not Hold"], "includes": ["A coverage report", "  "],
+        "local_prices": {"ghs": "3,500"}, "slots_total": 4,
+    })
+    assert made.status_code == 200, made.text
+    p = made.json()
+    assert p["slug"] == "ghana-startup-spotlight" and p["state"] == "open" and p["slots_left"] == 4
+    assert p["outlets"] == ["Techbullion.com", "tech cabal", "Some Outlet We Do Not Hold"]
+    assert sorted(p["held"]) == ["Tech Cabal", "TechBullion"]  # the two we can write to; the third is arranged by hand
+    assert p["includes"] == ["A coverage report"] and p["local_prices"] == {"GHS": "3500"}
+    again = await client.post("/v1/admin/distribution-packages", headers=OPS, json={"name": "Ghana Startup Spotlight"})
+    assert again.json()["slug"] == "ghana-startup-spotlight-2" and again.json()["state"] == "quote"  # no price yet
+    r = await client.patch(f"/v1/admin/distribution-packages/{p['id']}", headers=OPS, json={"name": "Ghana Spotlight", "outlets": ["Punch"], "note": "Hello", "kind": "campaign", "campaign": "black_friday"})
+    assert r.status_code == 200 and r.json()["name"] == "Ghana Spotlight" and r.json()["held"] == ["Punch"] and r.json()["campaign"] == "black_friday"
+    pid = p["id"]
+    async with maker() as db:
+        assert (await db.get(DistributionPackage, pid)).outlet_ids == ["30"]
+    for bad in ({"local_prices": {"naira": "1"}}, {"local_prices": {"NGN": "lots"}}, {"local_prices": {"NGN": "-5"}}):
+        assert (await client.patch(f"/v1/admin/distribution-packages/{pid}", headers=OPS, json=bad)).status_code == 422
+    assert (await client.post("/v1/admin/distribution-packages", headers=OPS, json={"usd_price": "5"})).status_code == 422  # no name
+    assert (await client.post("/v1/admin/distribution-packages", headers=OWNER, json={"name": "Nope"})).status_code in (401, 403)

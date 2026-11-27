@@ -576,7 +576,16 @@ async def packages(p: Principal = Depends(current_principal), db: AsyncSession =
     return {"packages": [package_service.view(x) for x in await package_service.listing(db)]}
 
 
-class PackagePatch(BaseModel):
+class PackageFields(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=200)
+    kind: Literal["regional", "organisation", "campaign"] | None = None
+    region: str | None = Field(default=None, max_length=30)
+    campaign: Literal["", "black_friday", "cyber_monday"] | None = None
+    ideal_for: str | None = Field(default=None, max_length=400)
+    note: str | None = Field(default=None, max_length=600)
+    outlets: list[str] | None = Field(default=None, max_length=40)  # the outlets promised, by name
+    includes: list[str] | None = Field(default=None, max_length=20)  # what else comes with it
+    local_prices: dict[str, str] | None = None  # {"NGN": "912203.49"}: shown, never charged
     usd_price: Decimal | None = Field(default=None, ge=0, le=Decimal("10000000"))
     clear_price: bool = False  # make it a custom quote again
     standard_usd: Decimal | None = Field(default=None, ge=0, le=Decimal("10000000"))
@@ -589,18 +598,49 @@ class PackagePatch(BaseModel):
     active: bool | None = None
 
 
-@router.get("/v1/admin/distribution-packages")
-async def admin_packages(p: Principal = Depends(require("operations.view")), db: AsyncSession = Depends(get_session)) -> dict:
-    return {"packages": [{**package_service.view(x), "active": x.active, "starts_at": x.starts_at} for x in await package_service.listing(db, everything=True)]}
+PackagePatch = PackageFields
 
 
-@router.patch("/v1/admin/distribution-packages/{id}")
-async def admin_package_patch(
-    id: str, body: PackagePatch, p: Principal = Depends(require("operations.manage")), db: AsyncSession = Depends(get_session)
-) -> dict:
-    pkg = await package_service.by_id(db, id)
-    if pkg is None:
-        raise HTTPException(404, "Package not found")
+def _lines(values: list[str]) -> list[str]:
+    return [v.strip()[:200] for v in values if v.strip()]
+
+
+def _local(values: dict[str, str]) -> dict[str, str]:
+    out = {}
+    for code, amount in values.items():
+        code = code.strip().upper()
+        if not (2 <= len(code) <= 4 and code.isalpha()):
+            raise HTTPException(422, f"{code or 'A currency'} is not a currency code, for example NGN or GBP")
+        try:
+            number = Decimal(amount.replace(",", "").strip())
+        except Exception as error:
+            raise HTTPException(422, f"{code}: enter the price as a number") from error
+        if number < 0:
+            raise HTTPException(422, f"{code}: the price cannot be negative")
+        out[code] = str(number)
+    return out
+
+
+async def _apply_package(db: AsyncSession, pkg: DistributionPackage, body: PackageFields) -> None:
+    if body.name is not None:
+        pkg.name = body.name.strip()
+    if body.kind is not None:
+        pkg.kind = body.kind
+    if body.region is not None:
+        pkg.region = body.region.strip()
+    if body.campaign is not None:
+        pkg.campaign = body.campaign
+    if body.ideal_for is not None:
+        pkg.ideal_for = body.ideal_for.strip()
+    if body.note is not None:
+        pkg.note = body.note.strip()
+    if body.includes is not None:
+        pkg.includes = _lines(body.includes)
+    if body.local_prices is not None:
+        pkg.local_prices = _local(body.local_prices)
+    if body.outlets is not None:
+        pkg.outlet_names = _lines(body.outlets)
+        pkg.outlet_ids = package_service.resolve(pkg.outlet_names, await catalog_service.catalog(db, admin=True))
     if body.clear_price:
         pkg.usd_price = None
     elif body.usd_price is not None:
@@ -622,9 +662,57 @@ async def admin_package_patch(
             pkg.ends_at = body.ends_at
     if body.active is not None:
         pkg.active = body.active
+
+
+async def _admin_view(db: AsyncSession, pkg: DistributionPackage) -> dict:
+    held = {o["id"]: o["name"] for o in await catalog_service.catalog(db, admin=True)}
+    return {
+        **package_service.view(pkg),
+        "active": pkg.active,
+        "starts_at": pkg.starts_at,
+        "held": [held[i] for i in (pkg.outlet_ids or []) if i in held],  # the promised outlets we can write to ourselves
+    }
+
+
+@router.get("/v1/admin/distribution-packages")
+async def admin_packages(p: Principal = Depends(require("operations.view")), db: AsyncSession = Depends(get_session)) -> dict:
+    return {"packages": [await _admin_view(db, x) for x in await package_service.listing(db, everything=True)]}
+
+
+@router.post("/v1/admin/distribution-packages")
+async def admin_package_create(
+    body: PackageFields, p: Principal = Depends(require("operations.manage")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    if not body.name:
+        raise HTTPException(422, "Give the package a name")
+    base = "".join(c if c.isalnum() else "-" for c in body.name.lower()).strip("-")
+    base = "-".join(x for x in base.split("-") if x)[:60] or "package"
+    taken = {x.slug for x in await package_service.listing(db, everything=True)}
+    slug, n = base, 2
+    while slug in taken:
+        slug, n = f"{base}-{n}", n + 1
+    last = max([x.sort for x in await package_service.listing(db, everything=True)], default=0)
+    pkg = DistributionPackage(slug=slug, name=body.name.strip(), kind=body.kind or "regional", region=body.region or "", campaign=body.campaign or "",
+                              outlet_names=[], outlet_ids=[], includes=[], local_prices={}, sort=last + 1, active=True)
+    db.add(pkg)
+    await _apply_package(db, pkg, body)
+    await db.flush()
+    audit(db, p.user.email, "distribution.package_created", target_type="distribution_package", target_id=pkg.id, detail={"name": pkg.name})
+    await db.commit()
+    return await _admin_view(db, pkg)
+
+
+@router.patch("/v1/admin/distribution-packages/{id}")
+async def admin_package_patch(
+    id: str, body: PackageFields, p: Principal = Depends(require("operations.manage")), db: AsyncSession = Depends(get_session)
+) -> dict:
+    pkg = await package_service.by_id(db, id)
+    if pkg is None:
+        raise HTTPException(404, "Package not found")
+    await _apply_package(db, pkg, body)
     audit(db, p.user.email, "distribution.package_edited", target_type="distribution_package", target_id=id, detail=body.model_dump(mode="json", exclude_unset=True))
     await db.commit()
-    return {**package_service.view(pkg), "active": pkg.active, "starts_at": pkg.starts_at}
+    return await _admin_view(db, pkg)
 
 
 class PlanIn(BaseModel):
