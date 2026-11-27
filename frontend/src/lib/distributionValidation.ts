@@ -3,7 +3,7 @@ import { validPhone } from "./phone";
 export type DistributionErrors = Partial<Record<keyof Draft, string>>;
 export function validateDistributionStep(d: Draft, step: string): DistributionErrors {
   const e: DistributionErrors = {};
-  if (step === "outlets" && !d.outlet_ids.length) e.outlet_ids = "Choose at least one media outlet to continue.";
+  if (step === "outlets" && !d.outlet_ids.length && !d.package_id) e.outlet_ids = "Choose at least one media outlet, or a package, to continue.";
   if (step === "content") {
     if (d.announcement_source === "platform" && !d.story_project_id) e.story_project_id = "Select a story written on Cover Founder.";
     if (!d.headline.trim()) e.headline = "Add a headline for your announcement.";

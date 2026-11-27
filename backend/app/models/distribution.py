@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, new_id, utcnow
@@ -81,3 +81,29 @@ class DistributionActivity(Base):
     kind: Mapped[str] = mapped_column(String(40))
     detail: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class DistributionPackage(Base, TimestampMixin):
+    """A ready-made media package: a named bundle of outlets (or services) sold at one price. Editable from the admin."""
+
+    __tablename__ = "distribution_packages"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    slug: Mapped[str] = mapped_column(String(80), unique=True)
+    kind: Mapped[str] = mapped_column(String(20), default="regional")  # regional | organisation | campaign
+    region: Mapped[str] = mapped_column(String(30), default="", index=True)
+    campaign: Mapped[str] = mapped_column(String(20), default="")  # black_friday | cyber_monday | ""
+    name: Mapped[str] = mapped_column(String(200))
+    usd_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)  # none = a custom quote, not sold in the app
+    standard_usd: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)  # the usual price, for "33% off"
+    local_prices: Mapped[dict] = mapped_column(JSON, default=dict)  # {"NGN": "912203.49"}: shown beside the price, never charged
+    outlet_names: Mapped[list] = mapped_column(JSON, default=list)  # as promised to the customer
+    outlet_ids: Mapped[list] = mapped_column(JSON, default=list)  # the ones we hold in the outlet catalogue (we write to these)
+    includes: Mapped[list] = mapped_column(JSON, default=list)  # what else comes with it
+    ideal_for: Mapped[str] = mapped_column(String(400), default="")
+    note: Mapped[str] = mapped_column(String(600), default="")
+    slots_total: Mapped[int | None] = mapped_column(Integer, nullable=True)  # none = no limit
+    slots_taken: Mapped[int] = mapped_column(Integer, default=0)
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    sort: Mapped[int] = mapped_column(Integer, default=0)

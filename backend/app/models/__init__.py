@@ -9,7 +9,13 @@ from app.models.analytics import (
 )
 from app.models.bank_receipt import BankReceipt
 from app.models.base import Base
-from app.models.distribution import DistributionActivity, DistributionMail, DistributionPlacement, DistributionRequest
+from app.models.distribution import (
+    DistributionActivity,
+    DistributionMail,
+    DistributionPackage,
+    DistributionPlacement,
+    DistributionRequest,
+)
 from app.models.entities import (
     Asset,
     AuditLog,
@@ -95,6 +101,7 @@ __all__ = [
     "AudienceEvent",
     "PublisherSnapshot",
     "DistributionActivity",
+    "DistributionPackage",
     "DistributionMail",
     "DistributionPlacement",
     "DistributionRequest",
