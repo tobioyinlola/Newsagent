@@ -6,8 +6,8 @@ from dataclasses import dataclass
 import httpx
 
 # category -> retry? ("permanent" ones fail fast: another attempt cannot succeed and may cost money)
-RETRYABLE = {"rate_limited": True, "temporary": True, "timeout": True, "busy": True}
-CATEGORIES = ("invalid_input", "auth", "rate_limited", "temporary", "timeout", "busy", "storage", "render", "unknown")
+RETRYABLE = {"quota": False, "rate_limited": True, "temporary": True, "timeout": True, "busy": True}
+CATEGORIES = ("invalid_input", "auth", "quota", "rate_limited", "temporary", "timeout", "busy", "storage", "render", "unknown")
 MAX_RETRY_AFTER_S = 120.0
 
 
@@ -56,6 +56,15 @@ def _retry_after(r: httpx.Response) -> float | None:
         return None
 
 
+def _out_of_credit(r: httpx.Response) -> bool:
+    """OpenAI answers 429 both for "too fast" (worth retrying) and for "no credit left" (not): the body tells them apart."""
+    try:
+        err = (r.json() or {}).get("error") or {}
+    except Exception:  # noqa: BLE001
+        return False
+    return "insufficient_quota" in {str(err.get("code")), str(err.get("type"))}
+
+
 def classify(exc: BaseException) -> Classified:
     """Decide how to treat an exception raised by a vendor adapter."""
     if isinstance(exc, ProviderError):
@@ -65,6 +74,8 @@ def classify(exc: BaseException) -> Classified:
         if code in (401, 403):
             return Classified("auth", False, None, f"The provider rejected our credentials ({code}).")
         if code == 429:
+            if _out_of_credit(exc.response):  # a 429 that retrying can never fix: the account itself has no credit left
+                return Classified("quota", False, None, "The provider account has run out of credit or hit its spending limit.")
             return Classified("rate_limited", True, _retry_after(exc.response), "The provider is rate limiting us.")
         if code in (408, 425) or code >= 500:
             return Classified("temporary", True, _retry_after(exc.response), f"The provider had a problem ({code}).")
@@ -74,3 +85,42 @@ def classify(exc: BaseException) -> Classified:
     if isinstance(exc, (httpx.TransportError, ConnectionError)):
         return Classified("temporary", True, None, "We couldn't reach the provider.")
     return Classified("unknown", True, None, str(exc)[:300] or exc.__class__.__name__)
+
+
+_last_alert: dict[str, float] = {}
+
+
+def answer_for_vendor_failure(exc: BaseException):
+    """What a customer reads when a vendor call failed inside their request: a 503 that says nothing was lost and when to retry. Returns None
+    for anything that is not a vendor failure, so real bugs still show as errors. A vendor that is out of credit or refusing our key also
+    tells the operators (at most once an hour), because only they can fix that."""
+    import asyncio
+    import time
+
+    from fastapi.responses import JSONResponse
+
+    if not isinstance(exc, (ProviderError, httpx.HTTPError, TimeoutError)):
+        return None
+    c = classify(exc)
+    if c.category in ("quota", "auth"):
+        now = time.monotonic()
+        if now - _last_alert.get(c.category, -3600.0) >= 3600:
+            _last_alert[c.category] = now
+            from app.services.notifications import notify_operators
+
+            try:
+                asyncio.get_running_loop().create_task(
+                    notify_operators(
+                        "Action needed: the writing provider is refusing requests",
+                        f"{c.message}\n\nCustomers are being asked to try again later. Check the OpenAI account (credit, spending limit, "
+                        "API key) in its dashboard. The same key also powers the interviewer's voice and transcription.",
+                    )
+                )
+            except RuntimeError:
+                pass
+        message = "Our writing assistant is unavailable for a short while. Nothing was lost or charged. Please try again in a few minutes."
+        wait = 300
+    else:
+        message = "Our writing assistant is very busy right now. Nothing was lost or charged. Please try again in a minute."
+        wait = int(c.retry_after or 30)
+    return JSONResponse({"detail": message}, status_code=503, headers={"Retry-After": str(max(5, min(wait, 600)))})
