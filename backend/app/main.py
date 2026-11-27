@@ -138,7 +138,13 @@ def create_app() -> FastAPI:
         and the browser reports only "Failed to fetch", hiding what happened."""
         try:
             return await call_next(request)
-        except Exception:
+        except Exception as e:
+            from app.integrations.errors import answer_for_vendor_failure
+
+            vendor = answer_for_vendor_failure(e)
+            if vendor is not None:  # a vendor (the writing model, say) was busy or out of credit: a calm "try again", not a crash
+                logging.getLogger("api").warning("vendor problem on %s %s: %s", request.method, request.url.path, e.__class__.__name__)
+                return vendor
             logging.getLogger("api").exception("unhandled error on %s %s", request.method, request.url.path)
             return JSONResponse({"detail": "Something went wrong on our side. Please try again."}, status_code=500)
 
