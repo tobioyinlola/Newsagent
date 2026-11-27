@@ -5,8 +5,11 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 // and content is always in the page (it only fades and rises), so nothing is hidden if a script is slow.
 const EASE = [0.22, 1, 0.36, 1] as const;
 
+// Every animated piece brings its own features, so it can never be left at "invisible" when used outside a wrapper.
+const Features = ({ children }: { children: ReactNode }) => <LazyMotion features={domAnimation}>{children}</LazyMotion>;
+
 export function MotionRoot({ children }: { children: ReactNode }) {
-  return <LazyMotion features={domAnimation} strict>{children}</LazyMotion>;
+  return <Features>{children}</Features>;
 }
 
 /** Fades up once when it scrolls into view. */
@@ -15,9 +18,11 @@ export function Reveal({ children, delay = 0, y = 18, className, as = "div" }: {
   const Tag = m[as];
   if (reduce) return <Tag className={className}>{children}</Tag>;
   return (
-    <Tag className={className} initial={{ opacity: 0, y }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "0px 0px -8% 0px" }} transition={{ duration: 0.6, delay, ease: EASE }}>
-      {children}
-    </Tag>
+    <Features>
+      <Tag className={className} initial={{ opacity: 0, y }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "0px 0px -8% 0px" }} transition={{ duration: 0.6, delay, ease: EASE }}>
+        {children}
+      </Tag>
+    </Features>
   );
 }
 
@@ -25,13 +30,13 @@ export function Reveal({ children, delay = 0, y = 18, className, as = "div" }: {
 export function Rise({ children, order = 0, className }: { children: ReactNode; order?: number; className?: string }) {
   const reduce = useReducedMotion();
   if (reduce) return <div className={className}>{children}</div>;
-  return <m.div className={className} initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 + order * 0.12, ease: EASE }}>{children}</m.div>;
+  return <Features><m.div className={className} initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 + order * 0.12, ease: EASE }}>{children}</m.div></Features>;
 }
 
 /** A line that draws itself left to right when it comes into view. */
 export function DrawLine({ className }: { className?: string }) {
   const reduce = useReducedMotion();
-  return <m.div aria-hidden="true" className={`origin-left ${className ?? ""}`} initial={{ scaleX: reduce ? 1 : 0 }} whileInView={{ scaleX: 1 }} viewport={{ once: true, margin: "0px 0px -15% 0px" }} transition={{ duration: 1.2, ease: EASE }} />;
+  return <Features><m.div aria-hidden="true" className={`origin-left ${className ?? ""}`} initial={{ scaleX: reduce ? 1 : 0 }} whileInView={{ scaleX: 1 }} viewport={{ once: true, margin: "0px 0px -15% 0px" }} transition={{ duration: 1.2, ease: EASE }} /></Features>;
 }
 
 /** Counts up to a number such as "1.2K" or "2,500+" when it scrolls into view; anything else is shown as it is. */
