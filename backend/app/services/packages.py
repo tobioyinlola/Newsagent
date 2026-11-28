@@ -37,12 +37,21 @@ def state(pkg: DistributionPackage, now: datetime | None = None) -> str:
     return "open" if pkg.usd_price is not None else "quote"
 
 
-def view(pkg: DistributionPackage, now: datetime | None = None) -> dict:
+def view(pkg: DistributionPackage, now: datetime | None = None, table: dict[str, str] | None = None) -> dict:
     price = credit_price(pkg)
     left = None if pkg.slots_total is None else max(0, pkg.slots_total - pkg.slots_taken)
     off = None
     if pkg.standard_usd and pkg.usd_price and pkg.standard_usd > pkg.usd_price:
         off = int(((pkg.standard_usd - pkg.usd_price) / pkg.standard_usd * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+    estimate = None  # a package with no US price (a quote) still shows in other currencies: worth what its stated price is, in dollars
+    if pkg.usd_price is None and table:
+        from app.services import package_rates
+
+        for code, amount in (pkg.local_prices or {}).items():
+            got = package_rates.to_usd(Decimal(str(amount)), code, table)
+            if got is not None:
+                estimate = str(got)
+                break
     return {
         "id": pkg.id,
         "slug": pkg.slug,
@@ -51,6 +60,7 @@ def view(pkg: DistributionPackage, now: datetime | None = None) -> dict:
         "campaign": pkg.campaign,
         "name": pkg.name,
         "usd_price": None if pkg.usd_price is None else str(pkg.usd_price),
+        "usd_estimate": estimate,  # only for a package that is priced on request
         "standard_usd": None if pkg.standard_usd is None else str(pkg.standard_usd),
         "percent_off": off,
         "credits": None if price is None else str(price),

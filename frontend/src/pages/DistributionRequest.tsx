@@ -19,7 +19,7 @@ import { DistributionMediaOptions } from "../components/DistributionMediaOptions
 import { Button, Card, ErrorBox, Notice } from "../components/ui";
 import { OutletPlanner } from "../components/OutletPlanner";
 import { PackageCards } from "../components/PackageCards";
-import { money, usd, type MediaPackage } from "../lib/packages";
+import { money, usd, type PackageList } from "../lib/packages";
 import { planBody, planIds, planRef, trackPlan, type Plan, type PlanResult } from "../lib/outletPlanner";
 
 type Video = { id: string; headline: string; announcement: string; video_url: string | null };
@@ -50,7 +50,7 @@ export function DistributionRequestPage() {
   const submitting = useRef(false);
   const list = usePaged(["distributions"], (limit, offset) => distributionPage<Distribution>("distribution", getToken(), limit, offset), { size: 10, refetchInterval: 15000 });
   const outlets = useQuery({ queryKey: ["distribution-outlets"], queryFn: () => request<{ outlets: Outlet[]; coming_soon: string[]; quote_version: string; filters: OutletFilterList; planner?: boolean }>("distribution/outlets") });
-  const packages = useQuery({ queryKey: ["distribution-packages"], queryFn: () => request<{ packages: MediaPackage[] }>("distribution-packages"), refetchInterval: 30000 });
+  const packages = useQuery({ queryKey: ["distribution-packages"], queryFn: () => request<PackageList>("distribution-packages"), refetchInterval: 30000 });
   const videos = useQuery({ queryKey: ["distribution-videos"], queryFn: () => request<Video[]>("distribution/videos") });
   const stories = useQuery({ queryKey: ["distribution-stories"], queryFn: () => request<{ project_id: string; headline: string; announcement: string }[]>("distribution/stories") });
   const images = useQuery({ queryKey: ["distribution-images", draft?.logo_key], queryFn: () => unwrap(api.GET("/v1/brand-kit/assets")), enabled: !!draft?.logo_key });
@@ -188,7 +188,7 @@ export function DistributionRequestPage() {
       <p role="status" className="text-sm">{saved || "Your progress is saved automatically."}</p>
       {draft.stage === "outlets" && fieldError("outlet_ids")}
       {draft.stage === "outlets" && row?.status === "draft" && pkg && <Card title="Your package"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-lg font-bold">{pkg.name}</p><p className="mt-1 text-sm text-muted">{usd(pkg.usd_price ?? 0)}{Object.keys(pkg.local_prices).length > 0 && ` · or ${Object.entries(pkg.local_prices).map(([c, v]) => money(c, v)).join(" · ")}`} · {total.toLocaleString("en-US", { maximumFractionDigits: 2 })} credits from your wallet</p></div><Button variant="secondary" onClick={() => patch({ package_id: "", outlet_ids: [] })}>Choose something else</Button></div>{pkg.outlets.length > 0 && <ul className="mt-4 grid gap-1.5 text-sm sm:grid-cols-2">{pkg.outlets.map(o => <li key={o} className="flex gap-2"><span aria-hidden="true">✓</span>{o}</li>)}</ul>}{pkg.includes.length > 0 && <ul className="mt-3 space-y-1.5 text-sm">{pkg.includes.map(o => <li key={o} className="flex gap-2"><span aria-hidden="true">+</span>{o}</li>)}</ul>}{pkg.note && <p className="mt-3 text-xs italic text-muted">{pkg.note}</p>}<p className="mt-3 text-sm text-muted">Next, add your video and announcement. Nothing is charged until you pay on the last step.</p></Card>}
-      {draft.stage === "outlets" && row?.status === "draft" && !pkg && (packages.data?.packages.length ?? 0) > 0 && <Card title="Ready-made media packages"><p className="mb-4 text-sm text-muted">A fixed set of outlets for one price. Or scroll down to pick outlets one by one.</p><PackageCards packages={packages.data!.packages} theme="light" chooseLabel="Use this package" onChoose={x => patch({ package_id: x.id, outlet_ids: [], plan_key: "", plan_ids: [] })} /></Card>}
+      {draft.stage === "outlets" && row?.status === "draft" && !pkg && (packages.data?.packages.length ?? 0) > 0 && <Card title="Ready-made media packages"><p className="mb-4 text-sm text-muted">A fixed set of outlets for one price. Or scroll down to pick outlets one by one.</p><PackageCards packages={packages.data!.packages} currencies={packages.data!.currencies} theme="light" chooseLabel="Use this package" onChoose={x => patch({ package_id: x.id, outlet_ids: [], plan_key: "", plan_ids: [] })} /></Card>}
       {draft.stage === "outlets" && row?.status === "draft" && !pkg && outlets.data?.planner && <OutletPlanner
         source="request"
         countries={planCountries}

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { distributionApi } from "../../lib/distribution";
 import { getToken } from "../lib/auth";
-import { PACKAGE_TABS, usd, type MediaPackage } from "../../lib/packages";
+import { PACKAGE_TABS, usd, type Currency, type MediaPackage } from "../../lib/packages";
 
 type Row = MediaPackage & { active: boolean; held: string[]; starts_at: string | null };
 const input = "mt-1 block min-h-11 w-full rounded border border-ink px-2 py-1 font-normal";
@@ -24,6 +24,7 @@ export function PackagesAdmin() {
         <button className="min-h-11 rounded border border-ink bg-brand-green px-4 py-2 text-sm font-semibold" onClick={() => setOpen(open === "new" ? "" : "new")}>Add a package</button>
       </div>
       {q.error && <p role="alert">{String(q.error)}</p>}
+      <RatesCard />
       {open === "new" && <PackageForm onSaved={saved} onCancel={() => setOpen("")} />}
       <ul className="space-y-3">{q.data?.packages.map((p) => (
         <li key={p.id} className="rounded border border-line p-4">
@@ -100,5 +101,37 @@ function PackageForm({ existing, onSaved, onCancel }: { existing?: Row; onSaved:
       {held && <p className="text-sm">We can write to {held.length ? held.join(", ") : "none of these outlets"} ourselves. The rest are arranged by your team by hand.</p>}
       <div className="flex flex-wrap items-center gap-3"><button type="submit" className="min-h-11 rounded border border-ink bg-brand-green px-4 py-2 text-sm font-semibold">{e ? "Save changes" : "Add package"}</button><button type="button" className="min-h-11 rounded border border-ink px-4 py-2 text-sm font-semibold" onClick={onCancel}>Cancel</button><span role="status" className="text-sm">{msg}</span></div>
     </form>
+  );
+}
+
+// The rates package prices are converted at when shown in another currency. A price the document states in a currency is shown as written;
+// these only decide the others. Customers are always charged in US dollars.
+function RatesCard() {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ["admin-package-rates"], queryFn: () => distributionApi<{ currencies: Currency[] }>("admin/distribution-package-rates", getToken()) });
+  const [edit, setEdit] = useState<Record<string, string>>({});
+  const [msg, setMsg] = useState("");
+  const list = (q.data?.currencies ?? []).filter((c) => c.code !== "USD");
+  const save = async () => {
+    setMsg("Saving…");
+    try {
+      await distributionApi("admin/distribution-package-rates", getToken(), "PUT", { rates: edit });
+      setEdit({}); setMsg("Saved. Customers see the new rates straight away.");
+      await qc.invalidateQueries({ queryKey: ["admin-package-rates"] });
+    } catch (e) { setMsg(e instanceof Error ? e.message : "Not saved"); }
+  };
+  return (
+    <details className="rounded border border-line p-4">
+      <summary className="cursor-pointer font-semibold">Exchange rates for showing prices in other currencies</summary>
+      <p className="mt-3 text-sm">How many of each currency buy one US dollar. They only decide how prices are <em>shown</em>; customers are always charged in US dollars. A price the package document states in a currency is shown exactly as written.</p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {list.map((c) => (
+          <label key={c.code} className="block text-sm font-semibold">1 US dollar in {c.name} ({c.code})
+            <input aria-label={`${c.code} per US dollar`} inputMode="decimal" className="mt-1 block min-h-11 w-full rounded border border-ink px-2 py-1 font-normal" value={edit[c.code] ?? c.per_usd} onChange={(e) => setEdit((x) => ({ ...x, [c.code]: e.target.value }))} />
+          </label>
+        ))}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-3"><button className="min-h-11 rounded border border-ink bg-brand-green px-4 py-2 text-sm font-semibold" onClick={() => void save()}>Save rates</button><span role="status" className="text-sm">{msg}</span></div>
+    </details>
   );
 }

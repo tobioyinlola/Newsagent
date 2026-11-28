@@ -158,3 +158,68 @@ async def test_admin_adds_a_package_and_edits_all_of_it(client, maker, workspace
         assert (await client.patch(f"/v1/admin/distribution-packages/{pid}", headers=OPS, json=bad)).status_code == 422
     assert (await client.post("/v1/admin/distribution-packages", headers=OPS, json={"usd_price": "5"})).status_code == 422  # no name
     assert (await client.post("/v1/admin/distribution-packages", headers=OWNER, json={"name": "Nope"})).status_code in (401, 403)
+
+
+async def test_every_package_can_be_shown_in_every_currency(client, maker):
+    await add(maker, slug="quote-only", usd_price=None, local_prices={"GBP": "530"})
+    await add(maker, slug="priced", usd_price=Decimal("100"))
+    r = (await client.get("/v1/public/distribution/packages")).json()
+    codes = [c["code"] for c in r["currencies"]]
+    assert codes[0] == "USD" and {"NGN", "GBP", "EUR", "CAD", "GHS", "KES", "UGX", "AED", "QAR", "CHF"} <= set(codes)
+    ngn = next(c for c in r["currencies"] if c["code"] == "NGN")
+    assert ngn["per_usd"] == "1400"  # the rate the document's own Nigerian prices imply
+    quote = next(p for p in r["packages"] if p["slug"] == "quote-only")
+    assert quote["usd_price"] is None and Decimal(quote["usd_estimate"]) == Decimal("697.46")  # 530 pounds at the document's rate, to show it in other currencies
+    sold = next(p for p in r["packages"] if p["usd_price"])
+    assert sold["usd_estimate"] is None  # a package with a real price never shows an estimate
+
+
+async def test_operator_changes_a_rate_and_it_shows_everywhere(client, maker, workspace):
+    r = await client.put("/v1/admin/distribution-package-rates", headers=OPS, json={"rates": {"ngn": "1500"}})
+    assert r.status_code == 200 and next(c for c in r.json()["currencies"] if c["code"] == "NGN")["per_usd"] == "1500"
+    shown = (await client.get("/v1/public/distribution/packages")).json()
+    assert next(c for c in shown["currencies"] if c["code"] == "NGN")["per_usd"] == "1500"
+    assert next(c for c in shown["currencies"] if c["code"] == "GBP")["per_usd"] == "0.7599"  # the others are as they were
+    for bad in ({"NGN": "lots"}, {"NGN": "0"}, {"NGN": "-4"}):
+        assert (await client.put("/v1/admin/distribution-package-rates", headers=OPS, json={"rates": bad})).status_code == 422
+    assert (await client.put("/v1/admin/distribution-package-rates", headers=OWNER, json={"rates": {"NGN": "1"}})).status_code in (401, 403)
+
+
+# Every price in "Cover Founder Regional Media Packages & BF/CM Offers", in the currencies the document states them in.
+DOCUMENT_PRICES = {
+    "pre-seed-nigeria": {"USD": "365", "NGN": "506000"},
+    "nigeria-startup-launch": {"USD": "651.57", "NGN": "912203.49"},
+    "nigeria-startup-growth": {"USD": "1198.61", "NGN": "1678059.10"},
+    "nigeria-market-leadership": {"USD": "1918.86", "NGN": "2686405.04"},
+    "africa-startup-entry": {"USD": "1533.24", "GHS": "18022", "KES": "199199", "UGX": "6423555"},
+    "africa-business-expansion": {"USD": "1905.30", "GHS": "22396", "KES": "247537", "UGX": "7982312"},
+    "usa-startup-visibility": {"USD": "554.58"},
+    "usa-entrepreneurship": {"USD": "1109.16"},
+    "usa-executive-authority": {"USD": "7690.41"},
+    "canada-startup-entry": {"USD": "961.74", "CAD": "1377.02"},
+    "canada-business-growth": {"USD": "9480.51", "CAD": "13574.19"},
+    "uk-startup-visibility": {"GBP": "530"},
+    "uk-business": {"USD": "25896.78", "GBP": "19678.19"},
+    "european-business-expansion": {"USD": "5545.80", "EUR": "5048.79", "CHF": "4670.78"},
+    "middle-east-startup-entry": {"AED": "1820", "QAR": "1805"},
+    "middle-east-business-authority": {"AED": "9165", "QAR": "9095"},
+    "accelerator-incubator-partnership": {"USD": "5000"},
+    "corporate-visibility-partnership": {"USD": "10000"},
+    "global-portfolio-partnership": {"USD": "25000"},
+    "bf-startup-visibility-deal": {"USD": "651.57", "NGN": "912203.49"},
+    "bf-international-founder-deal": {"USD": "995"},
+    "bf-executive-spotlight-deal": {"USD": "7690.41"},
+    "cm-two-market-deal": {"USD": "1495"},
+}
+
+
+def test_every_price_is_exactly_the_documents_in_the_documents_currencies():
+    by = {p["slug"]: p for p in PACKAGES}
+    for slug, prices in DOCUMENT_PRICES.items():
+        got = {c: Decimal(v) for c, v in by[slug]["local_prices"].items()}
+        if by[slug]["usd_price"]:
+            got["USD"] = Decimal(by[slug]["usd_price"])
+        assert got == {c: Decimal(v) for c, v in prices.items()}, slug
+    assert by["cm-startup-portfolio-deal"]["usd_price"] is None and not by["cm-startup-portfolio-deal"]["local_prices"]  # "Custom quote"
+    assert {s: Decimal(by[s]["standard_usd"]) for s in ("bf-international-founder-deal", "bf-executive-spotlight-deal", "cm-two-market-deal")} == {
+        "bf-international-founder-deal": Decimal("1495"), "bf-executive-spotlight-deal": Decimal("15000"), "cm-two-market-deal": Decimal("2495")}
