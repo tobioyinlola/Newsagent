@@ -96,6 +96,7 @@ export function ProjectDetail() {
       {moderation.data?.[0]?.status === "rejected" && (
         <Notice tone="warn">Our team couldn't approve this content.{moderation.data[0].note ? ` ${moderation.data[0].note}` : ""} Please edit it and try again.</Notice>
       )}
+      {p.state === "draft" && guided && <StartInterview projectId={id} />}
       {p.state === "script_ready" && guided && <BackToInterview projectId={id} />}
       {p.state === "script_ready" && guided && <StoryCopy projectId={id} compact />}
       {p.state === "script_ready" && guided && <StoryImages projectId={id} />}
@@ -163,3 +164,22 @@ function BackToInterview({ projectId }: { projectId: string }) {
   );
 }
 
+
+// A guided video whose interview never opened (the writing assistant was busy when it was started, say): open it now instead of leaving a blank page.
+// It tries once as the page opens, and shows what happened with a button if it still cannot. The details are saved and nothing is charged.
+function StartInterview({ projectId }: { projectId: string }) {
+  const qc = useQueryClient();
+  const tried = useRef(false);
+  const start = useMutation({
+    mutationFn: () => unwrap(api.POST("/v1/projects/{project_id}/guided/start", { params: { path: { project_id: projectId } } })),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["project", projectId] }); qc.invalidateQueries({ queryKey: ["interview", projectId] }); },
+  });
+  useEffect(() => { if (!tried.current) { tried.current = true; start.mutate(); } }, []);
+  return (
+    <Card title="Getting your interview ready">
+      <p aria-busy={start.isPending}>{start.isError ? "Your details are saved and nothing was charged, but we couldn't open your interview yet." : "Your details are saved. We're reading them and writing your interview questions. This takes a few seconds."}</p>
+      <ErrorBox error={start.error} />
+      {start.isError && <div className="mt-3"><Button disabled={start.isPending} onClick={() => start.mutate()}>{start.isPending ? "Trying again…" : "Try again"}</Button></div>}
+    </Card>
+  );
+}
