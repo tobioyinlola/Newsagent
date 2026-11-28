@@ -56,18 +56,25 @@ function PackageCard({ p, dark, chosen, onChoose, label, busy, currency, currenc
       </div>
       <div className="mt-3">
         {(() => {
-          const shown = priceIn(p, currency, currencies);
+          // The document's own prices come first. Anything else is a conversion, marked with ≈, and never replaces them.
+          const stated: [string, string][] = [...(p.usd_price ? ([["USD", p.usd_price]] as [string, string][]) : []), ...Object.entries(p.local_prices)];
+          const fmt = ([c, v]: [string, string]) => (c === "USD" ? usd(v) : money(c, v));
+          const converted = priceIn(p, currency, currencies);
+          const named = currencies.find((c) => c.code === currency)?.name ?? currency;
+          const leads = !stated.some(([c]) => c === currency) && !p.usd_price && stated.length > 0 ? stated[0] : null; // no dollar price to anchor on: lead with what the document says
+          const main = leads ? { text: fmt(leads), approx: false } : converted;
           const was = standardIn(p, currency, currencies);
-          const rest = Object.entries(p.local_prices).filter(([c]) => c !== currency);
-          if (!shown) return <p className={`text-3xl font-bold ${ink}`}>Custom quote</p>;
+          if (!main) return <p className={`text-3xl font-bold ${ink}`}>Custom quote</p>;
+          const others = stated.filter(([c]) => (leads ? c !== leads[0] : c !== currency) && !(c === "USD" && p.usd_price && currency !== "USD"));
           return (
             <>
-              <p className={`text-3xl font-bold ${ink}`} aria-label={`${shown.approx ? "about " : ""}${shown.text}`}>
-                {shown.approx && <span title="Converted at our current rate. You are charged in US dollars." className="mr-1 text-xl font-normal" aria-hidden="true">≈</span>}{shown.text}
+              <p className={`text-3xl font-bold ${ink}`} aria-label={`${main.approx ? "about " : ""}${main.text}`}>
+                {main.approx && <span title="Converted at our current rate. You are charged in US dollars." className="mr-1 text-xl font-normal" aria-hidden="true">≈</span>}{main.text}
                 {was && <span className={`ml-2 text-base font-normal line-through ${soft}`}>{was}</span>}
               </p>
+              {leads && converted && <p className={`mt-1 text-sm ${soft}`}>{converted.approx ? "≈ " : ""}{converted.text} in {named}</p>}
+              {others.length > 0 && <p className={`mt-1 text-sm ${soft}`}>{main.approx ? "Listed price" : "Also listed"}: {others.map(fmt).join(" · ")}</p>}
               {p.usd_price && currency !== "USD" && <p className={`mt-1 text-sm ${soft}`}>You pay <strong className={ink}>{usd(p.usd_price)}</strong>{p.credits ? ` · ${Number(p.credits).toLocaleString("en-US", { maximumFractionDigits: 2 })} credits` : ""}</p>}
-              {p.usd_price && currency === "USD" && rest.length > 0 && <p className={`mt-1 text-sm ${soft}`}>or {rest.map(([c, v]) => money(c, v)).join(" · ")}</p>}
               {!p.usd_price && <p className={`mt-1 text-sm ${soft}`}>Price on request</p>}
               {p.credits && !dark && currency === "USD" && <p className={`mt-1 text-xs ${soft}`}>Paid from your wallet: {Number(p.credits).toLocaleString("en-US", { maximumFractionDigits: 2 })} credits</p>}
             </>

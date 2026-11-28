@@ -56,9 +56,25 @@ test("prices can be shown in any currency, converted where the document gives no
   await picker.selectOption("AED");
   await expect(section.getByRole("article", { name: "The Middle East Startup Entry Package" })).toContainText("AED 1,820");
 
+  // the document's own prices lead, whatever the visitor's currency
+  await picker.selectOption("USD");
+  const me = section.getByRole("article", { name: "The Middle East Startup Entry Package" });
+  await expect(me).toContainText("AED 1,820"); // no dollar price in the document, so its own amount leads
+  await expect(me).toContainText("Also listed: QAR 1,805");
+  await expect(me).toContainText("≈ US$496 in US dollar"); // the conversion is a secondary line, marked as approximate
+  await section.getByRole("tab", { name: "Africa-wide" }).click();
+  await picker.selectOption("NGN");
+  const africa = section.getByRole("article", { name: "The Africa Startup Entry Package" });
+  await expect(africa).toContainText("≈₦2,146,536"); // converted, since the document gives no naira price for it
+  await expect(africa).toContainText("GH₵18,022"); // and its own listed prices are still there, exactly as written
+  await expect(africa).toContainText("KSh 199,199");
+  await expect(africa).toContainText("USh 6,423,555");
+  await section.getByRole("tab", { name: "Nigeria & West Africa" }).click();
+  await expect(section.getByRole("article", { name: "The Nigeria Startup Growth Package" })).toContainText("₦1,678,059.10"); // exact, not 1,198.61 x 1,400
+
   await page.reload();
   await section.scrollIntoViewIfNeeded();
-  await expect(section.getByLabel("Show prices in")).toHaveValue("AED"); // remembered
+  await expect(section.getByLabel("Show prices in")).toHaveValue("NGN"); // remembered
 });
 
 test("a visitor in Lagos starts in naira", async ({ browser }) => {
