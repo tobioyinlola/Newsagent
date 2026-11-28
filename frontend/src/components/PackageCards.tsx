@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { endsText, inTab, money, priceIn, quoteMail, rememberCurrency, standardIn, startingCurrency, tabsFor, usd, type Currency, type MediaPackage } from "../lib/packages";
+import { defaultCurrency, endsText, inTab, optionsFor, priceIn, quoteMail, standardIn, tabsFor, type Currency, type MediaPackage } from "../lib/packages";
 
 // The media packages, by region. Used on the public distribution page (dark) and inside the app (light).
 type Props = { packages: MediaPackage[]; currencies?: Currency[]; theme: "dark" | "light"; onChoose: (p: MediaPackage) => void; chosenId?: string; chooseLabel?: string; busy?: boolean };
 
 export function PackageCards({ packages, currencies = [], theme, onChoose, chosenId, chooseLabel = "Choose this package", busy }: Props) {
   const dark = theme === "dark";
-  const [currency, setCurrency] = useState(() => startingCurrency(currencies));
-  useEffect(() => { if (currencies.length && !currencies.some((c) => c.code === currency)) setCurrency("USD"); }, [currencies.length]);
+  // The currency chosen on a card applies to every card in the same region tab, so one choice is enough; a tab opens in its own currencies.
+  const [picked, setPicked] = useState<Record<string, string>>({});
   const tabs = tabsFor(packages);
   const [key, setKey] = useState("");
   useEffect(() => { if (!tabs.some((t) => t.key === key)) setKey(tabs[0]?.key ?? ""); }, [tabs.map((t) => t.key).join(), key]);
@@ -16,18 +16,6 @@ export function PackageCards({ packages, currencies = [], theme, onChoose, chose
   const ink = dark ? "text-white" : "text-ink", soft = dark ? "text-white/70" : "text-muted";
   return (
     <div>
-      {currencies.length > 1 && (
-        <div className="mb-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 sm:justify-end">
-          <label className={`flex items-center gap-2 text-sm font-semibold ${dark ? "text-white/80" : "text-ink"}`}>
-            Show prices in
-            <select aria-label="Show prices in" value={currency} onChange={(e) => { setCurrency(e.target.value); rememberCurrency(e.target.value); }}
-              className={`min-h-11 rounded-sm border px-3 py-2 text-sm font-bold ${dark ? "border-white/30 bg-ink text-white" : "border-ink bg-white text-ink"}`}>
-              {currencies.map((c) => <option key={c.code} value={c.code}>{c.code} · {c.name}</option>)}
-            </select>
-          </label>
-          <span className={`text-xs ${dark ? "text-white/55" : "text-muted"}`}>For reference. You are charged in US dollars, as credits.</span>
-        </div>
-      )}
       <div role="tablist" aria-label="Package regions" className="flex flex-wrap justify-center gap-2">
         {tabs.map((t) => (
           <button key={t.key} role="tab" type="button" aria-selected={key === t.key} onClick={() => setKey(t.key)}
@@ -38,13 +26,13 @@ export function PackageCards({ packages, currencies = [], theme, onChoose, chose
       </div>
       {key === "campaign" && <p className={`mx-auto mt-5 max-w-2xl text-center text-sm ${soft}`}><strong className={ink}>The year is almost over.</strong> Your business has done the work. Now it is time to make sure people know about it. Limited slots, 27 to 30 November.</p>}
       <div role="tabpanel" className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {shown.map((p) => <PackageCard key={p.id} p={p} dark={dark} chosen={chosenId === p.id} onChoose={onChoose} label={chooseLabel} busy={busy} currency={currency} currencies={currencies} />)}
+        {shown.map((p) => <PackageCard key={p.id} p={p} dark={dark} chosen={chosenId === p.id} onChoose={onChoose} label={chooseLabel} busy={busy} currencies={currencies} currency={picked[key] ?? defaultCurrency(p)} onCurrency={(c) => setPicked((x) => ({ ...x, [key]: c }))} />)}
       </div>
     </div>
   );
 }
 
-function PackageCard({ p, dark, chosen, onChoose, label, busy, currency, currencies }: { p: MediaPackage; dark: boolean; chosen: boolean; onChoose: (p: MediaPackage) => void; label: string; busy?: boolean; currency: string; currencies: Currency[] }) {
+function PackageCard({ p, dark, chosen, onChoose, label, busy, currency, currencies, onCurrency }: { p: MediaPackage; dark: boolean; chosen: boolean; onChoose: (p: MediaPackage) => void; label: string; busy?: boolean; currency: string; currencies: Currency[]; onCurrency: (code: string) => void }) {
   const ink = dark ? "text-white" : "text-ink", soft = dark ? "text-white/70" : "text-muted", line = dark ? "border-white/15" : "border-line";
   const scarce = p.slots_left !== null && p.slots_left > 0 && p.slots_left <= 5;
   const can = p.state === "open";
@@ -56,27 +44,23 @@ function PackageCard({ p, dark, chosen, onChoose, label, busy, currency, currenc
       </div>
       <div className="mt-3">
         {(() => {
-          // The document's own prices come first. Anything else is a conversion, marked with ≈, and never replaces them.
-          const stated: [string, string][] = [...(p.usd_price ? ([["USD", p.usd_price]] as [string, string][]) : []), ...Object.entries(p.local_prices)];
-          const fmt = ([c, v]: [string, string]) => (c === "USD" ? usd(v) : money(c, v));
-          const converted = priceIn(p, currency, currencies);
-          const named = currencies.find((c) => c.code === currency)?.name ?? currency;
-          const leads = !stated.some(([c]) => c === currency) && !p.usd_price && stated.length > 0 ? stated[0] : null; // no dollar price to anchor on: lead with what the document says
-          const main = leads ? { text: fmt(leads), approx: false } : converted;
+          const options = optionsFor(p, currencies);
+          const shown = priceIn(p, currency, currencies);
           const was = standardIn(p, currency, currencies);
-          if (!main) return <p className={`text-3xl font-bold ${ink}`}>Custom quote</p>;
-          const others = stated.filter(([c]) => (leads ? c !== leads[0] : c !== currency) && !(c === "USD" && p.usd_price && currency !== "USD"));
+          const credits = p.credits ? `${Number(p.credits).toLocaleString("en-US", { maximumFractionDigits: 2 })} credits` : null;
           return (
             <>
-              <p className={`text-3xl font-bold ${ink}`} aria-label={`${main.approx ? "about " : ""}${main.text}`}>
-                {main.approx && <span title="Converted at our current rate. You are charged in US dollars." className="mr-1 text-xl font-normal" aria-hidden="true">≈</span>}{main.text}
-                {was && <span className={`ml-2 text-base font-normal line-through ${soft}`}>{was}</span>}
-              </p>
-              {leads && converted && <p className={`mt-1 text-sm ${soft}`}>{converted.approx ? "≈ " : ""}{converted.text} in {named}</p>}
-              {others.length > 0 && <p className={`mt-1 text-sm ${soft}`}>{main.approx ? "Listed price" : "Also listed"}: {others.map(fmt).join(" · ")}</p>}
-              {p.usd_price && currency !== "USD" && <p className={`mt-1 text-sm ${soft}`}>You pay <strong className={ink}>{usd(p.usd_price)}</strong>{p.credits ? ` · ${Number(p.credits).toLocaleString("en-US", { maximumFractionDigits: 2 })} credits` : ""}</p>}
+              {options.length > 1 && (
+                <select aria-label={`Currency for ${p.name}`} value={currency} onChange={(e) => onCurrency(e.target.value)}
+                  className={`mb-2 min-h-9 rounded-sm border px-2 py-1 text-xs font-bold ${dark ? "border-white/30 bg-ink text-white" : "border-line bg-white text-ink"}`}>
+                  {options.map((c) => <option key={c.code} value={c.code}>{c.code} · {c.name}</option>)}
+                </select>
+              )}
+              {shown ? (
+                <p className={`text-3xl font-bold ${ink}`}>{shown}{was && <span className={`ml-2 text-base font-normal line-through ${soft}`}>{was}</span>}</p>
+              ) : <p className={`text-3xl font-bold ${ink}`}>Custom quote</p>}
+              {credits && <p className={`mt-1 text-sm ${soft}`}>{credits}</p>}
               {!p.usd_price && <p className={`mt-1 text-sm ${soft}`}>Price on request</p>}
-              {p.credits && !dark && currency === "USD" && <p className={`mt-1 text-xs ${soft}`}>Paid from your wallet: {Number(p.credits).toLocaleString("en-US", { maximumFractionDigits: 2 })} credits</p>}
             </>
           );
         })()}
