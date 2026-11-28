@@ -158,3 +158,28 @@ async def test_admin_adds_a_package_and_edits_all_of_it(client, maker, workspace
         assert (await client.patch(f"/v1/admin/distribution-packages/{pid}", headers=OPS, json=bad)).status_code == 422
     assert (await client.post("/v1/admin/distribution-packages", headers=OPS, json={"usd_price": "5"})).status_code == 422  # no name
     assert (await client.post("/v1/admin/distribution-packages", headers=OWNER, json={"name": "Nope"})).status_code in (401, 403)
+
+
+async def test_every_package_can_be_shown_in_every_currency(client, maker):
+    await add(maker, slug="quote-only", usd_price=None, local_prices={"GBP": "530"})
+    await add(maker, slug="priced", usd_price=Decimal("100"))
+    r = (await client.get("/v1/public/distribution/packages")).json()
+    codes = [c["code"] for c in r["currencies"]]
+    assert codes[0] == "USD" and {"NGN", "GBP", "EUR", "CAD", "GHS", "KES", "UGX", "AED", "QAR", "CHF"} <= set(codes)
+    ngn = next(c for c in r["currencies"] if c["code"] == "NGN")
+    assert ngn["per_usd"] == "1400"  # the rate the document's own Nigerian prices imply
+    quote = next(p for p in r["packages"] if p["slug"] == "quote-only")
+    assert quote["usd_price"] is None and Decimal(quote["usd_estimate"]) == Decimal("697.46")  # 530 pounds at the document's rate, to show it in other currencies
+    sold = next(p for p in r["packages"] if p["usd_price"])
+    assert sold["usd_estimate"] is None  # a package with a real price never shows an estimate
+
+
+async def test_operator_changes_a_rate_and_it_shows_everywhere(client, maker, workspace):
+    r = await client.put("/v1/admin/distribution-package-rates", headers=OPS, json={"rates": {"ngn": "1500"}})
+    assert r.status_code == 200 and next(c for c in r.json()["currencies"] if c["code"] == "NGN")["per_usd"] == "1500"
+    shown = (await client.get("/v1/public/distribution/packages")).json()
+    assert next(c for c in shown["currencies"] if c["code"] == "NGN")["per_usd"] == "1500"
+    assert next(c for c in shown["currencies"] if c["code"] == "GBP")["per_usd"] == "0.7599"  # the others are as they were
+    for bad in ({"NGN": "lots"}, {"NGN": "0"}, {"NGN": "-4"}):
+        assert (await client.put("/v1/admin/distribution-package-rates", headers=OPS, json={"rates": bad})).status_code == 422
+    assert (await client.put("/v1/admin/distribution-package-rates", headers=OWNER, json={"rates": {"NGN": "1"}})).status_code in (401, 403)
