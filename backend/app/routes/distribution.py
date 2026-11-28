@@ -28,7 +28,7 @@ from app.models.base import utcnow
 from app.services import distribution as fulfillment
 from app.services import distribution_catalog as catalog_service
 from app.services import distribution_planner as planner
-from app.services import ledger, paging, planner_stats
+from app.services import ledger, package_rates, paging, planner_stats
 from app.services import packages as package_service
 from app.services.audit import audit
 from app.services.ratelimit import limit
@@ -568,12 +568,34 @@ async def public_outlets(response: Response, db: AsyncSession = Depends(get_sess
 async def public_packages(response: Response, db: AsyncSession = Depends(get_session)) -> dict:
     """The media packages a visitor can read before signing up. Slots left are live, so the answer is only cached for a few seconds."""
     response.headers["Cache-Control"] = "public, max-age=15"
-    return {"packages": [package_service.view(x) for x in await package_service.listing(db)]}
+    table = await package_rates.rates(db)
+    return {"packages": [package_service.view(x, table=table) for x in await package_service.listing(db)], "currencies": package_rates.listing(table)}
 
 
 @router.get("/v1/distribution-packages")
 async def packages(p: Principal = Depends(current_principal), db: AsyncSession = Depends(get_session)) -> dict:
-    return {"packages": [package_service.view(x) for x in await package_service.listing(db)]}
+    table = await package_rates.rates(db)
+    return {"packages": [package_service.view(x, table=table) for x in await package_service.listing(db)], "currencies": package_rates.listing(table)}
+
+
+class RatesIn(BaseModel):
+    rates: dict[str, str]  # {"NGN": "1450"}: how many of it buy one US dollar
+
+
+@router.get("/v1/admin/distribution-package-rates")
+async def admin_package_rates(p: Principal = Depends(require("operations.view")), db: AsyncSession = Depends(get_session)) -> dict:
+    return {"currencies": package_rates.listing(await package_rates.rates(db))}
+
+
+@router.put("/v1/admin/distribution-package-rates")
+async def admin_set_package_rates(body: RatesIn, p: Principal = Depends(require("operations.manage")), db: AsyncSession = Depends(get_session)) -> dict:
+    try:
+        table = await package_rates.save(db, body.rates)
+    except (ValueError, ArithmeticError) as error:
+        raise HTTPException(422, str(error) if isinstance(error, ValueError) and "buy one" in str(error) else "Enter each rate as a number") from error
+    audit(db, p.user.email, "distribution.package_rates_edited", target_type="distribution_package", target_id="rates", detail=body.rates)
+    await db.commit()
+    return {"currencies": package_rates.listing(table)}
 
 
 class PackageFields(BaseModel):

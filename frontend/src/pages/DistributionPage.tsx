@@ -6,7 +6,7 @@ import { OutletBrowser } from "../components/OutletBrowser";
 import { PackageCards } from "../components/PackageCards";
 import { Reveal } from "../components/Motion";
 import { setAfterAuth } from "../lib/distributionFilters";
-import type { MediaPackage } from "../lib/packages";
+import type { PackageList } from "../lib/packages";
 import { OutletLogoStrip } from "../components/OutletLogoStrip";
 import { CHANNELS, Cta, Eyebrow, SiteShell } from "./Landing";
 
@@ -71,14 +71,14 @@ function DistributionHeroPhoto() {
 // Ready-made packages: a fixed set of outlets for one price. Paying happens in the app, so a visitor is asked to sign up first.
 function MediaPackages() {
   const nav = useNavigate();
-  const q = useQuery({ queryKey: ["public-packages"], queryFn: async () => { const r = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/v1/public/distribution/packages`); if (!r.ok) throw new Error("packages"); return (await r.json()).packages as MediaPackage[]; }, refetchInterval: 30000 });
-  const choose = (p: MediaPackage) => {
+  const q = useQuery({ queryKey: ["public-packages"], queryFn: async () => { const r = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/v1/public/distribution/packages`); if (!r.ok) throw new Error("packages"); return (await r.json()) as PackageList; }, refetchInterval: 30000 });
+  const choose = (p: PackageList["packages"][number]) => {
     const path = `/distribution/request?package=${encodeURIComponent(p.id)}`;
     if (getToken()) { nav(path); return; }
     setAfterAuth(path); // after sign-up the person lands in the request with this package already chosen
     nav("/signup");
   };
-  if (q.isError || !q.data?.length) return null; // the page still works without them
+  if (q.isError || !q.data?.packages.length) return null; // the page still works without them
   return (
     <section id="packages" aria-labelledby="packages-h" className="scroll-mt-4 border-b border-white/10 bg-ink px-4 py-16 md:px-8">
       <div className="mx-auto max-w-6xl">
@@ -87,7 +87,7 @@ function MediaPackages() {
           <h2 id="packages-h" className="mt-3 text-3xl text-white md:text-5xl">Ready-made packages, one price.</h2>
           <p className="mx-auto mt-3 max-w-2xl text-white/70">A fixed set of outlets for one price, by region. Create your free account and pay from your wallet. Nothing is charged until you confirm.</p>
         </Reveal>
-        <div className="mt-10"><PackageCards packages={q.data} theme="dark" onChoose={choose} chooseLabel="Choose this package" /></div>
+        <div className="mt-10"><PackageCards packages={q.data.packages} currencies={q.data.currencies} theme="dark" onChoose={choose} chooseLabel="Choose this package" /></div>
         <p className="mx-auto mt-8 max-w-3xl text-center text-xs text-white/50">Prices are in US dollars and paid from your wallet in credits; local prices are shown for reference. Publication depends on each outlet. Organisation packages are agreed in a service schedule.</p>
       </div>
     </section>

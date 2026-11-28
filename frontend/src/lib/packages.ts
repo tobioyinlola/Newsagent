@@ -1,7 +1,7 @@
 // Ready-made media packages: the shapes the server sends, and how their prices are written.
 export type MediaPackage = {
   id: string; slug: string; kind: "regional" | "organisation" | "campaign"; region: string; campaign: "" | "black_friday" | "cyber_monday";
-  name: string; usd_price: string | null; standard_usd: string | null; percent_off: number | null; credits: string | null;
+  name: string; usd_price: string | null; usd_estimate?: string | null; standard_usd: string | null; percent_off: number | null; credits: string | null;
   local_prices: Record<string, string>; outlets: string[]; includes: string[]; ideal_for: string; note: string;
   slots_total: number | null; slots_left: number | null; ends_at: string | null;
   state: "open" | "quote" | "not_started" | "ended" | "sold_out" | "off";
@@ -40,3 +40,52 @@ export function endsText(iso: string | null): string {
   if (!iso) return "";
   return `Ends ${new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "Africa/Lagos" })}`;
 }
+
+// ---------- prices in other currencies ----------
+// Display only: a customer is always charged in US dollars (as credits). A price the document states in a currency is shown exactly;
+// every other currency is converted from the dollar price at the rates the operator sets, and marked "≈".
+export type Currency = { code: string; name: string; per_usd: string };
+export type PackageList = { packages: MediaPackage[]; currencies: Currency[] };
+export type Shown = { text: string; approx: boolean };
+
+const rateOf = (cs: Currency[], code: string) => Number(cs.find((c) => c.code === code)?.per_usd ?? 0);
+/** A converted amount, rounded the way people read it: whole units once it is big, cents while it is small. */
+function rounded(n: number): number { return n >= 100 ? Math.round(n) : Math.round(n * 100) / 100; }
+
+/** What a package costs in a currency. Null when there is no price to show (a quote with nothing to convert from). */
+export function priceIn(p: MediaPackage, code: string, cs: Currency[]): Shown | null {
+  const stated = p.local_prices[code];
+  if (stated) return { text: money(code, stated), approx: false };
+  if (code === "USD" && p.usd_price) return { text: usd(p.usd_price), approx: false };
+  const dollars = p.usd_price ?? p.usd_estimate;
+  const rate = rateOf(cs, code);
+  if (!dollars || !rate) return null;
+  return { text: money(code, rounded(Number(dollars) * rate)), approx: true };
+}
+
+/** The usual price (the strike-through) in the same currency, converted. */
+export function standardIn(p: MediaPackage, code: string, cs: Currency[]): string | null {
+  if (!p.standard_usd) return null;
+  if (code === "USD") return usd(p.standard_usd);
+  const rate = rateOf(cs, code);
+  return rate ? money(code, rounded(Number(p.standard_usd) * rate)) : null;
+}
+
+// Where a visitor probably is, so the first thing they see is a price they recognise. They can change it, and it is remembered.
+const ZONES: Record<string, string> = {
+  "Africa/Lagos": "NGN", "Africa/Accra": "GHS", "Africa/Nairobi": "KES", "Africa/Kampala": "UGX", "Europe/London": "GBP",
+  "America/Toronto": "CAD", "America/Vancouver": "CAD", "America/Edmonton": "CAD", "America/Winnipeg": "CAD", "America/Halifax": "CAD",
+  "Asia/Dubai": "AED", "Asia/Qatar": "QAR", "Europe/Zurich": "CHF",
+};
+const KEY = "cf-package-currency";
+export function startingCurrency(cs: Currency[]): string {
+  const ok = (c: string | null | undefined): c is string => !!c && cs.some((x) => x.code === c);
+  try { const saved = localStorage.getItem(KEY); if (ok(saved)) return saved; } catch { /* private window */ }
+  try {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const guess = ZONES[zone] ?? (zone?.startsWith("Europe/") ? "EUR" : "USD");
+    if (ok(guess)) return guess;
+  } catch { /* old browser */ }
+  return "USD";
+}
+export function rememberCurrency(code: string) { try { localStorage.setItem(KEY, code); } catch { /* private window */ } }

@@ -28,6 +28,83 @@ test("the distribution page shows the media packages with their prices, slots an
   await expect(section.getByRole("article", { name: "The Corporate Visibility Partnership" })).toContainText("US$10,000");
 });
 
+test("prices can be shown in any currency, converted where the document gives none, and the choice is remembered", async ({ page, context }) => {
+  await context.clearCookies();
+  await page.goto("/press-distribution");
+  const section = page.locator("#packages");
+  await section.scrollIntoViewIfNeeded();
+  const picker = section.getByLabel("Show prices in");
+  await expect(picker).toHaveValue("USD");
+  await section.getByRole("tab", { name: "Black Friday & Cyber Monday" }).click();
+  const deal = section.getByRole("article", { name: "The International Founder Visibility Deal" });
+  await expect(deal).toContainText("US$995");
+
+  await picker.selectOption("NGN");
+  await expect(deal).toContainText("₦1,393,000"); // 995 at the document's 1,400 to the dollar, marked as converted
+  await expect(deal).toContainText("≈");
+  await expect(deal).toContainText("₦2,093,000"); // the usual price, converted too
+  await expect(deal).toContainText("You pay US$995"); // what is actually charged stays clear
+  const launch = section.getByRole("article", { name: "The Startup Visibility Deal" });
+  await expect(launch).toContainText("₦912,203.49"); // stated in the document, so shown exactly
+  await expect(launch.getByText("≈")).toHaveCount(0);
+
+  await section.getByRole("tab", { name: "United States" }).click(); // a US package has no local price in the document, and still shows in every currency
+  await picker.selectOption("GBP");
+  await expect(section.getByRole("article", { name: "The USA Startup Visibility Package" })).toContainText("£");
+  await section.getByRole("tab", { name: "Middle East" }).click(); // a quote-only package, shown in the document's own currency and converted for the others
+  await expect(section.getByRole("article", { name: "The Middle East Startup Entry Package" })).toContainText("Price on request");
+  await picker.selectOption("AED");
+  await expect(section.getByRole("article", { name: "The Middle East Startup Entry Package" })).toContainText("AED 1,820");
+
+  // the document's own prices lead, whatever the visitor's currency
+  await picker.selectOption("USD");
+  const me = section.getByRole("article", { name: "The Middle East Startup Entry Package" });
+  await expect(me).toContainText("AED 1,820"); // no dollar price in the document, so its own amount leads
+  await expect(me).toContainText("Also listed: QAR 1,805");
+  await expect(me).toContainText("≈ US$496 in US dollar"); // the conversion is a secondary line, marked as approximate
+  await section.getByRole("tab", { name: "Africa-wide" }).click();
+  await picker.selectOption("NGN");
+  const africa = section.getByRole("article", { name: "The Africa Startup Entry Package" });
+  await expect(africa).toContainText("≈₦2,146,536"); // converted, since the document gives no naira price for it
+  await expect(africa).toContainText("GH₵18,022"); // and its own listed prices are still there, exactly as written
+  await expect(africa).toContainText("KSh 199,199");
+  await expect(africa).toContainText("USh 6,423,555");
+  await section.getByRole("tab", { name: "Nigeria & West Africa" }).click();
+  await expect(section.getByRole("article", { name: "The Nigeria Startup Growth Package" })).toContainText("₦1,678,059.10"); // exact, not 1,198.61 x 1,400
+
+  await page.reload();
+  await section.scrollIntoViewIfNeeded();
+  await expect(section.getByLabel("Show prices in")).toHaveValue("NGN"); // remembered
+});
+
+test("a visitor in Lagos starts in naira", async ({ browser }) => {
+  const ctx = await browser.newContext({ timezoneId: "Africa/Lagos" });
+  const page = await ctx.newPage();
+  await page.goto("/press-distribution");
+  await expect(page.locator("#packages").getByLabel("Show prices in")).toHaveValue("NGN");
+  await ctx.close();
+});
+
+test("an operator can change an exchange rate and customers see it", async ({ browser, request, page }) => {
+  const ap = await (await browser.newContext()).newPage();
+  await ap.addInitScript(() => sessionStorage.setItem("newsagent.admin.token", "dev:ops@example.com"));
+  await ap.goto("/admin/distribution");
+  await ap.getByRole("button", { name: "Packages", exact: true }).click();
+  await ap.getByText("Exchange rates for showing prices in other currencies").click();
+  await ap.getByLabel("NGN per US dollar").fill("1500");
+  await ap.getByRole("button", { name: "Save rates" }).click();
+  await expect(ap.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
+  try {
+    await page.goto("/press-distribution");
+    const section = page.locator("#packages");
+    await section.getByRole("tab", { name: "Black Friday & Cyber Monday" }).click();
+    await section.getByLabel("Show prices in").selectOption("NGN");
+    await expect(section.getByRole("article", { name: "The International Founder Visibility Deal" })).toContainText("₦1,492,500"); // 995 x 1,500
+  } finally {
+    await request.put("http://localhost:8000/v1/admin/distribution-package-rates", { headers: { Authorization: "Bearer dev:ops@example.com" }, data: { rates: { NGN: "1400" } } });
+  }
+});
+
 test("a visitor who chooses a package is sent to sign up, and a customer buys it from the wallet, taking a slot", async ({ page, request }) => {
   const list = async () => (await (await request.get(`${API}/v1/public/distribution/packages`)).json()).packages as { id: string; slug: string; slots_left: number | null; credits: string }[];
   const deal = (await list()).find((p) => p.slug === "bf-startup-visibility-deal")!;
